@@ -14,9 +14,9 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Right Actions */}
+
       <div className="flex items-center gap-6">
-        {/* Search, Theme and Notifications */}
+       
         <button className="text-gray-400 hover:text-white transition">
           <Search size={18} />
         </button>
@@ -28,7 +28,7 @@ export default function Navbar() {
           <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
         </button>
 
-        {/* Profile Button */}
+       
         <div className="relative">
           <button 
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -41,10 +41,9 @@ export default function Navbar() {
             <ChevronDown size={14} className="text-gray-400" />
           </button>
 
-          {/* Dropdown Menu (Matches Screenshot popup completely) */}
           {isDropdownOpen && (
             <div className="absolute right-0 mt-3 w-64 bg-[#111625] border border-[#1e2640] rounded-xl shadow-2xl z-50 py-3 text-sm">
-              {/* Dropdown User Info */}
+           
               <div className="flex items-center gap-3 px-4 py-3 border-b border-[#1e2640]">
                 <div className="w-10 h-10 rounded-full bg-[#10b981] text-white flex items-center justify-center font-bold text-base">
                   A
