@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import AdminNavbar from "./AdminNavbar";
 import AdminSidebar from "./AdminSidebar";
@@ -6,11 +6,21 @@ import AdminSidebar from "./AdminSidebar";
 function AdminLayout({ isDarkMode, onToggleTheme }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+  useEffect(() => {
+    const updateCollapseState = () => {
+      setIsSidebarCollapsed(window.innerWidth < 768);
+    };
+    updateCollapseState();
+    window.addEventListener("resize", updateCollapseState);
+    return () => window.removeEventListener("resize", updateCollapseState);
+  }, []);
+
   return (
     <div
+      data-theme={isDarkMode ? "dark" : "light"}
       className={`h-screen overflow-hidden transition-colors duration-300 ${
         isDarkMode ? "bg-[#0f1724]" : "bg-[#edf2f8]"
-      }`}
+      } admin-shell`}
     >
       <AdminSidebar
         isDarkMode={isDarkMode}

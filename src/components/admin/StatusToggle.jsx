@@ -14,13 +14,13 @@ function StatusToggle({
       className="inline-flex items-center gap-1.5"
     >
       {checked ? (
-        <ToggleRight size={18} className="text-[#18a354]" />
+        <ToggleRight size={18} className="text-[var(--admin-success-text)]" />
       ) : (
-        <ToggleLeft size={18} className="text-[#f0a339]" />
+        <ToggleLeft size={18} className="text-[var(--admin-warning-text)]" />
       )}
       <span
         className={`text-xs font-semibold ${
-          checked ? "text-[#18a354]" : "text-[#f0a339]"
+          checked ? "text-[var(--admin-success-text)]" : "text-[var(--admin-warning-text)]"
         }`}
       >
         {checked ? labelOn : labelOff}

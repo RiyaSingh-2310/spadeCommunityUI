@@ -34,11 +34,11 @@ function UsersPage({ isDarkMode }) {
         <label className={`flex h-10 w-full items-center gap-2 rounded-xl border px-3 sm:max-w-[320px] ${
           isDarkMode ? "border-[#344662] bg-[#101a2a]" : "border-[#d8e3ef] bg-white"
         }`}>
-          <Search size={15} className={isDarkMode ? "text-[#8ea5c2]" : "text-[#8b98ab]"} />
+          <Search size={15} className="admin-text-subtle" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className={`w-full bg-transparent text-sm outline-none ${isDarkMode ? "text-[#f8fafc]" : "text-[#1f2b3d]"}`}
+            className="admin-text w-full bg-transparent text-sm outline-none placeholder:text-[var(--admin-subtle-foreground)]"
             placeholder="Search users..."
           />
         </label>
@@ -51,9 +51,10 @@ function UsersPage({ isDarkMode }) {
       </div>
 
       <TableCard isDarkMode={isDarkMode}>
-        <table className="min-w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
           <thead>
-            <tr className={isDarkMode ? "text-[#9fb0c8]" : "text-[#6f8098]"}>
+            <tr className="admin-text-muted">
               {["ID", "Name", "Email", "Status", "Action"].map((h) => (
                 <th
                   key={h}
@@ -69,16 +70,16 @@ function UsersPage({ isDarkMode }) {
           <tbody>
             {filtered.map((user) => (
               <tr key={user.id} className={`border-t align-middle ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}>
-                <td className="px-4 py-3 align-middle">{user.id}</td>
+                <td className="admin-text px-4 py-3 align-middle">{user.id}</td>
                 <td className="px-4 py-3 align-middle">
                   <div className="flex items-center gap-2.5">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#18a354]/20 text-xs font-semibold text-[#18a354]">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#18a354]/20 text-xs font-semibold text-[var(--admin-success-text)]">
                       {user.name.slice(0, 1)}
                     </span>
-                    {user.name}
+                    <span className="admin-text">{user.name}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 align-middle whitespace-nowrap">{user.email}</td>
+                <td className="admin-text px-4 py-3 align-middle whitespace-nowrap">{user.email}</td>
                 <td className="px-4 py-3 align-middle">
                   <StatusToggle
                     checked={user.enabled}
@@ -101,7 +102,8 @@ function UsersPage({ isDarkMode }) {
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       </TableCard>
     </div>
   );

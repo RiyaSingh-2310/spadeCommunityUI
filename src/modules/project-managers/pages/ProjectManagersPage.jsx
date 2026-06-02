@@ -1,20 +1,23 @@
+import { useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 
 const rows = [
-  { id: "PM-01", name: "Aarav Mehta", status: "Active", action: "" },
-  { id: "PM-02", name: "Kriti Nair", status: "Inactive", action: "" },
-  { id: "PM-03", name: "Rahul Roy", status: "Active", action: "" },
+  { name: "Aarav Mehta", emailAddress: "aarav@spadecommunity.com", status: "Active" },
+  { name: "Kriti Nair", emailAddress: "kriti@spadecommunity.com", status: "Inactive" },
+  { name: "Rahul Roy", emailAddress: "rahul@spadecommunity.com", status: "Active" },
 ];
 
 function ProjectManagersPage({ isDarkMode }) {
+  const navigate = useNavigate();
+
   return (
     <ModuleListingPage
       isDarkMode={isDarkMode}
       title="Project Managers"
-      subtitle="Manage project manager records here."
       searchPlaceholder="Search project managers..."
       actionLabel="Add Project Manager"
-      columns={["ID", "Name", "Status", "Action"]}
+      onActionClick={() => navigate("/project-managers/add")}
+      columns={["Name", "Email Address", "Status", "Action"]}
       rows={rows}
     />
   );

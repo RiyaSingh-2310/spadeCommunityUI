@@ -53,17 +53,24 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
 
   const inputClass = `h-11 w-full rounded-xl border px-3 text-sm outline-none transition ${
     isDarkMode
-      ? "border-[#344662] bg-[#101a2a] text-[#f8fafc] placeholder:text-[#8ea5c2]"
-      : "border-[#d8e3ef] bg-white text-[#1f2b3d] placeholder:text-[#8b98ab]"
+      ? "border-[#344662] bg-[#101a2a] text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)]"
+      : "border-[#d8e3ef] bg-white text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)]"
   }`;
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader title={isEdit ? "Edit Admin User" : "Add Admin User"} isDarkMode={isDarkMode} />
+      <AdminPageHeader
+        title={isEdit ? "Edit Admin User" : "Add Admin User"}
+        breadcrumbs={[
+          { label: "Users", to: "/users" },
+          { label: isEdit ? "Edit User" : "Add User" },
+        ]}
+        isDarkMode={isDarkMode}
+      />
       <TableCard title={isEdit ? `Editing User #${id}` : "User Details"} isDarkMode={isDarkMode}>
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <label className={`mb-2 block text-sm font-semibold ${isDarkMode ? "text-[#d4deeb]" : "text-[#304157]"}`}>
+            <label className="admin-text mb-2 block text-sm font-semibold">
               Profile Image Upload
             </label>
             <div className="flex items-center gap-3">
@@ -71,7 +78,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                 {preview ? (
                   <img src={preview} alt="preview" className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs text-[#8ea5c2]">No Img</div>
+                  <div className="admin-text-subtle flex h-full w-full items-center justify-center text-xs">No Img</div>
                 )}
               </div>
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-[#10a950] px-3 py-2 text-xs font-semibold text-white hover:bg-[#0f9b49]">
@@ -83,17 +90,17 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className={`mb-2 block text-sm font-semibold ${isDarkMode ? "text-[#d4deeb]" : "text-[#304157]"}`}>Name</label>
+              <label className="admin-text mb-2 block text-sm font-semibold">Name</label>
               <input placeholder="Enter Name" className={inputClass} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              {touched && !form.name && <p className="mt-1 text-xs text-[#de3d3d]">Name is required.</p>}
+              {touched && !form.name && <p className="mt-1 text-xs text-[var(--admin-danger-text)]">Name is required.</p>}
             </div>
             <div>
-              <label className={`mb-2 block text-sm font-semibold ${isDarkMode ? "text-[#d4deeb]" : "text-[#304157]"}`}>Email</label>
+              <label className="admin-text mb-2 block text-sm font-semibold">Email</label>
               <input placeholder="Enter Email Address" className={inputClass} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-              {touched && !form.email && <p className="mt-1 text-xs text-[#de3d3d]">Email is required.</p>}
+              {touched && !form.email && <p className="mt-1 text-xs text-[var(--admin-danger-text)]">Email is required.</p>}
             </div>
             <div>
-              <label className={`mb-2 block text-sm font-semibold ${isDarkMode ? "text-[#d4deeb]" : "text-[#304157]"}`}>New Password</label>
+              <label className="admin-text mb-2 block text-sm font-semibold">New Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -105,15 +112,15 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className={`absolute right-3 top-1/2 -translate-y-1/2 ${isDarkMode ? "text-[#8ea5c2]" : "text-[#8b98ab]"}`}
+                  className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {touched && !form.password && <p className="mt-1 text-xs text-[#de3d3d]">Password is required.</p>}
+              {touched && !form.password && <p className="mt-1 text-xs text-[var(--admin-danger-text)]">Password is required.</p>}
             </div>
             <div>
-              <label className={`mb-2 block text-sm font-semibold ${isDarkMode ? "text-[#d4deeb]" : "text-[#304157]"}`}>Confirm Password</label>
+              <label className="admin-text mb-2 block text-sm font-semibold">Confirm Password</label>
               <div className="relative">
                 <input
                   type={showConfirmPassword ? "text" : "password"}
@@ -125,13 +132,13 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  className={`absolute right-3 top-1/2 -translate-y-1/2 ${isDarkMode ? "text-[#8ea5c2]" : "text-[#8b98ab]"}`}
+                  className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
                 >
                   {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {touched && !form.confirmPassword && <p className="mt-1 text-xs text-[#de3d3d]">Confirm Password is required.</p>}
-              {touched && mismatch && <p className="mt-1 text-xs text-[#de3d3d]">Passwords must match.</p>}
+              {touched && !form.confirmPassword && <p className="mt-1 text-xs text-[var(--admin-danger-text)]">Confirm Password is required.</p>}
+              {touched && mismatch && <p className="mt-1 text-xs text-[var(--admin-danger-text)]">Passwords must match.</p>}
             </div>
           </div>
 
@@ -144,7 +151,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
               Submit
             </button>
             <button type="button" onClick={() => navigate("/users")} className={`h-11 rounded-xl px-5 text-sm font-semibold ${
-              isDarkMode ? "bg-[#1f3047] text-[#e2e8f0]" : "bg-[#eef4fb] text-[#2f3b4d]"
+              isDarkMode ? "bg-[#1f3047] text-[var(--admin-foreground)]" : "bg-[#eef4fb] text-[var(--admin-foreground)]"
             }`}>
               Cancel
             </button>

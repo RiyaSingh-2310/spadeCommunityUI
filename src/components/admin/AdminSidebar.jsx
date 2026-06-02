@@ -130,8 +130,8 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
     <aside
       className={`fixed left-0 top-0 z-40 h-screen max-h-screen overflow-hidden select-none border-r transition-all duration-300 ${
         isDarkMode
-          ? "bg-[#111b2c] text-[#cbd5e1] border-[#2a3c56]"
-          : "bg-white text-[#2a3548] border-[#dce6f1]"
+          ? "bg-[#111b2c] text-[var(--admin-foreground)] border-[#2a3c56]"
+          : "bg-white text-[var(--admin-foreground)] border-[#dce6f1]"
       } ${isCollapsed ? "w-20" : "w-[270px]"}`}
     >
       <div className="flex h-full min-h-0 flex-col">
@@ -187,8 +187,8 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
                     isActive
                       ? "bg-[#e6f6ee] text-[#138842] font-semibold shadow-[inset_0_0_0_1px_rgba(19,136,66,0.12)]"
                       : isDarkMode
-                        ? "text-[#94a3b8] hover:bg-[#1f3047] hover:text-[#f8fafc]"
-                        : "text-[#677388] hover:bg-[#f2f7fc] hover:text-[#273448]"
+                        ? "text-[var(--admin-muted-foreground)] hover:bg-[#1f3047] hover:text-[var(--admin-foreground)]"
+                        : "text-[var(--admin-muted-foreground)] hover:bg-[#f2f7fc] hover:text-[var(--admin-foreground)]"
                   }`}
                 >
                   <div
@@ -203,8 +203,8 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
                         isActive
                           ? "text-[#138842]"
                           : isDarkMode
-                            ? "text-[#64748b]"
-                            : "text-[#8b96a7]"
+                            ? "text-[var(--admin-subtle-foreground)]"
+                            : "text-[var(--admin-subtle-foreground)]"
                       }
                     >
                       {iconMap[item.label]}
@@ -213,7 +213,7 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
                   </div>
 
                   {!isCollapsed && item.type === "group" && (
-                    <span className={`ml-auto ${isDarkMode ? "text-[#64748b]" : "text-[#9aa4b3]"}`}>
+                    <span className="ml-auto">
                       {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </span>
                   )}
@@ -223,8 +223,8 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
                   <div
                     className={`pointer-events-none absolute left-[calc(100%+10px)] top-1/2 z-30 -translate-y-1/2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium opacity-0 shadow-md transition-all duration-200 group-hover:opacity-100 ${
                       isDarkMode
-                        ? "bg-[#1f3047] text-[#e2e8f0] border border-[#344662]"
-                        : "bg-white text-[#24354e] border border-[#d9e2ee]"
+                        ? "bg-[#1f3047] text-[var(--admin-foreground)] border border-[#344662]"
+                        : "bg-white text-[var(--admin-foreground)] border border-[#d9e2ee]"
                     }`}
                   >
                     {item.label}
@@ -244,8 +244,8 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
                             isChildActive
                               ? "bg-[#e6f6ee] text-[#138842] font-semibold"
                               : isDarkMode
-                                ? "text-[#9fb0c8] hover:bg-[#1f3047]"
-                                : "text-[#6f8098] hover:bg-[#f2f7fc]"
+                                ? "text-[var(--admin-muted-foreground)] hover:bg-[#1f3047]"
+                                : "text-[var(--admin-muted-foreground)] hover:bg-[#f2f7fc]"
                           }`}
                         >
                           {child.label}
@@ -267,8 +267,8 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
             onClick={() => setIsCollapsed((prev) => !prev)}
             className={`w-full h-14 p-4 flex items-center gap-3 text-sm font-medium transition-all duration-200 ${
               isDarkMode
-                ? "hover:bg-[#1f3047] text-[#94a3b8] hover:text-[#f8fafc]"
-                : "hover:bg-[#f2f7fc] text-[#7a879a] hover:text-[#253247]"
+                ? "hover:bg-[#1f3047] text-[var(--admin-muted-foreground)] hover:text-[var(--admin-foreground)]"
+                : "hover:bg-[#f2f7fc] text-[var(--admin-muted-foreground)] hover:text-[var(--admin-foreground)]"
             }`}
           >
             {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}

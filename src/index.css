@@ -17,6 +17,42 @@ body {
   min-width: 320px;
 }
 
+.admin-shell[data-theme="light"] {
+  --admin-foreground: #1f2b3d;
+  --admin-muted-foreground: #6f8098;
+  --admin-subtle-foreground: #8b98ab;
+  --admin-card-title: #233247;
+  --admin-success-text: #138842;
+  --admin-warning-text: #c27718;
+  --admin-danger-text: #de3d3d;
+}
+
+.admin-shell[data-theme="dark"] {
+  --admin-foreground: #f8fafc;
+  --admin-muted-foreground: #9fb0c8;
+  --admin-subtle-foreground: #8ea5c2;
+  --admin-card-title: #f8fafc;
+  --admin-success-text: #28c56d;
+  --admin-warning-text: #ffb347;
+  --admin-danger-text: #ff8f8f;
+}
+
+.admin-text {
+  color: var(--admin-foreground);
+}
+
+.admin-text-muted {
+  color: var(--admin-muted-foreground);
+}
+
+.admin-text-subtle {
+  color: var(--admin-subtle-foreground);
+}
+
+.admin-card-title {
+  color: var(--admin-card-title);
+}
+
 .auth-shell[data-theme="light"] {
   --kh-input-bg: #f4f8fc;
   --kh-input-text: #18202f;

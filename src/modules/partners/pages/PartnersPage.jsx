@@ -1,20 +1,50 @@
+import { useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 
 const rows = [
-  { id: "PT-1001", name: "Deepak Traders", status: "Active", action: "" },
-  { id: "PT-1002", name: "Traver Recycling", status: "Inactive", action: "" },
-  { id: "PT-1003", name: "Green Loop", status: "Active", action: "" },
+  {
+    sno: "1",
+    partnerCode: "PRT-1001",
+    name: "Deepak Traders",
+    emailAddress: "deepak@traders.com",
+    country: "India",
+    contactNumber: "+91 9876543210",
+    websiteUrl: "https://deepaktraders.com",
+    status: "Active",
+  },
+  {
+    sno: "2",
+    partnerCode: "PRT-1002",
+    name: "Traver Recycling",
+    emailAddress: "hello@traver.co",
+    country: "UAE",
+    contactNumber: "+971 567832145",
+    websiteUrl: "https://traver.co",
+    status: "Inactive",
+  },
 ];
 
 function PartnersPage({ isDarkMode }) {
+  const navigate = useNavigate();
+
   return (
     <ModuleListingPage
       isDarkMode={isDarkMode}
       title="Partners"
-      subtitle="Manage partner records here."
       searchPlaceholder="Search partners..."
       actionLabel="Add Partner"
-      columns={["ID", "Name", "Status", "Action"]}
+      onActionClick={() => navigate("/partners/add")}
+      columns={[
+        "S.No",
+        "Partner Code",
+        "Name",
+        "Email Address",
+        "Country",
+        "Contact Number",
+        "Website URL",
+        "Status",
+        "Action",
+      ]}
       rows={rows}
     />
   );

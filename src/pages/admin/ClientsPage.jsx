@@ -33,11 +33,11 @@ function ClientsPage({ isDarkMode }) {
         <label className={`flex h-10 w-full items-center gap-2 rounded-xl border px-3 sm:max-w-[340px] ${
           isDarkMode ? "border-[#344662] bg-[#101a2a]" : "border-[#d8e3ef] bg-white"
         }`}>
-          <Search size={15} className={isDarkMode ? "text-[#8ea5c2]" : "text-[#8b98ab]"} />
+          <Search size={15} className="admin-text-subtle" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className={`w-full bg-transparent text-sm outline-none ${isDarkMode ? "text-[#f8fafc]" : "text-[#1f2b3d]"}`}
+            className="admin-text w-full bg-transparent text-sm outline-none placeholder:text-[var(--admin-subtle-foreground)]"
             placeholder="Search clients..."
           />
         </label>
@@ -50,9 +50,10 @@ function ClientsPage({ isDarkMode }) {
       </div>
 
       <TableCard isDarkMode={isDarkMode}>
-        <table className="min-w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
           <thead>
-            <tr className={isDarkMode ? "text-[#9fb0c8]" : "text-[#6f8098]"}>
+            <tr className="admin-text-muted">
               {["S.No", "Client Code", "Name", "Email Address", "Country", "Contact Number", "Website URL", "Status", "Action"].map((h) => (
                 <th
                   key={h}
@@ -68,13 +69,13 @@ function ClientsPage({ isDarkMode }) {
           <tbody>
             {filtered.map((client) => (
               <tr key={client.id} className={`border-t align-middle ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}>
-                <td className="px-4 py-3 align-middle">{client.id}</td>
-                <td className="px-4 py-3 align-middle whitespace-nowrap">{client.code}</td>
-                <td className="px-4 py-3 align-middle">{client.name}</td>
-                <td className="px-4 py-3 align-middle whitespace-nowrap">{client.email}</td>
-                <td className="px-4 py-3 align-middle whitespace-nowrap">{client.country}</td>
-                <td className="px-4 py-3 align-middle whitespace-nowrap">{client.contact}</td>
-                <td className="px-4 py-3 align-middle whitespace-nowrap">{client.website}</td>
+                <td className="admin-text px-4 py-3 align-middle">{client.id}</td>
+                <td className="admin-text px-4 py-3 align-middle whitespace-nowrap">{client.code}</td>
+                <td className="admin-text px-4 py-3 align-middle">{client.name}</td>
+                <td className="admin-text px-4 py-3 align-middle whitespace-nowrap">{client.email}</td>
+                <td className="admin-text px-4 py-3 align-middle whitespace-nowrap">{client.country}</td>
+                <td className="admin-text px-4 py-3 align-middle whitespace-nowrap">{client.contact}</td>
+                <td className="admin-text px-4 py-3 align-middle whitespace-nowrap">{client.website}</td>
                 <td className="px-4 py-3 align-middle">
                   <StatusToggle
                     checked={client.active}
@@ -97,7 +98,8 @@ function ClientsPage({ isDarkMode }) {
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       </TableCard>
     </div>
   );

@@ -48,8 +48,8 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
 
   const inputClass = `h-11 w-full rounded-xl border px-3 text-sm outline-none transition ${
     isDarkMode
-      ? "border-[#344662] bg-[#101a2a] text-[#f8fafc] placeholder:text-[#8ea5c2]"
-      : "border-[#d8e3ef] bg-white text-[#1f2b3d] placeholder:text-[#8b98ab]"
+      ? "border-[#344662] bg-[#101a2a] text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)]"
+      : "border-[#d8e3ef] bg-white text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)]"
   }`;
 
   const onSubmit = (event) => {
@@ -64,6 +64,10 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
       <AdminPageHeader
         title={isEdit ? "Edit Client User" : "Add Client User"}
         subtitle={isEdit ? `Editing client #${id}` : undefined}
+        breadcrumbs={[
+          { label: "Clients", to: "/clients" },
+          { label: isEdit ? "Edit Client" : "Add Client" },
+        ]}
         isDarkMode={isDarkMode}
       />
 
@@ -78,7 +82,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
               ["Website URL", "website"],
             ].map(([label, key]) => (
               <div key={key}>
-                <label className={`mb-2 block text-sm font-semibold ${isDarkMode ? "text-[#d4deeb]" : "text-[#304157]"}`}>{label}</label>
+                <label className="admin-text mb-2 block text-sm font-semibold">{label}</label>
                 <input
                   className={inputClass}
                   placeholder={
@@ -98,7 +102,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
               </div>
             ))}
             <div>
-              <label className={`mb-2 block text-sm font-semibold ${isDarkMode ? "text-[#d4deeb]" : "text-[#304157]"}`}>Select Country</label>
+              <label className="admin-text mb-2 block text-sm font-semibold">Select Country</label>
               <select className={inputClass} value={form.country} onChange={(e) => setField("country", e.target.value)}>
                 <option value="">Select Country</option>
                 <option value="India">India</option>
@@ -117,7 +121,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
               ["API Header Key", "apiHeaderKey", "Enter API Header Key"],
             ].map(([label, key, placeholder]) => (
               <div key={key}>
-                <label className={`mb-2 block text-sm font-semibold ${isDarkMode ? "text-[#d4deeb]" : "text-[#304157]"}`}>{label}</label>
+                <label className="admin-text mb-2 block text-sm font-semibold">{label}</label>
                 <input
                   className={inputClass}
                   placeholder={placeholder}
@@ -127,7 +131,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
               </div>
             ))}
             <div>
-              <label className={`mb-2 block text-sm font-semibold ${isDarkMode ? "text-[#d4deeb]" : "text-[#304157]"}`}>API Secret Key</label>
+              <label className="admin-text mb-2 block text-sm font-semibold">API Secret Key</label>
               <div className="relative">
                 <input
                   type={showSecret ? "text" : "password"}
@@ -139,7 +143,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                 <button
                   type="button"
                   onClick={() => setShowSecret((prev) => !prev)}
-                  className={`absolute right-3 top-1/2 -translate-y-1/2 ${isDarkMode ? "text-[#8ea5c2]" : "text-[#8b98ab]"}`}
+                  className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
                 >
                   {showSecret ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -157,7 +161,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
             Submit
           </button>
           <button type="button" onClick={() => navigate("/clients")} className={`h-11 rounded-xl px-5 text-sm font-semibold ${
-            isDarkMode ? "bg-[#1f3047] text-[#e2e8f0]" : "bg-[#eef4fb] text-[#2f3b4d]"
+            isDarkMode ? "bg-[#1f3047] text-[var(--admin-foreground)]" : "bg-[#eef4fb] text-[var(--admin-foreground)]"
           }`}>
             Cancel
           </button>

@@ -9,8 +9,10 @@ function ModuleListingPage({
   isDarkMode,
   title,
   subtitle,
+  breadcrumbs,
   searchPlaceholder = "Search records...",
   actionLabel = "Add",
+  onActionClick,
   columns = [],
   rows = [],
   showStatus = true,
@@ -23,31 +25,40 @@ function ModuleListingPage({
   );
 
   return (
-    <div className="space-y-4">
-      <AdminPageHeader title={title} subtitle={subtitle} isDarkMode={isDarkMode} />
+    <div className="space-y-6">
+      <AdminPageHeader
+        title={title}
+        subtitle={subtitle}
+        breadcrumbs={breadcrumbs}
+        isDarkMode={isDarkMode}
+      />
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         <label
           className={`flex h-10 w-full items-center gap-2 rounded-xl border px-3 sm:max-w-[340px] ${
             isDarkMode ? "border-[#344662] bg-[#101a2a]" : "border-[#d8e3ef] bg-white"
           }`}
         >
-          <Search size={15} className={isDarkMode ? "text-[#8ea5c2]" : "text-[#8b98ab]"} />
+          <Search size={15} className="admin-text-subtle" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className={`w-full bg-transparent text-sm outline-none ${isDarkMode ? "text-[#f8fafc]" : "text-[#1f2b3d]"}`}
+            className="admin-text w-full bg-transparent text-sm outline-none placeholder:text-[var(--admin-subtle-foreground)]"
             placeholder={searchPlaceholder}
           />
         </label>
-        <button className="h-10 rounded-xl bg-[#10a950] px-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,169,80,0.28)] transition hover:bg-[#0f9b49]">
+        <button
+          onClick={onActionClick}
+          className="h-10 rounded-xl bg-[#10a950] px-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,169,80,0.28)] transition hover:bg-[#0f9b49]"
+        >
           {actionLabel}
         </button>
       </div>
 
       <TableCard isDarkMode={isDarkMode}>
-        <table className="min-w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
           <thead>
-            <tr className={isDarkMode ? "text-[#9fb0c8]" : "text-[#6f8098]"}>
+            <tr className="admin-text-muted">
               {columns.map((h) => (
                 <th
                   key={h}
@@ -97,25 +108,44 @@ function ModuleListingPage({
                     );
                   }
                   const value = row[key] ?? row[col] ?? "-";
+                  if (key === "name" && row.avatar) {
+                    return (
+                      <td key={col} className="px-4 py-3 align-middle whitespace-nowrap">
+                        <div className="inline-flex items-center gap-2">
+                          <img src={row.image} alt={row.name} className="h-8 w-8 rounded-full object-cover" />
+                          <span className="admin-text">{row.name}</span>
+                        </div>
+                      </td>
+                    );
+                  }
                   return (
                     <td
                       key={col}
                       className={`px-4 py-3 align-middle ${
-                        ["id", "emailaddress", "country", "contactnumber", "websiteurl", "status"].includes(
-                          key
-                        )
+                        [
+                          "id",
+                          "sno",
+                          "partnercode",
+                          "emailaddress",
+                          "projectid",
+                          "country",
+                          "contactnumber",
+                          "websiteurl",
+                          "status",
+                        ].includes(key)
                           ? "whitespace-nowrap"
                           : ""
                       }`}
                     >
-                      {value}
+                      <span className="admin-text">{value}</span>
                     </td>
                   );
                 })}
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       </TableCard>
     </div>
   );

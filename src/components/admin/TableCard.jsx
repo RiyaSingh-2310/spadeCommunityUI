@@ -8,11 +8,7 @@ function TableCard({ title, children, isDarkMode }) {
       }`}
     >
       {title && (
-        <h2
-          className={`mb-4 text-lg font-semibold ${
-            isDarkMode ? "text-[#f8fafc]" : "text-[#233247]"
-          }`}
-        >
+        <h2 className="admin-card-title mb-4 text-lg font-semibold">
           {title}
         </h2>
       )}

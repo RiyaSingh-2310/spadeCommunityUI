@@ -13,10 +13,14 @@ import UsersPage from "./pages/admin/UsersPage";
 import InvoiceListPage from "./modules/invoice/pages/InvoiceListPage";
 import InvoiceSettingsPage from "./modules/invoice/pages/InvoiceSettingsPage";
 import LogActivityPage from "./modules/log-activity/pages/LogActivityPage";
+import AddPartnerPage from "./modules/partners/pages/AddPartnerPage";
 import PartnersPage from "./modules/partners/pages/PartnersPage";
+import AddProjectManagerPage from "./modules/project-managers/pages/AddProjectManagerPage";
 import PrescreenGroupPage from "./modules/prescreen/pages/PrescreenGroupPage";
 import PrescreenPage from "./modules/prescreen/pages/PrescreenPage";
 import ProjectManagersPage from "./modules/project-managers/pages/ProjectManagersPage";
+import AddRfqPage from "./modules/sales/pages/AddRfqPage";
+import AddSalesManagerPage from "./modules/sales/pages/AddSalesManagerPage";
 import RfqPage from "./modules/sales/pages/RfqPage";
 import SalesManagerPage from "./modules/sales/pages/SalesManagerPage";
 import GroupSurveyPage from "./modules/survey/pages/GroupSurveyPage";
@@ -58,7 +62,6 @@ function App() {
         element={<AdminLayout isDarkMode={isDarkMode} onToggleTheme={toggleTheme} />}
       >
         <Route path="/" element={<DashboardPage isDarkMode={isDarkMode} />} />
-        <Route path="/dashboard" element={<Navigate to="/" replace />} />
         <Route path="/users" element={<UsersPage isDarkMode={isDarkMode} />} />
         <Route path="/users/add" element={<UserFormPage isDarkMode={isDarkMode} mode="add" />} />
         <Route path="/users/edit/:id" element={<UserFormPage isDarkMode={isDarkMode} mode="edit" />} />
@@ -66,9 +69,13 @@ function App() {
         <Route path="/clients/add" element={<ClientFormPage isDarkMode={isDarkMode} mode="add" />} />
         <Route path="/clients/edit/:id" element={<ClientFormPage isDarkMode={isDarkMode} mode="edit" />} />
         <Route path="/partners" element={<PartnersPage isDarkMode={isDarkMode} />} />
+        <Route path="/partners/add" element={<AddPartnerPage isDarkMode={isDarkMode} />} />
         <Route path="/project-managers" element={<ProjectManagersPage isDarkMode={isDarkMode} />} />
+        <Route path="/project-managers/add" element={<AddProjectManagerPage isDarkMode={isDarkMode} />} />
         <Route path="/sales/rfq" element={<RfqPage isDarkMode={isDarkMode} />} />
+        <Route path="/sales/rfq/add" element={<AddRfqPage isDarkMode={isDarkMode} />} />
         <Route path="/sales/sales-manager" element={<SalesManagerPage isDarkMode={isDarkMode} />} />
+        <Route path="/sales/sales-manager/add" element={<AddSalesManagerPage isDarkMode={isDarkMode} />} />
         <Route path="/prescreen/group" element={<PrescreenGroupPage isDarkMode={isDarkMode} />} />
         <Route path="/prescreen" element={<PrescreenPage isDarkMode={isDarkMode} />} />
         <Route path="/survey" element={<SurveyPage isDarkMode={isDarkMode} />} />

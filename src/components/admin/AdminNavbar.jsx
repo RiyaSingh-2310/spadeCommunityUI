@@ -20,26 +20,20 @@ function AdminNavbar({ isDarkMode, onToggleTheme }) {
 
   return (
     <div
-      className={`relative flex h-[72px] w-full items-center justify-between border-b px-4 transition-colors duration-300 sm:px-6 ${
+      className={`relative flex h-[72px] w-full items-center justify-end border-b px-4 transition-colors duration-300 sm:px-6 ${
         isDarkMode
           ? "border-[#28384f] bg-[#131d2d]"
           : "border-[#dde7f2] bg-white/95 backdrop-blur"
       }`}
     >
-      <div className="flex items-center gap-3">
-        <img
-          src={heroLogo}
-          alt="Spade Community logo"
-          className="h-8 w-auto max-w-[150px] object-contain sm:h-9 sm:max-w-[170px] md:h-10 md:max-w-[190px]"
-        />
-      </div>
+      
 
       <div className="flex items-center gap-2.5 sm:gap-3">
         <button
           className={`rounded-xl p-2.5 transition-all duration-200 focus:outline-none focus-visible:ring-2 ${
             isDarkMode
-              ? "text-[#94a3b8] hover:bg-[#1b2a40] hover:text-[#e2e8f0] focus-visible:ring-[#4a6c92]/40"
-              : "text-[#6f8198] hover:bg-[#eef4fb] hover:text-[#223046] focus-visible:ring-[#b9cadf]/60"
+              ? "admin-text-subtle hover:bg-[#1b2a40] hover:text-[var(--admin-foreground)] focus-visible:ring-[#4a6c92]/40"
+              : "admin-text-muted hover:bg-[#eef4fb] hover:text-[var(--admin-foreground)] focus-visible:ring-[#b9cadf]/60"
           }`}
           aria-label="search"
         >
@@ -48,8 +42,8 @@ function AdminNavbar({ isDarkMode, onToggleTheme }) {
         <button
           className={`relative rounded-xl p-2.5 transition-all duration-200 focus:outline-none focus-visible:ring-2 ${
             isDarkMode
-              ? "text-[#94a3b8] hover:bg-[#1b2a40] hover:text-[#e2e8f0] focus-visible:ring-[#4a6c92]/40"
-              : "text-[#6f8198] hover:bg-[#eef4fb] hover:text-[#223046] focus-visible:ring-[#b9cadf]/60"
+              ? "admin-text-subtle hover:bg-[#1b2a40] hover:text-[var(--admin-foreground)] focus-visible:ring-[#4a6c92]/40"
+              : "admin-text-muted hover:bg-[#eef4fb] hover:text-[var(--admin-foreground)] focus-visible:ring-[#b9cadf]/60"
           }`}
           aria-label="notifications"
         >
@@ -61,8 +55,8 @@ function AdminNavbar({ isDarkMode, onToggleTheme }) {
           onClick={onToggleTheme}
           className={`rounded-xl p-2.5 transition-all duration-200 focus:outline-none focus-visible:ring-2 ${
             isDarkMode
-              ? "text-[#cbd5e1] hover:bg-[#1b2a40] hover:text-[#f8fafc] focus-visible:ring-[#4a6c92]/40"
-              : "text-[#6f8198] hover:bg-[#eef4fb] hover:text-[#223046] focus-visible:ring-[#b9cadf]/60"
+              ? "admin-text hover:bg-[#1b2a40] hover:text-[var(--admin-foreground)] focus-visible:ring-[#4a6c92]/40"
+              : "admin-text-muted hover:bg-[#eef4fb] hover:text-[var(--admin-foreground)] focus-visible:ring-[#b9cadf]/60"
           }`}
           aria-label="toggle theme"
         >
@@ -82,15 +76,13 @@ function AdminNavbar({ isDarkMode, onToggleTheme }) {
               A
             </div>
             <span
-              className={`text-sm font-medium ${
-                isDarkMode ? "text-[#e2e8f0]" : "text-[#2d394b]"
-              }`}
+              className="admin-text text-sm font-medium"
             >
               Admin
             </span>
             <ChevronDown
               size={14}
-              className={isDarkMode ? "text-[#94a3b8]" : "text-[#8a97aa]"}
+              className="admin-text-subtle"
             />
           </button>
 
@@ -112,13 +104,11 @@ function AdminNavbar({ isDarkMode, onToggleTheme }) {
                 </div>
                 <div>
                   <h4
-                    className={`font-semibold ${
-                      isDarkMode ? "text-[#f8fafc]" : "text-[#202c3d]"
-                    }`}
+                    className="admin-text font-semibold"
                   >
                     Super Admin
                   </h4>
-                  <p className={`text-xs ${isDarkMode ? "text-[#94a3b8]" : "text-[#8f99a8]"}`}>
+                  <p className="admin-text-muted text-xs">
                     admin@spadecommunity.com
                   </p>
                 </div>
@@ -128,8 +118,8 @@ function AdminNavbar({ isDarkMode, onToggleTheme }) {
                 <button
                   className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition ${
                     isDarkMode
-                      ? "text-[#cbd5e1] hover:bg-[#1e293b]"
-                      : "text-[#5d697d] hover:bg-[#f1f5f9]"
+                      ? "admin-text hover:bg-[#1e293b]"
+                      : "admin-text-muted hover:bg-[#f1f5f9]"
                   }`}
                 >
                   <User size={16} />
@@ -138,14 +128,14 @@ function AdminNavbar({ isDarkMode, onToggleTheme }) {
                 <button
                   className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition ${
                     isDarkMode
-                      ? "text-[#cbd5e1] hover:bg-[#1e293b]"
-                      : "text-[#5d697d] hover:bg-[#f1f5f9]"
+                      ? "admin-text hover:bg-[#1e293b]"
+                      : "admin-text-muted hover:bg-[#f1f5f9]"
                   }`}
                 >
                   <Settings size={16} />
                   Settings
                 </button>
-<div className="border-t border-[#eef2f6]"></div>
+<div className={`border-t ${isDarkMode ? "border-[#1e293b]" : "border-[#eef2f6]"}`}></div>
                 <button
                   type="button"
                   onClick={() => {
@@ -155,8 +145,8 @@ function AdminNavbar({ isDarkMode, onToggleTheme }) {
                   }}
                   className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left font-medium transition ${
                     isDarkMode
-                      ? "text-[#f18484] hover:bg-[#301f2d]"
-                      : "text-[#de3d3d] hover:bg-[#fff1f1]"
+                      ? "text-[var(--admin-danger-text)] hover:bg-[#301f2d]"
+                      : "text-[var(--admin-danger-text)] hover:bg-[#fff1f1]"
                   }`}
                 >
                   <LogOut size={16} />
