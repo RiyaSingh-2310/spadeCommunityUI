@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+:root {
+  font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+.auth-shell[data-theme="light"] {
+  --kh-input-bg: #f4f8fc;
+  --kh-input-text: #18202f;
+  --kh-input-placeholder: #8f97a7;
+  --kh-input-border: #d5deea;
+  --kh-selection-bg: #dce9ff;
+}
+
+.auth-shell[data-theme="dark"] {
+  --kh-input-bg: #101a2a;
+  --kh-input-text: #f8fafc;
+  --kh-input-placeholder: #94a3b8;
+  --kh-input-border: #344662;
+  --kh-selection-bg: #2c4365;
+}
+
+.kh-input-shell {
+  background-color: var(--kh-input-bg);
+  border-color: var(--kh-input-border);
+}
+
+.kh-input {
+  color: var(--kh-input-text);
+  caret-color: var(--kh-input-text);
+}
+
+.kh-input::placeholder {
+  color: var(--kh-input-placeholder);
+}
+
+.kh-input::selection {
+  background: var(--kh-selection-bg);
+  color: var(--kh-input-text);
+}
+
+/* Normalize browser autofill styles across light/dark themes. */
+.kh-input:-webkit-autofill,
+.kh-input:-webkit-autofill:hover,
+.kh-input:-webkit-autofill:focus,
+.kh-input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--kh-input-text) !important;
+  caret-color: var(--kh-input-text);
+  box-shadow: 0 0 0 1000px var(--kh-input-bg) inset !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--kh-input-bg) inset !important;
+  border-radius: inherit;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+.kh-input:-moz-autofill {
+  box-shadow: 0 0 0 1000px var(--kh-input-bg) inset !important;
+  -moz-text-fill-color: var(--kh-input-text);
+}
