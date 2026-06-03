@@ -1,9 +1,10 @@
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 
-const rows = [
-  { id: "INV-1001", name: "Invoice Alpha", status: "Active", action: "" },
-  { id: "INV-1002", name: "Invoice Beta", status: "Inactive", action: "" },
-];
+const rows = Array.from({ length: 12 }, (_, idx) => ({
+  id: `INV-${1001 + idx}`,
+  name: `Invoice ${idx + 1}`,
+  status: idx % 3 === 0 ? "Inactive" : "Active",
+}));
 
 function InvoiceListPage({ isDarkMode }) {
   return (
@@ -13,8 +14,10 @@ function InvoiceListPage({ isDarkMode }) {
       subtitle="Manage invoice records here."
       searchPlaceholder="Search invoices..."
       actionLabel="Add Invoice"
-      columns={["ID", "Name", "Status", "Action"]}
+      columns={["S.No", "ID", "Name", "Status", "Action"]}
       rows={rows}
+      rowIdKey="id"
+      nowrapAllCells
     />
   );
 }

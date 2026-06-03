@@ -1,9 +1,10 @@
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 
-const rows = [
-  { id: "RSV-71", name: "Follow-up Survey A", status: "Active", action: "" },
-  { id: "RSV-72", name: "Follow-up Survey B", status: "Inactive", action: "" },
-];
+const rows = Array.from({ length: 12 }, (_, idx) => ({
+  id: `RSV-${71 + idx}`,
+  name: `Follow-up Survey ${String.fromCharCode(65 + (idx % 6))}`,
+  status: idx % 3 === 0 ? "Inactive" : "Active",
+}));
 
 function RecontactSurveyPage({ isDarkMode }) {
   return (
@@ -13,8 +14,10 @@ function RecontactSurveyPage({ isDarkMode }) {
       subtitle="Manage recontact survey records here."
       searchPlaceholder="Search recontact surveys..."
       actionLabel="Add Recontact"
-      columns={["ID", "Name", "Status", "Action"]}
+      columns={["S.No", "ID", "Name", "Status", "Action"]}
       rows={rows}
+      rowIdKey="id"
+      nowrapAllCells
     />
   );
 }

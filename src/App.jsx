@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes, useParams } from "react-router-dom";
+import GuestOnly from "./components/auth/GuestOnly";
+import RequireAuth from "./components/auth/RequireAuth";
 import AdminLayout from "./components/admin/AdminLayout";
 import ForgotPassword from "./pages/ForgotPassword";
 import Login from "./pages/Login";
@@ -12,10 +14,21 @@ import UserFormPage from "./pages/admin/UserFormPage";
 import UsersPage from "./pages/admin/UsersPage";
 import InvoiceListPage from "./modules/invoice/pages/InvoiceListPage";
 import InvoiceSettingsPage from "./modules/invoice/pages/InvoiceSettingsPage";
+import HomePageManagementPage from "./modules/home-page/pages/HomePageManagementPage";
 import LogActivityPage from "./modules/log-activity/pages/LogActivityPage";
+import MessagesPage from "./modules/notifications/pages/MessagesPage";
+import CompletedRewardsPage from "./modules/reward-points/pages/CompletedRewardsPage";
+import PendingRewardsPage from "./modules/reward-points/pages/PendingRewardsPage";
+import RewardSettingsPage from "./modules/reward-points/pages/RewardSettingsPage";
+import EditEmailTemplatePage from "./modules/system-email/pages/EditEmailTemplatePage";
+import SystemEmailTemplatePage from "./modules/system-email/pages/SystemEmailTemplatePage";
+import ProfilingQuestionFormPage from "./modules/user-screening/pages/ProfilingQuestionFormPage";
+import QuestionsListPage from "./modules/user-screening/pages/QuestionsListPage";
 import AddPartnerPage from "./modules/partners/pages/AddPartnerPage";
 import PartnersPage from "./modules/partners/pages/PartnersPage";
 import AddProjectManagerPage from "./modules/project-managers/pages/AddProjectManagerPage";
+import AddPrescreenGroupPage from "./modules/prescreen/pages/AddPrescreenGroupPage";
+import AddPrescreenPage from "./modules/prescreen/pages/AddPrescreenPage";
 import PrescreenGroupPage from "./modules/prescreen/pages/PrescreenGroupPage";
 import PrescreenPage from "./modules/prescreen/pages/PrescreenPage";
 import ProjectManagersPage from "./modules/project-managers/pages/ProjectManagersPage";
@@ -28,6 +41,26 @@ import RecontactSurveyPage from "./modules/survey/pages/RecontactSurveyPage";
 import SurveyPage from "./modules/survey/pages/SurveyPage";
 import SurveySettingsPage from "./modules/survey/pages/SurveySettingsPage";
 
+function UserFormEditRoute({ isDarkMode }) {
+  const { id } = useParams();
+  return <UserFormPage key={id} isDarkMode={isDarkMode} mode="edit" />;
+}
+
+function ClientFormEditRoute({ isDarkMode }) {
+  const { id } = useParams();
+  return <ClientFormPage key={id} isDarkMode={isDarkMode} mode="edit" />;
+}
+
+function ProfilingQuestionEditRoute({ isDarkMode }) {
+  const { id } = useParams();
+  return <ProfilingQuestionFormPage key={id} isDarkMode={isDarkMode} mode="edit" />;
+}
+
+function EditEmailTemplateRoute({ isDarkMode }) {
+  const { id } = useParams();
+  return <EditEmailTemplatePage key={id} isDarkMode={isDarkMode} />;
+}
+
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
@@ -37,37 +70,40 @@ function App() {
 
   return (
     <Routes>
-      <Route
-        path="/auth"
-        element={<Login isDarkMode={isDarkMode} onToggleTheme={toggleTheme} />}
-      />
-      <Route
-        path="/auth/forgot-password"
-        element={
-          <ForgotPassword isDarkMode={isDarkMode} onToggleTheme={toggleTheme} />
-        }
-      />
-      <Route
-        path="/auth/verify-otp"
-        element={<VerifyOtp isDarkMode={isDarkMode} onToggleTheme={toggleTheme} />}
-      />
-      <Route
-        path="/auth/reset-password"
-        element={
-          <ResetPassword isDarkMode={isDarkMode} onToggleTheme={toggleTheme} />
-        }
-      />
+      <Route element={<GuestOnly />}>
+        <Route
+          path="/auth"
+          element={<Login isDarkMode={isDarkMode} onToggleTheme={toggleTheme} />}
+        />
+        <Route
+          path="/auth/forgot-password"
+          element={
+            <ForgotPassword isDarkMode={isDarkMode} onToggleTheme={toggleTheme} />
+          }
+        />
+        <Route
+          path="/auth/verify-otp"
+          element={<VerifyOtp isDarkMode={isDarkMode} onToggleTheme={toggleTheme} />}
+        />
+        <Route
+          path="/auth/reset-password"
+          element={
+            <ResetPassword isDarkMode={isDarkMode} onToggleTheme={toggleTheme} />
+          }
+        />
+      </Route>
 
-      <Route
-        element={<AdminLayout isDarkMode={isDarkMode} onToggleTheme={toggleTheme} />}
-      >
+      <Route element={<RequireAuth />}>
+        <Route
+          element={<AdminLayout isDarkMode={isDarkMode} onToggleTheme={toggleTheme} />}
+        >
         <Route path="/" element={<DashboardPage isDarkMode={isDarkMode} />} />
         <Route path="/users" element={<UsersPage isDarkMode={isDarkMode} />} />
         <Route path="/users/add" element={<UserFormPage isDarkMode={isDarkMode} mode="add" />} />
-        <Route path="/users/edit/:id" element={<UserFormPage isDarkMode={isDarkMode} mode="edit" />} />
+        <Route path="/users/edit/:id" element={<UserFormEditRoute isDarkMode={isDarkMode} />} />
         <Route path="/clients" element={<ClientsPage isDarkMode={isDarkMode} />} />
         <Route path="/clients/add" element={<ClientFormPage isDarkMode={isDarkMode} mode="add" />} />
-        <Route path="/clients/edit/:id" element={<ClientFormPage isDarkMode={isDarkMode} mode="edit" />} />
+        <Route path="/clients/edit/:id" element={<ClientFormEditRoute isDarkMode={isDarkMode} />} />
         <Route path="/partners" element={<PartnersPage isDarkMode={isDarkMode} />} />
         <Route path="/partners/add" element={<AddPartnerPage isDarkMode={isDarkMode} />} />
         <Route path="/project-managers" element={<ProjectManagersPage isDarkMode={isDarkMode} />} />
@@ -77,7 +113,9 @@ function App() {
         <Route path="/sales/sales-manager" element={<SalesManagerPage isDarkMode={isDarkMode} />} />
         <Route path="/sales/sales-manager/add" element={<AddSalesManagerPage isDarkMode={isDarkMode} />} />
         <Route path="/prescreen/group" element={<PrescreenGroupPage isDarkMode={isDarkMode} />} />
+        <Route path="/prescreen/group/add" element={<AddPrescreenGroupPage isDarkMode={isDarkMode} />} />
         <Route path="/prescreen" element={<PrescreenPage isDarkMode={isDarkMode} />} />
+        <Route path="/prescreen/add" element={<AddPrescreenPage isDarkMode={isDarkMode} />} />
         <Route path="/survey" element={<SurveyPage isDarkMode={isDarkMode} />} />
         <Route path="/survey/group" element={<GroupSurveyPage isDarkMode={isDarkMode} />} />
         <Route path="/survey/recontact" element={<RecontactSurveyPage isDarkMode={isDarkMode} />} />
@@ -85,6 +123,26 @@ function App() {
         <Route path="/invoice/list" element={<InvoiceListPage isDarkMode={isDarkMode} />} />
         <Route path="/invoice/settings" element={<InvoiceSettingsPage isDarkMode={isDarkMode} />} />
         <Route path="/log-activity" element={<LogActivityPage isDarkMode={isDarkMode} />} />
+        <Route path="/notifications/messages" element={<MessagesPage isDarkMode={isDarkMode} />} />
+        <Route path="/reward-points/pending" element={<PendingRewardsPage isDarkMode={isDarkMode} />} />
+        <Route path="/reward-points/completed" element={<CompletedRewardsPage isDarkMode={isDarkMode} />} />
+        <Route path="/reward-points/settings" element={<RewardSettingsPage isDarkMode={isDarkMode} />} />
+        <Route path="/user-screening/questions" element={<QuestionsListPage isDarkMode={isDarkMode} />} />
+        <Route
+          path="/user-screening/questions/add"
+          element={<ProfilingQuestionFormPage isDarkMode={isDarkMode} mode="add" />}
+        />
+        <Route
+          path="/user-screening/questions/edit/:id"
+          element={<ProfilingQuestionEditRoute isDarkMode={isDarkMode} />}
+        />
+        <Route path="/home-page" element={<HomePageManagementPage isDarkMode={isDarkMode} />} />
+        <Route path="/system-email" element={<SystemEmailTemplatePage isDarkMode={isDarkMode} />} />
+        <Route
+          path="/system-email/edit/:id"
+          element={<EditEmailTemplateRoute isDarkMode={isDarkMode} />}
+        />
+        </Route>
       </Route>
     </Routes>
   );

@@ -1,0 +1,67 @@
+import { Loader2 } from "lucide-react";
+import FormErrorMessage from "./FormErrorMessage";
+
+function DeleteConfirmModal({
+  isOpen,
+  onCancel,
+  onConfirm,
+  isDeleting = false,
+  errorMessage = "",
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="admin-header-overlay absolute inset-0"
+        aria-label="Close delete confirmation"
+        onClick={onCancel}
+        disabled={isDeleting}
+      />
+      <div
+        className="admin-header-surface relative z-10 w-full max-w-md rounded-2xl border p-5 shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-modal-title"
+      >
+        <h2 id="delete-modal-title" className="admin-text mb-2 text-lg font-bold">
+          Delete Record
+        </h2>
+        <p className="admin-text-muted mb-4 text-sm">
+          Are you sure you want to delete this record?
+        </p>
+
+        {errorMessage && (
+          <div className="mb-4">
+            <FormErrorMessage message={errorMessage} />
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isDeleting}
+            className={`h-10 rounded-xl px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${
+              "bg-[var(--admin-header-search-bg)] admin-text border border-[var(--admin-header-surface-border)]"
+            }`}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="flex h-10 items-center justify-center gap-2 rounded-xl bg-[var(--admin-danger-text)] px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isDeleting && <Loader2 size={16} className="animate-spin" />}
+            {isDeleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default DeleteConfirmModal;

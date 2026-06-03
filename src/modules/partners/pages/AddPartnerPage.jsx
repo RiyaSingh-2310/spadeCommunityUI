@@ -2,11 +2,15 @@ import { useMemo, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
+import FormStatusSelect from "../../../components/admin/FormStatusSelect";
+import ProfileImageUpload from "../../../components/admin/ProfileImageUpload";
+import NumericInput from "../../../components/admin/NumericInput";
 import TableCard from "../../../components/admin/TableCard";
 
 function AddPartnerPage({ isDarkMode }) {
   const navigate = useNavigate();
   const [showSecret, setShowSecret] = useState(false);
+  const [preview, setPreview] = useState("");
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -21,6 +25,7 @@ function AddPartnerPage({ isDarkMode }) {
     apiBaseUrl: "",
     apiSecretKey: "",
     apiBody: "",
+    status: "Active",
   });
 
   const canSubmit = useMemo(
@@ -46,6 +51,8 @@ function AddPartnerPage({ isDarkMode }) {
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
+  const numericFieldKeys = new Set(["panelSize", "terminateOverQuota", "qualityTermSurveyClose"]);
+
   return (
     <div className="space-y-5">
       <AdminPageHeader
@@ -57,8 +64,22 @@ function AddPartnerPage({ isDarkMode }) {
         isDarkMode={isDarkMode}
       />
 
-      <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!canSubmit) return;
+          navigate("/partners");
+        }}
+      >
         <TableCard title="Basic Information" isDarkMode={isDarkMode}>
+          <div className="mb-4">
+            <ProfileImageUpload
+              isDarkMode={isDarkMode}
+              preview={preview}
+              onPreviewChange={setPreview}
+            />
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             {[
               ["Name", "name", "Enter Name"],
@@ -72,7 +93,21 @@ function AddPartnerPage({ isDarkMode }) {
             ].map(([label, key, placeholder]) => (
               <div key={key}>
                 <label className="admin-text mb-2 block text-sm font-semibold">{label}</label>
-                <input className={inputClass} placeholder={placeholder} value={form[key]} onChange={(e) => setField(key, e.target.value)} />
+                {numericFieldKeys.has(key) ? (
+                  <NumericInput
+                    className={inputClass}
+                    placeholder={placeholder}
+                    value={form[key]}
+                    onChange={(v) => setField(key, v)}
+                  />
+                ) : (
+                  <input
+                    className={inputClass}
+                    placeholder={placeholder}
+                    value={form[key]}
+                    onChange={(e) => setField(key, e.target.value)}
+                  />
+                )}
               </div>
             ))}
             <div>
@@ -84,6 +119,11 @@ function AddPartnerPage({ isDarkMode }) {
                 <option value="USA">USA</option>
               </select>
             </div>
+            <FormStatusSelect
+              value={form.status}
+              onChange={(status) => setField("status", status)}
+              inputClass={inputClass}
+            />
             <div className="md:col-span-2">
               <label className="admin-text mb-2 block text-sm font-semibold">About Partner</label>
               <textarea
@@ -130,7 +170,7 @@ function AddPartnerPage({ isDarkMode }) {
         </TableCard>
 
         <div className="flex items-center gap-3">
-          <button disabled={!canSubmit} className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]">
+          <button type="submit" disabled={!canSubmit} className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]">
             Submit
           </button>
           <button type="button" onClick={() => navigate("/partners")} className={`h-11 rounded-xl px-5 text-sm font-semibold ${isDarkMode ? "bg-[#1f3047] text-[var(--admin-foreground)]" : "bg-[#eef4fb] text-[var(--admin-foreground)]"}`}>

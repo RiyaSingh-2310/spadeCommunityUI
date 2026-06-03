@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
@@ -27,6 +27,14 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
     confirmPassword: false,
   });
   const [isResetting, setIsResetting] = useState(false);
+  const timeoutRef = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    },
+    []
+  );
 
   const strength = useMemo(() => getPasswordStrength(password), [password]);
   const passwordsMatch =
@@ -49,7 +57,8 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
     }
 
     setIsResetting(true);
-    setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = null;
       setIsResetting(false);
       navigate("/auth");
     }, 600);

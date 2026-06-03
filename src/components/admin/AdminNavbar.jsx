@@ -1,11 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { Bell, ChevronDown, LogOut, Moon, Search, Settings, Sun, User } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Moon, Settings, Sun, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import heroLogo from "../../assets/hero.png";
+import ProfileAvatar from "../shared/ProfileAvatar";
+import { clearAuthSession, getAdminUser } from "../../services/auth/authStorage";
+import HeaderSearch from "./HeaderSearch";
+import NotificationDrawer from "./NotificationDrawer";
 
 function AdminNavbar({ isDarkMode, onToggleTheme }) {
   const navigate = useNavigate();
+  const admin = getAdminUser();
+  const adminName = admin?.displayName || "Admin";
+  const adminEmail = admin?.email || "";
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(3);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -18,146 +26,117 @@ function AdminNavbar({ isDarkMode, onToggleTheme }) {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
+  const iconButtonClass =
+    "admin-icon-btn admin-text-subtle rounded-xl p-2.5 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-header-search-border)]";
+
+  const avatarProps = {
+    imageUrl: admin?.imageUrl,
+    firstName: admin?.firstName,
+    lastName: admin?.lastName,
+    alt: adminName,
+  };
+
   return (
-    <div
-      className={`relative flex h-[72px] w-full items-center justify-end border-b px-4 transition-colors duration-300 sm:px-6 ${
-        isDarkMode
-          ? "border-[#28384f] bg-[#131d2d]"
-          : "border-[#dde7f2] bg-white/95 backdrop-blur"
-      }`}
-    >
-      
+    <>
+      <div
+        className={`admin-header-surface relative flex h-[72px] w-full items-center justify-end border-b px-4 transition-colors duration-300 sm:px-6`}
+      >
+        <div className="flex w-full items-center justify-end gap-2.5 sm:gap-3">
+          <HeaderSearch />
 
-      <div className="flex items-center gap-2.5 sm:gap-3">
-        <button
-          className={`rounded-xl p-2.5 transition-all duration-200 focus:outline-none focus-visible:ring-2 ${
-            isDarkMode
-              ? "admin-text-subtle hover:bg-[#1b2a40] hover:text-[var(--admin-foreground)] focus-visible:ring-[#4a6c92]/40"
-              : "admin-text-muted hover:bg-[#eef4fb] hover:text-[var(--admin-foreground)] focus-visible:ring-[#b9cadf]/60"
-          }`}
-          aria-label="search"
-        >
-          <Search size={18} />
-        </button>
-        <button
-          className={`relative rounded-xl p-2.5 transition-all duration-200 focus:outline-none focus-visible:ring-2 ${
-            isDarkMode
-              ? "admin-text-subtle hover:bg-[#1b2a40] hover:text-[var(--admin-foreground)] focus-visible:ring-[#4a6c92]/40"
-              : "admin-text-muted hover:bg-[#eef4fb] hover:text-[var(--admin-foreground)] focus-visible:ring-[#b9cadf]/60"
-          }`}
-          aria-label="notifications"
-        >
-          <Bell size={18} />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#0ea246]"></span>
-        </button>
-        <button
-          type="button"
-          onClick={onToggleTheme}
-          className={`rounded-xl p-2.5 transition-all duration-200 focus:outline-none focus-visible:ring-2 ${
-            isDarkMode
-              ? "admin-text hover:bg-[#1b2a40] hover:text-[var(--admin-foreground)] focus-visible:ring-[#4a6c92]/40"
-              : "admin-text-muted hover:bg-[#eef4fb] hover:text-[var(--admin-foreground)] focus-visible:ring-[#b9cadf]/60"
-          }`}
-          aria-label="toggle theme"
-        >
-          {isDarkMode ? <Moon size={18} /> : <Sun size={18} />}
-        </button>
-
-        <div className="relative" ref={dropdownRef}>
           <button
-            onClick={() => setIsDropdownOpen((prev) => !prev)}
-            className={`flex items-center gap-2 rounded-full border px-2.5 py-1.5 transition-all duration-200 focus:outline-none ${
-              isDarkMode
-                ? "border-[#344662] bg-[#0f1a2b] hover:bg-[#1a2a40]"
-                : "border-[#dfe8f2] bg-white hover:bg-[#f8fbff]"
-            }`}
+            type="button"
+            onClick={() => setIsNotificationOpen(true)}
+            className={`${iconButtonClass} relative`}
+            aria-label="Open notifications"
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0ea246] text-xs font-bold text-white">
-              A
-            </div>
-            <span
-              className="admin-text text-sm font-medium"
-            >
-              Admin
-            </span>
-            <ChevronDown
-              size={14}
-              className="admin-text-subtle"
-            />
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span className="absolute right-2 top-2 flex h-2 w-2 items-center justify-center">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--admin-success-text)] opacity-60" />
+                <span className="relative h-2 w-2 rounded-full bg-[var(--admin-success-text)]" />
+              </span>
+            )}
           </button>
 
-          {isDropdownOpen && (
-            <div
-              className={`absolute right-0 z-50 mt-3 w-64 rounded-2xl border text-sm shadow-xl ${
-                isDarkMode
-                  ? "border-[#32445f] bg-[#121d2f]"
-                  : "border-[#dce6f2] bg-white"
-              }`}
-            >
-              <div
-                className={`flex items-center gap-3 border-b px-4 py-3 ${
-                  isDarkMode ? "border-[#1e293b]" : "border-[#eef2f6]"
-                }`}
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0ea246] text-base font-bold text-white">
-                  A
-                </div>
-                <div>
-                  <h4
-                    className="admin-text font-semibold"
-                  >
-                    Super Admin
-                  </h4>
-                  <p className="admin-text-muted text-xs">
-                    admin@spadecommunity.com
-                  </p>
-                </div>
-              </div>
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            className={iconButtonClass}
+            aria-label="Toggle theme"
+          >
+            {isDarkMode ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
 
-              <div className="p-2 flex flex-col gap-1">
-                <button
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition ${
-                    isDarkMode
-                      ? "admin-text hover:bg-[#1e293b]"
-                      : "admin-text-muted hover:bg-[#f1f5f9]"
-                  }`}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsDropdownOpen((prev) => !prev)}
+              className="admin-header-surface flex items-center gap-2 rounded-full border px-2.5 py-1.5 transition-all duration-200 focus:outline-none"
+            >
+              <ProfileAvatar {...avatarProps} size="sm" />
+              <span className="admin-text max-w-[120px] truncate text-sm font-medium">
+                {adminName}
+              </span>
+              <ChevronDown size={14} className="admin-text-subtle" />
+            </button>
+
+            {isDropdownOpen && (
+              <div className="admin-header-surface absolute right-0 z-50 mt-3 w-64 rounded-2xl border text-sm shadow-xl">
+                <div
+                  className="flex items-center gap-3 border-b px-4 py-3"
+                  style={{ borderColor: "var(--admin-header-surface-border)" }}
                 >
-                  <User size={16} />
-                  Profile
-                </button>
-                <button
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition ${
-                    isDarkMode
-                      ? "admin-text hover:bg-[#1e293b]"
-                      : "admin-text-muted hover:bg-[#f1f5f9]"
-                  }`}
-                >
-                  <Settings size={16} />
-                  Settings
-                </button>
-<div className={`border-t ${isDarkMode ? "border-[#1e293b]" : "border-[#eef2f6]"}`}></div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    localStorage.removeItem("authToken");
-                    sessionStorage.removeItem("authToken");
-                    navigate("/auth");
-                  }}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left font-medium transition ${
-                    isDarkMode
-                      ? "text-[var(--admin-danger-text)] hover:bg-[#301f2d]"
-                      : "text-[var(--admin-danger-text)] hover:bg-[#fff1f1]"
-                  }`}
-                >
-                  <LogOut size={16} />
-                  Sign Out
-                </button>
+                  <ProfileAvatar {...avatarProps} size="md" />
+                  <div className="min-w-0">
+                    <h4 className="admin-text truncate font-semibold">{adminName}</h4>
+                    <p className="admin-text-muted truncate text-xs">{adminEmail}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1 p-2">
+                  <button
+                    type="button"
+                    className="admin-icon-btn admin-text-muted flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition"
+                  >
+                    <User size={16} />
+                    Profile
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-icon-btn admin-text-muted flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition"
+                  >
+                    <Settings size={16} />
+                    Settings
+                  </button>
+                  <div
+                    className="border-t"
+                    style={{ borderColor: "var(--admin-header-surface-border)" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearAuthSession();
+                      navigate("/auth");
+                    }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left font-medium text-[var(--admin-danger-text)] transition hover:opacity-90"
+                  >
+                    <LogOut size={16} />
+                    Sign Out
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      <NotificationDrawer
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        onUnreadCountChange={setUnreadCount}
+      />
+    </>
   );
 }
 

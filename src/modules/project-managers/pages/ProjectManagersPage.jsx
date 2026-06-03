@@ -1,11 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 
-const rows = [
-  { name: "Aarav Mehta", emailAddress: "aarav@spadecommunity.com", status: "Active" },
-  { name: "Kriti Nair", emailAddress: "kriti@spadecommunity.com", status: "Inactive" },
-  { name: "Rahul Roy", emailAddress: "rahul@spadecommunity.com", status: "Active" },
-];
+const NAMES = ["Aarav Mehta", "Kriti Nair", "Rahul Roy", "Sophia Chen", "Marcus Johnson", "Priya Desai"];
+
+const rows = Array.from({ length: 12 }, (_, idx) => ({
+  id: `pm-${idx + 1}`,
+  name: NAMES[idx % NAMES.length],
+  image: idx % 2 === 0 ? `https://i.pravatar.cc/80?img=${15 + idx}` : undefined,
+  emailAddress: `pm${idx + 1}@spadecommunity.com`,
+  status: idx % 4 === 0 ? "Inactive" : "Active",
+}));
 
 function ProjectManagersPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -17,8 +21,10 @@ function ProjectManagersPage({ isDarkMode }) {
       searchPlaceholder="Search project managers..."
       actionLabel="Add Project Manager"
       onActionClick={() => navigate("/project-managers/add")}
-      columns={["Name", "Email Address", "Status", "Action"]}
+      columns={["S.No", "Name", "Email Address", "Status", "Action"]}
       rows={rows}
+      rowIdKey="id"
+      nowrapAllCells
     />
   );
 }

@@ -1,20 +1,36 @@
+import { useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 
-const rows = [
-  { id: "PG-1001", name: "North Zone Group", status: "Active", action: "" },
-  { id: "PG-1002", name: "South Zone Group", status: "Inactive", action: "" },
+const TITLES = [
+  "Checking Bots",
+  "Arabic Survey",
+  "German Survey",
+  "Security Checks",
+  "Questions For Bots",
+  "Fraud Detection Pack",
 ];
 
+const rows = Array.from({ length: 12 }, (_, idx) => ({
+  id: `pg-${idx + 1}`,
+  surveyTitle: TITLES[idx % TITLES.length],
+  language: ["English", "Arabic", "German", "French", "Spanish"][idx % 5],
+  status: idx % 4 === 0 ? "Inactive" : "Active",
+}));
+
 function PrescreenGroupPage({ isDarkMode }) {
+  const navigate = useNavigate();
+
   return (
     <ModuleListingPage
       isDarkMode={isDarkMode}
       title="Prescreen Group"
-      subtitle="Manage prescreen groups here."
       searchPlaceholder="Search prescreen groups..."
-      actionLabel="Add Group"
-      columns={["ID", "Name", "Status", "Action"]}
+      actionLabel="Add Prescreen Group"
+      onActionClick={() => navigate("/prescreen/group/add")}
+      columns={["S.No", "Survey Title", "Language", "Status", "Action"]}
       rows={rows}
+      rowIdKey="id"
+      nowrapAllCells
     />
   );
 }

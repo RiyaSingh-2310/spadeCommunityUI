@@ -1,9 +1,10 @@
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 
-const rows = [
-  { id: "INS-01", name: "Invoice Prefix Settings", status: "Active", action: "" },
-  { id: "INS-02", name: "Tax Settings", status: "Inactive", action: "" },
-];
+const rows = Array.from({ length: 12 }, (_, idx) => ({
+  id: `INS-${String(idx + 1).padStart(2, "0")}`,
+  name: `Invoice Setting ${idx + 1}`,
+  status: idx % 4 === 0 ? "Inactive" : "Active",
+}));
 
 function InvoiceSettingsPage({ isDarkMode }) {
   return (
@@ -13,8 +14,10 @@ function InvoiceSettingsPage({ isDarkMode }) {
       subtitle="Manage invoice settings here."
       searchPlaceholder="Search invoice settings..."
       actionLabel="Add Invoice Setting"
-      columns={["ID", "Name", "Status", "Action"]}
+      columns={["S.No", "ID", "Name", "Status", "Action"]}
       rows={rows}
+      rowIdKey="id"
+      nowrapAllCells
     />
   );
 }

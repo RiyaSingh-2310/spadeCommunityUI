@@ -1,13 +1,19 @@
 import { useMemo, useState } from "react";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
+import { ApiError } from "../services/api/ApiError";
+import { loginAdmin } from "../services/auth/authApi";
+import { saveAuthSession } from "../services/auth/authStorage";
 
 function Login({ isDarkMode, onToggleTheme }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState("");
   const [touched, setTouched] = useState({
     email: false,
     password: false,
@@ -23,19 +29,48 @@ function Login({ isDarkMode, onToggleTheme }) {
     touched.email && email.trim().length > 0 && !hasEmailFormat;
   const showPasswordError = touched.password && password.trim().length === 0;
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const hasEmail = email.trim().length > 0;
     const hasPassword = password.trim().length > 0;
     const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
     setTouched({ email: true, password: true });
+    setApiError("");
 
     if (!hasEmail || !hasPassword || !isEmailValid) {
       return;
     }
 
-    navigate("/dashboard");
+    setIsSubmitting(true);
+    try {
+      const response = await loginAdmin({
+        email: email.trim(),
+        password,
+      });
+
+      saveAuthSession({
+        token: response.token,
+        admin: {
+          ...(response.admin || {}),
+          firstName: response.firstName ?? response.admin?.firstName,
+          lastName: response.lastName ?? response.admin?.lastName,
+          email: response.email ?? response.admin?.email,
+          imageUrl: response.imageUrl ?? response.admin?.imageUrl,
+        },
+      });
+
+      const redirectTo = location.state?.from || "/";
+      navigate(redirectTo, { replace: true });
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : error?.message || "Login failed. Please try again.";
+      setApiError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -104,7 +139,7 @@ function Login({ isDarkMode, onToggleTheme }) {
               )}
               {showEmailFormatError && (
                 <p className="mt-1.5 text-xs text-[#de3d3d]">
-                  Enter a valid email address.
+                  Please enter a valid email address
                 </p>
               )}
             </div>
@@ -181,11 +216,18 @@ function Login({ isDarkMode, onToggleTheme }) {
               </div>
             </div>
 
+            {apiError && (
+              <p className="rounded-xl border border-[#de3d3d]/30 bg-[#de3d3d]/10 px-3 py-2 text-sm text-[#de3d3d]">
+                {apiError}
+              </p>
+            )}
+
             <button
               type="submit"
-              className="mt-1 flex h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-[#10a950] text-base font-semibold text-white shadow-[0_10px_24px_rgba(16,169,80,0.3)] transition-all duration-200 hover:-translate-y-px hover:bg-[#0f9b49] active:translate-y-0"
+              disabled={isSubmitting}
+              className="mt-1 flex h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-[#10a950] text-base font-semibold text-white shadow-[0_10px_24px_rgba(16,169,80,0.3)] transition-all duration-200 hover:-translate-y-px hover:bg-[#0f9b49] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
             >
-              Login
+              {isSubmitting ? "Signing in..." : "Login"}
             </button>
           </form>
     </AuthLayout>

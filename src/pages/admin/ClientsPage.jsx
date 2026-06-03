@@ -1,107 +1,68 @@
-import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AdminPageHeader from "../../components/admin/AdminPageHeader";
-import IconActions from "../../components/admin/IconActions";
-import StatusToggle from "../../components/admin/StatusToggle";
-import TableCard from "../../components/admin/TableCard";
+import ModuleListingPage from "../../modules/shared/components/ModuleListingPage";
 
-const initialClients = [
-  { id: 1, code: "CL-1001", name: "Alpha Corp", email: "ops@alpha.com", country: "India", contact: "+91 9876543210", website: "www.alpha.com", active: true },
-  { id: 2, code: "CL-1002", name: "Beta Labs", email: "admin@beta.com", country: "UAE", contact: "+971 555551111", website: "www.beta.com", active: true },
-  { id: 3, code: "CL-1003", name: "Gamma Tech", email: "team@gamma.com", country: "USA", contact: "+1 2102229988", website: "www.gamma.io", active: false },
-];
+const CLIENT_NAMES = ["Alpha Corp", "Beta Labs", "Gamma Tech", "Delta Works", "Epsilon Ltd"];
+
+const initialClients = Array.from({ length: 12 }, (_, idx) => ({
+  id: idx + 1,
+  clientCode: `CL-${1001 + idx}`,
+  name: CLIENT_NAMES[idx % CLIENT_NAMES.length],
+  emailAddress: `contact${idx + 1}@client.com`,
+  country: ["India", "UAE", "USA", "UK", "Canada"][idx % 5],
+  contactNumber: `+1 555${String(1000 + idx).slice(-4)}`,
+  websiteUrl: `https://client${idx + 1}.com`,
+  status: idx % 5 === 0 ? "Inactive" : "Active",
+  image: idx % 3 === 0 ? `https://i.pravatar.cc/80?img=${20 + idx}` : undefined,
+}));
 
 function ClientsPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const [query, setQuery] = useState("");
-  const [rows, setRows] = useState(initialClients);
+  const [clients, setClients] = useState(initialClients);
+  const [, setListVersion] = useState(0);
+  const bumpList = () => setListVersion((v) => v + 1);
 
-  const filtered = useMemo(
-    () =>
-      rows.filter((client) =>
-        `${client.name} ${client.code} ${client.email}`.toLowerCase().includes(query.toLowerCase())
-      ),
-    [rows, query]
-  );
+  const handleStatusToggle = (row) => {
+    setClients((prev) =>
+      prev.map((item) =>
+        item.id === row.id
+          ? { ...item, status: item.status === "Active" ? "Inactive" : "Active" }
+          : item
+      )
+    );
+    bumpList();
+  };
+
+  const handleDelete = (row) => {
+    setClients((prev) => prev.filter((item) => item.id !== row.id));
+    bumpList();
+  };
 
   return (
-    <div className="space-y-4">
-      <AdminPageHeader title="Client List" isDarkMode={isDarkMode} />
-
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-        <label className={`flex h-10 w-full items-center gap-2 rounded-xl border px-3 sm:max-w-[340px] ${
-          isDarkMode ? "border-[#344662] bg-[#101a2a]" : "border-[#d8e3ef] bg-white"
-        }`}>
-          <Search size={15} className="admin-text-subtle" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="admin-text w-full bg-transparent text-sm outline-none placeholder:text-[var(--admin-subtle-foreground)]"
-            placeholder="Search clients..."
-          />
-        </label>
-        <button
-          onClick={() => navigate("/clients/add")}
-          className="h-10 rounded-xl bg-[#10a950] px-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,169,80,0.28)] transition hover:bg-[#0f9b49]"
-        >
-          Add Client User
-        </button>
-      </div>
-
-      <TableCard isDarkMode={isDarkMode}>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-          <thead>
-            <tr className="admin-text-muted">
-              {["S.No", "Client Code", "Name", "Email Address", "Country", "Contact Number", "Website URL", "Status", "Action"].map((h) => (
-                <th
-                  key={h}
-                  className={`px-4 py-3 text-xs font-semibold uppercase tracking-wide ${
-                    h === "Action" ? "text-right" : "text-left"
-                  }`}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((client) => (
-              <tr key={client.id} className={`border-t align-middle ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}>
-                <td className="admin-text px-4 py-3 align-middle">{client.id}</td>
-                <td className="admin-text px-4 py-3 align-middle whitespace-nowrap">{client.code}</td>
-                <td className="admin-text px-4 py-3 align-middle">{client.name}</td>
-                <td className="admin-text px-4 py-3 align-middle whitespace-nowrap">{client.email}</td>
-                <td className="admin-text px-4 py-3 align-middle whitespace-nowrap">{client.country}</td>
-                <td className="admin-text px-4 py-3 align-middle whitespace-nowrap">{client.contact}</td>
-                <td className="admin-text px-4 py-3 align-middle whitespace-nowrap">{client.website}</td>
-                <td className="px-4 py-3 align-middle">
-                  <StatusToggle
-                    checked={client.active}
-                    onChange={() =>
-                      setRows((prev) =>
-                        prev.map((item) =>
-                          item.id === client.id ? { ...item, active: !item.active } : item
-                        )
-                      )
-                    }
-                  />
-                </td>
-                <td className="px-4 py-3 align-middle text-right">
-                  <IconActions
-                    isDarkMode={isDarkMode}
-                    onEdit={() => navigate(`/clients/edit/${client.id}`)}
-                    onDelete={() => setRows((prev) => prev.filter((item) => item.id !== client.id))}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          </table>
-        </div>
-      </TableCard>
-    </div>
+    <ModuleListingPage
+      isDarkMode={isDarkMode}
+      title="Client List"
+      searchPlaceholder="Search clients..."
+      actionLabel="Add Client User"
+      onActionClick={() => navigate("/clients/add")}
+      columns={[
+        "S.No",
+        "Client Code",
+        "Name",
+        "Email Address",
+        "Country",
+        "Contact Number",
+        "Website URL",
+        "Status",
+        "Action",
+      ]}
+      rows={clients}
+      rowIdKey="id"
+      onEdit={(row) => navigate(`/clients/edit/${row.id}`)}
+      onDelete={handleDelete}
+      onStatusToggle={handleStatusToggle}
+      nowrapAllCells
+    />
   );
 }
 

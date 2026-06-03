@@ -1,9 +1,10 @@
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 
-const rows = [
-  { id: "SV-11", name: "Citizen Survey", status: "Active", action: "" },
-  { id: "SV-12", name: "Waste Survey", status: "Inactive", action: "" },
-];
+const rows = Array.from({ length: 12 }, (_, idx) => ({
+  id: `SV-${11 + idx}`,
+  name: `Survey ${idx + 1}`,
+  status: idx % 3 === 0 ? "Inactive" : "Active",
+}));
 
 function SurveyPage({ isDarkMode }) {
   return (
@@ -13,8 +14,10 @@ function SurveyPage({ isDarkMode }) {
       subtitle="Manage survey records here."
       searchPlaceholder="Search surveys..."
       actionLabel="Add Survey"
-      columns={["ID", "Name", "Status", "Action"]}
+      columns={["S.No", "ID", "Name", "Status", "Action"]}
       rows={rows}
+      rowIdKey="id"
+      nowrapAllCells
     />
   );
 }

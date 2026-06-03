@@ -25,6 +25,14 @@ function VerifyOtp({ isDarkMode, onToggleTheme }) {
   const [error, setError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const inputsRef = useRef([]);
+  const verifyTimeoutRef = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (verifyTimeoutRef.current) clearTimeout(verifyTimeoutRef.current);
+    },
+    []
+  );
 
   useEffect(() => {
     if (timer === 0) {
@@ -85,7 +93,8 @@ function VerifyOtp({ isDarkMode, onToggleTheme }) {
       return;
     }
     setIsVerifying(true);
-    setTimeout(() => {
+    verifyTimeoutRef.current = setTimeout(() => {
+      verifyTimeoutRef.current = null;
       setIsVerifying(false);
       navigate("/auth/reset-password", { state: { email } });
     }, 600);

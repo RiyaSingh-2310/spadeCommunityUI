@@ -43,7 +43,14 @@ function AddRfqPage({ isDarkMode }) {
         isDarkMode={isDarkMode}
       />
       <TableCard title="RFQ Details" isDarkMode={isDarkMode}>
-        <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!canSubmit) return;
+            navigate("/sales/rfq");
+          }}
+        >
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">Client Name</label>
@@ -81,7 +88,7 @@ function AddRfqPage({ isDarkMode }) {
             </div>
           </div>
           <div className="flex items-center gap-3 pt-2">
-            <button disabled={!canSubmit} className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]">
+            <button type="submit" disabled={!canSubmit} className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]">
               Submit
             </button>
             <button type="button" onClick={() => navigate("/sales/rfq")} className={`h-11 rounded-xl px-5 text-sm font-semibold ${isDarkMode ? "bg-[#1f3047] text-[var(--admin-foreground)]" : "bg-[#eef4fb] text-[var(--admin-foreground)]"}`}>

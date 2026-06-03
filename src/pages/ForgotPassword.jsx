@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
@@ -8,6 +8,14 @@ function ForgotPassword({ isDarkMode, onToggleTheme }) {
   const [email, setEmail] = useState("");
   const [touched, setTouched] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const timeoutRef = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    },
+    []
+  );
 
   const hasEmail = email.trim().length > 0;
   const hasValidEmail = useMemo(
@@ -23,7 +31,8 @@ function ForgotPassword({ isDarkMode, onToggleTheme }) {
     }
 
     setIsSending(true);
-    setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = null;
       setIsSending(false);
       navigate("/auth/verify-otp", { state: { email: email.trim() } });
     }, 600);
@@ -93,7 +102,7 @@ function ForgotPassword({ isDarkMode, onToggleTheme }) {
           )}
           {touched && hasEmail && !hasValidEmail && (
             <p className="mt-1.5 text-xs text-[#de3d3d]">
-              Enter a valid email address.
+              Please enter a valid email address
             </p>
           )}
         </div>

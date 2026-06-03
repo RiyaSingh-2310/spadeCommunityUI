@@ -1,9 +1,10 @@
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 
-const rows = [
-  { id: "GSV-41", name: "Urban Group Survey", status: "Active", action: "" },
-  { id: "GSV-42", name: "Rural Group Survey", status: "Inactive", action: "" },
-];
+const rows = Array.from({ length: 12 }, (_, idx) => ({
+  id: `GSV-${41 + idx}`,
+  name: `Group Survey ${idx + 1}`,
+  status: idx % 4 === 0 ? "Inactive" : "Active",
+}));
 
 function GroupSurveyPage({ isDarkMode }) {
   return (
@@ -13,8 +14,10 @@ function GroupSurveyPage({ isDarkMode }) {
       subtitle="Manage group survey records here."
       searchPlaceholder="Search group surveys..."
       actionLabel="Add Group Survey"
-      columns={["ID", "Name", "Status", "Action"]}
+      columns={["S.No", "ID", "Name", "Status", "Action"]}
       rows={rows}
+      rowIdKey="id"
+      nowrapAllCells
     />
   );
 }

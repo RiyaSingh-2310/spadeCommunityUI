@@ -9,7 +9,7 @@ const stats = [
   { icon: ClipboardList, label: "Project Managers", count: 19, growth: "+3%" },
 ];
 
-const surveyRows = Array.from({ length: 8 }).map((_, idx) => ({
+const surveyRows = Array.from({ length: 3 }).map((_, idx) => ({
   id: `SRV-${1000 + idx}`,
   name: `Survey ${idx + 1}`,
   start: "2026-06-01",
@@ -17,13 +17,19 @@ const surveyRows = Array.from({ length: 8 }).map((_, idx) => ({
   status: idx % 2 === 0 ? "Active" : "Inactive",
 }));
 
-const liveRows = Array.from({ length: 6 }).map((_, idx) => ({
+const liveRows = Array.from({ length: 3 }).map((_, idx) => ({
   id: `LGS-${300 + idx}`,
   name: `Group Survey ${idx + 1}`,
   status: idx % 2 === 0 ? "Active" : "Inactive",
 }));
 
+const TABLE_HEAD =
+  "px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+
 function DashboardPage({ isDarkMode }) {
+  const borderRow = isDarkMode ? "border-[#263850]" : "border-[#e6edf5]";
+  const headClass = "admin-text-muted";
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -50,70 +56,88 @@ function DashboardPage({ isDarkMode }) {
                 {item.growth} <ArrowUpRight size={12} />
               </span>
             </div>
-            <p className={`text-2xl font-bold ${isDarkMode ? "text-[#f8fafc]" : "text-[#1f2b3d]"}`}>
-              {item.count}
-            </p>
-            <p className={`mt-1 text-sm ${isDarkMode ? "text-[#9fb0c8]" : "text-[#6f8098]"}`}>
-              {item.label}
-            </p>
+            <p className="admin-text text-2xl font-bold">{item.count}</p>
+            <p className="admin-text-muted mt-1 text-sm">{item.label}</p>
           </article>
         ))}
       </div>
 
       <TableCard title="Survey List" isDarkMode={isDarkMode}>
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className={isDarkMode ? "text-[#9fb0c8]" : "text-[#6f8098]"}>
-              {["ID", "Name", "Start Date", "End Date", "Status", "Action"].map((h) => (
-                <th key={h} className="px-3 py-3 text-left font-semibold">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {surveyRows.map((row) => (
-              <tr key={row.id} className={`border-t ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}>
-                <td className="px-3 py-3">{row.id}</td>
-                <td className="px-3 py-3">{row.name}</td>
-                <td className="px-3 py-3">{row.start}</td>
-                <td className="px-3 py-3">{row.end}</td>
-                <td className="px-3 py-3">
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    row.status === "Active" ? "bg-[#17a34a]/15 text-[#17a34a]" : "bg-[#94a3b8]/20 text-[#7b8da5]"
-                  }`}>
-                    {row.status}
-                  </span>
-                </td>
-                <td className="px-3 py-3">
-                  <button className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[#18a354] hover:bg-[#18a354]/10">Edit</button>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="admin-table min-w-full text-sm">
+            <thead>
+              <tr className={headClass}>
+                {["ID", "Name", "Start Date", "End Date", "Status", "Action"].map((h) => (
+                  <th key={h} className={TABLE_HEAD}>
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {surveyRows.map((row) => (
+                <tr key={row.id} className={`border-t ${borderRow}`}>
+                  <td className="admin-text whitespace-nowrap px-3 py-3">{row.id}</td>
+                  <td className="admin-text whitespace-nowrap px-3 py-3">{row.name}</td>
+                  <td className="admin-text whitespace-nowrap px-3 py-3">{row.start}</td>
+                  <td className="admin-text whitespace-nowrap px-3 py-3">{row.end}</td>
+                  <td className="whitespace-nowrap px-3 py-3">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        row.status === "Active"
+                          ? "bg-[var(--admin-success-text)]/15 text-[var(--admin-success-text)]"
+                          : "bg-[var(--admin-muted-foreground)]/20 text-[var(--admin-muted-foreground)]"
+                      }`}
+                    >
+                      {row.status}
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3">
+                    <button
+                      type="button"
+                      className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--admin-success-text)] hover:bg-[var(--admin-success-text)]/10"
+                    >
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </TableCard>
 
       <TableCard title="Live Group Survey" isDarkMode={isDarkMode}>
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className={isDarkMode ? "text-[#9fb0c8]" : "text-[#6f8098]"}>
-              {["ID", "Name", "Status", "Action"].map((h) => (
-                <th key={h} className="px-3 py-3 text-left font-semibold">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {liveRows.map((row) => (
-              <tr key={row.id} className={`border-t ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}>
-                <td className="px-3 py-3">{row.id}</td>
-                <td className="px-3 py-3">{row.name}</td>
-                <td className="px-3 py-3">{row.status}</td>
-                <td className="px-3 py-3">
-                  <button className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[#18a354] hover:bg-[#18a354]/10">Edit</button>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="admin-table min-w-full text-sm">
+            <thead>
+              <tr className={headClass}>
+                {["ID", "Name", "Status", "Action"].map((h) => (
+                  <th key={h} className={TABLE_HEAD}>
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {liveRows.map((row) => (
+                <tr key={row.id} className={`border-t ${borderRow}`}>
+                  <td className="admin-text whitespace-nowrap px-3 py-3">{row.id}</td>
+                  <td className="admin-text whitespace-nowrap px-3 py-3">{row.name}</td>
+                  <td className="admin-text whitespace-nowrap px-3 py-3">{row.status}</td>
+                  <td className="whitespace-nowrap px-3 py-3">
+                    <button
+                      type="button"
+                      className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--admin-success-text)] hover:bg-[var(--admin-success-text)]/10"
+                    >
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </TableCard>
     </div>
   );
