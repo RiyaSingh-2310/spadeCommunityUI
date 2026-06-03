@@ -3,6 +3,8 @@ import DebouncedSearchInput from "../../../components/admin/DebouncedSearchInput
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import AdminPagination from "../../../components/admin/AdminPagination";
 import AvatarNameCell from "../../../components/admin/AvatarNameCell";
+import ProfileAvatar from "../../../components/shared/ProfileAvatar";
+import TableLoadingSkeleton from "../../../components/admin/TableLoadingSkeleton";
 import IconActions from "../../../components/admin/IconActions";
 import RewardPendingActions from "../../../components/admin/RewardPendingActions";
 import StatusToggle from "../../../components/admin/StatusToggle";
@@ -14,6 +16,8 @@ import {
   isActionColumn,
   isDetailsColumn,
   isNowrapDataColumn,
+  isIdColumn,
+  isProfileImageColumn,
   isSnoColumn,
   isStatusColumn,
   TABLE_HEAD_BASE,
@@ -46,6 +50,10 @@ function ModuleListingPage({
   onView,
   onApprove,
   onReject,
+  isLoading = false,
+  loadingMessage = "Loading...",
+  emptyMessage = "No records found",
+  searchFields = null,
 }) {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query);
@@ -68,12 +76,22 @@ function ModuleListingPage({
     setCurrentPage(1);
   };
 
-  const filtered = data.filter((row) =>
-    Object.values(row)
+  const normalizedQuery = debouncedQuery.trim().toLowerCase();
+
+  const filtered = data.filter((row) => {
+    if (!normalizedQuery) return true;
+    if (searchFields?.length) {
+      return searchFields.some((field) =>
+        String(row[field] ?? "")
+          .toLowerCase()
+          .includes(normalizedQuery)
+      );
+    }
+    return Object.values(row)
       .join(" ")
       .toLowerCase()
-      .includes(debouncedQuery.toLowerCase())
-  );
+      .includes(normalizedQuery);
+  });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
   const safePage = Math.min(currentPage, totalPages);
@@ -82,6 +100,8 @@ function ModuleListingPage({
     () => paginateItems(filtered, safePage, pageSize),
     [filtered, safePage, pageSize]
   );
+
+  const hasProfileImageColumn = columns.some(isProfileImageColumn);
 
   return (
     <div className="space-y-6">
@@ -111,6 +131,9 @@ function ModuleListingPage({
       </div>
 
       <TableCard isDarkMode={isDarkMode}>
+        {isLoading && (
+          <p className="admin-text-muted mb-3 px-1 text-sm">{loadingMessage}</p>
+        )}
         <div className="overflow-x-auto">
           <table className="admin-table min-w-full text-sm">
           <thead>
@@ -128,7 +151,22 @@ function ModuleListingPage({
             </tr>
           </thead>
           <tbody>
-            {pagination.items.map((row, idx) => {
+            {isLoading ? (
+              <TableLoadingSkeleton
+                columns={columns}
+                isDarkMode={isDarkMode}
+              />
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="admin-text-muted px-4 py-16 text-center text-sm"
+                >
+                  {emptyMessage}
+                </td>
+              </tr>
+            ) : (
+            pagination.items.map((row, idx) => {
               const globalIdx = (pagination.currentPage - 1) * pageSize + idx;
               return (
               <tr
@@ -144,10 +182,32 @@ function ModuleListingPage({
                       </td>
                     );
                   }
+                  if (isIdColumn(col)) {
+                    return (
+                      <td key={col} className="px-4 py-3 align-middle whitespace-nowrap">
+                        <span className="admin-text">{row.id ?? "-"}</span>
+                      </td>
+                    );
+                  }
+                  if (isProfileImageColumn(col)) {
+                    return (
+                      <td key={col} className="px-4 py-3 align-middle whitespace-nowrap">
+                        <ProfileAvatar
+                          imageUrl={row.imageUrl ?? row.image}
+                          firstName={row.firstName}
+                          lastName={row.lastName}
+                          size="xs"
+                          alt={row.name}
+                        />
+                      </td>
+                    );
+                  }
                   if (key === "status" && showStatus && statusAsText) {
                     return (
                       <td key={col} className="px-4 py-3 align-middle whitespace-nowrap">
-                        <span className="admin-text">{row.status || "-"}</span>
+                        <span className="admin-text">
+                          {row.statusLabel ?? row.status ?? "-"}
+                        </span>
                       </td>
                     );
                   }
@@ -222,10 +282,17 @@ function ModuleListingPage({
                         key={col}
                         className={`px-4 py-3 align-middle ${nowrapAllCells ? "whitespace-nowrap" : ""}`}
                       >
-                        <AvatarNameCell
-                          name={row.name}
-                          image={row.image || row.avatar}
-                        />
+                        {hasProfileImageColumn ? (
+                          <span className="admin-text min-w-0 truncate">{row.name || "-"}</span>
+                        ) : (
+                          <AvatarNameCell
+                            name={row.name}
+                            image={row.image || row.avatar}
+                            imageUrl={row.imageUrl ?? row.image}
+                            firstName={row.firstName}
+                            lastName={row.lastName}
+                          />
+                        )}
                       </td>
                     );
                   }
@@ -245,16 +312,19 @@ function ModuleListingPage({
                 })}
               </tr>
             );
-            })}
+            })
+            )}
           </tbody>
           </table>
         </div>
-        <AdminPagination
-          isDarkMode={isDarkMode}
-          currentPage={pagination.currentPage}
-          totalPages={pagination.totalPages}
-          onPageChange={setCurrentPage}
-        />
+        {!isLoading && filtered.length > 0 && (
+          <AdminPagination
+            isDarkMode={isDarkMode}
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </TableCard>
     </div>
   );

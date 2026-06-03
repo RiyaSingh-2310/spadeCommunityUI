@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
 import DeleteConfirmModal from "../../components/admin/DeleteConfirmModal";
 import FormErrorMessage from "../../components/admin/FormErrorMessage";
 import FormFlashMessage from "../../components/admin/FormFlashMessage";
@@ -13,6 +12,15 @@ import {
   getRecords,
   updateRecord,
 } from "../../services/users/usersApi";
+
+const LIST_COLUMNS = [
+  "ID",
+  "Profile Image",
+  "Name",
+  "Email Address",
+  "Status",
+  "Action",
+];
 
 function UsersPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -32,10 +40,7 @@ function UsersPage({ isDarkMode }) {
       const data = await getRecords();
       setUsers(data.items);
     } catch (error) {
-      const msg =
-        error instanceof ApiError
-          ? error.message
-          : error?.message || "Failed to load users";
+      const msg = error instanceof ApiError ? error.message : error?.message || "";
       setLoadError(msg);
       setUsers([]);
     } finally {
@@ -72,14 +77,11 @@ function UsersPage({ isDarkMode }) {
     setDeleteError("");
     try {
       const data = await deleteRecord(deleteTarget.id);
-      setUsers((prev) => prev.filter((item) => item.id !== deleteTarget.id));
       setDeleteTarget(null);
       showFlash(data.message, "success");
+      await fetchUsers();
     } catch (error) {
-      const msg =
-        error instanceof ApiError
-          ? error.message
-          : error?.message || "Failed to delete user";
+      const msg = error instanceof ApiError ? error.message : error?.message || "";
       setDeleteError(msg);
     } finally {
       setIsDeleting(false);
@@ -94,15 +96,10 @@ function UsersPage({ isDarkMode }) {
         permission_type: row.permission_type || "admin",
         status: formStatusToApiStatus(nextStatus),
       });
-      setUsers((prev) =>
-        prev.map((item) =>
-          item.id === row.id ? { ...item, status: nextStatus } : item
-        )
-      );
       showFlash(data.message, "success");
+      await fetchUsers();
     } catch (error) {
-      const msg =
-        error instanceof ApiError ? error.message : error?.message || "";
+      const msg = error instanceof ApiError ? error.message : error?.message || "";
       showFlash(msg, "error");
     }
   };
@@ -112,31 +109,24 @@ function UsersPage({ isDarkMode }) {
       <FormFlashMessage message={flashMessage} type={flashType} />
       {loadError && <FormErrorMessage message={loadError} />}
 
-      {isLoading ? (
-        <div className="flex items-center justify-center gap-2 py-16">
-          <Loader2 size={24} className="animate-spin text-[var(--admin-success-text)]" />
-          <span className="admin-text-muted text-sm">Loading users...</span>
-        </div>
-      ) : users.length === 0 && !loadError ? (
-        <div className="admin-text-muted rounded-2xl border border-dashed border-[var(--admin-header-surface-border)] px-6 py-16 text-center text-sm">
-          No users found.
-        </div>
-      ) : (
-        <ModuleListingPage
-          isDarkMode={isDarkMode}
-          title="Admin Users"
-          searchPlaceholder="Search users..."
-          actionLabel="Add User"
-          onActionClick={() => navigate("/users/add")}
-          columns={["S.No", "Name", "Email", "Status", "Action"]}
-          rows={users}
-          rowIdKey="id"
-          onEdit={(row) => navigate(`/users/edit/${row.id}`)}
-          onDelete={handleDeleteRequest}
-          onStatusToggle={handleStatusToggle}
-          nowrapAllCells
-        />
-      )}
+      <ModuleListingPage
+        isDarkMode={isDarkMode}
+        title="Admin Users"
+        searchPlaceholder="Search by name or email..."
+        actionLabel="Add User"
+        onActionClick={() => navigate("/users/add")}
+        columns={LIST_COLUMNS}
+        rows={users}
+        rowIdKey="id"
+        searchFields={["name", "email"]}
+        isLoading={isLoading}
+        loadingMessage="Loading Admin Users..."
+        emptyMessage="No Admin Users Found"
+        onEdit={(row) => navigate(`/users/edit/${row.id}`)}
+        onDelete={handleDeleteRequest}
+        onStatusToggle={handleStatusToggle}
+        nowrapAllCells
+      />
 
       <DeleteConfirmModal
         isOpen={Boolean(deleteTarget)}

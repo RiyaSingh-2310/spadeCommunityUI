@@ -83,9 +83,13 @@ export async function getRecords() {
   };
 }
 
+/** GET /api/admin/:id — single admin for edit/details only (not for listing) */
 export async function getRecord(id) {
   const data = await apiRequest(`/api/admin/${id}`);
   assertSuccess(data, "Failed to load user");
+  if (!data.admin) {
+    throw new ApiError(data?.message || "Failed to load user", data);
+  }
   return data.admin;
 }
 

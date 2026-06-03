@@ -69,11 +69,9 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
         setExistingImage(admin?.image_url || "");
       } catch (error) {
         if (cancelled) return;
-        const message =
-          error instanceof ApiError
-            ? error.message
-            : error?.message || "Failed to load user";
-        setLoadError(message);
+        setLoadError(
+          error instanceof ApiError ? error.message : error?.message || ""
+        );
       } finally {
         if (!cancelled) setIsLoadingRecord(false);
       }
