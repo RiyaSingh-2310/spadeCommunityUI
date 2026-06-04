@@ -14,9 +14,7 @@ function FormRadioGroup({ label, name, value, onChange, options, isDarkMode }) {
               value={option}
               checked={value === option}
               onChange={() => onChange(option)}
-              className={`h-4 w-4 accent-[#10a950] ${
-                isDarkMode ? "border-[#344662]" : "border-[#d8e3ef]"
-              }`}
+              className="h-4 w-4 accent-[var(--admin-primary-color)]"
             />
             {option}
           </label>

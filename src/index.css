@@ -18,6 +18,8 @@ body {
 }
 
 .admin-shell[data-theme="light"] {
+  --primary-color: #10a950;
+  --admin-primary-color: #10a950;
   --admin-foreground: #1f2b3d;
   --admin-muted-foreground: #6f8098;
   --admin-subtle-foreground: #8b98ab;
@@ -37,9 +39,23 @@ body {
   --admin-header-surface-border: #dce6f2;
   --admin-header-overlay: rgba(15, 23, 36, 0.45);
   --admin-notification-unread-bg: rgba(14, 162, 70, 0.12);
+  --admin-checkbox-border: #c5d3e3;
+  --admin-checkbox-bg: #ffffff;
+  --admin-checkbox-hover-border: #10a950;
+  --admin-checkbox-checked-bg: #10a950;
+  --admin-checkbox-checked-border: #10a950;
+  --admin-checkbox-check-color: #ffffff;
+  --admin-checkbox-focus-ring: rgba(16, 169, 80, 0.35);
+  --admin-checkbox-disabled-opacity: 0.45;
+  --admin-permissions-table-head-bg: #f8fafc;
+  --admin-permissions-table-border: #d8e3ef;
+  --admin-permissions-row-border: #e6edf5;
+  --admin-permissions-row-hover: #f2f7fc;
 }
 
 .admin-shell[data-theme="dark"] {
+  --primary-color: #28c56d;
+  --admin-primary-color: #28c56d;
   --admin-foreground: #f8fafc;
   --admin-muted-foreground: #9fb0c8;
   --admin-subtle-foreground: #8ea5c2;
@@ -59,6 +75,18 @@ body {
   --admin-header-surface-border: #32445f;
   --admin-header-overlay: rgba(2, 6, 23, 0.65);
   --admin-notification-unread-bg: rgba(40, 197, 109, 0.15);
+  --admin-checkbox-border: #4a5f7a;
+  --admin-checkbox-bg: #101a2a;
+  --admin-checkbox-hover-border: #28c56d;
+  --admin-checkbox-checked-bg: #28c56d;
+  --admin-checkbox-checked-border: #28c56d;
+  --admin-checkbox-check-color: #ffffff;
+  --admin-checkbox-focus-ring: rgba(40, 197, 109, 0.4);
+  --admin-checkbox-disabled-opacity: 0.45;
+  --admin-permissions-table-head-bg: #152238;
+  --admin-permissions-table-border: #344662;
+  --admin-permissions-row-border: #263850;
+  --admin-permissions-row-hover: #1a273c;
 }
 
 .admin-text {
@@ -99,6 +127,72 @@ body {
   content: attr(data-placeholder);
   color: var(--admin-subtle-foreground);
   pointer-events: none;
+}
+
+/* Theme-aware checkboxes (permissions, forms) */
+.admin-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  flex-shrink: 0;
+  border-radius: 0.25rem;
+  border: 1.5px solid var(--admin-checkbox-border);
+  background-color: var(--admin-checkbox-bg);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.admin-checkbox:hover:not(:disabled) {
+  border-color: var(--admin-checkbox-hover-border);
+}
+
+.admin-checkbox:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--admin-checkbox-focus-ring);
+}
+
+.admin-checkbox:checked {
+  background-color: var(--admin-checkbox-checked-bg);
+  border-color: var(--admin-checkbox-checked-border);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 8.5L6.5 11.5L12.5 4.5' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 0.75rem 0.75rem;
+}
+
+.admin-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: var(--admin-checkbox-disabled-opacity);
+}
+
+.admin-permissions-table {
+  border-color: var(--admin-permissions-table-border);
+}
+
+.admin-permissions-table__head {
+  background-color: var(--admin-permissions-table-head-bg);
+}
+
+.admin-permissions-table__row {
+  border-color: var(--admin-permissions-row-border);
+}
+
+.admin-permissions-table__row:hover {
+  background-color: var(--admin-permissions-row-hover);
+}
+
+.admin-permissions-table__label {
+  color: var(--admin-foreground);
+  cursor: pointer;
+}
+
+.admin-permissions-table__label:hover {
+  color: var(--admin-foreground);
 }
 
 /* Global numeric inputs: hide browser spinners */
@@ -163,6 +257,26 @@ input[type="number"],
   background-color: var(--admin-header-overlay);
 }
 
+.admin-btn-cancel {
+  background-color: var(--admin-header-search-bg);
+  border: 1px solid var(--admin-header-surface-border);
+  color: var(--admin-foreground);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.admin-btn-cancel:hover:not(:disabled) {
+  background-color: var(--admin-permissions-row-hover);
+  color: var(--admin-foreground);
+}
+
+.admin-btn-cancel:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .admin-notification-unread {
   background-color: var(--admin-notification-unread-bg);
 }
@@ -223,4 +337,176 @@ input[type="number"],
 .kh-input:-moz-autofill {
   box-shadow: 0 0 0 1000px var(--kh-input-bg) inset !important;
   -moz-text-fill-color: var(--kh-input-text);
+}
+
+/* Global toast notifications (top-right) */
+.toast-viewport {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: min(100vw - 2rem, 22rem);
+  pointer-events: none;
+}
+
+.toast-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.875rem;
+  border: 1px solid transparent;
+  box-shadow: 0 12px 28px rgba(15, 23, 36, 0.14);
+  pointer-events: auto;
+  animation: toast-slide-in 0.28s ease-out;
+}
+
+.toast-viewport[data-theme="light"] .toast-item {
+  background-color: #ffffff;
+  border-color: #dce6f2;
+  color: #1f2b3d;
+}
+
+.toast-viewport[data-theme="dark"] .toast-item {
+  background-color: #121d2f;
+  border-color: #32445f;
+  color: #f8fafc;
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.45);
+}
+
+.toast-item__message {
+  flex: 1;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.toast-item__close {
+  display: inline-flex;
+  shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+  color: inherit;
+}
+
+.toast-item__close:hover {
+  opacity: 1;
+}
+
+.toast-item--success .toast-item__icon {
+  color: var(--admin-success-text, #138842);
+}
+
+.toast-item--error .toast-item__icon {
+  color: var(--admin-danger-text, #de3d3d);
+}
+
+.toast-item--warning .toast-item__icon {
+  color: var(--admin-warning-text, #c27718);
+}
+
+.toast-item--info .toast-item__icon {
+  color: var(--admin-primary-color, #10a950);
+}
+
+.toast-viewport[data-theme="light"] .toast-item--success {
+  border-color: rgba(19, 136, 66, 0.25);
+  background-color: #f3fbf6;
+}
+
+.toast-viewport[data-theme="light"] .toast-item--error {
+  border-color: rgba(222, 61, 61, 0.25);
+  background-color: #fff6f6;
+}
+
+.toast-viewport[data-theme="light"] .toast-item--warning {
+  border-color: rgba(194, 119, 24, 0.25);
+  background-color: #fffaf3;
+}
+
+.toast-viewport[data-theme="light"] .toast-item--info {
+  border-color: rgba(16, 169, 80, 0.2);
+  background-color: #f4fbf7;
+}
+
+.toast-viewport[data-theme="dark"] .toast-item--success {
+  border-color: rgba(40, 197, 109, 0.35);
+  background-color: #132a22;
+}
+
+.toast-viewport[data-theme="dark"] .toast-item--error {
+  border-color: rgba(255, 143, 143, 0.35);
+  background-color: #2a1a22;
+}
+
+.toast-viewport[data-theme="dark"] .toast-item--warning {
+  border-color: rgba(255, 179, 71, 0.35);
+  background-color: #2a2418;
+}
+
+.toast-viewport[data-theme="dark"] .toast-item--info {
+  border-color: rgba(40, 197, 109, 0.3);
+  background-color: #132238;
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Admin panel — mobile / tablet responsive shell (desktop layout unchanged at lg+) */
+@media (max-width: 1023px) {
+  .admin-shell .admin-table {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .admin-shell .admin-permissions-table {
+    max-height: min(60vh, 420px);
+  }
+
+  .toast-viewport {
+    left: 1rem;
+    right: 1rem;
+    max-width: calc(100vw - 2rem);
+  }
+}
+
+.admin-shell [data-admin-scroll-region] {
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-shell .admin-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.admin-shell .admin-form-actions > button,
+.admin-shell .admin-form-actions > a {
+  flex: 1 1 auto;
+  min-width: min(100%, 8rem);
+}
+
+@media (min-width: 640px) {
+  .admin-shell .admin-form-actions > button,
+  .admin-shell .admin-form-actions > a {
+    flex: 0 1 auto;
+  }
 }

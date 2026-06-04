@@ -1,10 +1,16 @@
-import { useMemo, useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../components/admin/AdminPageHeader";
 import FormStatusSelect from "../../components/admin/FormStatusSelect";
 import ProfileImageUpload from "../../components/admin/ProfileImageUpload";
 import TableCard from "../../components/admin/TableCard";
+import { toastApiError } from "../../services/toast/apiToast";
+import {
+  createClient,
+  mapClientToForm,
+  updateClient,
+} from "../../services/clients/clientsApi";
 import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
 import {
   getEmailError,
@@ -73,30 +79,91 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
   );
   const [showSecret, setShowSecret] = useState(false);
   const [preview, setPreview] = useState("");
-  const [existingImage] = useState(isEdit ? getDemoClientById(id).image : "");
-
-  const [touched, setTouched] = useState(false);
-  const inputClass = getAdminInputClass();
-
-  const errors = useMemo(
-    () => ({
-      name: getRequiredError(form.name, "Name"),
-      email: getEmailError(form.email),
-      country: getRequiredError(form.country, "Country"),
-      contactPerson: getRequiredError(form.contactPerson, "Contact Person"),
-      contactNumber: getRequiredError(form.contactNumber, "Contact Number"),
-      website: getUrlError(form.website, { required: true }),
-    }),
-    [form]
+  const [existingImage, setExistingImage] = useState(
+    isEdit ? getDemoClientById(id).image : ""
   );
 
-  const canSubmit = isFormValid(errors);
+  const [touched, setTouched] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const inputClass = getAdminInputClass();
 
-  const onSubmit = (event) => {
+  useEffect(() => {
+    if (!isEdit || !id) return undefined;
+    const demo = getDemoClientById(id);
+    setForm(mapClientToForm(demo));
+    setExistingImage(demo.image || "");
+    return undefined;
+  }, [isEdit, id]);
+
+  const errors = useMemo(() => {
+    const apiFields = {
+      name: getRequiredError(form.name, "Name"),
+      country: getRequiredError(form.country, "Country"),
+      contactNumber: getRequiredError(form.contactNumber, "Contact Number"),
+    };
+
+    if (!isEdit) {
+      return {
+        ...apiFields,
+        email: getEmailError(form.email),
+        contactPerson: "",
+        website: "",
+      };
+    }
+
+    return {
+      ...apiFields,
+      email: "",
+      contactPerson: "",
+      website: getUrlError(form.website, { required: false }),
+    };
+  }, [form, isEdit]);
+
+  const canSubmit = isFormValid(errors) && !isSubmitting;
+
+  const onSubmit = async (event) => {
     event.preventDefault();
     setTouched(true);
-    if (!canSubmit) return;
-    navigate("/clients");
+    if (!isFormValid(errors)) return;
+
+    setIsSubmitting(true);
+    try {
+      if (isEdit) {
+        const data = await updateClient(id, {
+          name: form.name,
+          country: form.country,
+          contact_no: form.contactNumber,
+        });
+
+        navigate("/clients", {
+          replace: true,
+          state: {
+            flash: { type: "success", message: data.message },
+            refresh: true,
+          },
+        });
+        return;
+      }
+
+      const data = await createClient({
+        name: form.name,
+        email: form.email,
+        country: form.country,
+        contact_no: form.contactNumber,
+      });
+
+      navigate("/clients", {
+        replace: true,
+        state: {
+          flash: { type: "success", message: data.message },
+          refresh: true,
+        },
+      });
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
@@ -122,20 +189,27 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
               onPreviewChange={setPreview}
               existingImage={existingImage}
               showCurrentLabel={isEdit}
+              name={form.name}
             />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {[
-              ["Name", "name"],
-              ["Email", "email"],
-              ["Contact Person", "contactPerson"],
-              ["Contact Number", "contactNumber"],
-              ["Website URL", "website"],
-            ].map(([label, key]) => (
+              ["Name", "name", true],
+              ["Email", "email", !isEdit],
+              ["Contact Person", "contactPerson", false],
+              ["Contact Number", "contactNumber", true],
+              ["Website URL", "website", false],
+            ].map(([label, key, required]) => (
               <div key={key}>
-                <label className="admin-text mb-2 block text-sm font-semibold">{label}</label>
+                <label className="admin-text mb-2 block text-sm font-semibold">
+                  {label}
+                  {required && (
+                    <span className="text-[var(--admin-danger-text)]"> *</span>
+                  )}
+                </label>
                 <input
-                  className={inputClass}
+                  className={`${inputClass} ${key === "email" && isEdit ? "opacity-70" : ""}`}
+                  type={key === "email" ? "email" : "text"}
                   placeholder={
                     key === "name"
                       ? "Enter Name"
@@ -150,6 +224,8 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                   value={form[key]}
                   onChange={(e) => setField(key, e.target.value)}
                   onBlur={() => setTouched(true)}
+                  disabled={isSubmitting || (isEdit && key === "email")}
+                  readOnly={isEdit && key === "email"}
                 />
                 {touched && errors[key] && (
                   <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{errors[key]}</p>
@@ -157,12 +233,16 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
               </div>
             ))}
             <div>
-              <label className="admin-text mb-2 block text-sm font-semibold">Select Country</label>
+              <label className="admin-text mb-2 block text-sm font-semibold">
+                Select Country
+                <span className="text-[var(--admin-danger-text)]"> *</span>
+              </label>
               <select
                 className={inputClass}
                 value={form.country}
                 onChange={(e) => setField("country", e.target.value)}
                 onBlur={() => setTouched(true)}
+                disabled={isSubmitting}
               >
                 <option value="">Select Country</option>
                 <option value="India">India</option>
@@ -224,13 +304,23 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]"
+            className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]"
           >
-            Submit
+            {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+            {isSubmitting
+              ? isEdit
+                ? "Updating..."
+                : "Submitting..."
+              : isEdit
+                ? "Update"
+                : "Submit"}
           </button>
-          <button type="button" onClick={() => navigate("/clients")} className={`h-11 rounded-xl px-5 text-sm font-semibold ${
-            isDarkMode ? "bg-[#1f3047] text-[var(--admin-foreground)]" : "bg-[#eef4fb] text-[var(--admin-foreground)]"
-          }`}>
+          <button
+            type="button"
+            onClick={() => navigate("/clients")}
+            disabled={isSubmitting}
+            className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
+          >
             Cancel
           </button>
         </div>

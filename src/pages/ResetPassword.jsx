@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Eye, EyeOff, LockKeyhole } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
+import { resetPassword } from "../services/auth/authApi";
+import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 
 const getPasswordStrength = (password) => {
   if (!password) {
@@ -18,6 +20,10 @@ const getPasswordStrength = (password) => {
 
 function ResetPassword({ isDarkMode, onToggleTheme }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const email = location.state?.email || "";
+  const otp = location.state?.otp || "";
+
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -27,14 +33,12 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
     confirmPassword: false,
   });
   const [isResetting, setIsResetting] = useState(false);
-  const timeoutRef = useRef(null);
 
-  useEffect(
-    () => () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    },
-    []
-  );
+  useEffect(() => {
+    if (!email || !otp) {
+      navigate("/auth/forgot-password", { replace: true });
+    }
+  }, [email, otp, navigate]);
 
   const strength = useMemo(() => getPasswordStrength(password), [password]);
   const passwordsMatch =
@@ -48,7 +52,7 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
     confirmPassword.trim().length > 0 &&
     password !== confirmPassword;
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setTouched({ password: true, confirmPassword: true });
 
@@ -57,11 +61,19 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
     }
 
     setIsResetting(true);
-    timeoutRef.current = setTimeout(() => {
-      timeoutRef.current = null;
+    try {
+      const data = await resetPassword({
+        email,
+        otp,
+        newPassword: password,
+      });
+      toastApiSuccess(data);
+      navigate("/auth", { replace: true });
+    } catch (err) {
+      toastApiError(err);
+    } finally {
       setIsResetting(false);
-      navigate("/auth");
-    }, 600);
+    }
   };
 
   return (
@@ -110,6 +122,7 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
               autoComplete="new-password"
               placeholder="Enter new password"
               value={password}
+              disabled={isResetting}
               onChange={(event) => setPassword(event.target.value)}
               onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
               className={`kh-input h-full w-full bg-transparent pl-2.5 text-[15px] outline-none ${
@@ -189,6 +202,7 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
               autoComplete="new-password"
               placeholder="Confirm new password"
               value={confirmPassword}
+              disabled={isResetting}
               onChange={(event) => setConfirmPassword(event.target.value)}
               onBlur={() =>
                 setTouched((prev) => ({ ...prev, confirmPassword: true }))

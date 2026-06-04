@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useListingPageActions } from "../../shared/hooks/useListingPageActions";
 
 const TITLES = [
   "Are you a human respondent?",
@@ -10,7 +11,7 @@ const TITLES = [
   "Language preference check",
 ];
 
-const rows = Array.from({ length: 12 }, (_, idx) => ({
+const initialRows = Array.from({ length: 12 }, (_, idx) => ({
   id: `ps-${idx + 1}`,
   title: TITLES[idx % TITLES.length],
   language: ["English", "Arabic", "German", "French"][idx % 4],
@@ -20,6 +21,10 @@ const rows = Array.from({ length: 12 }, (_, idx) => ({
 
 function PrescreenPage({ isDarkMode }) {
   const navigate = useNavigate();
+  const { rows, onEdit, onDelete, onStatusToggle } = useListingPageActions({
+    initialRows,
+    editPath: "/prescreen",
+  });
 
   return (
     <ModuleListingPage
@@ -31,6 +36,10 @@ function PrescreenPage({ isDarkMode }) {
       columns={["S.No", "Title", "Language", "Right Answer", "Status", "Action"]}
       rows={rows}
       rowIdKey="id"
+      onEdit={onEdit}
+      onDelete={onDelete}
+      onStatusToggle={onStatusToggle}
+      permissionModule="prescreen"
       nowrapAllCells
     />
   );

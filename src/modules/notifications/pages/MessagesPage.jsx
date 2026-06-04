@@ -1,9 +1,10 @@
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useListingPageActions } from "../../shared/hooks/useListingPageActions";
 
 const NAMES = ["John Smith", "David Roy", "Ahmed Khan", "Priya Desai", "Emma Wilson"];
 const SUBJECTS = ["Welcome Email", "Survey Invite", "Reward Update", "Password Reset", "Account Alert"];
 
-const rows = Array.from({ length: 12 }, (_, idx) => ({
+const initialRows = Array.from({ length: 12 }, (_, idx) => ({
   id: `msg-${idx + 1}`,
   name: NAMES[idx % NAMES.length],
   subject: SUBJECTS[idx % SUBJECTS.length],
@@ -11,6 +12,8 @@ const rows = Array.from({ length: 12 }, (_, idx) => ({
 }));
 
 function MessagesPage({ isDarkMode }) {
+  const { rows, onDelete } = useListingPageActions({ initialRows });
+
   return (
     <ModuleListingPage
       isDarkMode={isDarkMode}
@@ -20,6 +23,8 @@ function MessagesPage({ isDarkMode }) {
       rows={rows}
       rowIdKey="id"
       showStatus={false}
+      onDelete={onDelete}
+      permissionModule="messages"
       nowrapAllCells
     />
   );

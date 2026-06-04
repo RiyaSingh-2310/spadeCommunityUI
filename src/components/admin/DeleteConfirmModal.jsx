@@ -1,12 +1,11 @@
 import { Loader2 } from "lucide-react";
-import FormErrorMessage from "./FormErrorMessage";
+import { getAdminCancelButtonClass } from "../../modules/shared/utils/formStyles";
 
 function DeleteConfirmModal({
   isOpen,
   onCancel,
   onConfirm,
   isDeleting = false,
-  errorMessage = "",
 }) {
   if (!isOpen) return null;
 
@@ -32,20 +31,12 @@ function DeleteConfirmModal({
           Are you sure you want to delete this record?
         </p>
 
-        {errorMessage && (
-          <div className="mb-4">
-            <FormErrorMessage message={errorMessage} />
-          </div>
-        )}
-
         <div className="flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
             onClick={onCancel}
             disabled={isDeleting}
-            className={`h-10 rounded-xl px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${
-              "bg-[var(--admin-header-search-bg)] admin-text border border-[var(--admin-header-surface-border)]"
-            }`}
+            className={getAdminCancelButtonClass("modal")}
           >
             Cancel
           </button>

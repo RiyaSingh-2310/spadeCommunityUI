@@ -91,7 +91,7 @@ function AddRfqPage({ isDarkMode }) {
             <button type="submit" disabled={!canSubmit} className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]">
               Submit
             </button>
-            <button type="button" onClick={() => navigate("/sales/rfq")} className={`h-11 rounded-xl px-5 text-sm font-semibold ${isDarkMode ? "bg-[#1f3047] text-[var(--admin-foreground)]" : "bg-[#eef4fb] text-[var(--admin-foreground)]"}`}>
+            <button type="button" onClick={() => navigate("/sales/rfq")} className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50">
               Cancel
             </button>
           </div>

@@ -25,6 +25,7 @@ function RfqPage({ isDarkMode }) {
       columns={["S.No", "ID", "Name", "Email Address", "Project ID (if won)", "Country"]}
       rows={rows}
       showStatus={false}
+      permissionModule="rfq"
       nowrapAllCells
     />
   );

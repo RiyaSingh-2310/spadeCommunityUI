@@ -14,7 +14,7 @@ function QuestionTypeRadioGroup({ value, onChange, options, isDarkMode }) {
               value={type}
               checked={value === type}
               onChange={() => onChange(type)}
-              className={`h-4 w-4 accent-[#10a950] ${
+              className={`h-4 w-4 accent-[var(--admin-primary-color)] ${
                 isDarkMode ? "border-[#344662]" : "border-[#d8e3ef]"
               }`}
             />

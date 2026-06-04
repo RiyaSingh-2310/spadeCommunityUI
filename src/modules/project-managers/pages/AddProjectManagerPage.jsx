@@ -65,6 +65,7 @@ function AddProjectManagerPage({ isDarkMode }) {
             isDarkMode={isDarkMode}
             preview={preview}
             onPreviewChange={setPreview}
+            name={form.name}
           />
           <div className="grid gap-4 md:grid-cols-2">
             <div>
@@ -133,7 +134,7 @@ function AddProjectManagerPage({ isDarkMode }) {
             <button type="submit" disabled={!canSubmit} className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]">
               Submit
             </button>
-            <button type="button" onClick={() => navigate("/project-managers")} className={`h-11 rounded-xl px-5 text-sm font-semibold ${isDarkMode ? "bg-[#1f3047] text-[var(--admin-foreground)]" : "bg-[#eef4fb] text-[var(--admin-foreground)]"}`}>
+            <button type="button" onClick={() => navigate("/project-managers")} className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50">
               Cancel
             </button>
           </div>

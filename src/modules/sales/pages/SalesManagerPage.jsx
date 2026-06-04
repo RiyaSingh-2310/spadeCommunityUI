@@ -1,9 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useListingPageActions } from "../../shared/hooks/useListingPageActions";
 
 const NAMES = ["Arun Kumar", "Meera Singh", "David Roy", "Sarah Khan", "Ahmed Khan", "Emma Wilson"];
 
-const rows = Array.from({ length: 12 }, (_, idx) => ({
+const initialRows = Array.from({ length: 12 }, (_, idx) => ({
   id: `sm-${idx + 1}`,
   name: NAMES[idx % NAMES.length],
   emailAddress: `manager${idx + 1}@spadecommunity.com`,
@@ -13,6 +14,11 @@ const rows = Array.from({ length: 12 }, (_, idx) => ({
 
 function SalesManagerPage({ isDarkMode }) {
   const navigate = useNavigate();
+  const { rows, onEdit, onDelete, onStatusToggle } = useListingPageActions({
+    initialRows,
+    editPath: "/sales/sales-manager",
+  });
+
   return (
     <ModuleListingPage
       isDarkMode={isDarkMode}
@@ -23,6 +29,10 @@ function SalesManagerPage({ isDarkMode }) {
       columns={["S.No", "Name", "Email Address", "Status", "Action"]}
       rows={rows}
       rowIdKey="id"
+      onEdit={onEdit}
+      onDelete={onDelete}
+      onStatusToggle={onStatusToggle}
+      permissionModule="sales_manager"
       nowrapAllCells
     />
   );

@@ -45,11 +45,50 @@ export function getUserDisplayName(firstName = "", lastName = "", fallbackName =
   return fallback || "Admin";
 }
 
-function splitFullName(name) {
+export function splitFullName(name) {
   const parts = name?.trim().split(/\s+/).filter(Boolean) ?? [];
   if (parts.length === 0) return { firstName: "", lastName: "" };
   if (parts.length === 1) return { firstName: parts[0], lastName: "" };
   return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+}
+
+/**
+ * Normalizes any member/user row for Avatar (API shapes, demo data, snake_case).
+ * @param {Record<string, unknown>} [record]
+ */
+export function resolveAvatarFromRecord(record = {}) {
+  const name =
+    (typeof record.name === "string" && record.name) ||
+    (typeof record.displayName === "string" && record.displayName) ||
+    "";
+
+  const fromName = splitFullName(name);
+
+  const firstName =
+    (typeof record.firstName === "string" && record.firstName) ||
+    (typeof record.first_name === "string" && record.first_name) ||
+    fromName.firstName;
+
+  const lastName =
+    (typeof record.lastName === "string" && record.lastName) ||
+    (typeof record.last_name === "string" && record.last_name) ||
+    fromName.lastName;
+
+  const imageUrl = getValidImageUrl(
+    record.imageUrl ??
+      record.image_url ??
+      record.image ??
+      record.avatar ??
+      null
+  );
+
+  return {
+    firstName,
+    lastName,
+    imageUrl,
+    displayName: getUserDisplayName(firstName, lastName, name),
+    initials: getUserInitials(firstName, lastName),
+  };
 }
 
 /**
@@ -79,6 +118,18 @@ export function normalizeAdminUser(admin) {
       null
   );
 
+  const permissions =
+    admin.permissions ??
+    (typeof admin.permissions_json === "string"
+      ? (() => {
+          try {
+            return JSON.parse(admin.permissions_json);
+          } catch {
+            return null;
+          }
+        })()
+      : admin.permissions_json);
+
   return {
     ...admin,
     firstName,
@@ -87,5 +138,7 @@ export function normalizeAdminUser(admin) {
     imageUrl,
     displayName: getUserDisplayName(firstName, lastName, admin.name),
     initials: getUserInitials(firstName, lastName),
+    permission_type: admin.permission_type ?? admin.permissionType ?? "user",
+    permissions,
   };
 }

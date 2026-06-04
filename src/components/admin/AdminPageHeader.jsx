@@ -14,17 +14,11 @@ function AdminPageHeader({
   return (
     <div className={wrapperClass}>
       <div>
-        <h1
-          className="admin-text text-[28px] leading-[1.2] font-bold tracking-[-0.015em]"
-        >
+        <h1 className="admin-text admin-page-title text-xl font-bold leading-[1.2] tracking-[-0.015em] sm:text-2xl lg:text-[28px]">
           {title}
         </h1>
         <Breadcrumbs items={breadcrumbs} isDarkMode={isDarkMode} />
-        {subtitle && (
-          <p className="admin-text-muted mt-1 text-sm">
-            {subtitle}
-          </p>
-        )}
+        
       </div>
       {rightContent && <div className="flex items-center gap-3">{rightContent}</div>}
     </div>

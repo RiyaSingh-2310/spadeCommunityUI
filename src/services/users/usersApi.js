@@ -1,9 +1,19 @@
+import { API_ROUTES } from "../../config/api";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
+import {
+  buildPermissionsPayload,
+  normalizePermissions,
+} from "../../modules/permissions/permissionsUtils";
+import {
+  apiStatusToFormValue,
+  formValueToApiStatus,
+  formatStatusLabel,
+} from "../../modules/shared/utils/statusLabels";
 
-function assertSuccess(data, fallbackMessage) {
+function assertSuccess(data) {
   if (data?.success !== true) {
-    throw new ApiError(data?.message || fallbackMessage, data);
+    throw new ApiError(data?.message ?? "", data);
   }
   return data;
 }
@@ -19,18 +29,15 @@ function splitNameParts(name) {
 }
 
 export function apiStatusToFormStatus(status) {
-  return String(status ?? "").toLowerCase() === "inactive" ? "Inactive" : "Active";
+  return apiStatusToFormValue(status);
 }
 
 export function formatAdminStatusLabel(status) {
-  const normalized = String(status ?? "").toLowerCase();
-  if (normalized === "inactive") return "Inactive";
-  if (normalized === "active") return "Active";
-  return status ? String(status) : "-";
+  return formatStatusLabel(status);
 }
 
 export function formStatusToApiStatus(status) {
-  return status === "Inactive" ? "inactive" : "active";
+  return formValueToApiStatus(status);
 }
 
 /**
@@ -52,7 +59,8 @@ export function mapAdminToUserRow(admin) {
     statusLabel: formatAdminStatusLabel(admin?.status),
     image: imageUrl || undefined,
     imageUrl,
-    permission_type: admin?.permission_type ?? "admin",
+    permission_type: admin?.permission_type ?? "user",
+    permissions: normalizePermissions(admin?.permissions),
     contact_no: admin?.contact_no ?? "",
     login_count: admin?.login_count ?? 0,
   };
@@ -65,14 +73,15 @@ export function mapAdminToForm(admin) {
     password: "",
     confirmPassword: "",
     status: apiStatusToFormStatus(admin?.status),
-    permission_type: admin?.permission_type ?? "admin",
+    permission_type: admin?.permission_type ?? "user",
+    permissions: normalizePermissions(admin?.permissions),
   };
 }
 
 /** GET /api/admin/all — full admin list for listing page only */
 export async function getRecords() {
-  const data = await apiRequest("/api/admin/all");
-  assertSuccess(data, "Failed to load users");
+  const data = await apiRequest(API_ROUTES.admin.all);
+  assertSuccess(data);
 
   const admins = Array.isArray(data.admins) ? data.admins : [];
 
@@ -85,10 +94,10 @@ export async function getRecords() {
 
 /** GET /api/admin/:id — single admin for edit/details only (not for listing) */
 export async function getRecord(id) {
-  const data = await apiRequest(`/api/admin/${id}`);
-  assertSuccess(data, "Failed to load user");
+  const data = await apiRequest(API_ROUTES.admin.byId(id));
+  assertSuccess(data);
   if (!data.admin) {
-    throw new ApiError(data?.message || "Failed to load user", data);
+    throw new ApiError(data?.message ?? "", data);
   }
   return data.admin;
 }
@@ -100,46 +109,72 @@ export async function getRecord(id) {
  *   password: string,
  *   contact_no?: string,
  *   permission_type?: string,
- *   status: string
+ *   status: string,
+ *   permissions?: object
  * }} payload
  */
 export async function createUser(payload) {
-  const data = await apiRequest("/api/admin/add-user", {
+  const body = {
+    name: payload.name.trim(),
+    email: payload.email.trim(),
+    password: payload.password,
+    contact_no: payload.contact_no?.trim() ?? "",
+    permission_type: payload.permission_type ?? "user",
+    status: payload.status,
+    ...buildPermissionsPayload(payload.permissions),
+  };
+
+  const data = await apiRequest(API_ROUTES.admin.create, {
     method: "POST",
-    body: {
-      name: payload.name.trim(),
-      email: payload.email.trim(),
-      password: payload.password,
-      contact_no: payload.contact_no?.trim() ?? "",
-      permission_type: payload.permission_type ?? "admin",
-      status: payload.status,
-    },
+    body,
   });
 
-  return assertSuccess(data, "Failed to create user");
+  return assertSuccess(data);
 }
 
 /**
  * @param {string|number} id
- * @param {{ name: string, permission_type: string, status: string }} payload
+ * @param {{
+ *   name: string,
+ *   permission_type?: string,
+ *   status: string,
+ *   permissions?: object
+ * }} payload
  */
 export async function updateRecord(id, payload) {
-  const data = await apiRequest(`/api/admin/updateadmin/${id}`, {
+  const body = {
+    name: payload.name.trim(),
+    permission_type: payload.permission_type ?? "user",
+    status: payload.status,
+    ...buildPermissionsPayload(payload.permissions),
+  };
+
+  const data = await apiRequest(API_ROUTES.admin.update(id), {
     method: "PUT",
-    body: {
-      name: payload.name.trim(),
-      permission_type: payload.permission_type,
-      status: payload.status,
-    },
+    body,
   });
 
-  return assertSuccess(data, "Failed to update user");
+  return assertSuccess(data);
+}
+
+/**
+ * PUT /api/admin/permissions/:id
+ * @param {string|number} id
+ * @param {object} permissions
+ */
+export async function updatePermissions(id, permissions) {
+  const data = await apiRequest(API_ROUTES.admin.updatePermissions(id), {
+    method: "PUT",
+    body: buildPermissionsPayload(permissions),
+  });
+
+  return assertSuccess(data);
 }
 
 export async function deleteRecord(id) {
-  const data = await apiRequest(`/api/admin/delete/${id}`, {
+  const data = await apiRequest(API_ROUTES.admin.delete(id), {
     method: "DELETE",
   });
 
-  return assertSuccess(data, "Failed to delete user");
+  return assertSuccess(data);
 }

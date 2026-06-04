@@ -5,6 +5,7 @@ import NumericInput from "../../../components/admin/NumericInput";
 import FormField from "../../../components/admin/FormField";
 import FormRadioGroup from "../../../components/admin/FormRadioGroup";
 import TableCard from "../../../components/admin/TableCard";
+import { useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { getRequiredError, isFormValid } from "../../shared/utils/validation";
 
@@ -19,6 +20,7 @@ function RewardSettingsPage({ isDarkMode }) {
   });
   const [touched, setTouched] = useState(false);
 
+  const { readOnly, showSubmit } = useFormAccess();
   const inputClass = getAdminInputClass();
 
   const errors = useMemo(
@@ -32,7 +34,7 @@ function RewardSettingsPage({ isDarkMode }) {
     [form]
   );
 
-  const canSubmit = isFormValid(errors);
+  const canSubmit = showSubmit && !readOnly && isFormValid(errors);
 
   const setField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -40,7 +42,7 @@ function RewardSettingsPage({ isDarkMode }) {
 
   const handleSubmit = () => {
     setTouched(true);
-    if (!canSubmit) return;
+    if (readOnly || !showSubmit || !canSubmit) return;
     navigate("/reward-points/pending");
   };
 
@@ -106,6 +108,7 @@ function RewardSettingsPage({ isDarkMode }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
+            {showSubmit && (
             <button
               type="button"
               disabled={!canSubmit}
@@ -114,14 +117,11 @@ function RewardSettingsPage({ isDarkMode }) {
             >
               Submit
             </button>
+            )}
             <button
               type="button"
               onClick={() => navigate("/reward-points/pending")}
-              className={`h-11 rounded-xl px-5 text-sm font-semibold ${
-                isDarkMode
-                  ? "bg-[#1f3047] text-[var(--admin-foreground)]"
-                  : "bg-[#eef4fb] text-[var(--admin-foreground)]"
-              }`}
+              className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>

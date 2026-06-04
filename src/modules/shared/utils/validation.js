@@ -70,6 +70,25 @@ export function getOptionalConfirmPasswordError(password, confirmPassword) {
   return "";
 }
 
+export function stripHtmlText(html) {
+  if (typeof document !== "undefined") {
+    const el = document.createElement("div");
+    el.innerHTML = html || "";
+    return (el.textContent || "").trim();
+  }
+  return String(html || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function getRichTextError(value, label) {
+  if (!stripHtmlText(value)) {
+    return `${label} is required`;
+  }
+  return "";
+}
+
 export function isFormValid(errors) {
   return Object.values(errors).every((msg) => !msg);
 }

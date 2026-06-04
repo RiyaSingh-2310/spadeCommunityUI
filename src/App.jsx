@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Route, Routes, useParams } from "react-router-dom";
+import ToastContainer from "./components/shared/ToastContainer";
 import GuestOnly from "./components/auth/GuestOnly";
 import RequireAuth from "./components/auth/RequireAuth";
 import AdminLayout from "./components/admin/AdminLayout";
@@ -11,6 +12,7 @@ import ClientFormPage from "./pages/admin/ClientFormPage";
 import ClientsPage from "./pages/admin/ClientsPage";
 import DashboardPage from "./pages/admin/DashboardPage";
 import UserFormPage from "./pages/admin/UserFormPage";
+import UserPermissionsPage from "./pages/admin/UserPermissionsPage";
 import UsersPage from "./pages/admin/UsersPage";
 import InvoiceListPage from "./modules/invoice/pages/InvoiceListPage";
 import InvoiceSettingsPage from "./modules/invoice/pages/InvoiceSettingsPage";
@@ -36,8 +38,13 @@ import AddRfqPage from "./modules/sales/pages/AddRfqPage";
 import AddSalesManagerPage from "./modules/sales/pages/AddSalesManagerPage";
 import RfqPage from "./modules/sales/pages/RfqPage";
 import SalesManagerPage from "./modules/sales/pages/SalesManagerPage";
+import EditGroupSurveyPage from "./modules/survey/pages/EditGroupSurveyPage";
+import AddSurveyPage from "./modules/survey/pages/AddSurveyPage";
+import EditSurveyPage from "./modules/survey/pages/EditSurveyPage";
+import GroupSurveyDetailsPage from "./modules/survey/pages/GroupSurveyDetailsPage";
 import GroupSurveyPage from "./modules/survey/pages/GroupSurveyPage";
 import RecontactSurveyPage from "./modules/survey/pages/RecontactSurveyPage";
+import SurveyDetailsPage from "./modules/survey/pages/SurveyDetailsPage";
 import SurveyPage from "./modules/survey/pages/SurveyPage";
 import SurveySettingsPage from "./modules/survey/pages/SurveySettingsPage";
 
@@ -69,7 +76,9 @@ function App() {
   };
 
   return (
-    <Routes>
+    <>
+      <ToastContainer isDarkMode={isDarkMode} />
+      <Routes>
       <Route element={<GuestOnly />}>
         <Route
           path="/auth"
@@ -101,23 +110,52 @@ function App() {
         <Route path="/users" element={<UsersPage isDarkMode={isDarkMode} />} />
         <Route path="/users/add" element={<UserFormPage isDarkMode={isDarkMode} mode="add" />} />
         <Route path="/users/edit/:id" element={<UserFormEditRoute isDarkMode={isDarkMode} />} />
+        <Route
+          path="/users/:id/permissions"
+          element={<UserPermissionsPage isDarkMode={isDarkMode} />}
+        />
         <Route path="/clients" element={<ClientsPage isDarkMode={isDarkMode} />} />
         <Route path="/clients/add" element={<ClientFormPage isDarkMode={isDarkMode} mode="add" />} />
         <Route path="/clients/edit/:id" element={<ClientFormEditRoute isDarkMode={isDarkMode} />} />
         <Route path="/partners" element={<PartnersPage isDarkMode={isDarkMode} />} />
         <Route path="/partners/add" element={<AddPartnerPage isDarkMode={isDarkMode} />} />
+        <Route path="/partners/edit/:id" element={<AddPartnerPage isDarkMode={isDarkMode} />} />
         <Route path="/project-managers" element={<ProjectManagersPage isDarkMode={isDarkMode} />} />
         <Route path="/project-managers/add" element={<AddProjectManagerPage isDarkMode={isDarkMode} />} />
+        <Route
+          path="/project-managers/edit/:id"
+          element={<AddProjectManagerPage isDarkMode={isDarkMode} />}
+        />
         <Route path="/sales/rfq" element={<RfqPage isDarkMode={isDarkMode} />} />
         <Route path="/sales/rfq/add" element={<AddRfqPage isDarkMode={isDarkMode} />} />
         <Route path="/sales/sales-manager" element={<SalesManagerPage isDarkMode={isDarkMode} />} />
         <Route path="/sales/sales-manager/add" element={<AddSalesManagerPage isDarkMode={isDarkMode} />} />
+        <Route
+          path="/sales/sales-manager/edit/:id"
+          element={<AddSalesManagerPage isDarkMode={isDarkMode} />}
+        />
         <Route path="/prescreen/group" element={<PrescreenGroupPage isDarkMode={isDarkMode} />} />
         <Route path="/prescreen/group/add" element={<AddPrescreenGroupPage isDarkMode={isDarkMode} />} />
+        <Route
+          path="/prescreen/group/edit/:id"
+          element={<AddPrescreenGroupPage isDarkMode={isDarkMode} />}
+        />
         <Route path="/prescreen" element={<PrescreenPage isDarkMode={isDarkMode} />} />
         <Route path="/prescreen/add" element={<AddPrescreenPage isDarkMode={isDarkMode} />} />
+        <Route path="/prescreen/edit/:id" element={<AddPrescreenPage isDarkMode={isDarkMode} />} />
         <Route path="/survey" element={<SurveyPage isDarkMode={isDarkMode} />} />
+        <Route path="/survey/add" element={<AddSurveyPage isDarkMode={isDarkMode} />} />
+        <Route path="/survey/view/:id" element={<SurveyDetailsPage isDarkMode={isDarkMode} />} />
+        <Route path="/survey/edit/:id" element={<EditSurveyPage isDarkMode={isDarkMode} />} />
         <Route path="/survey/group" element={<GroupSurveyPage isDarkMode={isDarkMode} />} />
+        <Route
+          path="/survey/group/view/:id"
+          element={<GroupSurveyDetailsPage isDarkMode={isDarkMode} />}
+        />
+        <Route
+          path="/survey/group/edit/:id"
+          element={<EditGroupSurveyPage isDarkMode={isDarkMode} />}
+        />
         <Route path="/survey/recontact" element={<RecontactSurveyPage isDarkMode={isDarkMode} />} />
         <Route path="/survey/settings" element={<SurveySettingsPage isDarkMode={isDarkMode} />} />
         <Route path="/invoice/list" element={<InvoiceListPage isDarkMode={isDarkMode} />} />
@@ -145,6 +183,7 @@ function App() {
         </Route>
       </Route>
     </Routes>
+    </>
   );
 }
 

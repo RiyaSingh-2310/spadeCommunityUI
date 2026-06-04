@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
-import FormSuccessMessage from "../../../components/admin/FormSuccessMessage";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
@@ -27,7 +26,6 @@ function EditEmailTemplatePage({ isDarkMode }) {
   const existing = id ? getEmailTemplateById(id) : null;
   const [form, setForm] = useState(() => buildInitialForm(id));
   const [touched, setTouched] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
 
   const inputClass = getAdminInputClass();
 
@@ -43,7 +41,6 @@ function EditEmailTemplatePage({ isDarkMode }) {
   const canSubmit = isFormValid(errors);
 
   const setField = (key, value) => {
-    setSuccessMessage("");
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -56,7 +53,6 @@ function EditEmailTemplatePage({ isDarkMode }) {
       subject: form.subject.trim(),
       body: form.body,
     });
-    setSuccessMessage("Email template saved successfully.");
   };
 
   if (!existing) {
@@ -87,7 +83,6 @@ function EditEmailTemplatePage({ isDarkMode }) {
       />
       <TableCard title="Email Template Details" isDarkMode={isDarkMode}>
         <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-          <FormSuccessMessage message={successMessage} />
           <FormField
             label="Template Title"
             required
@@ -137,11 +132,7 @@ function EditEmailTemplatePage({ isDarkMode }) {
             <button
               type="button"
               onClick={() => navigate("/system-email")}
-              className={`h-11 rounded-xl px-5 text-sm font-semibold ${
-                isDarkMode
-                  ? "bg-[#1f3047] text-[var(--admin-foreground)]"
-                  : "bg-[#eef4fb] text-[var(--admin-foreground)]"
-              }`}
+              className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>

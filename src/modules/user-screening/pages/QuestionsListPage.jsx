@@ -53,6 +53,7 @@ function QuestionsListPage({ isDarkMode }) {
         "Action",
       ]}
       rows={rows}
+      permissionModule="user_screening_management"
       nowrapAllCells
       rowIdKey="id"
       onEdit={handleEdit}

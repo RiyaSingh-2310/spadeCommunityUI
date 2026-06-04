@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
+import { forgotPassword, verifyOtp } from "../services/auth/authApi";
+import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 
 const OTP_LENGTH = 6;
-const DEMO_OTP = "123456";
 
 const maskEmail = (email) => {
   if (!email || !email.includes("@")) {
@@ -24,15 +25,14 @@ function VerifyOtp({ isDarkMode, onToggleTheme }) {
   const [timer, setTimer] = useState(30);
   const [error, setError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const inputsRef = useRef([]);
-  const verifyTimeoutRef = useRef(null);
 
-  useEffect(
-    () => () => {
-      if (verifyTimeoutRef.current) clearTimeout(verifyTimeoutRef.current);
-    },
-    []
-  );
+  useEffect(() => {
+    if (!email) {
+      navigate("/auth/forgot-password", { replace: true });
+    }
+  }, [email, navigate]);
 
   useEffect(() => {
     if (timer === 0) {
@@ -82,32 +82,56 @@ function VerifyOtp({ isDarkMode, onToggleTheme }) {
     setError("");
   };
 
-  const handleVerify = (event) => {
+  const handleVerify = async (event) => {
     event.preventDefault();
     if (otpValue.length !== OTP_LENGTH) {
       setError("Please enter the 6-digit OTP.");
       return;
     }
-    if (otpValue !== DEMO_OTP) {
-      setError("Invalid OTP. Please try again.");
-      return;
-    }
+
     setIsVerifying(true);
-    verifyTimeoutRef.current = setTimeout(() => {
-      verifyTimeoutRef.current = null;
+    setError("");
+    try {
+      const data = await verifyOtp({ email, otp: otpValue });
+      toastApiSuccess(data);
+      navigate("/auth/reset-password", {
+        state: { email, otp: otpValue },
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Invalid OTP. Please try again."
+      );
+      toastApiError(err);
+    } finally {
       setIsVerifying(false);
-      navigate("/auth/reset-password", { state: { email } });
-    }, 600);
+    }
   };
 
-  const handleResend = () => {
-    if (timer > 0) {
+  const handleResend = async () => {
+    if (timer > 0 || isResending) {
       return;
     }
-    setTimer(30);
-    setOtp(Array(OTP_LENGTH).fill(""));
+
+    if (!email) {
+      navigate("/auth/forgot-password", { replace: true });
+      return;
+    }
+
+    setIsResending(true);
     setError("");
-    inputsRef.current[0]?.focus();
+    try {
+      const data = await forgotPassword({ email });
+      toastApiSuccess(data);
+      setTimer(30);
+      setOtp(Array(OTP_LENGTH).fill(""));
+      inputsRef.current[0]?.focus();
+    } catch (err) {
+      toastApiError(err);
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -142,6 +166,7 @@ function VerifyOtp({ isDarkMode, onToggleTheme }) {
               inputMode="numeric"
               maxLength={1}
               value={value}
+              disabled={isVerifying}
               onChange={(event) => handleChange(index, event.target.value)}
               onKeyDown={(event) => handleKeyDown(index, event)}
               aria-label={`OTP digit ${index + 1}`}
@@ -176,16 +201,16 @@ function VerifyOtp({ isDarkMode, onToggleTheme }) {
             <button
               type="button"
               onClick={handleResend}
-              disabled={timer > 0}
+              disabled={timer > 0 || isResending}
               className={`font-semibold transition-colors ${
-                timer > 0
+                timer > 0 || isResending
                   ? isDarkMode
                     ? "cursor-not-allowed text-[#64748b]"
                     : "cursor-not-allowed text-[#9aa7b8]"
                   : "text-[#18a354] hover:text-[#138b46]"
               }`}
             >
-              Resend OTP
+              {isResending ? "Resending..." : "Resend OTP"}
             </button>
             <p
               className={`mt-1 text-xs ${

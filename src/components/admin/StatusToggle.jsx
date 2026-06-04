@@ -1,10 +1,14 @@
 import { ToggleLeft, ToggleRight } from "lucide-react";
+import {
+  STATUS_UI_ACTIVE,
+  STATUS_UI_INACTIVE,
+} from "../../modules/shared/utils/statusLabels";
 
 function StatusToggle({
   checked,
   onChange,
-  labelOn = "Activated",
-  labelOff = "Deactivated",
+  labelOn = STATUS_UI_ACTIVE,
+  labelOff = STATUS_UI_INACTIVE,
 }) {
   return (
     <button

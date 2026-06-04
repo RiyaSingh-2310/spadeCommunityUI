@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../components/admin/AdminPageHeader";
-import FormErrorMessage from "../../components/admin/FormErrorMessage";
 import FormField from "../../components/admin/FormField";
-import FormPermissionSelect from "../../components/admin/FormPermissionSelect";
 import FormStatusSelect from "../../components/admin/FormStatusSelect";
 import ProfileImageUpload from "../../components/admin/ProfileImageUpload";
 import TableCard from "../../components/admin/TableCard";
-import { ApiError } from "../../services/api/ApiError";
+import UserPermissionsTable from "../../components/admin/UserPermissionsTable";
+import { toastApiError } from "../../services/toast/apiToast";
+import {
+  createDefaultPermissions,
+  normalizePermissions,
+} from "../../modules/permissions/permissionsUtils";
 import {
   createUser,
   formStatusToApiStatus,
@@ -16,6 +19,10 @@ import {
   mapAdminToForm,
   updateRecord,
 } from "../../services/users/usersApi";
+import {
+  fieldDisabled,
+  useFormAccess,
+} from "../../modules/permissions/FormAccessContext";
 import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
 import {
   getConfirmPasswordError,
@@ -33,7 +40,8 @@ const EMPTY_ADD_FORM = {
   password: "",
   confirmPassword: "",
   status: "Active",
-  permission_type: "admin",
+  permission_type: "user",
+  permissions: createDefaultPermissions(),
 };
 
 function UserFormPage({ isDarkMode, mode = "add" }) {
@@ -49,9 +57,9 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
-  const [loadError, setLoadError] = useState("");
-  const [apiError, setApiError] = useState("");
+  const [loadFailed, setLoadFailed] = useState(false);
 
+  const { readOnly, showSubmit } = useFormAccess();
   const inputClass = getAdminInputClass();
 
   useEffect(() => {
@@ -61,7 +69,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
 
     const loadUser = async () => {
       setIsLoadingRecord(true);
-      setLoadError("");
+      setLoadFailed(false);
       try {
         const admin = await getRecord(id);
         if (cancelled) return;
@@ -69,9 +77,8 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
         setExistingImage(admin?.image_url || "");
       } catch (error) {
         if (cancelled) return;
-        setLoadError(
-          error instanceof ApiError ? error.message : error?.message || ""
-        );
+        setLoadFailed(true);
+        toastApiError(error);
       } finally {
         if (!cancelled) setIsLoadingRecord(false);
       }
@@ -98,14 +105,17 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
   );
 
   const canSubmit =
-    isFormValid(errors) && !isSubmitting && !isLoadingRecord && !loadError;
+    showSubmit &&
+    !readOnly &&
+    isFormValid(errors) &&
+    !isSubmitting &&
+    !isLoadingRecord &&
+    !loadFailed;
 
   const onSubmit = async (event) => {
     event.preventDefault();
     setTouched(true);
-    setApiError("");
-
-    if (!isFormValid(errors)) return;
+    if (readOnly || !showSubmit || !isFormValid(errors)) return;
 
     setIsSubmitting(true);
     try {
@@ -114,6 +124,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
           name: form.name,
           permission_type: form.permission_type,
           status: formStatusToApiStatus(form.status),
+          permissions: form.permissions,
         });
 
         navigate("/users", {
@@ -133,6 +144,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
         contact_no: "",
         permission_type: form.permission_type,
         status: formStatusToApiStatus(form.status),
+        permissions: form.permissions,
       });
 
       navigate("/users", {
@@ -143,11 +155,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
         },
       });
     } catch (error) {
-      const message =
-        error instanceof ApiError
-          ? error.message
-          : error?.message || "Request failed";
-      setApiError(message);
+      toastApiError(error);
     } finally {
       setIsSubmitting(false);
     }
@@ -162,7 +170,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
     );
   }
 
-  if (isEdit && loadError) {
+  if (isEdit && loadFailed) {
     return (
       <div className="space-y-4">
         <AdminPageHeader
@@ -173,7 +181,6 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
           ]}
           isDarkMode={isDarkMode}
         />
-        <FormErrorMessage message={loadError} />
         <button
           type="button"
           onClick={() => navigate("/users")}
@@ -195,141 +202,142 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
         ]}
         isDarkMode={isDarkMode}
       />
-      <TableCard title={isEdit ? `Editing User #${id}` : "User Details"} isDarkMode={isDarkMode}>
-        <form onSubmit={onSubmit} className="space-y-4" noValidate>
-          <ProfileImageUpload
-            isDarkMode={isDarkMode}
-            preview={preview}
-            onPreviewChange={setPreview}
-            existingImage={existingImage}
-            showCurrentLabel={isEdit}
+
+      <form onSubmit={onSubmit} className="space-y-5" noValidate>
+        <TableCard title="Basic Information" isDarkMode={isDarkMode}>
+          <div className="space-y-4">
+            <ProfileImageUpload
+              isDarkMode={isDarkMode}
+              preview={preview}
+              onPreviewChange={setPreview}
+              existingImage={existingImage}
+              showCurrentLabel={isEdit}
+              name={form.name}
+            />
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField label="Name" required error={touched ? errors.name : ""}>
+                <input
+                  placeholder="Enter Name"
+                  className={inputClass}
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  onBlur={() => setTouched(true)}
+                  disabled={fieldDisabled(readOnly, isSubmitting)}
+                />
+              </FormField>
+              <FormField
+                label="Email Address"
+                required={!isEdit}
+                error={touched ? errors.email : ""}
+              >
+                <input
+                  type="email"
+                  placeholder="Enter Email Address"
+                  className={`${inputClass} ${isEdit ? "opacity-70" : ""}`}
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  onBlur={() => setTouched(true)}
+                  disabled={fieldDisabled(readOnly, isSubmitting) || isEdit}
+                  readOnly={isEdit}
+                />
+              </FormField>
+              {!isEdit && (
+                <>
+                  <FormField label="Password" required error={touched ? errors.password : ""}>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter Password"
+                        className={`${inputClass} pr-10`}
+                        value={form.password}
+                        onChange={(e) => setForm({ ...form, password: e.target.value })}
+                        onBlur={() => setTouched(true)}
+                        disabled={fieldDisabled(readOnly, isSubmitting)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
+                        disabled={fieldDisabled(readOnly, isSubmitting)}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </FormField>
+                  <FormField
+                    label="Confirm Password"
+                    required
+                    error={touched ? errors.confirmPassword : ""}
+                  >
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Confirm Password"
+                        className={`${inputClass} pr-10`}
+                        value={form.confirmPassword}
+                        onChange={(e) =>
+                          setForm({ ...form, confirmPassword: e.target.value })
+                        }
+                        onBlur={() => setTouched(true)}
+                        disabled={fieldDisabled(readOnly, isSubmitting)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                        className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
+                        disabled={fieldDisabled(readOnly, isSubmitting)}
+                      >
+                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </FormField>
+                </>
+              )}
+              <FormStatusSelect
+                value={form.status}
+                onChange={(status) => setForm((prev) => ({ ...prev, status }))}
+                inputClass={inputClass}
+              />
+            </div>
+          </div>
+        </TableCard>
+
+        <TableCard title="User Permissions" isDarkMode={isDarkMode}>
+          <UserPermissionsTable
+            permissions={form.permissions}
+            onChange={(permissions) => setForm((prev) => ({ ...prev, permissions }))}
+            disabled={fieldDisabled(readOnly, isSubmitting)}
           />
+        </TableCard>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <FormField label="Name" required error={touched ? errors.name : ""}>
-              <input
-                placeholder="Enter Name"
-                className={inputClass}
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                onBlur={() => setTouched(true)}
-                disabled={isSubmitting}
-              />
-            </FormField>
-            <FormField
-              label="Email Address"
-              required={!isEdit}
-              error={touched ? errors.email : ""}
-            >
-              <input
-                type="email"
-                placeholder="Enter Email Address"
-                className={`${inputClass} ${isEdit ? "opacity-70" : ""}`}
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                onBlur={() => setTouched(true)}
-                disabled={isSubmitting || isEdit}
-                readOnly={isEdit}
-              />
-            </FormField>
-            {!isEdit && (
-              <>
-                <FormField label="Password" required error={touched ? errors.password : ""}>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter Password"
-                      className={`${inputClass} pr-10`}
-                      value={form.password}
-                      onChange={(e) => setForm({ ...form, password: e.target.value })}
-                      onBlur={() => setTouched(true)}
-                      disabled={isSubmitting}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
-                      disabled={isSubmitting}
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                </FormField>
-                <FormField
-                  label="Confirm Password"
-                  required
-                  error={touched ? errors.confirmPassword : ""}
-                >
-                  <div className="relative">
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirm Password"
-                      className={`${inputClass} pr-10`}
-                      value={form.confirmPassword}
-                      onChange={(e) =>
-                        setForm({ ...form, confirmPassword: e.target.value })
-                      }
-                      onBlur={() => setTouched(true)}
-                      disabled={isSubmitting}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword((prev) => !prev)}
-                      className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
-                      disabled={isSubmitting}
-                    >
-                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                </FormField>
-              </>
-            )}
-            <FormPermissionSelect
-              value={form.permission_type}
-              onChange={(permission_type) =>
-                setForm((prev) => ({ ...prev, permission_type }))
-              }
-              inputClass={inputClass}
-            />
-            <FormStatusSelect
-              value={form.status}
-              onChange={(status) => setForm((prev) => ({ ...prev, status }))}
-              inputClass={inputClass}
-            />
-          </div>
-
-          <FormErrorMessage message={apiError} />
-
-          <div className="flex items-center gap-3 pt-2">
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]"
-            >
-              {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-              {isSubmitting
-                ? isEdit
-                  ? "Updating..."
-                  : "Submitting..."
-                : isEdit
-                  ? "Update"
-                  : "Submit"}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/users")}
-              disabled={isSubmitting}
-              className={`h-11 rounded-xl px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${
-                isDarkMode
-                  ? "bg-[#1f3047] text-[var(--admin-foreground)]"
-                  : "bg-[#eef4fb] text-[var(--admin-foreground)]"
-              }`}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </TableCard>
+        <div className="flex flex-wrap items-center gap-3">
+          {showSubmit && (
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]"
+          >
+            {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+            {isSubmitting
+              ? isEdit
+                ? "Updating..."
+                : "Submitting..."
+              : isEdit
+                ? "Update"
+                : "Submit"}
+          </button>
+          )}
+          <button
+            type="button"
+            onClick={() => navigate("/users")}
+            disabled={fieldDisabled(readOnly, isSubmitting)}
+            className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

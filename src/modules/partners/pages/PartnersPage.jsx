@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useListingPageActions } from "../../shared/hooks/useListingPageActions";
 
 const NAMES = [
   "John Smith",
@@ -10,7 +11,7 @@ const NAMES = [
   "Pacific Metals Co.",
 ];
 
-const rows = Array.from({ length: 12 }, (_, idx) => ({
+const initialRows = Array.from({ length: 12 }, (_, idx) => ({
   id: `ptn-${idx + 1}`,
   partnerCode: `PTN-${1001 + idx}`,
   name: NAMES[idx % NAMES.length],
@@ -24,6 +25,10 @@ const rows = Array.from({ length: 12 }, (_, idx) => ({
 
 function PartnersPage({ isDarkMode }) {
   const navigate = useNavigate();
+  const { rows, onEdit, onDelete, onStatusToggle } = useListingPageActions({
+    initialRows,
+    editPath: "/partners",
+  });
 
   return (
     <ModuleListingPage
@@ -45,6 +50,10 @@ function PartnersPage({ isDarkMode }) {
       ]}
       rows={rows}
       rowIdKey="id"
+      onEdit={onEdit}
+      onDelete={onDelete}
+      onStatusToggle={onStatusToggle}
+      permissionModule="partners"
       nowrapAllCells
     />
   );

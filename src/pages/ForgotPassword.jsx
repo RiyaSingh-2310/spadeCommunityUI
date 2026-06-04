@@ -1,21 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
+import { forgotPassword } from "../services/auth/authApi";
+import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 
 function ForgotPassword({ isDarkMode, onToggleTheme }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [touched, setTouched] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const timeoutRef = useRef(null);
-
-  useEffect(
-    () => () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    },
-    []
-  );
 
   const hasEmail = email.trim().length > 0;
   const hasValidEmail = useMemo(
@@ -23,7 +17,7 @@ function ForgotPassword({ isDarkMode, onToggleTheme }) {
     [email]
   );
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setTouched(true);
     if (!hasEmail || !hasValidEmail) {
@@ -31,11 +25,15 @@ function ForgotPassword({ isDarkMode, onToggleTheme }) {
     }
 
     setIsSending(true);
-    timeoutRef.current = setTimeout(() => {
-      timeoutRef.current = null;
-      setIsSending(false);
+    try {
+      const data = await forgotPassword({ email: email.trim() });
+      toastApiSuccess(data);
       navigate("/auth/verify-otp", { state: { email: email.trim() } });
-    }, 600);
+    } catch (err) {
+      toastApiError(err);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -90,6 +88,7 @@ function ForgotPassword({ isDarkMode, onToggleTheme }) {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               onBlur={() => setTouched(true)}
+              disabled={isSending}
               className={`kh-input h-full w-full bg-transparent pl-2.5 text-[15px] outline-none ${
                 isDarkMode
                   ? "text-[#f8fafc] placeholder:text-[#94a3b8]"

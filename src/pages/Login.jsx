@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
-import { ApiError } from "../services/api/ApiError";
 import { loginAdmin } from "../services/auth/authApi";
+import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 import { saveAuthSession } from "../services/auth/authStorage";
 
 function Login({ isDarkMode, onToggleTheme }) {
@@ -13,7 +13,6 @@ function Login({ isDarkMode, onToggleTheme }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [apiError, setApiError] = useState("");
   const [touched, setTouched] = useState({
     email: false,
     password: false,
@@ -36,8 +35,6 @@ function Login({ isDarkMode, onToggleTheme }) {
     const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
     setTouched({ email: true, password: true });
-    setApiError("");
-
     if (!hasEmail || !hasPassword || !isEmailValid) {
       return;
     }
@@ -48,6 +45,8 @@ function Login({ isDarkMode, onToggleTheme }) {
         email: email.trim(),
         password,
       });
+
+      toastApiSuccess(response);
 
       saveAuthSession({
         token: response.token,
@@ -63,11 +62,7 @@ function Login({ isDarkMode, onToggleTheme }) {
       const redirectTo = location.state?.from || "/";
       navigate(redirectTo, { replace: true });
     } catch (error) {
-      const message =
-        error instanceof ApiError
-          ? error.message
-          : error?.message || "Login failed. Please try again.";
-      setApiError(message);
+      toastApiError(error);
     } finally {
       setIsSubmitting(false);
     }
@@ -215,12 +210,6 @@ function Login({ isDarkMode, onToggleTheme }) {
                 </button>
               </div>
             </div>
-
-            {apiError && (
-              <p className="rounded-xl border border-[#de3d3d]/30 bg-[#de3d3d]/10 px-3 py-2 text-sm text-[#de3d3d]">
-                {apiError}
-              </p>
-            )}
 
             <button
               type="submit"

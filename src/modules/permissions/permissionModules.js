@@ -1,0 +1,32 @@
+/** Module keys must match API `permissions` object keys (snake_case). */
+export const PERMISSION_MODULES = [
+  { key: "dashboard", label: "Dashboard" },
+  { key: "users", label: "Users" },
+  { key: "clients", label: "Clients" },
+  { key: "partners", label: "Partners" },
+  { key: "project_managers", label: "Project Managers" },
+  { key: "sales", label: "Sales" },
+  { key: "rfq", label: "RFQ" },
+  { key: "sales_manager", label: "Sales Manager" },
+  { key: "prescreen", label: "Prescreen" },
+  { key: "prescreen_group", label: "Prescreen Group" },
+  { key: "survey", label: "Survey" },
+  { key: "group_survey", label: "Group Survey" },
+  { key: "recontact_survey", label: "Recontact Survey" },
+  { key: "survey_settings", label: "Survey Settings" },
+  { key: "invoice", label: "Invoice" },
+  { key: "invoice_settings", label: "Invoice Settings" },
+  { key: "invoices", label: "Invoices" },
+  { key: "notifications", label: "Notifications" },
+  { key: "messages", label: "Messages" },
+  { key: "reward_points", label: "Reward Points" },
+  { key: "pending_rewards", label: "Pending Rewards" },
+  { key: "completed_rewards", label: "Completed Rewards" },
+  { key: "reward_settings", label: "Reward Settings" },
+  { key: "user_screening_management", label: "User Screening Management" },
+  { key: "homepage_management", label: "Homepage Management" },
+  { key: "system_email_templates", label: "System Email Templates" },
+  { key: "log_activity", label: "Log Activity" },
+];
+
+export const PERMISSION_MODULE_KEYS = PERMISSION_MODULES.map((m) => m.key);

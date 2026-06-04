@@ -1,4 +1,4 @@
-function TableCard({ title, children, isDarkMode }) {
+function TableCard({ title, children, footer, isDarkMode }) {
   return (
     <section
       className={`rounded-3xl border p-4 transition-all duration-300 sm:p-5 ${
@@ -12,7 +12,8 @@ function TableCard({ title, children, isDarkMode }) {
           {title}
         </h2>
       )}
-      <div className="overflow-x-auto">{children}</div>
+      <div className="admin-table-scroll -mx-1 overflow-x-auto px-1">{children}</div>
+      {footer ? <div className="mt-0">{footer}</div> : null}
     </section>
   );
 }

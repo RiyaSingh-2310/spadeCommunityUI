@@ -1,9 +1,19 @@
 import { getPageNumbers } from "../../modules/shared/utils/pagination";
 
-function AdminPagination({ currentPage, totalPages, onPageChange, isDarkMode }) {
-  if (totalPages <= 1) return null;
+function AdminPagination({
+  currentPage,
+  totalPages,
+  totalItems = 0,
+  pageSize = 10,
+  onPageChange,
+  isDarkMode,
+}) {
+  if (totalItems <= 0) return null;
 
-  const pages = getPageNumbers(currentPage, totalPages);
+  const start = (currentPage - 1) * pageSize + 1;
+  const end = Math.min(currentPage * pageSize, totalItems);
+  const showControls = totalPages > 1;
+  const pages = showControls ? getPageNumbers(currentPage, totalPages) : [];
   const btnBase =
     "inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition";
   const inactive = isDarkMode
@@ -19,9 +29,14 @@ function AdminPagination({ currentPage, totalPages, onPageChange, isDarkMode }) 
 
   return (
     <nav
-      className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-end"
+      className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
       aria-label="Pagination"
     >
+      <p className="admin-text-muted text-center text-sm sm:text-left">
+        Showing {start}–{end} of {totalItems}
+      </p>
+      {showControls && (
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
       <button
         type="button"
         disabled={currentPage <= 1}
@@ -49,6 +64,8 @@ function AdminPagination({ currentPage, totalPages, onPageChange, isDarkMode }) 
       >
         Next
       </button>
+      </div>
+      )}
     </nav>
   );
 }

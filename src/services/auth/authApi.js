@@ -1,5 +1,12 @@
-import { API_BASE_URL, API_LOGIN_BEARER_TOKEN } from "../../config/api";
+import { API_LOGIN_BEARER_TOKEN, API_ROUTES, buildApiUrl } from "../../config/api";
+import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
+
+const AUTH_FLOW_REQUEST_OPTIONS = {
+  method: "POST",
+  auth: false,
+  loginBearer: true,
+};
 
 /**
  * POST /api/admin/login
@@ -14,7 +21,7 @@ export async function loginAdmin(credentials) {
     headers.Authorization = `Bearer ${API_LOGIN_BEARER_TOKEN}`;
   }
 
-  const url = `${API_BASE_URL}/api/admin/login`;
+  const url = buildApiUrl(API_ROUTES.admin.login);
 
   let response;
   try {
@@ -60,4 +67,62 @@ export async function loginAdmin(credentials) {
   }
 
   return data;
+}
+
+/**
+ * @param {object | null | undefined} data
+ */
+function assertAuthFlowSuccess(data, fallbackMessage) {
+  if (data?.success !== true) {
+    throw new ApiError(data?.message || fallbackMessage, data);
+  }
+  return data;
+}
+
+/**
+ * POST /api/admin/forgot-password — sends OTP to email.
+ * @param {{ email: string }} payload
+ */
+export async function forgotPassword(payload) {
+  const data = await apiRequest(API_ROUTES.admin.forgotPassword, {
+    ...AUTH_FLOW_REQUEST_OPTIONS,
+    body: {
+      email: payload.email.trim(),
+    },
+  });
+
+  return assertAuthFlowSuccess(data, "Failed to send OTP. Please try again.");
+}
+
+/**
+ * POST /api/admin/verify-otp
+ * @param {{ email: string, otp: string }} payload
+ */
+export async function verifyOtp(payload) {
+  const data = await apiRequest(API_ROUTES.admin.verifyOtp, {
+    ...AUTH_FLOW_REQUEST_OPTIONS,
+    body: {
+      email: payload.email.trim(),
+      otp: String(payload.otp).trim(),
+    },
+  });
+
+  return assertAuthFlowSuccess(data, "OTP verification failed. Please try again.");
+}
+
+/**
+ * POST /api/admin/reset-password
+ * @param {{ email: string, otp: string, newPassword: string }} payload
+ */
+export async function resetPassword(payload) {
+  const data = await apiRequest(API_ROUTES.admin.resetPassword, {
+    ...AUTH_FLOW_REQUEST_OPTIONS,
+    body: {
+      email: payload.email.trim(),
+      otp: String(payload.otp).trim(),
+      newPassword: payload.newPassword,
+    },
+  });
+
+  return assertAuthFlowSuccess(data, "Password reset failed. Please try again.");
 }

@@ -1,12 +1,32 @@
+import { useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useListingPageActions } from "../../shared/hooks/useListingPageActions";
 
-const rows = Array.from({ length: 12 }, (_, idx) => ({
-  id: `SV-${11 + idx}`,
-  name: `Survey ${idx + 1}`,
-  status: idx % 3 === 0 ? "Inactive" : "Active",
+const CLIENT_CODES = ["CL-1001", "CL-1002", "CL-1003", "CL-1004", "CL-1005"];
+const PROJECTS = [
+  "Brand Tracker Q2",
+  "CX Pulse Study",
+  "Product Launch Survey",
+  "Employee NPS Wave",
+  "Market Sizing Study",
+];
+
+const initialRows = Array.from({ length: 12 }, (_, idx) => ({
+  id: `SV-${1001 + idx}`,
+  projectName: PROJECTS[idx % PROJECTS.length],
+  clientCode: CLIENT_CODES[idx % CLIENT_CODES.length],
+  startDate: `${String(1 + (idx % 28)).padStart(2, "0")}/03/2026`,
+  endDate: `${String(10 + (idx % 18)).padStart(2, "0")}/04/2026`,
+  status: idx % 4 === 0 ? "Inactive" : "Active",
 }));
 
 function SurveyPage({ isDarkMode }) {
+  const navigate = useNavigate();
+  const { rows, onStatusToggle } = useListingPageActions({
+    initialRows,
+    editPath: "/survey",
+  });
+
   return (
     <ModuleListingPage
       isDarkMode={isDarkMode}
@@ -14,9 +34,35 @@ function SurveyPage({ isDarkMode }) {
       subtitle="Manage survey records here."
       searchPlaceholder="Search surveys..."
       actionLabel="Add Survey"
-      columns={["S.No", "ID", "Name", "Status", "Action"]}
+      onActionClick={() => navigate("/survey/add")}
+      columns={[
+        "ID",
+        "Project Name",
+        "Client Code",
+        "Start Date",
+        "End Date",
+        "Status",
+        "Action",
+      ]}
       rows={rows}
       rowIdKey="id"
+      actionVariant="view-edit"
+      showDeleteAction={false}
+      editPath="/survey"
+      onView={(row) => {
+        const id = row.id;
+        if (id == null) return;
+        navigate(`/survey/view/${encodeURIComponent(id)}`);
+      }}
+      onStatusToggle={onStatusToggle}
+      permissionModule="survey"
+      searchFields={[
+        "id",
+        "projectName",
+        "clientCode",
+        "startDate",
+        "endDate",
+      ]}
       nowrapAllCells
     />
   );

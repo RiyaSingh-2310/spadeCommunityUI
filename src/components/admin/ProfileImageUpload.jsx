@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Upload, X } from "lucide-react";
+import Avatar from "../shared/Avatar";
+import { getValidImageUrl } from "../../modules/shared/utils/userAvatar";
 
 function ProfileImageUpload({
   isDarkMode,
@@ -8,10 +10,14 @@ function ProfileImageUpload({
   existingImage = "",
   label = "Profile Image",
   showCurrentLabel = false,
+  name = "",
+  firstName = "",
+  lastName = "",
 }) {
   const inputRef = useRef(null);
   const blobUrlRef = useRef("");
   const displayImage = preview || existingImage;
+  const hasImage = Boolean(getValidImageUrl(displayImage));
 
   const revokeBlobUrl = () => {
     if (blobUrlRef.current) {
@@ -45,25 +51,26 @@ function ProfileImageUpload({
   return (
     <div>
       <label className="admin-text mb-2 block text-sm font-semibold">{label}</label>
-      {showCurrentLabel && displayImage && (
+      {showCurrentLabel && hasImage && (
         <p className="admin-text-muted mb-2 text-xs">Current Profile Image</p>
       )}
       <div className="flex flex-wrap items-center gap-4">
         <div
-          className={`h-[100px] w-[100px] shrink-0 overflow-hidden rounded-full border ${borderClass}`}
+          className={`shrink-0 overflow-hidden rounded-full border ${borderClass}`}
         >
-          {displayImage ? (
-            <img src={displayImage} alt="Profile preview" className="h-full w-full object-cover" />
-          ) : (
-            <div className="admin-avatar-fallback flex h-full w-full items-center justify-center text-sm font-semibold">
-              —
-            </div>
-          )}
+          <Avatar
+            imageUrl={hasImage ? displayImage : null}
+            firstName={firstName}
+            lastName={lastName}
+            name={name}
+            size="profileLarge"
+            alt={name || "Profile"}
+          />
         </div>
         <div className="flex flex-col gap-2">
           <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-xl bg-[#10a950] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0f9b49]">
             <Upload size={16} />
-            {displayImage ? "Replace Image" : "Upload Image"}
+            {hasImage ? "Replace Image" : "Upload Image"}
             <input
               ref={inputRef}
               type="file"

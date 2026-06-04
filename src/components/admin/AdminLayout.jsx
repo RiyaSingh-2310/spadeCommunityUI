@@ -1,19 +1,62 @@
 import { useEffect, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
+import { PermissionsProvider, usePermissions } from "../../modules/permissions/PermissionsContext";
+import { FormAccessProvider, isFormRoute } from "../../modules/permissions/FormAccessContext";
+import { getRoutePermissionAccess } from "../../modules/permissions/routePermissions";
+import {
+  ADMIN_MOBILE_MEDIA_QUERY,
+  useMediaQuery,
+} from "../../modules/shared/hooks/useMediaQuery";
+import ScrollToTopOnNavigate from "../shared/ScrollToTopOnNavigate";
 import AdminNavbar from "./AdminNavbar";
 import AdminSidebar from "./AdminSidebar";
+import PermissionDenied from "./PermissionDenied";
 
-function AdminLayout({ isDarkMode, onToggleTheme }) {
+function AdminLayoutContent({ isDarkMode, onToggleTheme }) {
+  const location = useLocation();
+  const { canRead, canWrite } = usePermissions();
+  const isMobile = useMediaQuery(ADMIN_MOBILE_MEDIA_QUERY);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const { moduleKey, requiresWrite } = getRoutePermissionAccess(location.pathname);
+  const hasAccess =
+    !moduleKey || (requiresWrite ? canWrite(moduleKey) : canRead(moduleKey));
 
   useEffect(() => {
-    const updateCollapseState = () => {
-      setIsSidebarCollapsed(window.innerWidth < 768);
+    setIsMobileDrawerOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setIsMobileDrawerOpen(false);
+    }
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (!isMobile || !isMobileDrawerOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
     };
-    updateCollapseState();
-    window.addEventListener("resize", updateCollapseState);
-    return () => window.removeEventListener("resize", updateCollapseState);
-  }, []);
+  }, [isMobile, isMobileDrawerOpen]);
+
+  useEffect(() => {
+    if (!isMobile || !isMobileDrawerOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsMobileDrawerOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isMobile, isMobileDrawerOpen]);
+
+  const contentMarginClass = isMobile
+    ? "ml-0"
+    : isSidebarCollapsed
+      ? "ml-20"
+      : "ml-[270px]";
 
   return (
     <div
@@ -22,22 +65,59 @@ function AdminLayout({ isDarkMode, onToggleTheme }) {
         isDarkMode ? "bg-[#0f1724]" : "bg-[#edf2f8]"
       } admin-shell`}
     >
+      {isMobile && isMobileDrawerOpen && (
+        <button
+          type="button"
+          className="admin-header-overlay fixed inset-0 z-[90] cursor-default border-0 p-0 lg:hidden"
+          aria-label="Close navigation menu"
+          onClick={() => setIsMobileDrawerOpen(false)}
+        />
+      )}
+
       <AdminSidebar
         isDarkMode={isDarkMode}
-        isCollapsed={isSidebarCollapsed}
+        isMobile={isMobile}
+        isDrawerOpen={isMobileDrawerOpen}
+        onCloseDrawer={() => setIsMobileDrawerOpen(false)}
+        isCollapsed={!isMobile && isSidebarCollapsed}
         setIsCollapsed={setIsSidebarCollapsed}
       />
-      <div
-        className={`min-w-0 transition-[margin] duration-300 ${
-          isSidebarCollapsed ? "ml-20" : "ml-[270px]"
-        }`}
-      >
-        <AdminNavbar isDarkMode={isDarkMode} onToggleTheme={onToggleTheme} />
-        <main className="h-[calc(100vh-72px)] overflow-y-auto p-4 sm:p-6">
-          <Outlet />
+
+      <div className={`min-w-0 transition-[margin] duration-300 ${contentMarginClass}`}>
+        <AdminNavbar
+          isDarkMode={isDarkMode}
+          onToggleTheme={onToggleTheme}
+          isMobile={isMobile}
+          onOpenMobileMenu={() => setIsMobileDrawerOpen(true)}
+        />
+        <main
+          id="admin-main-scroll"
+          data-admin-scroll-region
+          className="h-[calc(100vh-72px)] overflow-y-auto overflow-x-hidden p-4 sm:p-6"
+        >
+          <ScrollToTopOnNavigate />
+          {hasAccess ? (
+            isFormRoute(location.pathname) ? (
+              <FormAccessProvider isDarkMode={isDarkMode}>
+                <Outlet />
+              </FormAccessProvider>
+            ) : (
+              <Outlet />
+            )
+          ) : (
+            <PermissionDenied isDarkMode={isDarkMode} />
+          )}
         </main>
       </div>
     </div>
+  );
+}
+
+function AdminLayout(props) {
+  return (
+    <PermissionsProvider>
+      <AdminLayoutContent {...props} />
+    </PermissionsProvider>
   );
 }
 

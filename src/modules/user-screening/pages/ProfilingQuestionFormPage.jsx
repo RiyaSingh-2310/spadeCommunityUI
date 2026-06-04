@@ -212,11 +212,7 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
             <button
               type="button"
               onClick={() => navigate("/user-screening/questions")}
-              className={`h-11 rounded-xl px-5 text-sm font-semibold ${
-                isDarkMode
-                  ? "bg-[#1f3047] text-[var(--admin-foreground)]"
-                  : "bg-[#eef4fb] text-[var(--admin-foreground)]"
-              }`}
+              className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>

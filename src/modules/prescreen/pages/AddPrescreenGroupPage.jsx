@@ -90,11 +90,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
             <button
               type="button"
               onClick={() => navigate("/prescreen/group")}
-              className={`h-11 rounded-xl px-5 text-sm font-semibold ${
-                isDarkMode
-                  ? "bg-[#1f3047] text-[var(--admin-foreground)]"
-                  : "bg-[#eef4fb] text-[var(--admin-foreground)]"
-              }`}
+              className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>

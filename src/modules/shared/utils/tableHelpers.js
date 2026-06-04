@@ -1,7 +1,16 @@
 const COLUMN_KEY_MAP = {
   "S.No": "sno",
+  "S. No.": "sno",
   ID: "id",
-  "Profile Image": "profileImage",
+  "Project Name": "projectName",
+  "Client Name": "clientName",
+  "Client Code": "clientCode",
+  "Start Date": "startDate",
+  "End Date": "endDate",
+  Client: "client",
+  "Invoice Date": "invoiceDate",
+  "Due Date": "dueDate",
+  "Gross Amount": "grossAmount",
   "Partner Code": "partnerCode",
   "Email Address": "emailAddress",
   "Contact Number": "contactNumber",
@@ -57,7 +66,17 @@ const NOWRAP_DATA_KEYS = new Set([
   "createdDate",
   "questionType",
   "sortOrder",
+  "projectName",
+  "clientName",
+  "startDate",
+  "endDate",
+  "invoiceDate",
+  "dueDate",
+  "grossAmount",
+  "client",
 ]);
+
+import { formatStatusLabel } from "./statusLabels";
 
 export function getColumnKey(columnLabel) {
   if (COLUMN_KEY_MAP[columnLabel]) {
@@ -80,6 +99,9 @@ export function getRowValue(row, columnLabel) {
   for (const k of keysToTry) {
     const value = row[k];
     if (value !== undefined && value !== null && value !== "") {
+      if (key === "status" || k === "status") {
+        return formatStatusLabel(row.statusLabel ?? value);
+      }
       return value;
     }
   }

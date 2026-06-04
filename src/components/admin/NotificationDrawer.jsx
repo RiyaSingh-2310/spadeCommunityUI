@@ -12,8 +12,8 @@ const BASE_NOTIFICATIONS = [
   },
   {
     id: 2,
-    title: "Partner Activated",
-    description: "Deepak Traders account was activated successfully.",
+    title: "Partner Active",
+    description: "Deepak Traders account is now active.",
     datetime: "Today, 09:10 AM",
     read: false,
   },

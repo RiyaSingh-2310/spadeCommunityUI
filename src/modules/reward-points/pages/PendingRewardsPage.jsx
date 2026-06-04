@@ -28,6 +28,7 @@ function PendingRewardsPage({ isDarkMode }) {
       rowIdKey="id"
       showStatus={false}
       actionVariant="reward-pending"
+      permissionModule="pending_rewards"
       nowrapAllCells
       onView={(row) => {
         window.alert(

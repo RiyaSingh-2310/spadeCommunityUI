@@ -19,13 +19,22 @@ import {
   Users,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { SIDEBAR_NAV_ITEMS } from "../../config/sidebarNavConfig";
+import { usePermissions } from "../../modules/permissions/PermissionsContext";
 import heroLogo from "../../assets/SpadeCommunitylogoWhite.png";
 import compressedLogo from "../../assets/SpadeCommunitylogocompressed.png";
 
 const COLLAPSED_SIDEBAR_WIDTH = 80;
 const FLYOUT_HIDE_DELAY_MS = 150;
 
-function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
+function AdminSidebar({
+  isDarkMode,
+  isCollapsed,
+  setIsCollapsed,
+  isMobile = false,
+  isDrawerOpen = false,
+  onCloseDrawer,
+}) {
   const [manualOpenSection, setManualOpenSection] = useState(null);
   const [hoveredLabel, setHoveredLabel] = useState(null);
   const [flyoutTop, setFlyoutTop] = useState(0);
@@ -33,150 +42,23 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const sidebarItems = useMemo(
-    () => [
-      { type: "link", label: "Dashboard", root: "/", matcher: /^\/($|dashboard)/ },
-      { type: "link", label: "Users", root: "/users", matcher: /^\/users(\/|$)/ },
-      { type: "link", label: "Clients", root: "/clients", matcher: /^\/clients(\/|$)/ },
-      { type: "link", label: "Partners", root: "/partners", matcher: /^\/partners(\/|$)/ },
-      {
-        type: "link",
-        label: "Project Managers",
-        root: "/project-managers",
-        matcher: /^\/project-managers(\/|$)/,
-      },
-      {
-        type: "group",
-        label: "Sales",
-        key: "sales",
-        matcher: /^\/sales(\/|$)/,
-        children: [
-          { label: "RFQ", root: "/sales/rfq", matcher: /^\/sales\/rfq(\/|$)/ },
-          {
-            label: "Sales Manager",
-            root: "/sales/sales-manager",
-            matcher: /^\/sales\/sales-manager(\/|$)/,
-          },
-        ],
-      },
-      {
-        type: "group",
-        label: "Prescreen",
-        key: "prescreen",
-        matcher: /^\/prescreen(\/|$)/,
-        children: [
-          {
-            label: "Prescreen Group",
-            root: "/prescreen/group",
-            matcher: /^\/prescreen\/group(\/|$)/,
-          },
-          { label: "Prescreen", root: "/prescreen", matcher: /^\/prescreen$/ },
-        ],
-      },
-      {
-        type: "group",
-        label: "Survey",
-        key: "survey",
-        matcher: /^\/survey(\/|$)/,
-        children: [
-          { label: "Survey", root: "/survey", matcher: /^\/survey$/ },
-          { label: "Group Survey", root: "/survey/group", matcher: /^\/survey\/group(\/|$)/ },
-          {
-            label: "Recontact Survey",
-            root: "/survey/recontact",
-            matcher: /^\/survey\/recontact(\/|$)/,
-          },
-          {
-            label: "Survey Settings",
-            root: "/survey/settings",
-            matcher: /^\/survey\/settings(\/|$)/,
-          },
-        ],
-      },
-      {
-        type: "group",
-        label: "Invoice",
-        key: "invoice",
-        matcher: /^\/invoice(\/|$)/,
-        children: [
-          {
-            label: "Invoice Settings",
-            root: "/invoice/settings",
-            matcher: /^\/invoice\/settings(\/|$)/,
-          },
-          { label: "Invoices", root: "/invoice/list", matcher: /^\/invoice\/list(\/|$)/ },
-        ],
-      },
-      {
-        type: "link",
-        label: "Log Activity",
-        root: "/log-activity",
-        matcher: /^\/log-activity(\/|$)/,
-      },
-      {
-        type: "group",
-        label: "Notifications",
-        key: "notifications",
-        matcher: /^\/notifications(\/|$)/,
-        children: [
-          {
-            label: "Messages",
-            root: "/notifications/messages",
-            matcher: /^\/notifications\/messages(\/|$)/,
-          },
-        ],
-      },
-      {
-        type: "group",
-        label: "Reward Points",
-        key: "reward-points",
-        matcher: /^\/reward-points(\/|$)/,
-        children: [
-          {
-            label: "Pending Rewards",
-            root: "/reward-points/pending",
-            matcher: /^\/reward-points\/pending(\/|$)/,
-          },
-          {
-            label: "Completed Rewards",
-            root: "/reward-points/completed",
-            matcher: /^\/reward-points\/completed(\/|$)/,
-          },
-          {
-            label: "Reward Settings",
-            root: "/reward-points/settings",
-            matcher: /^\/reward-points\/settings(\/|$)/,
-          },
-        ],
-      },
-      {
-        type: "group",
-        label: "Screening Management",
-        key: "user-screening",
-        matcher: /^\/user-screening(\/|$)/,
-        children: [
-          {
-            label: "List of All Questions",
-            root: "/user-screening/questions",
-            matcher: /^\/user-screening\/questions(\/|$)/,
-          },
-        ],
-      },
-      {
-        type: "link",
-        label: "Home Page Management",
-        root: "/home-page",
-        matcher: /^\/home-page(\/|$)/,
-      },
-      {
-        type: "link",
-        label: "System Email Template",
-        root: "/system-email",
-        matcher: /^\/system-email(\/|$)/,
-      },
-    ],
-    []
-  );
+  const { canAccessNavItem } = usePermissions();
+
+  const sidebarItems = useMemo(() => {
+    const filterChildren = (children = []) =>
+      children.filter((child) => canAccessNavItem(child.permissionKeys));
+
+    return SIDEBAR_NAV_ITEMS.map((item) => {
+      if (item.type === "group") {
+        const children = filterChildren(item.children);
+        if (!canAccessNavItem(item.permissionKeys) && children.length === 0) {
+          return null;
+        }
+        return { ...item, children };
+      }
+      return canAccessNavItem(item.permissionKeys) ? item : null;
+    }).filter(Boolean);
+  }, [canAccessNavItem]);
 
   const iconMap = {
     Dashboard: <LayoutDashboard size={21} strokeWidth={2} />,
@@ -188,12 +70,12 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
     Prescreen: <ClipboardList size={21} strokeWidth={2} />,
     Survey: <ScrollText size={21} strokeWidth={2} />,
     Invoice: <ReceiptIndianRupee size={21} strokeWidth={2} />,
-    "Log Activity": <ScrollText size={21} strokeWidth={2} />,
     Notifications: <Bell size={21} strokeWidth={2} />,
     "Reward Points": <Gift size={21} strokeWidth={2} />,
     "Screening Management": <ShieldCheck size={21} strokeWidth={2} />,
     "Home Page Management": <Home size={21} strokeWidth={2} />,
     "System Email Template": <Mail size={21} strokeWidth={2} />,
+    "Log Activity": <ScrollText size={21} strokeWidth={2} />,
   };
 
   const activeGroupKey =
@@ -213,7 +95,7 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
   useEffect(() => () => clearHideTimeout(), []);
 
   const openFlyout = (label, event) => {
-    if (!isCollapsed) return;
+    if (!isCollapsed || isMobile) return;
     clearHideTimeout();
     const rect = event.currentTarget.getBoundingClientRect();
     setFlyoutTop(rect.top);
@@ -237,6 +119,9 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
   const navigateAndClose = (path) => {
     navigate(path);
     closeFlyout();
+    if (isMobile) {
+      onCloseDrawer?.();
+    }
   };
 
   const handleRowMouseLeave = (event) => {
@@ -248,7 +133,7 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
   };
 
   const renderItemFlyout = (item) => {
-    if (!isCollapsed || hoveredLabel !== item.label) return null;
+    if (isMobile || !isCollapsed || hoveredLabel !== item.label) return null;
 
     const isGroup = item.type === "group";
     const flyoutHeight = isGroup ? 44 + item.children.length * 36 : 40;
@@ -317,18 +202,32 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
     );
   };
 
+  const sidebarWidthClass = isMobile ? "w-[min(280px,85vw)]" : isCollapsed ? "w-20" : "w-[270px]";
+  const sidebarPositionClass = isMobile
+    ? `z-[100] transition-transform duration-300 ease-in-out ${
+        isDrawerOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
+      }`
+    : isCollapsed
+      ? "z-[100] overflow-visible translate-x-0"
+      : "z-40 overflow-hidden translate-x-0";
+
   return (
     <>
       <aside
-        className={`fixed left-0 top-0 h-screen max-h-screen select-none border-r transition-all duration-300 ${
-          isCollapsed ? "z-[100] overflow-visible" : "z-40 overflow-hidden"
-        } ${
+        className={`admin-sidebar fixed left-0 top-0 h-screen max-h-screen select-none border-r ${
+          isMobile ? "overflow-hidden" : isCollapsed ? "overflow-visible" : "overflow-hidden"
+        } ${sidebarPositionClass} ${
           isDarkMode
             ? "bg-[#111b2c] text-[var(--admin-foreground)] border-[#2a3c56]"
             : "bg-white text-[var(--admin-foreground)] border-[#dce6f1]"
-        } ${isCollapsed ? "w-20" : "w-[270px]"}`}
+        } ${sidebarWidthClass}`}
+        aria-hidden={isMobile && !isDrawerOpen ? true : undefined}
       >
-        <div className={`flex h-full min-h-0 flex-col ${isCollapsed ? "overflow-visible" : "overflow-hidden"}`}>
+        <div
+          className={`flex h-full min-h-0 flex-col ${
+            isMobile || !isCollapsed ? "overflow-hidden" : "overflow-visible"
+          }`}
+        >
           <div
             className={`flex h-[72px] shrink-0 items-center border-b px-4 ${
               isDarkMode ? "border-[#2a3c56]" : "border-[#dce6f1]"
@@ -336,14 +235,14 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
           >
             <div
               className={`flex w-full items-center transition-all duration-300 ${
-                isCollapsed ? "justify-center" : "justify-start gap-3"
+                isCollapsed && !isMobile ? "justify-center" : "justify-start gap-3"
               }`}
             >
               <img
                 src={heroLogo}
                 alt="Spade logo"
                 className={`shrink-0 object-contain transition-all duration-300 ${
-                  isCollapsed
+                  isCollapsed && !isMobile
                     ? "pointer-events-none absolute h-0 w-0 scale-95 opacity-0"
                     : "h-[46px] w-auto max-w-[190px] opacity-100 scale-100"
                 }`}
@@ -352,7 +251,7 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
                 src={compressedLogo}
                 alt="Spade compact logo"
                 className={`shrink-0 object-contain transition-all duration-300 ${
-                  isCollapsed
+                  isCollapsed && !isMobile
                     ? "h-9 w-9 opacity-100 scale-100 sm:h-10 sm:w-10"
                     : "pointer-events-none absolute h-0 w-0 scale-95 opacity-0"
                 }`}
@@ -361,8 +260,8 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
           </div>
 
           <nav
-            className={`mt-4 min-h-0 flex-1 px-3 pb-3 ${
-              isCollapsed ? "overflow-y-auto overflow-x-visible" : "overflow-y-auto"
+            className={`mt-4 min-h-0 flex-1 px-3 pb-3 overflow-y-auto ${
+              isCollapsed && !isMobile ? "overflow-x-visible" : ""
             }`}
           >
             {sidebarItems.map((item) => {
@@ -387,7 +286,7 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
                           prev === item.key ? null : item.key
                         );
                       } else {
-                        navigate(item.root);
+                        navigateAndClose(item.root);
                       }
                     }}
                     className={`flex h-10 w-full cursor-pointer items-center rounded-2xl px-3.5 text-left transition-all duration-200 ${
@@ -415,10 +314,12 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
                       >
                         {iconMap[item.label]}
                       </span>
-                      {!isCollapsed && <span className="text-sm">{item.label}</span>}
+                      {(!isCollapsed || isMobile) && (
+                        <span className="text-sm">{item.label}</span>
+                      )}
                     </div>
 
-                    {!isCollapsed && item.type === "group" && (
+                    {(!isCollapsed || isMobile) && item.type === "group" && (
                       <span className="admin-text-subtle ml-auto">
                         {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                       </span>
@@ -427,7 +328,7 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
 
                   {renderItemFlyout(item)}
 
-                  {item.type === "group" && isExpanded && !isCollapsed && (
+                  {item.type === "group" && isExpanded && (!isCollapsed || isMobile) && (
                     <div className="mt-0.5 space-y-0.5">
                       {item.children.map((child) => {
                         const isChildActive = child.matcher.test(location.pathname);
@@ -435,7 +336,7 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
                           <button
                             type="button"
                             key={child.label}
-                            onClick={() => navigate(child.root)}
+                            onClick={() => navigateAndClose(child.root)}
                             className={`flex h-9 w-full items-center rounded-xl px-3.5 pl-11 text-left text-xs transition-all ${
                               isChildActive
                                 ? "bg-[#e6f6ee] font-semibold text-[#138842]"
@@ -455,31 +356,33 @@ function AdminSidebar({ isDarkMode, isCollapsed, setIsCollapsed }) {
             })}
           </nav>
 
-          <div
-            className={`sticky bottom-0 z-10 shrink-0 border-t ${
-              isDarkMode ? "border-[#2a3c56]" : "border-[#dce6f1]"
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                setIsCollapsed((prev) => {
-                  if (prev) {
-                    closeFlyout();
-                  }
-                  return !prev;
-                });
-              }}
-              className={`flex h-14 w-full items-center gap-3 p-4 text-sm font-medium transition-all duration-200 ${
-                isDarkMode
-                  ? "text-[var(--admin-muted-foreground)] hover:bg-[#1f3047] hover:text-[var(--admin-foreground)]"
-                  : "text-[var(--admin-muted-foreground)] hover:bg-[#f2f7fc] hover:text-[var(--admin-foreground)]"
+          {!isMobile && (
+            <div
+              className={`sticky bottom-0 z-10 shrink-0 border-t ${
+                isDarkMode ? "border-[#2a3c56]" : "border-[#dce6f1]"
               }`}
             >
-              {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-              {!isCollapsed && <span>Collapse</span>}
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCollapsed((prev) => {
+                    if (prev) {
+                      closeFlyout();
+                    }
+                    return !prev;
+                  });
+                }}
+                className={`flex h-14 w-full items-center gap-3 p-4 text-sm font-medium transition-all duration-200 ${
+                  isDarkMode
+                    ? "text-[var(--admin-muted-foreground)] hover:bg-[#1f3047] hover:text-[var(--admin-foreground)]"
+                    : "text-[var(--admin-muted-foreground)] hover:bg-[#f2f7fc] hover:text-[var(--admin-foreground)]"
+                }`}
+              >
+                {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+                {!isCollapsed && <span>Collapse</span>}
+              </button>
+            </div>
+          )}
         </div>
       </aside>
     </>

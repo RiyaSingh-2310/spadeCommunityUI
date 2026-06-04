@@ -32,6 +32,7 @@ function CompletedRewardsPage({ isDarkMode }) {
       rowIdKey="id"
       showStatus
       statusAsText
+      permissionModule="completed_rewards"
       nowrapAllCells
       onView={(row) => {
         window.alert(

@@ -1,7 +1,13 @@
 import { useEffect, useRef } from "react";
 import { Bold, Italic, List, ListOrdered, Underline } from "lucide-react";
 
-function RichTextEditor({ value, onChange, isDarkMode, placeholder = "Enter content..." }) {
+function RichTextEditor({
+  value,
+  onChange,
+  isDarkMode,
+  placeholder = "Enter content...",
+  disabled = false,
+}) {
   const editorRef = useRef(null);
 
   useEffect(() => {
@@ -12,6 +18,7 @@ function RichTextEditor({ value, onChange, isDarkMode, placeholder = "Enter cont
   }, [value]);
 
   const exec = (command, arg) => {
+    if (disabled) return;
     editorRef.current?.focus();
     document.execCommand(command, false, arg);
     onChange(editorRef.current?.innerHTML || "");
@@ -35,32 +42,32 @@ function RichTextEditor({ value, onChange, isDarkMode, placeholder = "Enter cont
           isDarkMode ? "border-[#344662] bg-[#101a2a]" : "border-[#d8e3ef] bg-[#f8fafc]"
         }`}
       >
-        <button type="button" className={toolbarBtn()} onClick={() => exec("bold")} aria-label="Bold">
+        <button type="button" className={toolbarBtn()} onClick={() => exec("bold")} aria-label="Bold" disabled={disabled}>
           <Bold size={15} />
         </button>
-        <button type="button" className={toolbarBtn()} onClick={() => exec("italic")} aria-label="Italic">
+        <button type="button" className={toolbarBtn()} onClick={() => exec("italic")} aria-label="Italic" disabled={disabled}>
           <Italic size={15} />
         </button>
-        <button type="button" className={toolbarBtn()} onClick={() => exec("underline")} aria-label="Underline">
+        <button type="button" className={toolbarBtn()} onClick={() => exec("underline")} aria-label="Underline" disabled={disabled}>
           <Underline size={15} />
         </button>
-        <button type="button" className={toolbarBtn()} onClick={() => exec("insertUnorderedList")} aria-label="Bullet list">
+        <button type="button" className={toolbarBtn()} onClick={() => exec("insertUnorderedList")} aria-label="Bullet list" disabled={disabled}>
           <List size={15} />
         </button>
-        <button type="button" className={toolbarBtn()} onClick={() => exec("insertOrderedList")} aria-label="Numbered list">
+        <button type="button" className={toolbarBtn()} onClick={() => exec("insertOrderedList")} aria-label="Numbered list" disabled={disabled}>
           <ListOrdered size={15} />
         </button>
       </div>
       <div
         ref={editorRef}
-        contentEditable
         role="textbox"
         aria-multiline
         data-placeholder={placeholder}
-        onInput={() => onChange(editorRef.current?.innerHTML || "")}
+        onInput={() => !disabled && onChange(editorRef.current?.innerHTML || "")}
+        contentEditable={!disabled}
         className={`admin-rich-editor admin-text min-h-[140px] px-3 py-3 text-sm outline-none ${
           isDarkMode ? "bg-[#101a2a]" : "bg-[var(--admin-header-search-bg)]"
-        }`}
+        } ${disabled ? "cursor-not-allowed opacity-70" : ""}`}
         suppressContentEditableWarning
       />
     </div>

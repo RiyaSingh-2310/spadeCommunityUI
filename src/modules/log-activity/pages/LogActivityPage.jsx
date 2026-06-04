@@ -49,7 +49,19 @@ function LogActivityPage({ isDarkMode }) {
         placeholder="Search log activity..."
         isDarkMode={isDarkMode}
       />
-      <TableCard isDarkMode={isDarkMode}>
+      <TableCard
+        isDarkMode={isDarkMode}
+        footer={
+          <AdminPagination
+            isDarkMode={isDarkMode}
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            pageSize={DEFAULT_PAGE_SIZE}
+            onPageChange={setCurrentPage}
+          />
+        }
+      >
         <div className="overflow-x-auto">
           <table className="admin-table min-w-full text-sm">
             <thead>
@@ -91,12 +103,6 @@ function LogActivityPage({ isDarkMode }) {
             </tbody>
           </table>
         </div>
-        <AdminPagination
-          isDarkMode={isDarkMode}
-          currentPage={pagination.currentPage}
-          totalPages={pagination.totalPages}
-          onPageChange={setCurrentPage}
-        />
       </TableCard>
     </div>
   );

@@ -22,6 +22,7 @@ function SystemEmailTemplatePage({ isDarkMode }) {
       showDeleteAction={false}
       onEdit={handleEdit}
       rowIdKey="id"
+      permissionModule="system_email_templates"
       nowrapAllCells
     />
   );
