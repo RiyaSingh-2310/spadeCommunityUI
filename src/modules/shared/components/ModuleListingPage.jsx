@@ -13,6 +13,7 @@ import InvoicePdfAction from "../../../components/admin/InvoicePdfAction";
 import RewardPendingActions from "../../../components/admin/RewardPendingActions";
 import UserManagementActions from "../../../components/admin/UserManagementActions";
 import ViewEditActions from "../../../components/admin/ViewEditActions";
+import SurveyListingActions from "../../../components/admin/SurveyListingActions";
 import StatusToggle from "../../../components/admin/StatusToggle";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import ViewActionButton from "../../../components/admin/ViewActionButton";
@@ -59,6 +60,9 @@ function ModuleListingPage({
   onSearch,
   onStatusToggle,
   onView,
+  onFindUser,
+  onUserSurveyData,
+  onSurveyClone,
   onApprove,
   onReject,
   onPdfDownload,
@@ -403,19 +407,48 @@ function ModuleListingPage({
                       );
                     }
                     if (actionVariant === "view-edit") {
+                      const useSurveyActions =
+                        onFindUser || onUserSurveyData || onSurveyClone;
                       return (
                         <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
-                          <ViewEditActions
-                            isDarkMode={isDarkMode}
-                            onView={
-                              allowRead && onView ? () => onView(row, globalIdx) : undefined
-                            }
-                            onEdit={
-                              canShowEdit
-                                ? () => handleEdit(row, globalIdx)
-                                : undefined
-                            }
-                          />
+                          {useSurveyActions ? (
+                            <SurveyListingActions
+                              isDarkMode={isDarkMode}
+                              onView={
+                                allowRead && onView ? () => onView(row, globalIdx) : undefined
+                              }
+                              onEdit={
+                                canShowEdit
+                                  ? () => handleEdit(row, globalIdx)
+                                  : undefined
+                              }
+                              onFindUser={
+                                allowRead && onFindUser
+                                  ? () => onFindUser(row, globalIdx)
+                                  : undefined
+                              }
+                              onUserSurveyData={
+                                allowRead && onUserSurveyData
+                                  ? () => onUserSurveyData(row, globalIdx)
+                                  : undefined
+                              }
+                              onSurveyClone={
+                                onSurveyClone ? () => onSurveyClone(row, globalIdx) : undefined
+                              }
+                            />
+                          ) : (
+                            <ViewEditActions
+                              isDarkMode={isDarkMode}
+                              onView={
+                                allowRead && onView ? () => onView(row, globalIdx) : undefined
+                              }
+                              onEdit={
+                                canShowEdit
+                                  ? () => handleEdit(row, globalIdx)
+                                  : undefined
+                              }
+                            />
+                          )}
                         </td>
                       );
                     }

@@ -29,6 +29,8 @@ const ROUTE_RULES = [
   { matcher: /^\/survey\/settings(\/|$)/, module: "survey_settings" },
   { matcher: /^\/survey\/add/, module: "survey", requiresWrite: true },
   { matcher: /^\/survey\/edit/, module: "survey", requiresWrite: true },
+  { matcher: /^\/survey\/[^/]+\/find-user/, module: "survey" },
+  { matcher: /^\/survey\/[^/]+\/user-survey-data/, module: "survey" },
   { matcher: /^\/survey\/view/, module: "survey" },
   { matcher: /^\/survey(\/|$)/, module: "survey" },
   { matcher: /^\/invoice\/settings(\/|$)/, module: "invoice_settings" },

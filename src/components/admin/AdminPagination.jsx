@@ -7,13 +7,21 @@ function AdminPagination({
   pageSize = 10,
   onPageChange,
   isDarkMode,
+  /** When true, renders Previous | 1 | Next even with zero items. */
+  showWhenEmpty = false,
 }) {
-  if (totalItems <= 0) return null;
+  if (totalItems <= 0 && !showWhenEmpty) return null;
 
-  const start = (currentPage - 1) * pageSize + 1;
-  const end = Math.min(currentPage * pageSize, totalItems);
-  const showControls = totalPages > 1;
-  const pages = showControls ? getPageNumbers(currentPage, totalPages) : [];
+  const safeTotalPages = Math.max(1, totalPages);
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), safeTotalPages);
+  const start = totalItems > 0 ? (safeCurrentPage - 1) * pageSize + 1 : 0;
+  const end = totalItems > 0 ? Math.min(safeCurrentPage * pageSize, totalItems) : 0;
+  const showControls = showWhenEmpty || safeTotalPages > 1;
+  const pages = showWhenEmpty
+    ? [1]
+    : showControls
+      ? getPageNumbers(safeCurrentPage, safeTotalPages)
+      : [];
   const btnBase =
     "inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition";
   const inactive = isDarkMode
@@ -33,15 +41,17 @@ function AdminPagination({
       aria-label="Pagination"
     >
       <p className="admin-text-muted text-center text-sm sm:text-left">
-        Showing {start}–{end} of {totalItems}
+        {totalItems > 0
+          ? `Showing ${start}–${end} of ${totalItems}`
+          : "No records to display"}
       </p>
       {showControls && (
       <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
       <button
         type="button"
-        disabled={currentPage <= 1}
-        onClick={() => onPageChange(currentPage - 1)}
-        className={`${btnBase} ${currentPage <= 1 ? disabled : inactive}`}
+        disabled={safeCurrentPage <= 1}
+        onClick={() => onPageChange(safeCurrentPage - 1)}
+        className={`${btnBase} ${safeCurrentPage <= 1 ? disabled : inactive}`}
       >
         Previous
       </button>
@@ -50,17 +60,17 @@ function AdminPagination({
           key={page}
           type="button"
           onClick={() => onPageChange(page)}
-          className={`${btnBase} ${page === currentPage ? active : inactive}`}
-          aria-current={page === currentPage ? "page" : undefined}
+          className={`${btnBase} ${page === safeCurrentPage ? active : inactive}`}
+          aria-current={page === safeCurrentPage ? "page" : undefined}
         >
           {page}
         </button>
       ))}
       <button
         type="button"
-        disabled={currentPage >= totalPages}
-        onClick={() => onPageChange(currentPage + 1)}
-        className={`${btnBase} ${currentPage >= totalPages ? disabled : inactive}`}
+        disabled={safeCurrentPage >= safeTotalPages}
+        onClick={() => onPageChange(safeCurrentPage + 1)}
+        className={`${btnBase} ${safeCurrentPage >= safeTotalPages ? disabled : inactive}`}
       >
         Next
       </button>

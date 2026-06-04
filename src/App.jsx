@@ -44,6 +44,8 @@ import EditSurveyPage from "./modules/survey/pages/EditSurveyPage";
 import GroupSurveyDetailsPage from "./modules/survey/pages/GroupSurveyDetailsPage";
 import GroupSurveyPage from "./modules/survey/pages/GroupSurveyPage";
 import RecontactSurveyPage from "./modules/survey/pages/RecontactSurveyPage";
+import FindUserPage from "./modules/survey/find-user/pages/FindUserPage";
+import UserSurveyDataPage from "./modules/survey/user-survey-data/pages/UserSurveyDataPage";
 import SurveyDetailsPage from "./modules/survey/pages/SurveyDetailsPage";
 import SurveyPage from "./modules/survey/pages/SurveyPage";
 import SurveySettingsPage from "./modules/survey/pages/SurveySettingsPage";
@@ -145,6 +147,14 @@ function App() {
         <Route path="/prescreen/edit/:id" element={<AddPrescreenPage isDarkMode={isDarkMode} />} />
         <Route path="/survey" element={<SurveyPage isDarkMode={isDarkMode} />} />
         <Route path="/survey/add" element={<AddSurveyPage isDarkMode={isDarkMode} />} />
+        <Route
+          path="/survey/:id/find-user"
+          element={<FindUserPage isDarkMode={isDarkMode} />}
+        />
+        <Route
+          path="/survey/:id/user-survey-data"
+          element={<UserSurveyDataPage isDarkMode={isDarkMode} />}
+        />
         <Route path="/survey/view/:id" element={<SurveyDetailsPage isDarkMode={isDarkMode} />} />
         <Route path="/survey/edit/:id" element={<EditSurveyPage isDarkMode={isDarkMode} />} />
         <Route path="/survey/group" element={<GroupSurveyPage isDarkMode={isDarkMode} />} />

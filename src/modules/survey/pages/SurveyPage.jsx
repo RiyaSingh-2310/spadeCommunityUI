@@ -54,6 +54,27 @@ function SurveyPage({ isDarkMode }) {
         if (id == null) return;
         navigate(`/survey/view/${encodeURIComponent(id)}`);
       }}
+      onFindUser={(row) => {
+        const id = row.id;
+        if (id == null) return;
+        navigate(`/survey/${encodeURIComponent(id)}/find-user`, {
+          state: {
+            surveyName: row.projectName || "Lifestyle Evolution India",
+          },
+        });
+      }}
+      onUserSurveyData={(row) => {
+        const id = row.id;
+        if (id == null) return;
+        navigate(`/survey/${encodeURIComponent(id)}/user-survey-data`, {
+          state: {
+            surveyName: row.projectName || "Lifestyle Evaluation India",
+          },
+        });
+      }}
+      onSurveyClone={() => {
+        // Future implementation: clone survey project
+      }}
       onStatusToggle={onStatusToggle}
       permissionModule="survey"
       searchFields={[
