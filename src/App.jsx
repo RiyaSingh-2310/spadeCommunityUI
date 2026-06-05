@@ -26,6 +26,7 @@ import EditEmailTemplatePage from "./modules/system-email/pages/EditEmailTemplat
 import SystemEmailTemplatePage from "./modules/system-email/pages/SystemEmailTemplatePage";
 import ProfilingQuestionFormPage from "./modules/user-screening/pages/ProfilingQuestionFormPage";
 import QuestionsListPage from "./modules/user-screening/pages/QuestionsListPage";
+import SortProfilingQuestionsPage from "./modules/user-screening/pages/SortProfilingQuestionsPage";
 import AddPartnerPage from "./modules/partners/pages/AddPartnerPage";
 import PartnersPage from "./modules/partners/pages/PartnersPage";
 import AddProjectManagerPage from "./modules/project-managers/pages/AddProjectManagerPage";
@@ -39,6 +40,8 @@ import AddSalesManagerPage from "./modules/sales/pages/AddSalesManagerPage";
 import RfqPage from "./modules/sales/pages/RfqPage";
 import SalesManagerPage from "./modules/sales/pages/SalesManagerPage";
 import EditGroupSurveyPage from "./modules/survey/pages/EditGroupSurveyPage";
+import AddGroupSurveyProjectPage from "./modules/survey/pages/AddGroupSurveyProjectPage";
+import GroupSurveyProjectsListPage from "./modules/survey/pages/GroupSurveyProjectsListPage";
 import AddSurveyPage from "./modules/survey/pages/AddSurveyPage";
 import EditSurveyPage from "./modules/survey/pages/EditSurveyPage";
 import GroupSurveyDetailsPage from "./modules/survey/pages/GroupSurveyDetailsPage";
@@ -159,6 +162,14 @@ function App() {
         <Route path="/survey/edit/:id" element={<EditSurveyPage isDarkMode={isDarkMode} />} />
         <Route path="/survey/group" element={<GroupSurveyPage isDarkMode={isDarkMode} />} />
         <Route
+          path="/survey/group/:groupId/add-project"
+          element={<AddGroupSurveyProjectPage isDarkMode={isDarkMode} />}
+        />
+        <Route
+          path="/survey/group/:groupId/projects"
+          element={<GroupSurveyProjectsListPage isDarkMode={isDarkMode} />}
+        />
+        <Route
           path="/survey/group/view/:id"
           element={<GroupSurveyDetailsPage isDarkMode={isDarkMode} />}
         />
@@ -176,6 +187,10 @@ function App() {
         <Route path="/reward-points/completed" element={<CompletedRewardsPage isDarkMode={isDarkMode} />} />
         <Route path="/reward-points/settings" element={<RewardSettingsPage isDarkMode={isDarkMode} />} />
         <Route path="/user-screening/questions" element={<QuestionsListPage isDarkMode={isDarkMode} />} />
+        <Route
+          path="/user-screening/questions/sort"
+          element={<SortProfilingQuestionsPage isDarkMode={isDarkMode} />}
+        />
         <Route
           path="/user-screening/questions/add"
           element={<ProfilingQuestionFormPage isDarkMode={isDarkMode} mode="add" />}

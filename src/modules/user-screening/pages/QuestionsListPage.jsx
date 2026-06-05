@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import {
   deleteProfilingQuestion,
@@ -10,11 +10,19 @@ import {
 
 function QuestionsListPage({ isDarkMode }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [listVersion, setListVersion] = useState(0);
   const rows = toListingRows(loadProfilingQuestions());
   void listVersion;
 
   const bumpList = () => setListVersion((v) => v + 1);
+
+  useEffect(() => {
+    if (location.state?.refresh) {
+      bumpList();
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, location.pathname, navigate]);
 
   const handleStatusToggle = (row) => {
     const nextStatus =
@@ -41,6 +49,8 @@ function QuestionsListPage({ isDarkMode }) {
       isDarkMode={isDarkMode}
       title="List of All Questions"
       searchPlaceholder="Search questions..."
+      secondaryActionLabel="Sort Profiling Questions"
+      onSecondaryActionClick={() => navigate("/user-screening/questions/sort")}
       actionLabel="Add Profiling Questions"
       onActionClick={() => navigate("/user-screening/questions/add")}
       columns={[

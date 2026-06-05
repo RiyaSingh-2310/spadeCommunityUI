@@ -5,6 +5,7 @@ import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormStatusSelect from "../../../components/admin/FormStatusSelect";
 import ProfileImageUpload from "../../../components/admin/ProfileImageUpload";
 import TableCard from "../../../components/admin/TableCard";
+import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import {
   getConfirmPasswordError,
@@ -13,6 +14,8 @@ import {
   getRequiredError,
   isFormValid,
 } from "../../shared/utils/validation";
+
+const MANAGER_FORM_FIELDS = ["name", "email", "password", "confirmPassword"];
 
 function AddProjectManagerPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -27,7 +30,6 @@ function AddProjectManagerPage({ isDarkMode }) {
     status: "Active",
   });
 
-  const [touched, setTouched] = useState(false);
   const inputClass = getAdminInputClass();
 
   const errors = useMemo(
@@ -39,6 +41,11 @@ function AddProjectManagerPage({ isDarkMode }) {
     }),
     [form]
   );
+
+  const { showError, touch, validateSubmit } = useFormValidation({
+    errors,
+    fields: MANAGER_FORM_FIELDS,
+  });
 
   const canSubmit = isFormValid(errors);
 
@@ -57,9 +64,10 @@ function AddProjectManagerPage({ isDarkMode }) {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!canSubmit) return;
+            if (!validateSubmit() || !canSubmit) return;
             navigate("/project-managers");
           }}
+          noValidate
         >
           <ProfileImageUpload
             isDarkMode={isDarkMode}
@@ -70,13 +78,29 @@ function AddProjectManagerPage({ isDarkMode }) {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">Name</label>
-              <input className={inputClass} placeholder="Enter Name" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} onBlur={() => setTouched(true)} />
-              {touched && errors.name && <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{errors.name}</p>}
+              <input
+                className={inputClass}
+                placeholder="Enter Name"
+                value={form.name}
+                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                onBlur={() => touch("name")}
+              />
+              {showError("name") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("name")}</p>
+              )}
             </div>
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">Email Address</label>
-              <input className={inputClass} placeholder="Enter Email Address" value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} onBlur={() => setTouched(true)} />
-              {touched && errors.email && <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{errors.email}</p>}
+              <input
+                className={inputClass}
+                placeholder="Enter Email Address"
+                value={form.email}
+                onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                onBlur={() => touch("email")}
+              />
+              {showError("email") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("email")}</p>
+              )}
             </div>
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">New Password</label>
@@ -87,7 +111,7 @@ function AddProjectManagerPage({ isDarkMode }) {
                   placeholder="Enter New Password"
                   value={form.password}
                   onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-                  onBlur={() => setTouched(true)}
+                  onBlur={() => touch("password")}
                 />
                 <button
                   type="button"
@@ -97,8 +121,8 @@ function AddProjectManagerPage({ isDarkMode }) {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {touched && errors.password && (
-                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{errors.password}</p>
+              {showError("password") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("password")}</p>
               )}
             </div>
             <div>
@@ -110,7 +134,7 @@ function AddProjectManagerPage({ isDarkMode }) {
                   placeholder="Confirm New Password"
                   value={form.confirmPassword}
                   onChange={(e) => setForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-                  onBlur={() => setTouched(true)}
+                  onBlur={() => touch("confirmPassword")}
                 />
                 <button
                   type="button"
@@ -120,8 +144,10 @@ function AddProjectManagerPage({ isDarkMode }) {
                   {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {touched && errors.confirmPassword && (
-                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{errors.confirmPassword}</p>
+              {showError("confirmPassword") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
+                  {showError("confirmPassword")}
+                </p>
               )}
             </div>
             <FormStatusSelect
@@ -131,10 +157,18 @@ function AddProjectManagerPage({ isDarkMode }) {
             />
           </div>
           <div className="flex items-center gap-3 pt-2">
-            <button type="submit" disabled={!canSubmit} className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]">
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]"
+            >
               Submit
             </button>
-            <button type="button" onClick={() => navigate("/project-managers")} className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50">
+            <button
+              type="button"
+              onClick={() => navigate("/project-managers")}
+              className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
+            >
               Cancel
             </button>
           </div>

@@ -37,17 +37,24 @@ function SurveyListingActions({
   onFindUser,
   onUserSurveyData,
   onSurveyClone,
+  labels = {},
 }) {
   const hasAny =
     onView || onEdit || onFindUser || onUserSurveyData || onSurveyClone;
 
   if (!hasAny) return null;
 
+  const viewLabel = labels.view ?? "View";
+  const editLabel = labels.edit ?? "Edit";
+  const findUserLabel = labels.findUser ?? "Find User";
+  const userSurveyDataLabel = labels.userSurveyData ?? "User Survey Data";
+  const surveyCloneLabel = labels.surveyClone ?? "Survey Clone";
+
   return (
     <div className="flex flex-wrap items-center justify-end gap-1.5">
       <ActionIconButton
         isDarkMode={isDarkMode}
-        label="View"
+        label={viewLabel}
         onClick={onView}
         disabled={!onView}
       >
@@ -55,7 +62,7 @@ function SurveyListingActions({
       </ActionIconButton>
       <ActionIconButton
         isDarkMode={isDarkMode}
-        label="Edit"
+        label={editLabel}
         onClick={onEdit}
         disabled={!onEdit}
       >
@@ -63,7 +70,7 @@ function SurveyListingActions({
       </ActionIconButton>
       <ActionIconButton
         isDarkMode={isDarkMode}
-        label="Find User"
+        label={findUserLabel}
         onClick={onFindUser}
         disabled={!onFindUser}
       >
@@ -71,7 +78,7 @@ function SurveyListingActions({
       </ActionIconButton>
       <ActionIconButton
         isDarkMode={isDarkMode}
-        label="User Survey Data"
+        label={userSurveyDataLabel}
         onClick={onUserSurveyData}
         disabled={!onUserSurveyData}
       >
@@ -79,7 +86,7 @@ function SurveyListingActions({
       </ActionIconButton>
       <ActionIconButton
         isDarkMode={isDarkMode}
-        label="Survey Clone"
+        label={surveyCloneLabel}
         onClick={onSurveyClone}
         disabled={!onSurveyClone}
       >

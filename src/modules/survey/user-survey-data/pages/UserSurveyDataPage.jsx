@@ -47,15 +47,15 @@ function UserSurveyDataPage({ isDarkMode }) {
           { label: "User Survey Data" },
         ]}
         isDarkMode={isDarkMode}
-        rightContent={
-          <button
-            type="button"
-            onClick={() => navigate("/survey")}
-            className="admin-btn-cancel h-10 rounded-xl px-4 text-sm font-semibold"
-          >
-            Back to Survey
-          </button>
-        }
+        // rightContent={
+        //   <button
+        //     type="button"
+        //     onClick={() => navigate("/survey")}
+        //     className="admin-btn-cancel h-10 rounded-xl px-4 text-sm font-semibold"
+        //   >
+        //     Back to Survey
+        //   </button>
+        // }
       />
 
       <DebouncedSearchInput

@@ -1,22 +1,25 @@
 import { useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useListingPageActions } from "../../shared/hooks/useListingPageActions";
+import {
+  GROUP_PROJECT_NAMES,
+  GROUP_SURVEY_CLIENT_OPTIONS,
+} from "../data/groupSurveyData";
 
-const CLIENTS = ["Alpha Corp", "Beta Labs", "Gamma Tech", "Delta Works", "Epsilon Ltd"];
-const PROJECTS = [
-  "Group Wave 1",
-  "Group Wave 2",
-  "Panel Sync Study",
-  "Community Panel Q3",
-  "Segmentation Wave",
-];
+const initialRows = Array.from({ length: 12 }, (_, idx) => {
+  const client = GROUP_SURVEY_CLIENT_OPTIONS[idx % GROUP_SURVEY_CLIENT_OPTIONS.length];
+  const projectName = GROUP_PROJECT_NAMES[idx % GROUP_PROJECT_NAMES.length];
 
-const initialRows = Array.from({ length: 12 }, (_, idx) => ({
-  id: `GSV-${41 + idx}`,
-  clientName: CLIENTS[idx % CLIENTS.length],
-  projectName: PROJECTS[idx % PROJECTS.length],
-  status: idx % 5 === 0 ? "Inactive" : "Active",
-}));
+  return {
+    id: `GSV-${41 + idx}`,
+    clientName: client.label,
+    clientCode: client.value,
+    client: client.value,
+    projectName,
+    groupProject: projectName,
+    status: idx % 5 === 0 ? "Inactive" : "Active",
+  };
+});
 
 function GroupSurveyPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -24,6 +27,8 @@ function GroupSurveyPage({ isDarkMode }) {
     initialRows,
     editPath: "/survey/group",
   });
+
+  const getGroupId = (row) => row?.id;
 
   return (
     <ModuleListingPage
@@ -35,17 +40,27 @@ function GroupSurveyPage({ isDarkMode }) {
       columns={["S. No.", "Client Name", "Project Name", "Status", "Action"]}
       rows={rows}
       rowIdKey="id"
-      actionVariant="view-edit"
+      actionVariant="group-survey"
       showDeleteAction={false}
       editPath="/survey/group"
-      onView={(row) => {
-        const id = row.id;
+      onEdit={(row) => {
+        const id = getGroupId(row);
         if (id == null) return;
-        navigate(`/survey/group/view/${encodeURIComponent(id)}`);
+        navigate(`/survey/group/edit/${encodeURIComponent(id)}`);
+      }}
+      onAddProject={(row) => {
+        const id = getGroupId(row);
+        if (id == null) return;
+        navigate(`/survey/group/${encodeURIComponent(id)}/add-project`);
+      }}
+      onListProjects={(row) => {
+        const id = getGroupId(row);
+        if (id == null) return;
+        navigate(`/survey/group/${encodeURIComponent(id)}/projects`);
       }}
       onStatusToggle={onStatusToggle}
       permissionModule="group_survey"
-      searchFields={["clientName", "projectName"]}
+      searchFields={["clientName", "projectName", "clientCode"]}
       nowrapAllCells
     />
   );

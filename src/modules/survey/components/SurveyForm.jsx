@@ -39,15 +39,19 @@ function SurveyForm({
   form,
   setForm,
   errors,
-  touched,
-  setTouched,
+  showError,
+  touch,
   isDarkMode,
   disabled = false,
+  groupProject = "",
+  readOnlyClient = false,
+  clientOptions = SURVEY_CLIENT_OPTIONS,
+  projectManagerOptions = PROJECT_MANAGER_OPTIONS,
+  salesManagerOptions = SALES_MANAGER_OPTIONS,
 }) {
   const fileInputRef = useRef(null);
   const inputClass = getAdminInputClass();
   const selectClass = `${inputClass} appearance-none`;
-  const showError = (key) => (touched ? errors[key] : "");
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -63,11 +67,11 @@ function SurveyForm({
     if (file && !file.name.toLowerCase().endsWith(".csv")) {
       event.target.value = "";
       setField("surveyCsvFile", null);
-      setTouched(true);
+      touch("surveyCsvFile");
       return;
     }
     setField("surveyCsvFile", file);
-    setTouched(true);
+    touch("surveyCsvFile");
   };
 
   const isSingleLink = form.projectLinkType === "Single Link";
@@ -76,16 +80,27 @@ function SurveyForm({
     <div className="space-y-5">
       <TableCard title="Project Information" isDarkMode={isDarkMode}>
         <div className="grid gap-4 md:grid-cols-2">
+          {groupProject ? (
+            <FormField label="Group Project">
+              <input
+                className={`${inputClass} opacity-70`}
+                value={groupProject}
+                disabled
+                readOnly
+              />
+            </FormField>
+          ) : null}
+
           <FormField label="Client" required error={showError("client")}>
             <select
-              className={selectClass}
+              className={`${selectClass} ${readOnlyClient ? "opacity-70" : ""}`}
               value={form.client}
               onChange={(e) => setField("client", e.target.value)}
-              onBlur={() => setTouched(true)}
-              disabled={disabled}
+              onBlur={() => touch("client")}
+              disabled={disabled || readOnlyClient}
             >
               <option value="">Select Client</option>
-              {SURVEY_CLIENT_OPTIONS.map((opt) => (
+              {clientOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -99,7 +114,7 @@ function SurveyForm({
               placeholder="Enter Project Name"
               value={form.projectName}
               onChange={(e) => setField("projectName", e.target.value)}
-              onBlur={() => setTouched(true)}
+              onBlur={() => touch("projectName")}
               disabled={disabled}
             />
           </FormField>
@@ -109,11 +124,11 @@ function SurveyForm({
               className={selectClass}
               value={form.projectManager}
               onChange={(e) => setField("projectManager", e.target.value)}
-              onBlur={() => setTouched(true)}
+              onBlur={() => touch("projectManager")}
               disabled={disabled}
             >
               <option value="">Select Project Manager</option>
-              {PROJECT_MANAGER_OPTIONS.map((name) => (
+              {projectManagerOptions.map((name) => (
                 <option key={name} value={name}>
                   {name}
                 </option>
@@ -126,7 +141,7 @@ function SurveyForm({
               className={selectClass}
               value={form.projectCountry}
               onChange={(e) => setField("projectCountry", e.target.value)}
-              onBlur={() => setTouched(true)}
+              onBlur={() => touch("projectCountry")}
               disabled={disabled}
             >
               <option value="">Select Country</option>
@@ -146,7 +161,7 @@ function SurveyForm({
               disabled={disabled}
             >
               <option value="">Select Sales Manager</option>
-              {SALES_MANAGER_OPTIONS.map((name) => (
+              {salesManagerOptions.map((name) => (
                 <option key={name} value={name}>
                   {name}
                 </option>
@@ -192,7 +207,7 @@ function SurveyForm({
               placeholder="Enter LOI"
               value={form.loi}
               onChange={(value) => setField("loi", value)}
-              onBlur={() => setTouched(true)}
+              onBlur={() => touch("loi")}
               disabled={disabled}
             />
           </FormField>
@@ -203,7 +218,7 @@ function SurveyForm({
               placeholder="Enter IR"
               value={form.ir}
               onChange={(value) => setField("ir", value)}
-              onBlur={() => setTouched(true)}
+              onBlur={() => touch("ir")}
               disabled={disabled}
             />
           </FormField>
@@ -214,7 +229,7 @@ function SurveyForm({
               placeholder="Enter Sample Size"
               value={form.sampleSize}
               onChange={(value) => setField("sampleSize", value)}
-              onBlur={() => setTouched(true)}
+              onBlur={() => touch("sampleSize")}
               disabled={disabled}
             />
           </FormField>
@@ -224,7 +239,7 @@ function SurveyForm({
               className={selectClass}
               value={form.currency}
               onChange={(e) => setField("currency", e.target.value)}
-              onBlur={() => setTouched(true)}
+              onBlur={() => touch("currency")}
               disabled={disabled}
             >
               <option value="">Select Currency</option>
@@ -242,7 +257,7 @@ function SurveyForm({
               placeholder="Enter CPI"
               value={form.cpi}
               onChange={(value) => setField("cpi", value)}
-              onBlur={() => setTouched(true)}
+              onBlur={() => touch("cpi")}
               disabled={disabled}
             />
           </FormField>
@@ -253,7 +268,7 @@ function SurveyForm({
               className={inputClass}
               value={form.startDate}
               onChange={(e) => setField("startDate", e.target.value)}
-              onBlur={() => setTouched(true)}
+              onBlur={() => touch("startDate")}
               disabled={disabled}
             />
           </FormField>
@@ -265,7 +280,7 @@ function SurveyForm({
               value={form.endDate}
               min={form.startDate || undefined}
               onChange={(e) => setField("endDate", e.target.value)}
-              onBlur={() => setTouched(true)}
+              onBlur={() => touch("endDate")}
               disabled={disabled}
             />
           </FormField>
@@ -278,6 +293,7 @@ function SurveyForm({
             value={form.projectLinkType}
             onChange={(value) => {
               setField("projectLinkType", value);
+              touch("projectLinkType");
               if (value === "Single Link") {
                 setForm((prev) => ({ ...prev, surveyCsvFile: null }));
               } else {
@@ -297,7 +313,7 @@ function SurveyForm({
                 placeholder="Enter Live Link"
                 value={form.liveLink}
                 onChange={(e) => setField("liveLink", e.target.value)}
-                onBlur={() => setTouched(true)}
+                onBlur={() => touch("liveLink")}
                 disabled={disabled}
               />
             </FormField>
@@ -307,7 +323,7 @@ function SurveyForm({
                 placeholder="Enter Test Link"
                 value={form.testLink}
                 onChange={(e) => setField("testLink", e.target.value)}
-                onBlur={() => setTouched(true)}
+                onBlur={() => touch("testLink")}
                 disabled={disabled}
               />
             </FormField>
@@ -389,7 +405,7 @@ function SurveyForm({
                 className={selectClass}
                 value={form.language}
                 onChange={(e) => setField("language", e.target.value)}
-                onBlur={() => setTouched(true)}
+                onBlur={() => touch("language")}
                 disabled={disabled}
               >
                 <option value="">Select Language</option>
@@ -405,7 +421,7 @@ function SurveyForm({
                 className={selectClass}
                 value={form.surveyGroup}
                 onChange={(e) => setField("surveyGroup", e.target.value)}
-                onBlur={() => setTouched(true)}
+                onBlur={() => touch("surveyGroup")}
                 disabled={disabled}
               >
                 <option value="">Select Survey Group</option>
@@ -432,7 +448,7 @@ function SurveyForm({
               placeholder="Enter User Termination Point"
               value={form.userTerminationPoint}
               onChange={(e) => setField("userTerminationPoint", e.target.value)}
-              onBlur={() => setTouched(true)}
+              onBlur={() => touch("userTerminationPoint")}
               disabled={disabled}
             />
           </FormField>
@@ -446,7 +462,7 @@ function SurveyForm({
               placeholder="Enter User Completion Point"
               value={form.userCompletionPoint}
               onChange={(e) => setField("userCompletionPoint", e.target.value)}
-              onBlur={() => setTouched(true)}
+              onBlur={() => touch("userCompletionPoint")}
               disabled={disabled}
             />
           </FormField>

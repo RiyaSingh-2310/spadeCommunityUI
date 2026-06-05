@@ -6,6 +6,26 @@ import FormStatusSelect from "../../../components/admin/FormStatusSelect";
 import ProfileImageUpload from "../../../components/admin/ProfileImageUpload";
 import NumericInput from "../../../components/admin/NumericInput";
 import TableCard from "../../../components/admin/TableCard";
+import { useFormValidation } from "../../shared/hooks/useFormValidation";
+import {
+  getEmailError,
+  getRequiredError,
+  getUrlError,
+  isFormValid,
+} from "../../shared/utils/validation";
+
+const PARTNER_FORM_FIELDS = [
+  "name",
+  "email",
+  "country",
+  "contactPerson",
+  "contactNumber",
+  "website",
+  "panelSize",
+  "terminateOverQuota",
+  "qualityTermSurveyClose",
+  "aboutPartner",
+];
 
 function AddPartnerPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -28,20 +48,34 @@ function AddPartnerPage({ isDarkMode }) {
     status: "Active",
   });
 
-  const canSubmit = useMemo(
-    () =>
-      form.name &&
-      form.email &&
-      form.country &&
-      form.contactPerson &&
-      form.contactNumber &&
-      form.website &&
-      form.panelSize &&
-      form.terminateOverQuota &&
-      form.qualityTermSurveyClose &&
-      form.aboutPartner,
+  const errors = useMemo(
+    () => ({
+      name: getRequiredError(form.name, "Name"),
+      email: getEmailError(form.email),
+      country: getRequiredError(form.country, "Country"),
+      contactPerson: getRequiredError(form.contactPerson, "Contact Person"),
+      contactNumber: getRequiredError(form.contactNumber, "Contact Number"),
+      website: getUrlError(form.website, { required: true }),
+      panelSize: getRequiredError(form.panelSize, "Panel Size"),
+      terminateOverQuota: getRequiredError(
+        form.terminateOverQuota,
+        "Complete Terminate Over Quota"
+      ),
+      qualityTermSurveyClose: getRequiredError(
+        form.qualityTermSurveyClose,
+        "Quality Term Survey Close"
+      ),
+      aboutPartner: getRequiredError(form.aboutPartner, "About Partner"),
+    }),
     [form]
   );
+
+  const { showError, touch, validateSubmit } = useFormValidation({
+    errors,
+    fields: PARTNER_FORM_FIELDS,
+  });
+
+  const canSubmit = isFormValid(errors);
 
   const inputClass = `h-11 w-full rounded-xl border px-3 text-sm outline-none transition ${
     isDarkMode
@@ -68,9 +102,10 @@ function AddPartnerPage({ isDarkMode }) {
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!canSubmit) return;
+          if (!validateSubmit() || !canSubmit) return;
           navigate("/partners");
         }}
+        noValidate
       >
         <TableCard title="Basic Information" isDarkMode={isDarkMode}>
           <div className="mb-4">
@@ -100,6 +135,7 @@ function AddPartnerPage({ isDarkMode }) {
                     placeholder={placeholder}
                     value={form[key]}
                     onChange={(v) => setField(key, v)}
+                    onBlur={() => touch(key)}
                   />
                 ) : (
                   <input
@@ -107,18 +143,30 @@ function AddPartnerPage({ isDarkMode }) {
                     placeholder={placeholder}
                     value={form[key]}
                     onChange={(e) => setField(key, e.target.value)}
+                    onBlur={() => touch(key)}
                   />
+                )}
+                {showError(key) && (
+                  <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError(key)}</p>
                 )}
               </div>
             ))}
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">Select Country</label>
-              <select className={inputClass} value={form.country} onChange={(e) => setField("country", e.target.value)}>
+              <select
+                className={inputClass}
+                value={form.country}
+                onChange={(e) => setField("country", e.target.value)}
+                onBlur={() => touch("country")}
+              >
                 <option value="">Select Country</option>
                 <option value="India">India</option>
                 <option value="UAE">UAE</option>
                 <option value="USA">USA</option>
               </select>
+              {showError("country") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("country")}</p>
+              )}
             </div>
             <FormStatusSelect
               value={form.status}
@@ -132,7 +180,13 @@ function AddPartnerPage({ isDarkMode }) {
                 placeholder="Enter About Partner"
                 value={form.aboutPartner}
                 onChange={(e) => setField("aboutPartner", e.target.value)}
+                onBlur={() => touch("aboutPartner")}
               />
+              {showError("aboutPartner") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
+                  {showError("aboutPartner")}
+                </p>
+              )}
             </div>
           </div>
         </TableCard>

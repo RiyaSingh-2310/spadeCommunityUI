@@ -277,6 +277,19 @@ input[type="number"],
   opacity: 0.5;
 }
 
+.sortable-question-row-over {
+  border-color: var(--admin-success-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--admin-success-text) 35%, transparent);
+}
+
+.sortable-question-row-dragging {
+  border-color: var(--admin-success-text);
+}
+
+.sortable-question-handle {
+  touch-action: none;
+}
+
 .admin-notification-unread {
   background-color: var(--admin-notification-unread-bg);
 }

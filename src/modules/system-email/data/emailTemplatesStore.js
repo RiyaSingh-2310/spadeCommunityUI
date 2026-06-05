@@ -1,6 +1,15 @@
 const STORAGE_KEY = "system-email-templates";
 
-const DEFAULT_BODY = `<p>Hello {{name}},</p><p>Welcome to Speed Community.</p><p>Thank you for registering.</p><p>Regards,<br/>Speed Community Team</p>`;
+export const DEFAULT_EMAIL_DESCRIPTION = `<p>Dear {USER_NAME},</p>
+<p>You recently signed up with Speed Community.</p>
+<p>Please click on the activation link below to verify your email address.</p>
+<p>Click here to activate your account:</p>
+<p>Activation Link:<br/>{ACTIVATION_LINK}</p>
+<p>If you run into any problems, simply copy and paste the entire link into your web browser.</p>
+<p>Thank you,</p>
+<p>Speed Community</p>`;
+
+const DEFAULT_BODY = DEFAULT_EMAIL_DESCRIPTION;
 
 const INITIAL_TEMPLATES = [
   {

@@ -7,10 +7,19 @@ import FormStatusSelect from "../../../components/admin/FormStatusSelect";
 import QuestionTypeRadioGroup from "../../../components/admin/QuestionTypeRadioGroup";
 import TableCard from "../../../components/admin/TableCard";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
+import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   getRequiredError,
   isFormValid,
 } from "../../shared/utils/validation";
+
+const PROFILING_QUESTION_FIELDS = [
+  "language",
+  "questionTitle",
+  "questionType",
+  "options",
+  "status",
+];
 import {
   createProfilingQuestion,
   getProfilingQuestionById,
@@ -48,8 +57,6 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
   const { id } = useParams();
   const isEdit = mode === "edit";
   const [form, setForm] = useState(() => buildInitialForm(isEdit, id));
-  const [touched, setTouched] = useState(false);
-
   const inputClass = getAdminInputClass();
   const needsOptions = OPTION_QUESTION_TYPES.includes(form.questionType);
   const existingRecord = isEdit && id ? getProfilingQuestionById(id) : null;
@@ -68,6 +75,11 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
     return next;
   }, [form, needsOptions]);
 
+  const { showError, touch, validateSubmit } = useFormValidation({
+    errors,
+    fields: PROFILING_QUESTION_FIELDS,
+  });
+
   const canSubmit = isFormValid(errors);
 
   const setField = (key, value) => {
@@ -81,8 +93,7 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
   };
 
   const handleSubmit = () => {
-    setTouched(true);
-    if (!canSubmit) return;
+    if (!validateSubmit() || !canSubmit) return;
     const payload = {
       language: form.language.trim(),
       questionTitle: form.questionTitle.trim(),
@@ -132,12 +143,12 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
       <TableCard title="Profiling Question Details" isDarkMode={isDarkMode}>
         <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
           <div className="grid gap-4 md:grid-cols-2">
-            <FormField label="Language" required error={touched ? errors.language : ""}>
+            <FormField label="Language" required error={showError("language")}>
               <select
                 className={inputClass}
                 value={form.language}
                 onChange={(e) => setField("language", e.target.value)}
-                onBlur={() => setTouched(true)}
+                onBlur={() => touch("language")}
               >
                 <option value="">Select Language</option>
                 {LANGUAGES.map((lang) => (
@@ -158,38 +169,41 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
               className="md:col-span-2"
               label="Question Title"
               required
-              error={touched ? errors.questionTitle : ""}
+              error={showError("questionTitle")}
             >
               <input
                 className={inputClass}
                 placeholder="Enter Question Title"
                 value={form.questionTitle}
                 onChange={(e) => setField("questionTitle", e.target.value)}
-                onBlur={() => setTouched(true)}
+                onBlur={() => touch("questionTitle")}
               />
             </FormField>
           </div>
 
           <QuestionTypeRadioGroup
             value={form.questionType}
-            onChange={(type) => setField("questionType", type)}
+            onChange={(type) => {
+              setField("questionType", type);
+              touch("questionType");
+            }}
             options={QUESTION_TYPES}
             isDarkMode={isDarkMode}
           />
 
           {needsOptions && (
-            <FormField label="Add Options" required error={touched ? errors.options : ""}>
+            <FormField label="Add Options" required error={showError("options")}>
               <textarea
                 className={`${inputClass} min-h-[120px] py-2`}
                 placeholder="Enter options (one per line)"
                 value={form.options}
                 onChange={(e) => setField("options", e.target.value)}
-                onBlur={() => setTouched(true)}
+                onBlur={() => touch("options")}
               />
             </FormField>
           )}
-          {touched && errors.questionType && (
-            <p className="text-xs text-[var(--admin-danger-text)]">{errors.questionType}</p>
+          {showError("questionType") && (
+            <p className="text-xs text-[var(--admin-danger-text)]">{showError("questionType")}</p>
           )}
 
           <div className="max-w-md">

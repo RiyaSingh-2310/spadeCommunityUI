@@ -3,26 +3,28 @@ import { Mail } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
 import AuthSecondaryAction from "../components/auth/AuthSecondaryAction";
+import { useFormValidation } from "../modules/shared/hooks/useFormValidation";
+import { getEmailError } from "../modules/shared/utils/validation";
 import { forgotPassword } from "../services/auth/authApi";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
+
+const FORGOT_PASSWORD_FIELDS = ["email"];
 
 function ForgotPassword({ isDarkMode, onToggleTheme }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState(location.state?.email || "");
-  const [touched, setTouched] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  const hasEmail = email.trim().length > 0;
-  const hasValidEmail = useMemo(
-    () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()),
-    [email]
-  );
+  const errors = useMemo(() => ({ email: getEmailError(email) }), [email]);
+  const { showError, touch, validateSubmit } = useFormValidation({
+    errors,
+    fields: FORGOT_PASSWORD_FIELDS,
+  });
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setTouched(true);
-    if (!hasEmail || !hasValidEmail) {
+    if (!validateSubmit() || errors.email) {
       return;
     }
 
@@ -67,7 +69,7 @@ function ForgotPassword({ isDarkMode, onToggleTheme }) {
           </label>
           <div
             className={`kh-input-shell flex h-[52px] items-center rounded-2xl border px-4 transition-all duration-200 ${
-              touched && (!hasEmail || !hasValidEmail)
+              showError("email")
                 ? "border-[#de3d3d] focus-within:border-[#de3d3d] focus-within:ring-2 focus-within:ring-[#de3d3d]/20"
                 : isDarkMode
                   ? "border-[#344662] bg-[#101a2a] focus-within:border-[#24b86b] focus-within:ring-2 focus-within:ring-[#24b86b]/20"
@@ -89,7 +91,7 @@ function ForgotPassword({ isDarkMode, onToggleTheme }) {
               placeholder="Enter your email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              onBlur={() => setTouched(true)}
+              onBlur={() => touch("email")}
               disabled={isSending}
               className={`kh-input h-full w-full bg-transparent pl-2.5 text-[15px] outline-none ${
                 isDarkMode
@@ -98,13 +100,8 @@ function ForgotPassword({ isDarkMode, onToggleTheme }) {
               }`}
             />
           </div>
-          {touched && !hasEmail && (
-            <p className="mt-1.5 text-xs text-[#de3d3d]">Email is required.</p>
-          )}
-          {touched && hasEmail && !hasValidEmail && (
-            <p className="mt-1.5 text-xs text-[#de3d3d]">
-              Please enter a valid email address
-            </p>
+          {showError("email") && (
+            <p className="mt-1.5 text-xs text-[#de3d3d]">{showError("email")}</p>
           )}
         </div>
 

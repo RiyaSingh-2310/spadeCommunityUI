@@ -74,3 +74,25 @@ export function getSurveyFormErrors(form) {
 export function isSurveyFormSubmittable(form) {
   return isFormValid(getSurveyFormErrors(form));
 }
+
+export const SURVEY_FORM_FIELDS = [
+  "client",
+  "projectName",
+  "projectManager",
+  "projectCountry",
+  "loi",
+  "ir",
+  "sampleSize",
+  "currency",
+  "cpi",
+  "startDate",
+  "endDate",
+  "projectLinkType",
+  "liveLink",
+  "testLink",
+  "surveyCsvFile",
+  "language",
+  "surveyGroup",
+  "userTerminationPoint",
+  "userCompletionPoint",
+];

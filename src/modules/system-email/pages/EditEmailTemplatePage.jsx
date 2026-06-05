@@ -1,64 +1,89 @@
 import { useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
-import { getAdminInputClass } from "../../shared/utils/formStyles";
+import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
+import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
+import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getRequiredError, isFormValid } from "../../shared/utils/validation";
-import { getEmailTemplateById, saveEmailTemplate } from "../data/emailTemplatesStore";
 
-function buildInitialForm(templateId) {
-  const existing = getEmailTemplateById(templateId);
-  if (!existing) {
-    return { title: "", subject: "", body: "" };
-  }
-  return {
-    title: existing.title,
-    subject: existing.subject,
-    body: existing.body,
-  };
+const EMAIL_TEMPLATE_FIELDS = ["description"];
+import { toastApiSuccess } from "../../../services/toast/apiToast";
+import {
+  DEFAULT_EMAIL_DESCRIPTION,
+  getEmailTemplateById,
+  saveEmailTemplate,
+} from "../data/emailTemplatesStore";
+
+function stripHtml(html) {
+  return String(html ?? "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .trim();
+}
+
+function buildInitialDescription(template) {
+  const body = template?.body?.trim();
+  return body || DEFAULT_EMAIL_DESCRIPTION;
 }
 
 function EditEmailTemplatePage({ isDarkMode }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const existing = id ? getEmailTemplateById(id) : null;
-  const [form, setForm] = useState(() => buildInitialForm(id));
-  const [touched, setTouched] = useState(false);
+  const { readOnly, showSubmit } = useFormAccess();
+
+  const [description, setDescription] = useState(() =>
+    buildInitialDescription(existing)
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputClass = getAdminInputClass();
 
   const errors = useMemo(
     () => ({
-      title: getRequiredError(form.title, "Template Title"),
-      subject: getRequiredError(form.subject, "Email Subject"),
-      body: getRequiredError(form.body.replace(/<[^>]*>/g, "").trim() || form.body, "Email Body"),
+      description: getRequiredError(
+        stripHtml(description),
+        "Email Description"
+      ),
     }),
-    [form]
+    [description]
   );
 
-  const canSubmit = isFormValid(errors);
+  const { showError, touch, validateSubmit } = useFormValidation({
+    errors,
+    fields: EMAIL_TEMPLATE_FIELDS,
+  });
 
-  const setField = (key, value) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
+  const canSubmit =
+    showSubmit && !readOnly && isFormValid(errors) && !isSubmitting;
 
-  const handleSubmit = () => {
-    setTouched(true);
-    if (!canSubmit || !existing) return;
-    saveEmailTemplate({
-      id: existing.id,
-      title: form.title.trim(),
-      subject: form.subject.trim(),
-      body: form.body,
-    });
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!validateSubmit() || !isFormValid(errors) || !existing) return;
+
+    setIsSubmitting(true);
+    try {
+      saveEmailTemplate({
+        id: existing.id,
+        title: existing.title,
+        subject: existing.subject,
+        body: description,
+      });
+      toastApiSuccess({ message: "Email template updated successfully." });
+      navigate("/system-email", { replace: true });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!existing) {
     return (
       <div className="space-y-6">
-        <AdminPageHeader title="Edit Template" isDarkMode={isDarkMode} />
+        <AdminPageHeader title="Edit Email Template" isDarkMode={isDarkMode} />
         <p className="admin-text-muted text-sm">Template not found.</p>
         <button
           type="button"
@@ -74,65 +99,53 @@ function EditEmailTemplatePage({ isDarkMode }) {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="Edit Template"
+        title="Edit Email Template"
         breadcrumbs={[
           { label: "System Email Template", to: "/system-email" },
-          { label: "Edit Template" },
+          { label: "Edit Email Template" },
         ]}
         isDarkMode={isDarkMode}
       />
       <TableCard title="Email Template Details" isDarkMode={isDarkMode}>
-        <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-          <FormField
-            label="Template Title"
-            required
-            error={touched ? errors.title : ""}
-          >
+        <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+          <FormField label="Email Title">
             <input
-              className={inputClass}
-              value={form.title}
-              onChange={(e) => setField("title", e.target.value)}
-              onBlur={() => setTouched(true)}
+              className={`${inputClass} opacity-70`}
+              value={existing.title}
+              disabled
+              readOnly
             />
           </FormField>
           <FormField
-            label="Email Subject"
+            label="Email Description"
             required
-            error={touched ? errors.subject : ""}
-          >
-            <input
-              className={inputClass}
-              placeholder="Enter Email Subject"
-              value={form.subject}
-              onChange={(e) => setField("subject", e.target.value)}
-              onBlur={() => setTouched(true)}
-            />
-          </FormField>
-          <FormField
-            label="Email Body"
-            required
-            error={touched ? errors.body : ""}
+            error={showError("description")}
           >
             <RichTextEditor
               isDarkMode={isDarkMode}
-              value={form.body}
-              onChange={(v) => setField("body", v)}
-              placeholder="Enter Email Content"
+              value={description}
+              onChange={setDescription}
+              onBlur={() => touch("description")}
+              placeholder="Enter email description"
+              disabled={fieldDisabled(readOnly, isSubmitting)}
             />
           </FormField>
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <button
-              type="button"
-              disabled={!canSubmit}
-              onClick={handleSubmit}
-              className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Submit
-            </button>
+          <div className="admin-form-actions flex flex-wrap items-center gap-3 pt-2">
+            {showSubmit && !readOnly && (
+              <button
+                type="submit"
+                disabled={!canSubmit}
+                className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]"
+              >
+                {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                {isSubmitting ? "Submitting..." : "Submit"}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => navigate("/system-email")}
-              className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isSubmitting}
+              className={getAdminCancelButtonClass()}
             >
               Cancel
             </button>

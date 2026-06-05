@@ -4,6 +4,7 @@ import { Bold, Italic, List, ListOrdered, Underline } from "lucide-react";
 function RichTextEditor({
   value,
   onChange,
+  onBlur,
   isDarkMode,
   placeholder = "Enter content...",
   disabled = false,
@@ -64,6 +65,7 @@ function RichTextEditor({
         aria-multiline
         data-placeholder={placeholder}
         onInput={() => !disabled && onChange(editorRef.current?.innerHTML || "")}
+        onBlur={onBlur}
         contentEditable={!disabled}
         className={`admin-rich-editor admin-text min-h-[140px] px-3 py-3 text-sm outline-none ${
           isDarkMode ? "bg-[#101a2a]" : "bg-[var(--admin-header-search-bg)]"

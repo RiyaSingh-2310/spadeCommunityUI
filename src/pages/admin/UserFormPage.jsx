@@ -24,6 +24,7 @@ import {
   useFormAccess,
 } from "../../modules/permissions/FormAccessContext";
 import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
+import { useFormValidation } from "../../modules/shared/hooks/useFormValidation";
 import {
   getConfirmPasswordError,
   getEmailError,
@@ -33,6 +34,8 @@ import {
   getRequiredError,
   isFormValid,
 } from "../../modules/shared/utils/validation";
+
+const USER_FORM_FIELDS = ["name", "email", "password", "confirmPassword"];
 
 const EMPTY_ADD_FORM = {
   name: "",
@@ -51,8 +54,8 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
 
   const [form, setForm] = useState(EMPTY_ADD_FORM);
   const [preview, setPreview] = useState("");
+  const [imageFile, setImageFile] = useState(null);
   const [existingImage, setExistingImage] = useState("");
-  const [touched, setTouched] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,34 +64,6 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
 
   const { readOnly, showSubmit } = useFormAccess();
   const inputClass = getAdminInputClass();
-
-  useEffect(() => {
-    if (!isEdit || !id) return undefined;
-
-    let cancelled = false;
-
-    const loadUser = async () => {
-      setIsLoadingRecord(true);
-      setLoadFailed(false);
-      try {
-        const admin = await getRecord(id);
-        if (cancelled) return;
-        setForm(mapAdminToForm(admin));
-        setExistingImage(admin?.image_url || "");
-      } catch (error) {
-        if (cancelled) return;
-        setLoadFailed(true);
-        toastApiError(error);
-      } finally {
-        if (!cancelled) setIsLoadingRecord(false);
-      }
-    };
-
-    loadUser();
-    return () => {
-      cancelled = true;
-    };
-  }, [isEdit, id]);
 
   const errors = useMemo(
     () => ({
@@ -104,6 +79,44 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
     [form, isEdit]
   );
 
+  const { showError, touch, validateSubmit, resetValidation } = useFormValidation({
+    errors,
+    fields: USER_FORM_FIELDS,
+  });
+
+  useEffect(() => {
+    if (!isEdit || !id) return undefined;
+
+    let cancelled = false;
+
+    const loadUser = async () => {
+      resetValidation();
+      setForm(EMPTY_ADD_FORM);
+      setPreview("");
+      setImageFile(null);
+      setExistingImage("");
+      setIsLoadingRecord(true);
+      setLoadFailed(false);
+      try {
+        const admin = await getRecord(id);
+        if (cancelled) return;
+        setForm(mapAdminToForm(admin));
+        setExistingImage(admin?.image_url || admin?.imageUrl || "");
+      } catch (error) {
+        if (cancelled) return;
+        setLoadFailed(true);
+        toastApiError(error);
+      } finally {
+        if (!cancelled) setIsLoadingRecord(false);
+      }
+    };
+
+    loadUser();
+    return () => {
+      cancelled = true;
+    };
+  }, [isEdit, id, resetValidation]);
+
   const canSubmit =
     showSubmit &&
     !readOnly &&
@@ -114,8 +127,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
 
   const onSubmit = async (event) => {
     event.preventDefault();
-    setTouched(true);
-    if (readOnly || !showSubmit || !isFormValid(errors)) return;
+    if (readOnly || !showSubmit || !validateSubmit() || !isFormValid(errors)) return;
 
     setIsSubmitting(true);
     try {
@@ -142,6 +154,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
         email: form.email,
         password: form.password,
         contact_no: "",
+        imageFile,
         permission_type: form.permission_type,
         status: formStatusToApiStatus(form.status),
         permissions: form.permissions,
@@ -210,26 +223,27 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
               isDarkMode={isDarkMode}
               preview={preview}
               onPreviewChange={setPreview}
+              onFileChange={setImageFile}
               existingImage={existingImage}
               showCurrentLabel={isEdit}
               name={form.name}
             />
 
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField label="Name" required error={touched ? errors.name : ""}>
+              <FormField label="Name" required error={showError("name")}>
                 <input
                   placeholder="Enter Name"
                   className={inputClass}
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  onBlur={() => setTouched(true)}
+                  onBlur={() => touch("name")}
                   disabled={fieldDisabled(readOnly, isSubmitting)}
                 />
               </FormField>
               <FormField
                 label="Email Address"
                 required={!isEdit}
-                error={touched ? errors.email : ""}
+                error={showError("email")}
               >
                 <input
                   type="email"
@@ -237,14 +251,14 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                   className={`${inputClass} ${isEdit ? "opacity-70" : ""}`}
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  onBlur={() => setTouched(true)}
+                  onBlur={() => touch("email")}
                   disabled={fieldDisabled(readOnly, isSubmitting) || isEdit}
                   readOnly={isEdit}
                 />
               </FormField>
               {!isEdit && (
                 <>
-                  <FormField label="Password" required error={touched ? errors.password : ""}>
+                  <FormField label="Password" required error={showError("password")}>
                     <div className="relative">
                       <input
                         type={showPassword ? "text" : "password"}
@@ -252,7 +266,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                         className={`${inputClass} pr-10`}
                         value={form.password}
                         onChange={(e) => setForm({ ...form, password: e.target.value })}
-                        onBlur={() => setTouched(true)}
+                        onBlur={() => touch("password")}
                         disabled={fieldDisabled(readOnly, isSubmitting)}
                       />
                       <button
@@ -268,7 +282,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                   <FormField
                     label="Confirm Password"
                     required
-                    error={touched ? errors.confirmPassword : ""}
+                    error={showError("confirmPassword")}
                   >
                     <div className="relative">
                       <input
@@ -279,7 +293,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                         onChange={(e) =>
                           setForm({ ...form, confirmPassword: e.target.value })
                         }
-                        onBlur={() => setTouched(true)}
+                        onBlur={() => touch("confirmPassword")}
                         disabled={fieldDisabled(readOnly, isSubmitting)}
                       />
                       <button

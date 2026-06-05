@@ -6,7 +6,10 @@ import LogoImageUpload from "../../../components/admin/LogoImageUpload";
 import TableCard from "../../../components/admin/TableCard";
 import { useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
+import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getRequiredError, isFormValid } from "../../shared/utils/validation";
+
+const INVOICE_SETTINGS_FIELDS = ["address", "paymentTerms", "footerContent"];
 
 const DEFAULT_ADDRESS = `Spade Community Pvt. Ltd.
 123 Business Park, Sector 18
@@ -29,7 +32,6 @@ function InvoiceSettingsPage({ isDarkMode }) {
     paymentTerms: DEFAULT_PAYMENT_TERMS,
     footerContent: DEFAULT_FOOTER,
   });
-  const [touched, setTouched] = useState(false);
   const { readOnly, showSubmit } = useFormAccess();
   const inputClass = getAdminInputClass();
 
@@ -42,14 +44,18 @@ function InvoiceSettingsPage({ isDarkMode }) {
     [form]
   );
 
+  const { showError, touch, validateSubmit } = useFormValidation({
+    errors,
+    fields: INVOICE_SETTINGS_FIELDS,
+  });
+
   const canSubmit = showSubmit && !readOnly && isFormValid(errors);
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const onSubmit = (event) => {
     event.preventDefault();
-    setTouched(true);
-    if (readOnly || !showSubmit || !canSubmit) return;
+    if (readOnly || !showSubmit || !validateSubmit() || !canSubmit) return;
     navigate("/invoice/settings", { replace: true });
   };
 
@@ -75,13 +81,13 @@ function InvoiceSettingsPage({ isDarkMode }) {
             <FormField
               label="Address"
               required
-              error={touched ? errors.address : ""}
+              error={showError("address")}
             >
               <textarea
                 className={`${inputClass} min-h-[120px] resize-y`}
                 value={form.address}
                 onChange={(e) => setField("address", e.target.value)}
-                onBlur={() => setTouched(true)}
+                onBlur={() => touch("address")}
                 rows={5}
                 readOnly={readOnly}
                 disabled={readOnly}
@@ -90,13 +96,13 @@ function InvoiceSettingsPage({ isDarkMode }) {
             <FormField
               label="Payment Terms"
               required
-              error={touched ? errors.paymentTerms : ""}
+              error={showError("paymentTerms")}
             >
               <textarea
                 className={`${inputClass} min-h-[100px] resize-y`}
                 value={form.paymentTerms}
                 onChange={(e) => setField("paymentTerms", e.target.value)}
-                onBlur={() => setTouched(true)}
+                onBlur={() => touch("paymentTerms")}
                 rows={4}
                 readOnly={readOnly}
                 disabled={readOnly}
@@ -105,13 +111,13 @@ function InvoiceSettingsPage({ isDarkMode }) {
             <FormField
               label="Invoice Footer Content"
               required
-              error={touched ? errors.footerContent : ""}
+              error={showError("footerContent")}
             >
               <textarea
                 className={`${inputClass} min-h-[80px] resize-y`}
                 value={form.footerContent}
                 onChange={(e) => setField("footerContent", e.target.value)}
-                onBlur={() => setTouched(true)}
+                onBlur={() => touch("footerContent")}
                 rows={3}
                 readOnly={readOnly}
                 disabled={readOnly}

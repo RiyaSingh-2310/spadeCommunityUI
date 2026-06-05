@@ -47,8 +47,9 @@ export async function apiRequest(path, options = {}) {
     headers: extraHeaders = {},
   } = options;
 
+  const isFormDataBody = typeof FormData !== "undefined" && body instanceof FormData;
   const headers = {
-    "Content-Type": "application/json",
+    ...(isFormDataBody ? {} : { "Content-Type": "application/json" }),
     ...extraHeaders,
   };
 
@@ -76,7 +77,12 @@ export async function apiRequest(path, options = {}) {
     response = await fetch(url, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body:
+        body === undefined
+          ? undefined
+          : isFormDataBody
+            ? body
+            : JSON.stringify(body),
     });
   } catch {
     throw new ApiError("Unable to reach the server. Please try again.");

@@ -12,12 +12,22 @@ import {
   updateClient,
 } from "../../services/clients/clientsApi";
 import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
+import { useFormValidation } from "../../modules/shared/hooks/useFormValidation";
 import {
   getEmailError,
   getRequiredError,
   getUrlError,
   isFormValid,
 } from "../../modules/shared/utils/validation";
+
+const CLIENT_FORM_FIELDS = [
+  "name",
+  "email",
+  "contactPerson",
+  "contactNumber",
+  "website",
+  "country",
+];
 
 const CLIENT_NAMES = ["Alpha Corp", "Beta Labs", "Gamma Tech", "Delta Works", "Epsilon Ltd"];
 const COUNTRIES = ["India", "UAE", "USA", "UK", "Canada"];
@@ -83,7 +93,6 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
     isEdit ? getDemoClientById(id).image : ""
   );
 
-  const [touched, setTouched] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputClass = getAdminInputClass();
 
@@ -119,12 +128,16 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
     };
   }, [form, isEdit]);
 
+  const { showError, touch, validateSubmit } = useFormValidation({
+    errors,
+    fields: CLIENT_FORM_FIELDS,
+  });
+
   const canSubmit = isFormValid(errors) && !isSubmitting;
 
   const onSubmit = async (event) => {
     event.preventDefault();
-    setTouched(true);
-    if (!isFormValid(errors)) return;
+    if (!validateSubmit() || !isFormValid(errors)) return;
 
     setIsSubmitting(true);
     try {
@@ -223,12 +236,12 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                   }
                   value={form[key]}
                   onChange={(e) => setField(key, e.target.value)}
-                  onBlur={() => setTouched(true)}
+                  onBlur={() => touch(key)}
                   disabled={isSubmitting || (isEdit && key === "email")}
                   readOnly={isEdit && key === "email"}
                 />
-                {touched && errors[key] && (
-                  <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{errors[key]}</p>
+                {showError(key) && (
+                  <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError(key)}</p>
                 )}
               </div>
             ))}
@@ -241,7 +254,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                 className={inputClass}
                 value={form.country}
                 onChange={(e) => setField("country", e.target.value)}
-                onBlur={() => setTouched(true)}
+                onBlur={() => touch("country")}
                 disabled={isSubmitting}
               >
                 <option value="">Select Country</option>
@@ -249,8 +262,8 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                 <option value="UAE">UAE</option>
                 <option value="USA">USA</option>
               </select>
-              {touched && errors.country && (
-                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{errors.country}</p>
+              {showError("country") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("country")}</p>
               )}
             </div>
             <FormStatusSelect

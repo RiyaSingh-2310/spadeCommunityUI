@@ -1,3 +1,8 @@
+import {
+  matchesPrescreenMain,
+  matchesSurveyMain,
+} from "./sidebarNavUtils";
+
 export const SIDEBAR_NAV_ITEMS = [
   {
     type: "link",
@@ -71,7 +76,8 @@ export const SIDEBAR_NAV_ITEMS = [
       {
         label: "Prescreen",
         root: "/prescreen",
-        matcher: /^\/prescreen$/,
+        isActive: matchesPrescreenMain,
+        matcher: /^\/prescreen(\/|$)/,
         permissionKeys: ["prescreen"],
       },
     ],
@@ -91,7 +97,8 @@ export const SIDEBAR_NAV_ITEMS = [
       {
         label: "Survey",
         root: "/survey",
-        matcher: /^\/survey$/,
+        isActive: matchesSurveyMain,
+        matcher: /^\/survey(\/|$)/,
         permissionKeys: ["survey"],
       },
       {

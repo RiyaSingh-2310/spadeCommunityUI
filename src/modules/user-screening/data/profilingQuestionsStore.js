@@ -192,3 +192,29 @@ export function toListingRows(questions) {
     status: q.status,
   }));
 }
+
+/**
+ * Persists a new display order for all profiling questions.
+ * @param {{ id: string }[]} orderedQuestions
+ */
+export function saveProfilingQuestionOrder(orderedQuestions) {
+  const list = readStore();
+  const orderById = new Map(
+    orderedQuestions.map((question, index) => [question.id, index])
+  );
+
+  if (orderById.size !== list.length) {
+    throw new Error("All profiling questions must be included in the sort order.");
+  }
+
+  const next = list.map((question) => {
+    const sortOrder = orderById.get(question.id);
+    if (sortOrder == null) {
+      throw new Error("All profiling questions must be included in the sort order.");
+    }
+    return { ...question, sortOrder };
+  });
+
+  writeStore(next.sort((a, b) => a.sortOrder - b.sortOrder));
+  return next;
+}

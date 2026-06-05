@@ -7,6 +7,7 @@ function ProfileImageUpload({
   isDarkMode,
   preview,
   onPreviewChange,
+  onFileChange = () => {},
   existingImage = "",
   label = "Profile Image",
   showCurrentLabel = false,
@@ -35,12 +36,14 @@ function ProfileImageUpload({
     const nextUrl = URL.createObjectURL(file);
     blobUrlRef.current = nextUrl;
     onPreviewChange(nextUrl);
+    onFileChange(file);
     event.target.value = "";
   };
 
   const handleRemove = () => {
     revokeBlobUrl();
     onPreviewChange("");
+    onFileChange(null);
     if (inputRef.current) {
       inputRef.current.value = "";
     }

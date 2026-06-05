@@ -7,7 +7,10 @@ import FormRadioGroup from "../../../components/admin/FormRadioGroup";
 import TableCard from "../../../components/admin/TableCard";
 import { useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
+import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getRequiredError, isFormValid } from "../../shared/utils/validation";
+
+const REWARD_SETTINGS_FIELDS = ["registrationReward", "minimumPayout"];
 
 function RewardSettingsPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -18,8 +21,6 @@ function RewardSettingsPage({ isDarkMode }) {
     flipkart: "Yes",
     paypal: "Yes",
   });
-  const [touched, setTouched] = useState(false);
-
   const { readOnly, showSubmit } = useFormAccess();
   const inputClass = getAdminInputClass();
 
@@ -34,6 +35,11 @@ function RewardSettingsPage({ isDarkMode }) {
     [form]
   );
 
+  const { showError, touch, validateSubmit } = useFormValidation({
+    errors,
+    fields: REWARD_SETTINGS_FIELDS,
+  });
+
   const canSubmit = showSubmit && !readOnly && isFormValid(errors);
 
   const setField = (key, value) => {
@@ -41,8 +47,7 @@ function RewardSettingsPage({ isDarkMode }) {
   };
 
   const handleSubmit = () => {
-    setTouched(true);
-    if (readOnly || !showSubmit || !canSubmit) return;
+    if (readOnly || !showSubmit || !validateSubmit() || !canSubmit) return;
     navigate("/reward-points/pending");
   };
 
@@ -55,13 +60,13 @@ function RewardSettingsPage({ isDarkMode }) {
             className="max-w-md"
             label="User Registration Reward Point"
             required
-            error={touched ? errors.registrationReward : ""}
+            error={showError("registrationReward")}
           >
             <NumericInput
               className={inputClass}
               value={form.registrationReward}
               onChange={(v) => setField("registrationReward", v)}
-              onBlur={() => setTouched(true)}
+              onBlur={() => touch("registrationReward")}
             />
           </FormField>
 
@@ -71,13 +76,13 @@ function RewardSettingsPage({ isDarkMode }) {
               <FormField
                 label="Minimum Payout"
                 required
-                error={touched ? errors.minimumPayout : ""}
+                error={showError("minimumPayout")}
               >
                 <NumericInput
                   className={inputClass}
                   value={form.minimumPayout}
                   onChange={(v) => setField("minimumPayout", v)}
-                  onBlur={() => setTouched(true)}
+                  onBlur={() => touch("minimumPayout")}
                 />
               </FormField>
               <FormRadioGroup

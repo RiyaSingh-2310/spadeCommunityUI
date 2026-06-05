@@ -20,6 +20,10 @@ import {
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { SIDEBAR_NAV_ITEMS } from "../../config/sidebarNavConfig";
+import {
+  findActiveSidebarGroupKey,
+  isSidebarItemActive,
+} from "../../config/sidebarNavUtils";
 import { usePermissions } from "../../modules/permissions/PermissionsContext";
 import heroLogo from "../../assets/SpadeCommunitylogoWhite.png";
 import compressedLogo from "../../assets/SpadeCommunitylogocompressed.png";
@@ -78,12 +82,16 @@ function AdminSidebar({
     "Log Activity": <ScrollText size={21} strokeWidth={2} />,
   };
 
-  const activeGroupKey =
-    sidebarItems.find(
-      (item) => item.type === "group" && item.matcher.test(location.pathname)
-    )?.key ?? null;
+  const activeGroupKey = findActiveSidebarGroupKey(
+    sidebarItems,
+    location.pathname
+  );
 
   const openSection = manualOpenSection ?? activeGroupKey;
+
+  useEffect(() => {
+    setManualOpenSection(null);
+  }, [location.pathname]);
 
   const clearHideTimeout = () => {
     if (hideTimeoutRef.current) {
@@ -117,7 +125,11 @@ function AdminSidebar({
   };
 
   const navigateAndClose = (path) => {
-    navigate(path);
+    if (location.pathname !== path) {
+      navigate(path);
+    } else {
+      navigate(path, { replace: true });
+    }
     closeFlyout();
     if (isMobile) {
       onCloseDrawer?.();
@@ -168,7 +180,10 @@ function AdminSidebar({
               </div>
               <div className="py-1">
                 {item.children.map((child) => {
-                  const isChildActive = child.matcher.test(location.pathname);
+                  const isChildActive = isSidebarItemActive(
+                    child,
+                    location.pathname
+                  );
                   return (
                     <button
                       type="button"
@@ -191,7 +206,9 @@ function AdminSidebar({
               role="menuitem"
               onClick={() => navigateAndClose(item.root)}
               className={`admin-sidebar-flyout-item flex h-10 w-full items-center px-3 text-left text-sm font-medium transition-colors ${
-                item.matcher.test(location.pathname) ? "admin-sidebar-flyout-item-active" : ""
+                isSidebarItemActive(item, location.pathname)
+                  ? "admin-sidebar-flyout-item-active"
+                  : ""
               }`}
             >
               {item.label}
@@ -265,7 +282,7 @@ function AdminSidebar({
             }`}
           >
             {sidebarItems.map((item) => {
-              const isActive = item.matcher.test(location.pathname);
+              const isActive = isSidebarItemActive(item, location.pathname);
               const isExpanded = item.type === "group" && openSection === item.key;
 
               return (
@@ -331,7 +348,10 @@ function AdminSidebar({
                   {item.type === "group" && isExpanded && (!isCollapsed || isMobile) && (
                     <div className="mt-0.5 space-y-0.5">
                       {item.children.map((child) => {
-                        const isChildActive = child.matcher.test(location.pathname);
+                        const isChildActive = isSidebarItemActive(
+                    child,
+                    location.pathname
+                  );
                         return (
                           <button
                             type="button"

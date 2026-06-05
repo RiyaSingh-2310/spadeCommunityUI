@@ -6,11 +6,21 @@ import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
+import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   getRequiredError,
   getRichTextError,
   isFormValid,
 } from "../../shared/utils/validation";
+
+const SURVEY_SETTINGS_FIELDS = [
+  "language",
+  "completeRedirect",
+  "terminateRedirect",
+  "overQuotaRedirect",
+  "qualityTermRedirect",
+  "surveyCloseRedirect",
+];
 
 const LANGUAGE_OPTIONS = ["English", "Spanish", "French", "German", "Hindi"];
 
@@ -28,7 +38,6 @@ function SurveySettingsPage({ isDarkMode }) {
     language: "English",
     ...DEFAULT_CONTENT,
   });
-  const [touched, setTouched] = useState(false);
   const { readOnly, showSubmit } = useFormAccess();
   const inputClass = getAdminInputClass();
 
@@ -59,14 +68,18 @@ function SurveySettingsPage({ isDarkMode }) {
     [form]
   );
 
+  const { showError, touch, validateSubmit } = useFormValidation({
+    errors,
+    fields: SURVEY_SETTINGS_FIELDS,
+  });
+
   const canSubmit = showSubmit && !readOnly && isFormValid(errors);
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const onSubmit = (event) => {
     event.preventDefault();
-    setTouched(true);
-    if (readOnly || !showSubmit || !canSubmit) return;
+    if (readOnly || !showSubmit || !validateSubmit() || !canSubmit) return;
     navigate("/survey/settings", { replace: true });
   };
 
@@ -92,13 +105,13 @@ function SurveySettingsPage({ isDarkMode }) {
             className="max-w-md"
             label="Language"
             required
-            error={touched ? errors.language : ""}
+            error={showError("language")}
           >
             <select
               className={inputClass}
               value={form.language}
               onChange={(e) => setField("language", e.target.value)}
-              onBlur={() => setTouched(true)}
+              onBlur={() => touch("language")}
               disabled={readOnly}
             >
               {LANGUAGE_OPTIONS.map((lang) => (
@@ -117,12 +130,13 @@ function SurveySettingsPage({ isDarkMode }) {
                 key={key}
                 label={label}
                 required
-                error={touched ? errors[key] : ""}
+                error={showError(key)}
               >
                 <RichTextEditor
                   isDarkMode={isDarkMode}
                   value={form[key]}
                   onChange={(value) => setField(key, value)}
+                  onBlur={() => touch(key)}
                   placeholder={`Enter ${label.toLowerCase()}...`}
                   disabled={readOnly}
                 />

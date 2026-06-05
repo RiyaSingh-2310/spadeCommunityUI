@@ -78,6 +78,14 @@ function UsersPage({ isDarkMode }) {
     }
   };
 
+  const navigateToUserEdit = (row) => {
+    const userId = row?.id ?? row?.admin_id;
+    if (userId == null || String(userId).trim() === "") {
+      return;
+    }
+    navigate(`/users/edit/${encodeURIComponent(String(userId))}`);
+  };
+
   const handleStatusToggle = async (row) => {
     const nextStatus = row.status === "Active" ? "Inactive" : "Active";
     try {
@@ -110,7 +118,7 @@ function UsersPage({ isDarkMode }) {
         isLoading={isLoading}
         loadingMessage="Loading Admin Users..."
         emptyMessage="No Admin Users Found"
-        onEdit={(row) => navigate(`/users/edit/${row.id}`)}
+        onEdit={navigateToUserEdit}
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}
         pageSize={DEFAULT_PAGE_SIZE}

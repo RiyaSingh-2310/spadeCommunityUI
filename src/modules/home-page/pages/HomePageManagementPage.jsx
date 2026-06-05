@@ -3,7 +3,22 @@ import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
+import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
+import {
+  getRequiredError,
+  getRichTextError,
+  isFormValid,
+} from "../../shared/utils/validation";
+
+const HOME_PAGE_FIELDS = [
+  "title",
+  "keyword",
+  "description",
+  "threeSteps",
+  "chooseReward",
+  "footerJsx",
+];
 
 const DEFAULT_STEPS_HTML =
   "<p><strong>Step 1:</strong> Register your account</p><p><strong>Step 2:</strong> Complete your profile</p><p><strong>Step 3:</strong> Start earning rewards</p>";
@@ -37,16 +52,24 @@ function HomePageManagementPage({ isDarkMode }) {
 
   const inputClass = getAdminInputClass();
 
-  const canSubmit = useMemo(
-    () =>
-      form.title.trim() &&
-      form.keyword.trim() &&
-      form.description.trim() &&
-      form.threeSteps.trim() &&
-      form.chooseReward.trim() &&
-      form.footerJsx.trim(),
+  const errors = useMemo(
+    () => ({
+      title: getRequiredError(form.title, "Title"),
+      keyword: getRequiredError(form.keyword, "Keyword"),
+      description: getRequiredError(form.description, "Description"),
+      threeSteps: getRichTextError(form.threeSteps, "Three Simple Steps"),
+      chooseReward: getRichTextError(form.chooseReward, "Choose The Reward"),
+      footerJsx: getRequiredError(form.footerJsx, "Footer.jsx"),
+    }),
     [form]
   );
+
+  const { showError, touch, validateSubmit } = useFormValidation({
+    errors,
+    fields: HOME_PAGE_FIELDS,
+  });
+
+  const canSubmit = isFormValid(errors);
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -58,9 +81,10 @@ function HomePageManagementPage({ isDarkMode }) {
           className="space-y-5"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!canSubmit) return;
+            if (!validateSubmit() || !canSubmit) return;
             navigate("/");
           }}
+          noValidate
         >
           <div>
             <label className="admin-text mb-2 block text-sm font-semibold">Title</label>
@@ -69,7 +93,11 @@ function HomePageManagementPage({ isDarkMode }) {
               placeholder="Enter Title"
               value={form.title}
               onChange={(e) => setField("title", e.target.value)}
+              onBlur={() => touch("title")}
             />
+            {showError("title") && (
+              <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("title")}</p>
+            )}
           </div>
           <div>
             <label className="admin-text mb-2 block text-sm font-semibold">Keyword</label>
@@ -78,7 +106,11 @@ function HomePageManagementPage({ isDarkMode }) {
               placeholder="Enter Keyword"
               value={form.keyword}
               onChange={(e) => setField("keyword", e.target.value)}
+              onBlur={() => touch("keyword")}
             />
+            {showError("keyword") && (
+              <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("keyword")}</p>
+            )}
           </div>
           <div>
             <label className="admin-text mb-2 block text-sm font-semibold">Description</label>
@@ -87,7 +119,13 @@ function HomePageManagementPage({ isDarkMode }) {
               placeholder="Enter Description"
               value={form.description}
               onChange={(e) => setField("description", e.target.value)}
+              onBlur={() => touch("description")}
             />
+            {showError("description") && (
+              <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
+                {showError("description")}
+              </p>
+            )}
           </div>
           <div>
             <label className="admin-text mb-2 block text-sm font-semibold">Three Simple Steps</label>
@@ -95,8 +133,14 @@ function HomePageManagementPage({ isDarkMode }) {
               isDarkMode={isDarkMode}
               value={form.threeSteps}
               onChange={(v) => setField("threeSteps", v)}
+              onBlur={() => touch("threeSteps")}
               placeholder="Enter three simple steps content..."
             />
+            {showError("threeSteps") && (
+              <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
+                {showError("threeSteps")}
+              </p>
+            )}
           </div>
           <div>
             <label className="admin-text mb-2 block text-sm font-semibold">Choose The Reward</label>
@@ -104,8 +148,14 @@ function HomePageManagementPage({ isDarkMode }) {
               isDarkMode={isDarkMode}
               value={form.chooseReward}
               onChange={(v) => setField("chooseReward", v)}
+              onBlur={() => touch("chooseReward")}
               placeholder="Enter reward section content..."
             />
+            {showError("chooseReward") && (
+              <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
+                {showError("chooseReward")}
+              </p>
+            )}
           </div>
           <div>
             <label className="admin-text mb-2 block text-sm font-semibold">Footer.jsx</label>
@@ -114,8 +164,12 @@ function HomePageManagementPage({ isDarkMode }) {
               placeholder="Footer.jsx"
               value={form.footerJsx}
               onChange={(e) => setField("footerJsx", e.target.value)}
+              onBlur={() => touch("footerJsx")}
               spellCheck={false}
             />
+            {showError("footerJsx") && (
+              <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("footerJsx")}</p>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <button

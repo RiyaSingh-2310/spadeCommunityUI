@@ -11,11 +11,77 @@ import {
   formatStatusLabel,
 } from "../../modules/shared/utils/statusLabels";
 
+function isApiSuccess(data) {
+  if (!data || typeof data !== "object") return false;
+  const explicit = data.success;
+  if (explicit === false || explicit === "false") return false;
+  return explicit === true || explicit === "true" || explicit == null;
+}
+
 function assertSuccess(data) {
-  if (data?.success !== true) {
+  if (!isApiSuccess(data)) {
     throw new ApiError(data?.message ?? "", data);
   }
   return data;
+}
+
+function resolveAdminId(admin) {
+  if (!admin || typeof admin !== "object") return undefined;
+  return admin.id ?? admin.admin_id ?? admin.user_id ?? admin.userId;
+}
+
+function looksLikeAdminRecord(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return (
+    resolveAdminId(value) != null ||
+    typeof value.email === "string" ||
+    typeof value.name === "string"
+  );
+}
+
+/**
+ * Extracts a single admin/user record from GET-by-id (and similar) payloads.
+ * @param {object | null | undefined} data
+ */
+export function extractAdminFromResponse(data) {
+  if (!data || typeof data !== "object") return null;
+
+  const nested = data.data && typeof data.data === "object" ? data.data : null;
+
+  const candidates = [
+    data.admin,
+    data.user,
+    data.adminUser,
+    nested?.admin,
+    nested?.user,
+    nested?.adminUser,
+    looksLikeAdminRecord(nested) ? nested : null,
+    looksLikeAdminRecord(data) ? data : null,
+  ];
+
+  for (const candidate of candidates) {
+    if (looksLikeAdminRecord(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function extractAdminsList(data) {
+  if (!data || typeof data !== "object") return [];
+
+  const nested = data.data && typeof data.data === "object" ? data.data : null;
+
+  const list =
+    data.admins ??
+    data.users ??
+    nested?.admins ??
+    nested?.users ??
+    (Array.isArray(data.data) ? data.data : null) ??
+    (Array.isArray(data) ? data : null);
+
+  return Array.isArray(list) ? list : [];
 }
 
 function splitNameParts(name) {
@@ -26,6 +92,12 @@ function splitNameParts(name) {
   if (parts.length === 0) return { firstName: "", lastName: "" };
   if (parts.length === 1) return { firstName: parts[0], lastName: "" };
   return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+}
+
+function resolveAdminPermissions(admin) {
+  return normalizePermissions(
+    admin?.permissions ?? admin?.permissions_json ?? admin?.permission
+  );
 }
 
 export function apiStatusToFormStatus(status) {
@@ -46,10 +118,10 @@ export function formStatusToApiStatus(status) {
  */
 export function mapAdminToUserRow(admin) {
   const { firstName, lastName } = splitNameParts(admin?.name);
-  const imageUrl = admin?.image_url ?? null;
+  const imageUrl = admin?.image_url ?? admin?.imageUrl ?? null;
 
   return {
-    id: admin?.id,
+    id: resolveAdminId(admin),
     name: admin?.name ?? "",
     firstName,
     lastName,
@@ -59,10 +131,10 @@ export function mapAdminToUserRow(admin) {
     statusLabel: formatAdminStatusLabel(admin?.status),
     image: imageUrl || undefined,
     imageUrl,
-    permission_type: admin?.permission_type ?? "user",
-    permissions: normalizePermissions(admin?.permissions),
-    contact_no: admin?.contact_no ?? "",
-    login_count: admin?.login_count ?? 0,
+    permission_type: admin?.permission_type ?? admin?.permissionType ?? "user",
+    permissions: resolveAdminPermissions(admin),
+    contact_no: admin?.contact_no ?? admin?.contactNo ?? "",
+    login_count: admin?.login_count ?? admin?.loginCount ?? 0,
   };
 }
 
@@ -73,8 +145,8 @@ export function mapAdminToForm(admin) {
     password: "",
     confirmPassword: "",
     status: apiStatusToFormStatus(admin?.status),
-    permission_type: admin?.permission_type ?? "user",
-    permissions: normalizePermissions(admin?.permissions),
+    permission_type: admin?.permission_type ?? admin?.permissionType ?? "user",
+    permissions: resolveAdminPermissions(admin),
   };
 }
 
@@ -83,7 +155,7 @@ export async function getRecords() {
   const data = await apiRequest(API_ROUTES.admin.all);
   assertSuccess(data);
 
-  const admins = Array.isArray(data.admins) ? data.admins : [];
+  const admins = extractAdminsList(data);
 
   return {
     ...data,
@@ -94,12 +166,22 @@ export async function getRecords() {
 
 /** GET /api/admin/:id — single admin for edit/details only (not for listing) */
 export async function getRecord(id) {
-  const data = await apiRequest(API_ROUTES.admin.byId(id));
-  assertSuccess(data);
-  if (!data.admin) {
-    throw new ApiError(data?.message ?? "", data);
+  const normalizedId = String(id ?? "").trim();
+  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
+    throw new ApiError("Invalid user id.");
   }
-  return data.admin;
+
+  const data = await apiRequest(API_ROUTES.admin.byId(normalizedId));
+  const admin = extractAdminFromResponse(data);
+
+  if (!admin) {
+    if (!isApiSuccess(data)) {
+      throw new ApiError(data?.message ?? "", data);
+    }
+    throw new ApiError(data?.message ?? "User not found.", data);
+  }
+
+  return admin;
 }
 
 /**
@@ -108,21 +190,35 @@ export async function getRecord(id) {
  *   email: string,
  *   password: string,
  *   contact_no?: string,
+ *   imageFile?: File | null,
  *   permission_type?: string,
  *   status: string,
  *   permissions?: object
  * }} payload
  */
 export async function createUser(payload) {
-  const body = {
-    name: payload.name.trim(),
-    email: payload.email.trim(),
-    password: payload.password,
-    contact_no: payload.contact_no?.trim() ?? "",
-    permission_type: payload.permission_type ?? "user",
-    status: payload.status,
-    ...buildPermissionsPayload(payload.permissions),
-  };
+  const body = new FormData();
+  body.append("name", payload.name.trim());
+  body.append("email", payload.email.trim());
+  body.append("password", payload.password);
+
+  const contactNo = payload.contact_no?.trim() ?? "";
+  if (contactNo) {
+    body.append("contact_no", contactNo);
+    body.append("contact-no", contactNo);
+  }
+
+  body.append("permission_type", payload.permission_type ?? "user");
+  body.append("status", payload.status);
+
+  const permissionPayload = buildPermissionsPayload(payload.permissions);
+  body.append("permissions", JSON.stringify(permissionPayload.permissions));
+
+  if (payload.imageFile instanceof File) {
+    body.append("image", payload.imageFile);
+    // Some backends map this key; keep both for compatibility with current API variants.
+    // body.append("image_url", payload.imageFile);
+  }
 
   const data = await apiRequest(API_ROUTES.admin.create, {
     method: "POST",

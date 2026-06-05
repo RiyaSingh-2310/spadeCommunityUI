@@ -49,7 +49,7 @@ export function getConfirmPasswordError(password, confirmPassword) {
   if (!confirm) {
     return "Confirm password is required";
   }
-  if (pwd !== confirm) {
+  if (pwd && confirm && pwd !== confirm) {
     return "Passwords must match";
   }
   return "";
@@ -66,7 +66,7 @@ export function getOptionalConfirmPasswordError(password, confirmPassword) {
   const confirm = String(confirmPassword ?? "").trim();
   if (!pwd && !confirm) return "";
   if (!confirm) return "Confirm password is required";
-  if (pwd !== confirm) return "Passwords must match";
+  if (pwd && confirm && pwd !== confirm) return "Passwords must match";
   return "";
 }
 
@@ -91,4 +91,30 @@ export function getRichTextError(value, label) {
 
 export function isFormValid(errors) {
   return Object.values(errors).every((msg) => !msg);
+}
+
+/** @param {string[]} fields */
+export function createEmptyTouched(fields) {
+  return fields.reduce((acc, field) => ({ ...acc, [field]: false }), {});
+}
+
+/** @param {string[]} fields */
+export function markAllTouched(fields, existing = {}) {
+  return fields.reduce((acc, field) => ({ ...acc, [field]: true }), {
+    ...existing,
+  });
+}
+
+/**
+ * Show a field error only after the user has blurred the field or submitted the form.
+ * @param {string} field
+ * @param {Record<string, boolean>} touched
+ * @param {Record<string, string>} errors
+ * @param {boolean} [submitAttempted]
+ */
+export function showFieldError(field, touched, errors, submitAttempted = false) {
+  if (!submitAttempted && !touched?.[field]) {
+    return "";
+  }
+  return errors?.[field] || "";
 }

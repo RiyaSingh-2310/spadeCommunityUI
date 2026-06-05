@@ -8,6 +8,7 @@ import AvatarNameCell from "../../../components/admin/AvatarNameCell";
 import Avatar from "../../../components/shared/Avatar";
 import { resolveAvatarFromRecord } from "../utils/userAvatar";
 import TableLoadingSkeleton from "../../../components/admin/TableLoadingSkeleton";
+import GroupSurveyListingActions from "../../../components/admin/GroupSurveyListingActions";
 import IconActions from "../../../components/admin/IconActions";
 import InvoicePdfAction from "../../../components/admin/InvoicePdfAction";
 import RewardPendingActions from "../../../components/admin/RewardPendingActions";
@@ -43,6 +44,8 @@ function ModuleListingPage({
   searchPlaceholder = "Search records...",
   actionLabel = "Add",
   onActionClick,
+  secondaryActionLabel,
+  onSecondaryActionClick,
   columns = [],
   rows = [],
   showStatus = true,
@@ -63,6 +66,9 @@ function ModuleListingPage({
   onFindUser,
   onUserSurveyData,
   onSurveyClone,
+  onAddProject,
+  onListProjects,
+  surveyActionLabels,
   onApprove,
   onReject,
   onPdfDownload,
@@ -89,12 +95,18 @@ function ModuleListingPage({
 
   const hasActionColumn = columns.some(isActionColumn);
   const isExternallyManaged = Boolean(
-    onStatusToggle || onEdit || onDelete || onManagePermissions
+    onStatusToggle ||
+      onEdit ||
+      onDelete ||
+      onManagePermissions ||
+      onAddProject ||
+      onListProjects
   );
   const editOnly = actionVariant === "edit-only";
   const viewEdit = actionVariant === "view-edit";
   const pdfDownload = actionVariant === "pdf-download";
   const userManagement = actionVariant === "user-management";
+  const groupSurvey = actionVariant === "group-survey";
 
   const getRowId = useCallback(
     (row) => row?.[rowIdKey] ?? row?.id,
@@ -154,12 +166,16 @@ function ModuleListingPage({
     !viewEdit &&
     !pdfDownload &&
     !userManagement &&
+    !groupSurvey &&
     Boolean(onDelete || hasActionColumn);
   const canShowManagePermissions =
     allowWrite && userManagement && Boolean(onManagePermissions);
   const effectiveStatusToggle = allowWrite ? onStatusToggle : undefined;
   const effectiveStatusAsText = statusAsText || (showStatus && !allowWrite);
   const showAddButton = Boolean(onActionClick && allowWrite);
+  const showSecondaryAction = Boolean(
+    onSecondaryActionClick && secondaryActionLabel && allowWrite
+  );
 
   const rowsSignature = rows.map((row) => row[rowIdKey] ?? row.id ?? "").join(",");
   const [prevRowsSignature, setPrevRowsSignature] = useState(rowsSignature);
@@ -243,14 +259,27 @@ function ModuleListingPage({
           placeholder={searchPlaceholder}
           isDarkMode={isDarkMode}
         />
-        {showAddButton && (
-          <button
-            type="button"
-            onClick={onActionClick}
-            className="h-10 shrink-0 rounded-xl bg-[#10a950] px-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,169,80,0.28)] transition hover:bg-[#0f9b49]"
-          >
-            {actionLabel}
-          </button>
+        {(showSecondaryAction || showAddButton) && (
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2.5">
+            {showSecondaryAction && (
+              <button
+                type="button"
+                onClick={onSecondaryActionClick}
+                className="admin-btn-cancel h-10 rounded-xl px-4 text-sm font-semibold transition hover:opacity-90"
+              >
+                {secondaryActionLabel}
+              </button>
+            )}
+            {showAddButton && (
+              <button
+                type="button"
+                onClick={onActionClick}
+                className="h-10 shrink-0 rounded-xl bg-[#10a950] px-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,169,80,0.28)] transition hover:bg-[#0f9b49]"
+              >
+                {actionLabel}
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -378,7 +407,7 @@ function ModuleListingPage({
                     );
                   }
                   if (isActionColumn(col)) {
-                    if (!allowWrite) return null;
+                    if (!allowWrite && !(groupSurvey && allowRead)) return null;
                     if (actionVariant === "user-management") {
                       return (
                         <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
@@ -400,6 +429,30 @@ function ModuleListingPage({
                             onDelete={
                               canShowDelete
                                 ? () => handleDeleteRequest(row, globalIdx)
+                                : undefined
+                            }
+                          />
+                        </td>
+                      );
+                    }
+                    if (actionVariant === "group-survey") {
+                      return (
+                        <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
+                          <GroupSurveyListingActions
+                            isDarkMode={isDarkMode}
+                            onEdit={
+                              canShowEdit
+                                ? () => handleEdit(row, globalIdx)
+                                : undefined
+                            }
+                            onAddProject={
+                              canShowEdit && onAddProject
+                                ? () => onAddProject(row, globalIdx)
+                                : undefined
+                            }
+                            onListProjects={
+                              allowRead && onListProjects
+                                ? () => onListProjects(row, globalIdx)
                                 : undefined
                             }
                           />
@@ -435,6 +488,7 @@ function ModuleListingPage({
                               onSurveyClone={
                                 onSurveyClone ? () => onSurveyClone(row, globalIdx) : undefined
                               }
+                              labels={surveyActionLabels}
                             />
                           ) : (
                             <ViewEditActions
