@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
 import { loginAdmin } from "../services/auth/authApi";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
@@ -8,7 +8,6 @@ import { saveAuthSession } from "../services/auth/authStorage";
 
 function Login({ isDarkMode, onToggleTheme }) {
   const navigate = useNavigate();
-  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -46,21 +45,15 @@ function Login({ isDarkMode, onToggleTheme }) {
         password,
       });
 
-      toastApiSuccess(response);
-
       saveAuthSession({
         token: response.token,
-        admin: {
-          ...(response.admin || {}),
-          firstName: response.firstName ?? response.admin?.firstName,
-          lastName: response.lastName ?? response.admin?.lastName,
-          email: response.email ?? response.admin?.email,
-          imageUrl: response.imageUrl ?? response.admin?.imageUrl,
-        },
+        refreshToken: response.refreshToken,
+        admin: response.admin,
       });
 
-      const redirectTo = location.state?.from || "/";
-      navigate(redirectTo, { replace: true });
+      toastApiSuccess(response);
+
+      navigate("/", { replace: true });
     } catch (error) {
       toastApiError(error);
     } finally {

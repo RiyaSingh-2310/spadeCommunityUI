@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
 import { Mail } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
+import AuthSecondaryAction from "../components/auth/AuthSecondaryAction";
 import { forgotPassword } from "../services/auth/authApi";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 
 function ForgotPassword({ isDarkMode, onToggleTheme }) {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const location = useLocation();
+  const [email, setEmail] = useState(location.state?.email || "");
   const [touched, setTouched] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
@@ -112,6 +114,15 @@ function ForgotPassword({ isDarkMode, onToggleTheme }) {
           className="mt-1 flex h-[52px] w-full items-center justify-center rounded-2xl bg-[#10a950] text-base font-semibold text-white shadow-[0_10px_24px_rgba(16,169,80,0.3)] transition-all duration-200 hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:bg-[#6fbd93] disabled:shadow-none"
         >
           {isSending ? "Sending..." : "Send OTP"}
+        </button>
+
+        <button
+          type="button"
+          className="h-11 rounded-xl w-full text-center px-5 text-sm font-semibold transition cursor-pointer disabled:opacity-50 bg-[#f4f8fc] border border-[#dce6f2] text-[#18202f] hover:bg-[#e9f0f7] disabled:border-[#d5deea] disabled:bg-[#f4f8fc] disabled:text-[#18202f]"
+          onClick={() => navigate("/auth")}
+          disabled={isSending}
+        >
+          Back
         </button>
       </form>
     </AuthLayout>

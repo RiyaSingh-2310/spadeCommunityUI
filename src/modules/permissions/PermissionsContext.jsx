@@ -1,6 +1,10 @@
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { getAdminUser } from "../../services/auth/authStorage";
+import {
+  AUTH_SESSION_CHANGED_EVENT,
+  getAdminUser,
+  getAuthToken,
+} from "../../services/auth/authStorage";
 import { getEffectivePermissions, isSuperAdminUser } from "./getEffectivePermissions";
 import { canReadModule, canWriteModule } from "./permissionsUtils";
 
@@ -8,7 +12,16 @@ const PermissionsContext = createContext(null);
 
 export function PermissionsProvider({ children }) {
   const location = useLocation();
-  const admin = getAdminUser();
+  const [sessionVersion, setSessionVersion] = useState(0);
+
+  useEffect(() => {
+    const sync = () => setSessionVersion((v) => v + 1);
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, sync);
+    return () => window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, sync);
+  }, []);
+
+  const admin = useMemo(() => getAdminUser(), [sessionVersion, location.pathname]);
+  const token = useMemo(() => getAuthToken(), [sessionVersion]);
 
   const value = useMemo(() => {
     const superAdmin = isSuperAdminUser(admin);
@@ -31,7 +44,7 @@ export function PermissionsProvider({ children }) {
       canWrite,
       canAccessNavItem,
     };
-  }, [admin, location.pathname]);
+  }, [admin, token, location.pathname]);
 
   return (
     <PermissionsContext.Provider value={value}>

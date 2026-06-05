@@ -1,6 +1,7 @@
 import { API_LOGIN_BEARER_TOKEN, API_ROUTES, buildApiUrl } from "../../config/api";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
+import { mapLoginResponse } from "./mapLoginResponse";
 
 const AUTH_FLOW_REQUEST_OPTIONS = {
   method: "POST",
@@ -44,29 +45,41 @@ export async function loginAdmin(credentials) {
     throw new ApiError("Invalid response from server.");
   }
 
-  if (!response.ok || data?.success !== true) {
+  const isHttpSuccess = response.status === 200 || response.status === 201;
+  const mapped = mapLoginResponse(data);
+
+  if (!isHttpSuccess) {
     throw new ApiError(
-      data?.message || "Login failed. Please try again.",
+      mapped.message || data?.message || "Login failed. Please try again.",
       data,
       response.status
     );
   }
 
-  if (!data.token) {
-    throw new ApiError(data?.message || "Login failed. Please try again.", data);
+  if (!mapped.success || !mapped.token) {
+    throw new ApiError(
+      mapped.message || data?.message || "Login failed. Please try again.",
+      data,
+      response.status
+    );
   }
 
-  if (
-    data.admin?.status &&
-    String(data.admin.status).toLowerCase() !== "active"
-  ) {
+  const status = mapped.admin?.status ?? data?.admin?.status ?? data?.status;
+  if (status && String(status).toLowerCase() !== "active") {
     throw new ApiError(
       "Your account is inactive. Please contact support.",
       data
     );
   }
 
-  return data;
+  return {
+    ...data,
+    success: true,
+    message: mapped.message || data?.message,
+    token: mapped.token,
+    refreshToken: mapped.refreshToken,
+    admin: mapped.admin,
+  };
 }
 
 /**

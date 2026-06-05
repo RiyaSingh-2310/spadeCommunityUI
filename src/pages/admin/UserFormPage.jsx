@@ -181,13 +181,13 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
           ]}
           isDarkMode={isDarkMode}
         />
-        <button
+        {/* <button
           type="button"
           onClick={() => navigate("/users")}
           className="admin-text h-11 rounded-xl border border-[var(--admin-header-surface-border)] px-5 text-sm font-semibold"
         >
           Back to Users
-        </button>
+        </button> */}
       </div>
     );
   }

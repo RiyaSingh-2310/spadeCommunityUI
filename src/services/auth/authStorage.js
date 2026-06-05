@@ -5,18 +5,56 @@ import {
 } from "../../modules/shared/utils/userAvatar";
 
 const TOKEN_KEY = "authToken";
+const REFRESH_TOKEN_KEY = "refreshToken";
 const ADMIN_KEY = "adminUser";
 
-export function saveAuthSession({ token, admin }) {
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(ADMIN_KEY, JSON.stringify(normalizeAdminUser(admin)));
+/** Dispatched after login/logout so listeners can refresh auth-dependent UI. */
+export const AUTH_SESSION_CHANGED_EVENT = "auth:session-changed";
+
+function notifyAuthSessionChanged() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(AUTH_SESSION_CHANGED_EVENT));
+  }
+}
+
+/**
+ * @param {{ token: string, refreshToken?: string, admin?: object | null }} session
+ */
+export function saveAuthSession({ token, refreshToken, admin }) {
+  const normalizedToken = String(token ?? "").trim();
+  if (!normalizedToken) {
+    throw new Error("Cannot save auth session without a token.");
+  }
+
+  localStorage.setItem(TOKEN_KEY, normalizedToken);
+
+  if (refreshToken) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, String(refreshToken).trim());
+  } else {
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
+
+  const normalizedAdmin = normalizeAdminUser(admin);
+  if (normalizedAdmin) {
+    localStorage.setItem(ADMIN_KEY, JSON.stringify(normalizedAdmin));
+  } else {
+    localStorage.removeItem(ADMIN_KEY);
+  }
+
   sessionStorage.removeItem(TOKEN_KEY);
+  notifyAuthSessionChanged();
 }
 
 export function clearAuthSession() {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem(ADMIN_KEY);
   sessionStorage.removeItem(TOKEN_KEY);
+  notifyAuthSessionChanged();
+}
+
+export function getRefreshToken() {
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
 export function getAuthToken() {
@@ -24,7 +62,8 @@ export function getAuthToken() {
 }
 
 export function isAuthenticated() {
-  return Boolean(getAuthToken());
+  const token = getAuthToken();
+  return Boolean(token && String(token).trim() && token !== "undefined" && token !== "null");
 }
 
 export function getAdminUser() {

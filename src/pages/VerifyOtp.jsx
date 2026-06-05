@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
+import AuthSecondaryAction from "../components/auth/AuthSecondaryAction";
 import { forgotPassword, verifyOtp } from "../services/auth/authApi";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 
@@ -190,13 +191,6 @@ function VerifyOtp({ isDarkMode, onToggleTheme }) {
         </button>
 
         <div className="space-y-2 text-center text-sm">
-          <button
-            type="button"
-            onClick={() => navigate("/auth/forgot-password")}
-            className="font-semibold text-[#18a354] transition-colors hover:text-[#138b46]"
-          >
-            Change Email Address
-          </button>
           <div>
             <button
               type="button"
@@ -217,10 +211,23 @@ function VerifyOtp({ isDarkMode, onToggleTheme }) {
                 isDarkMode ? "text-[#94a3b8]" : "text-[#8e97a7]"
               }`}
             >
-              {timer > 0 ? `Available in ${timer}s` : "You can resend OTP now"}
+              {timer > 0
+                ? `Available In: ${String(Math.floor(timer / 60)).padStart(2, "0")}:${String(timer % 60).padStart(2, "0")}`
+                : "You can resend OTP now"}
             </p>
           </div>
         </div>
+
+        <button
+          type="button"
+          className="h-11 rounded-xl w-full text-center px-5 text-sm font-semibold transition cursor-pointer disabled:opacity-50 bg-[#f4f8fc] border border-[#dce6f2] text-[#18202f] hover:bg-[#e9f0f7] disabled:border-[#d5deea] disabled:bg-[#f4f8fc] disabled:text-[#18202f]"
+          onClick={() =>
+            navigate("/auth/forgot-password", { state: { email } })
+          }
+          disabled={isVerifying}
+        >
+          Back
+        </button>
       </form>
     </AuthLayout>
   );
