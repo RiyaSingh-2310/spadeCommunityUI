@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DEFAULT_PAGE_SIZE } from "../../../shared/utils/pagination";
 import { searchFindUsers } from "../services/findUserApi";
-
-const PAGE_SIZE = 10;
 
 /**
  * @param {string} surveyId
@@ -11,76 +10,72 @@ const PAGE_SIZE = 10;
 export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const offsetRef = useRef(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const requestIdRef = useRef(0);
 
-  const loadPage = useCallback(
-    async (reset = false) => {
-      const requestId = ++requestIdRef.current;
-      const offset = reset ? 0 : offsetRef.current;
+  const loadPage = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+    setIsLoading(true);
 
-      if (reset) {
-        setIsLoading(true);
-        setUsers([]);
-        offsetRef.current = 0;
-      } else {
-        setIsLoadingMore(true);
+    try {
+      const result = await searchFindUsers({
+        surveyId,
+        filters: activeFilters,
+        page: currentPage,
+        pageSize,
+      });
+
+      if (requestId !== requestIdRef.current) return;
+
+      setUsers(result.items ?? []);
+      setTotalItems(result.total ?? 0);
+      setTotalPages(result.totalPages ?? 1);
+      setHasSearched(true);
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setIsLoading(false);
       }
-
-      try {
-        const result = await searchFindUsers({
-          surveyId,
-          filters: activeFilters,
-          offset,
-          limit: PAGE_SIZE,
-        });
-
-        if (requestId !== requestIdRef.current) return;
-
-        setUsers((prev) => (reset ? result.items : [...prev, ...result.items]));
-        offsetRef.current = offset + result.items.length;
-        setHasMore(result.hasMore);
-        setHasSearched(true);
-      } finally {
-        if (requestId === requestIdRef.current) {
-          setIsLoading(false);
-          setIsLoadingMore(false);
-        }
-      }
-    },
-    [surveyId, activeFilters]
-  );
+    }
+  }, [surveyId, activeFilters, currentPage, pageSize]);
 
   useEffect(() => {
     if (searchVersion < 1) return;
-    loadPage(true);
+    loadPage();
   }, [searchVersion, loadPage]);
-
-  const loadMore = useCallback(() => {
-    if (!hasMore || isLoading || isLoadingMore || !hasSearched) return;
-    loadPage(false);
-  }, [hasMore, isLoading, isLoadingMore, hasSearched, loadPage]);
 
   const reset = useCallback(() => {
     requestIdRef.current += 1;
     setUsers([]);
-    setHasMore(false);
+    setTotalItems(0);
+    setTotalPages(1);
     setHasSearched(false);
     setIsLoading(false);
-    setIsLoadingMore(false);
-    offsetRef.current = 0;
+    setCurrentPage(1);
+  }, []);
+
+  const handlePageChange = useCallback((page) => {
+    setCurrentPage(page);
+  }, []);
+
+  const handlePageSizeChange = useCallback((nextSize) => {
+    setPageSize(nextSize);
+    setCurrentPage(1);
   }, []);
 
   return {
     users,
     isLoading,
-    isLoadingMore,
-    hasMore,
     hasSearched,
-    loadMore,
+    currentPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    onPageChange: handlePageChange,
+    onPageSizeChange: handlePageSizeChange,
     reset,
   };
 }

@@ -7,15 +7,19 @@ const PAGE_DELAY_MS = 600;
  * @param {{
  *   surveyId: string,
  *   filters: { questionId: string, answer: string }[],
- *   offset: number,
- *   limit: number,
+ *   page?: number,
+ *   pageSize?: number,
+ *   offset?: number,
+ *   limit?: number,
  * }} params
  */
 export async function searchFindUsers({
   surveyId,
   filters = [],
-  offset = 0,
-  limit = 10,
+  page = 1,
+  pageSize = 10,
+  offset,
+  limit,
 }) {
   await new Promise((r) => setTimeout(r, PAGE_DELAY_MS));
 
@@ -28,12 +32,22 @@ export async function searchFindUsers({
 
   void surveyId;
 
-  const slice = pool.slice(offset, offset + limit);
+  const safePageSize = pageSize ?? limit ?? 10;
+  const safePage = Math.max(1, page);
+  const start =
+    offset != null ? offset : (safePage - 1) * safePageSize;
+  const slice = pool.slice(start, start + safePageSize);
+  const total = pool.length;
+  const totalPages = Math.max(1, Math.ceil(total / safePageSize) || 1);
+
   return {
     success: true,
     items: slice,
-    total: pool.length,
-    hasMore: offset + limit < pool.length,
+    total,
+    page: safePage,
+    pageSize: safePageSize,
+    totalPages,
+    hasMore: start + safePageSize < total,
   };
 }
 

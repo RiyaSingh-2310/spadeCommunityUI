@@ -1,4 +1,5 @@
 import {
+  getDateRangeError,
   getRequiredError,
   isFormValid,
 } from "../../shared/utils/validation";
@@ -47,8 +48,9 @@ export function getSurveyFormErrors(form) {
     surveyGroup: "",
   };
 
-  if (form.startDate && form.endDate && form.endDate < form.startDate) {
-    errors.endDate = "End Date cannot be earlier than Start Date";
+  const dateRangeError = getDateRangeError(form.startDate, form.endDate);
+  if (dateRangeError) {
+    errors.endDate = dateRangeError;
   }
 
   if (form.projectLinkType === "Single Link") {

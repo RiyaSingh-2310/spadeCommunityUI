@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { useLocation, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../../components/admin/AdminPageHeader";
 import TableCard from "../../../../components/admin/TableCard";
 import FindUserFilters from "../components/FindUserFilters";
@@ -7,7 +7,6 @@ import FindUserTable from "../components/FindUserTable";
 import FindUserToolbar from "../components/FindUserToolbar";
 import InvitedUsersModal from "../components/InvitedUsersModal";
 import { useInfiniteUsers } from "../hooks/useInfiniteUsers";
-import { useIntersectionLoadMore } from "../hooks/useIntersectionLoadMore";
 import { inviteFindUsers } from "../services/findUserApi";
 import { toastApiError, toastApiSuccess } from "../../../../services/toast/apiToast";
 
@@ -20,7 +19,6 @@ function createFilterRow() {
 }
 
 function FindUserPage({ isDarkMode }) {
-  const navigate = useNavigate();
   const { id: surveyId } = useParams();
   const location = useLocation();
   const surveyName =
@@ -38,21 +36,15 @@ function FindUserPage({ isDarkMode }) {
   const {
     users,
     isLoading,
-    isLoadingMore,
-    hasMore,
     hasSearched,
-    loadMore,
+    currentPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    onPageChange,
+    onPageSizeChange,
     reset,
   } = useInfiniteUsers(surveyId, activeFilters, searchVersion);
-
-  const handleLoadMore = useCallback(() => {
-    loadMore();
-  }, [loadMore]);
-
-  const sentinelRef = useIntersectionLoadMore({
-    onLoadMore: handleLoadMore,
-    enabled: hasSearched && hasMore && !isLoading && !isLoadingMore,
-  });
 
   const handleSearch = () => {
     const valid = filterRows
@@ -123,15 +115,6 @@ function FindUserPage({ isDarkMode }) {
           { label: "Find User" },
         ]}
         isDarkMode={isDarkMode}
-        // rightContent={
-        //   <button
-        //     type="button"
-        //     onClick={() => navigate("/survey")}
-        //     className="admin-btn-cancel h-10 rounded-xl px-4 text-sm font-semibold"
-        //   >
-        //     Back to Survey
-        //   </button>
-        // }
       />
 
       <TableCard title="Filters" isDarkMode={isDarkMode}>
@@ -165,11 +148,14 @@ function FindUserPage({ isDarkMode }) {
         onToggleAll={handleSelectAll}
         selectAll={effectiveSelectAll}
         isLoading={isLoading}
-        isLoadingMore={isLoadingMore}
         hasSearched={hasSearched}
-        hasMore={hasMore}
-        sentinelRef={sentinelRef}
         isDarkMode={isDarkMode}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
       />
 
       <InvitedUsersModal

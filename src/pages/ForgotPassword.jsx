@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
 import AuthSecondaryAction from "../components/auth/AuthSecondaryAction";
 import { useFormValidation } from "../modules/shared/hooks/useFormValidation";
-import { getEmailError } from "../modules/shared/utils/validation";
+import { getAuthEmailError } from "../modules/shared/utils/validation";
 import { forgotPassword } from "../services/auth/authApi";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 
@@ -16,7 +16,7 @@ function ForgotPassword({ isDarkMode, onToggleTheme }) {
   const [email, setEmail] = useState(location.state?.email || "");
   const [isSending, setIsSending] = useState(false);
 
-  const errors = useMemo(() => ({ email: getEmailError(email) }), [email]);
+  const errors = useMemo(() => ({ email: getAuthEmailError(email) }), [email]);
   const { showError, touch, validateSubmit } = useFormValidation({
     errors,
     fields: FORGOT_PASSWORD_FIELDS,

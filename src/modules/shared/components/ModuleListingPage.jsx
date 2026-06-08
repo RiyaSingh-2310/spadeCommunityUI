@@ -52,7 +52,7 @@ function ModuleListingPage({
   statusAsText = false,
   actionVariant = "edit-delete",
   showDeleteAction = true,
-  pageSize = DEFAULT_PAGE_SIZE,
+  pageSize: initialPageSize = DEFAULT_PAGE_SIZE,
   showPagination = true,
   nowrapAllCells = false,
   rowIdKey = "id",
@@ -79,6 +79,8 @@ function ModuleListingPage({
   loadingMessage = "Loading...",
   emptyMessage = "No records found",
   searchFields = null,
+  /** API total record count (used for pagination summary when not searching). */
+  totalRecords = null,
 }) {
   const navigate = useNavigate();
   const {
@@ -89,6 +91,7 @@ function ModuleListingPage({
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(initialPageSize);
   const [internalData, setInternalData] = useState(rows);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -208,13 +211,25 @@ function ModuleListingPage({
       .includes(normalizedQuery);
   });
 
+  const handlePageSizeChange = (nextSize) => {
+    setPageSize(nextSize);
+    setCurrentPage(1);
+  };
+
+  const paginationTotalItems = normalizedQuery
+    ? filtered.length
+    : totalRecords ?? filtered.length;
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
   const safePage = Math.min(currentPage, totalPages);
 
-  const pagination = useMemo(
-    () => paginateItems(filtered, safePage, pageSize),
-    [filtered, safePage, pageSize]
-  );
+  const pagination = useMemo(() => {
+    const slice = paginateItems(filtered, safePage, pageSize);
+    return {
+      ...slice,
+      totalItems: paginationTotalItems,
+    };
+  }, [filtered, safePage, pageSize, paginationTotalItems]);
 
   useEffect(() => {
     const pages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
@@ -230,8 +245,17 @@ function ModuleListingPage({
         currentPage={pagination.currentPage}
         totalPages={pagination.totalPages}
         totalItems={pagination.totalItems}
+        visibleItemCount={
+          totalRecords != null && !normalizedQuery
+            ? Math.min(
+                (pagination.currentPage - 1) * pageSize + pagination.items.length,
+                pagination.totalItems
+              )
+            : null
+        }
         pageSize={pageSize}
         onPageChange={setCurrentPage}
+        onPageSizeChange={handlePageSizeChange}
       />
     ) : null;
 

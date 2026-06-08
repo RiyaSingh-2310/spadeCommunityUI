@@ -63,13 +63,13 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
 
     setIsResetting(true);
     try {
-      const data = await resetPassword({
-        email,
-        otp,
+      const response = await resetPassword({
+        email: email.trim(),
+        otp: String(otp).trim(),
         newPassword: password,
       });
-      toastApiSuccess(data);
-      navigate("/auth", { replace: true });
+      toastApiSuccess(response);
+      navigate("/auth", { replace: true, state: { email: email.trim() } });
     } catch (err) {
       toastApiError(err);
     } finally {

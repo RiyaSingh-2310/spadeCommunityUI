@@ -2,9 +2,20 @@ import { API_DEBUG, API_LOGIN_BEARER_TOKEN, buildApiUrl } from "../../config/api
 import { getAuthToken } from "../auth/authStorage";
 import { ApiError } from "./ApiError";
 
-function extractErrorMessage(response, data, rawText) {
-  if (data?.message) return data.message;
-  if (data?.error) return data.error;
+const HTTP_STATUS_MESSAGES = {
+  400: "Bad request. Please check your input.",
+  401: "Unauthorized. Please check your credentials.",
+  403: "Access forbidden.",
+  404: "The requested resource was not found.",
+  500: "Internal server error. Please try again later.",
+  502: "The API server is unavailable (502 Bad Gateway). Ensure the backend is running and reachable.",
+  503: "Service temporarily unavailable. Please try again later.",
+  504: "Gateway timeout. The server took too long to respond.",
+};
+
+export function extractErrorMessage(response, data, rawText) {
+  if (data?.message) return String(data.message);
+  if (data?.error) return String(data.error);
   if (typeof data === "string" && data.trim()) return data.trim();
 
   const preMatch = rawText?.match(/<pre>([^<]+)<\/pre>/i);
@@ -16,7 +27,11 @@ function extractErrorMessage(response, data, rawText) {
     return rawText.trim();
   }
 
-  if (response.status) {
+  if (response?.status && HTTP_STATUS_MESSAGES[response.status]) {
+    return HTTP_STATUS_MESSAGES[response.status];
+  }
+
+  if (response?.status) {
     return response.statusText
       ? `${response.statusText} (${response.status})`
       : `Request failed (${response.status})`;
@@ -25,7 +40,7 @@ function extractErrorMessage(response, data, rawText) {
   return "Request failed";
 }
 
-async function readResponseBody(response) {
+export async function readResponseBody(response) {
   const rawText = await response.text();
   if (!rawText) {
     return { data: null, rawText: "" };
@@ -84,7 +99,10 @@ export async function apiRequest(path, options = {}) {
             ? body
             : JSON.stringify(body),
     });
-  } catch {
+  } catch (networkError) {
+    if (API_DEBUG) {
+      console.error("[API] Network error:", networkError);
+    }
     throw new ApiError("Unable to reach the server. Please try again.");
   }
 
@@ -92,11 +110,16 @@ export async function apiRequest(path, options = {}) {
 
   if (API_DEBUG) {
     console.log("[API] Response status:", response.status);
-    console.log("[API] Response:", data ?? rawText);
+    console.log("[API] Response data:", data ?? rawText);
   }
 
   if (!response.ok) {
     const message = extractErrorMessage(response, data, rawText);
+    if (API_DEBUG) {
+      console.error("[API] Error status:", response.status);
+      console.error("[API] Error message:", message);
+      console.error("[API] Error body:", data ?? rawText);
+    }
     throw new ApiError(message, data, response.status);
   }
 

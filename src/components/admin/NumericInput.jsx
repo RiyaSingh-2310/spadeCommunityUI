@@ -1,4 +1,5 @@
 import {
+  handleIntegerPaste,
   preventBlockedNumericKeys,
   preventWheelValueChange,
   sanitizeInteger,
@@ -18,6 +19,7 @@ function NumericInput({ value, onChange, className = "", ...props }) {
       value={value}
       onChange={handleChange}
       onKeyDown={preventBlockedNumericKeys}
+      onPaste={(e) => handleIntegerPaste(e, onChange)}
       onWheel={preventWheelValueChange}
       className={`admin-number-input ${className}`}
       {...props}

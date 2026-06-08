@@ -1,12 +1,28 @@
+import { useMemo, useState } from "react";
 import { X } from "lucide-react";
+import AdminPagination from "../../../../components/admin/AdminPagination";
 import TableCard from "../../../../components/admin/TableCard";
 import { getAdminCancelButtonClass } from "../../../shared/utils/formStyles";
+import { DEFAULT_PAGE_SIZE, paginateItems } from "../../../shared/utils/pagination";
 import { INVITED_USERS_DEMO } from "../utils/demoData";
 
 const TABLE_HEAD =
   "admin-text-muted px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
 
 function InvitedUsersModal({ isOpen, onClose, isDarkMode }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+
+  const pagination = useMemo(
+    () => paginateItems(INVITED_USERS_DEMO, currentPage, pageSize),
+    [currentPage, pageSize]
+  );
+
+  const handlePageSizeChange = (nextSize) => {
+    setPageSize(nextSize);
+    setCurrentPage(1);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -41,7 +57,20 @@ function InvitedUsersModal({ isOpen, onClose, isDarkMode }) {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          <TableCard isDarkMode={isDarkMode}>
+          <TableCard
+            isDarkMode={isDarkMode}
+            footer={
+              <AdminPagination
+                isDarkMode={isDarkMode}
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            }
+          >
             <div className="overflow-x-auto">
               <table className="admin-table min-w-full text-sm">
                 <thead>
@@ -56,19 +85,22 @@ function InvitedUsersModal({ isOpen, onClose, isDarkMode }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {INVITED_USERS_DEMO.map((row, idx) => (
-                    <tr
-                      key={row.id}
-                      className="border-t align-middle"
-                      style={{ borderColor: "var(--admin-header-surface-border)" }}
-                    >
-                      <td className="admin-text px-3 py-3">{idx + 1}</td>
-                      <td className="admin-text px-3 py-3">{row.name}</td>
-                      <td className="admin-text px-3 py-3">{row.email}</td>
-                      <td className="admin-text px-3 py-3">{row.inviteStatus}</td>
-                      <td className="admin-text px-3 py-3">{row.earnedPoints}</td>
-                    </tr>
-                  ))}
+                  {pagination.items.map((row, idx) => {
+                    const globalIdx = (pagination.currentPage - 1) * pageSize + idx;
+                    return (
+                      <tr
+                        key={row.id}
+                        className="border-t align-middle"
+                        style={{ borderColor: "var(--admin-header-surface-border)" }}
+                      >
+                        <td className="admin-text px-3 py-3">{globalIdx + 1}</td>
+                        <td className="admin-text px-3 py-3">{row.name}</td>
+                        <td className="admin-text px-3 py-3">{row.email}</td>
+                        <td className="admin-text px-3 py-3">{row.inviteStatus}</td>
+                        <td className="admin-text px-3 py-3">{row.earnedPoints}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

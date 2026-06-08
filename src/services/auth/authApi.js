@@ -1,6 +1,13 @@
-import { API_LOGIN_BEARER_TOKEN, API_ROUTES, buildApiUrl } from "../../config/api";
+import {
+  API_BASE_URL,
+  API_DEBUG,
+  API_LOGIN_BEARER_TOKEN,
+  API_ROUTES,
+  buildApiUrl,
+} from "../../config/api";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
+import { mapAuthFlowResponse } from "./mapAuthFlowResponse";
 import { mapLoginResponse } from "./mapLoginResponse";
 
 const AUTH_FLOW_REQUEST_OPTIONS = {
@@ -9,87 +16,92 @@ const AUTH_FLOW_REQUEST_OPTIONS = {
   loginBearer: true,
 };
 
-/**
- * POST /api/admin/login
- * @param {{ email: string, password: string }} credentials
- */
-export async function loginAdmin(credentials) {
-  const headers = {
-    "Content-Type": "application/json",
-  };
-
-  if (API_LOGIN_BEARER_TOKEN) {
-    headers.Authorization = `Bearer ${API_LOGIN_BEARER_TOKEN}`;
+function logAuthDebug(scope, label, value) {
+  if (API_DEBUG) {
+    console.log(`[${scope}] ${label}:`, value);
   }
+}
 
-  const url = buildApiUrl(API_ROUTES.admin.login);
-
-  let response;
-  try {
-    response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        email: credentials.email.trim(),
-        password: credentials.password,
-      }),
-    });
-  } catch {
-    throw new ApiError("Unable to reach the server. Please try again.");
+function logAuthError(scope, error) {
+  if (!API_DEBUG) return;
+  if (error instanceof ApiError) {
+    console.error(`[${scope}] Error status:`, error.status);
+    console.error(`[${scope}] Error message:`, error.message);
+    console.error(`[${scope}] Error data:`, error.data);
+    return;
   }
-
-  let data = null;
-  try {
-    data = await response.json();
-  } catch {
-    throw new ApiError("Invalid response from server.");
-  }
-
-  const isHttpSuccess = response.status === 200 || response.status === 201;
-  const mapped = mapLoginResponse(data);
-
-  if (!isHttpSuccess) {
-    throw new ApiError(
-      mapped.message || data?.message || "Login failed. Please try again.",
-      data,
-      response.status
-    );
-  }
-
-  if (!mapped.success || !mapped.token) {
-    throw new ApiError(
-      mapped.message || data?.message || "Login failed. Please try again.",
-      data,
-      response.status
-    );
-  }
-
-  const status = mapped.admin?.status ?? data?.admin?.status ?? data?.status;
-  if (status && String(status).toLowerCase() !== "active") {
-    throw new ApiError(
-      "Your account is inactive. Please contact support.",
-      data
-    );
-  }
-
-  return {
-    ...data,
-    success: true,
-    message: mapped.message || data?.message,
-    token: mapped.token,
-    refreshToken: mapped.refreshToken,
-    admin: mapped.admin,
-  };
+  console.error(`[${scope}] Unexpected error:`, error);
 }
 
 /**
  * @param {object | null | undefined} data
  */
 function assertAuthFlowSuccess(data, fallbackMessage) {
-  if (data?.success !== true) {
-    throw new ApiError(data?.message || fallbackMessage, data);
+  const mapped = mapAuthFlowResponse(data);
+  if (!mapped.success) {
+    throw new ApiError(mapped.message || fallbackMessage, data);
   }
-  return data;
+  return {
+    ...data,
+    success: true,
+    message: mapped.message || data?.message || fallbackMessage,
+  };
+}
+
+/**
+ * POST /api/admin/login
+ * @param {{ email: string, password: string }} credentials
+ */
+export async function loginAdmin(credentials) {
+  const payload = {
+    email: credentials.email.trim(),
+    password: credentials.password,
+  };
+
+  const url = buildApiUrl(API_ROUTES.admin.login);
+
+  logAuthDebug("Login", "API base URL", API_BASE_URL || "(same-origin — Vite proxy → localhost:5050)");
+  logAuthDebug("Login", "Request URL", url);
+  logAuthDebug("Login", "Request payload", { email: payload.email, password: "***" });
+  logAuthDebug("Login", "Login bearer configured", Boolean(API_LOGIN_BEARER_TOKEN));
+
+  let data;
+  try {
+    data = await apiRequest(API_ROUTES.admin.login, {
+      method: "POST",
+      auth: false,
+      loginBearer: true,
+      body: payload,
+    });
+    logAuthDebug("Login", "Response data", data);
+  } catch (error) {
+    logAuthError("Login", error);
+    throw error;
+  }
+
+  const mapped = mapLoginResponse(data);
+
+  if (!mapped.success || !mapped.token) {
+    throw new ApiError(
+      mapped.message || "Login failed. Please try again.",
+      data,
+      200
+    );
+  }
+
+  const status = mapped.admin?.status ?? data?.data?.admin?.status;
+  if (status && String(status).toLowerCase() !== "active") {
+    throw new ApiError("Your account is inactive. Please contact support.", data);
+  }
+
+  return {
+    success: true,
+    message: mapped.message || "Login successful!",
+    token: mapped.token,
+    refreshToken: mapped.refreshToken,
+    admin: mapped.admin,
+    data: data?.data ?? { token: mapped.token, admin: mapped.admin },
+  };
 }
 
 /**
@@ -97,14 +109,21 @@ function assertAuthFlowSuccess(data, fallbackMessage) {
  * @param {{ email: string }} payload
  */
 export async function forgotPassword(payload) {
-  const data = await apiRequest(API_ROUTES.admin.forgotPassword, {
-    ...AUTH_FLOW_REQUEST_OPTIONS,
-    body: {
-      email: payload.email.trim(),
-    },
-  });
+  const body = { email: payload.email.trim() };
+  logAuthDebug("Forgot Password", "Request URL", buildApiUrl(API_ROUTES.admin.forgotPassword));
+  logAuthDebug("Forgot Password", "Payload", body);
 
-  return assertAuthFlowSuccess(data, "Failed to send OTP. Please try again.");
+  try {
+    const data = await apiRequest(API_ROUTES.admin.forgotPassword, {
+      ...AUTH_FLOW_REQUEST_OPTIONS,
+      body,
+    });
+    logAuthDebug("Forgot Password", "Response", data);
+    return assertAuthFlowSuccess(data, "Failed to send OTP. Please try again.");
+  } catch (error) {
+    logAuthError("Forgot Password", error);
+    throw error;
+  }
 }
 
 /**
@@ -112,15 +131,24 @@ export async function forgotPassword(payload) {
  * @param {{ email: string, otp: string }} payload
  */
 export async function verifyOtp(payload) {
-  const data = await apiRequest(API_ROUTES.admin.verifyOtp, {
-    ...AUTH_FLOW_REQUEST_OPTIONS,
-    body: {
-      email: payload.email.trim(),
-      otp: String(payload.otp).trim(),
-    },
-  });
+  const body = {
+    email: payload.email.trim(),
+    otp: String(payload.otp).trim(),
+  };
+  logAuthDebug("Verify OTP", "Request URL", buildApiUrl(API_ROUTES.admin.verifyOtp));
+  logAuthDebug("Verify OTP", "Payload", body);
 
-  return assertAuthFlowSuccess(data, "OTP verification failed. Please try again.");
+  try {
+    const data = await apiRequest(API_ROUTES.admin.verifyOtp, {
+      ...AUTH_FLOW_REQUEST_OPTIONS,
+      body,
+    });
+    logAuthDebug("Verify OTP", "Response", data);
+    return assertAuthFlowSuccess(data, "OTP verification failed. Please try again.");
+  } catch (error) {
+    logAuthError("Verify OTP", error);
+    throw error;
+  }
 }
 
 /**
@@ -128,14 +156,40 @@ export async function verifyOtp(payload) {
  * @param {{ email: string, otp: string, newPassword: string }} payload
  */
 export async function resetPassword(payload) {
-  const data = await apiRequest(API_ROUTES.admin.resetPassword, {
-    ...AUTH_FLOW_REQUEST_OPTIONS,
-    body: {
-      email: payload.email.trim(),
-      otp: String(payload.otp).trim(),
-      newPassword: payload.newPassword,
-    },
+  const body = {
+    email: String(payload.email ?? "").trim(),
+    otp: String(payload.otp ?? "").trim(),
+    newPassword: String(payload.newPassword ?? ""),
+  };
+
+  logAuthDebug("Reset Password", "Request URL", buildApiUrl(API_ROUTES.admin.resetPassword));
+  logAuthDebug("Reset Password", "Payload", {
+    email: body.email,
+    otp: body.otp,
+    newPassword: "***",
   });
 
-  return assertAuthFlowSuccess(data, "Password reset failed. Please try again.");
+  try {
+    const data = await apiRequest(API_ROUTES.admin.resetPassword, {
+      ...AUTH_FLOW_REQUEST_OPTIONS,
+      body,
+    });
+    logAuthDebug("Reset Password", "Response", data);
+
+    const mapped = mapAuthFlowResponse(data);
+    if (!mapped.success) {
+      throw new ApiError(
+        mapped.message || "Password reset failed. Please try again.",
+        data
+      );
+    }
+
+    return {
+      success: true,
+      message: mapped.message || "Password reset successful! You can now login.",
+    };
+  } catch (error) {
+    logAuthError("Reset Password", error);
+    throw error;
+  }
 }

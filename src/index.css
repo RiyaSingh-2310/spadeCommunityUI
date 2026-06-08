@@ -210,6 +210,17 @@ input[type="number"],
   appearance: textfield;
 }
 
+.admin-phone-country-btn {
+  border-color: var(--admin-header-search-border);
+  background-color: var(--admin-header-search-bg);
+  color: var(--admin-foreground);
+}
+
+.admin-phone-country-btn:focus-visible {
+  outline: 2px solid var(--admin-primary-color, #10a950);
+  outline-offset: 1px;
+}
+
 .admin-sidebar-flyout {
   background-color: var(--admin-sidebar-flyout-bg);
   border-color: var(--admin-sidebar-flyout-border);

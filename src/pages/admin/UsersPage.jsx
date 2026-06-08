@@ -25,6 +25,7 @@ function UsersPage({ isDarkMode }) {
   const location = useLocation();
   useFlashMessage();
   const [users, setUsers] = useState([]);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -34,9 +35,11 @@ function UsersPage({ isDarkMode }) {
     try {
       const data = await getRecords();
       setUsers(data.items);
+      setTotalRecords(data.total ?? data.count ?? data.items.length);
     } catch (error) {
       toastApiError(error);
       setUsers([]);
+      setTotalRecords(0);
     } finally {
       setIsLoading(false);
     }
@@ -121,6 +124,7 @@ function UsersPage({ isDarkMode }) {
         onEdit={navigateToUserEdit}
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}
+        totalRecords={totalRecords}
         pageSize={DEFAULT_PAGE_SIZE}
         showPagination
         nowrapAllCells

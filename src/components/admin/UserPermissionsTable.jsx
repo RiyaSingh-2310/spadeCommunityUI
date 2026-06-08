@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { PERMISSION_TREE } from "../../modules/permissions/permissionTree";
 import {
   areAllPermissionsSelected,
+  deriveExpandedPermissionGroupIds,
   getParentRowPermission,
   setAllPermissions,
   setChildModulePermission,
@@ -117,8 +118,15 @@ function UserPermissionsTable({
   permissions,
   onChange,
   disabled = false,
+  /** When set (e.g. user id in edit mode), auto-expands groups with assigned child permissions. */
+  permissionsInitKey = null,
 }) {
   const [expandedGroups, setExpandedGroups] = useState(() => new Set());
+
+  useEffect(() => {
+    if (permissionsInitKey == null) return;
+    setExpandedGroups(deriveExpandedPermissionGroupIds(permissions));
+  }, [permissionsInitKey, permissions]);
 
   const allRead = areAllPermissionsSelected(permissions, "canRead");
   const allWrite = areAllPermissionsSelected(permissions, "canWrite");

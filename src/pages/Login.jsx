@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
+import { AUTH_EMAIL_REGEX } from "../modules/shared/utils/validation";
 import { loginAdmin } from "../services/auth/authApi";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 import { saveAuthSession } from "../services/auth/authStorage";
@@ -18,7 +19,7 @@ function Login({ isDarkMode, onToggleTheme }) {
   });
 
   const hasEmailFormat = useMemo(
-    () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()),
+    () => AUTH_EMAIL_REGEX.test(email.trim()),
     [email]
   );
 
@@ -31,7 +32,7 @@ function Login({ isDarkMode, onToggleTheme }) {
     event.preventDefault();
     const hasEmail = email.trim().length > 0;
     const hasPassword = password.trim().length > 0;
-    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    const isEmailValid = AUTH_EMAIL_REGEX.test(email.trim());
 
     setTouched({ email: true, password: true });
     if (!hasEmail || !hasPassword || !isEmailValid) {
@@ -104,8 +105,9 @@ function Login({ isDarkMode, onToggleTheme }) {
                 <input
                   id="email"
                   name="loginEmail"
-                  type="email"
-                  autoComplete="email"
+                  type="text"
+                  inputMode="email"
+                  autoComplete="username"
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}

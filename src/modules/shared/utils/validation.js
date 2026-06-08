@@ -1,4 +1,6 @@
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Matches backend auth identifiers (e.g. test@123). */
+export const AUTH_EMAIL_REGEX = /^[^\s@]+@[^\s@]+$/;
 export const URL_REGEX = /^https?:\/\/[^\s/$.?#].[^\s]*$/i;
 
 export const DEFAULT_PASSWORD_MIN_LENGTH = 8;
@@ -16,6 +18,18 @@ export function getEmailError(value, { required = true, label = "Email Address" 
     return required ? `${label} is required` : "";
   }
   if (!EMAIL_REGEX.test(trimmed)) {
+    return "Please enter a valid email address";
+  }
+  return "";
+}
+
+/** Lenient email validation for login / forgot-password flows. */
+export function getAuthEmailError(value, { required = true, label = "Email" } = {}) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) {
+    return required ? `${label} is required` : "";
+  }
+  if (!AUTH_EMAIL_REGEX.test(trimmed)) {
     return "Please enter a valid email address";
   }
   return "";
@@ -104,6 +118,16 @@ export function markAllTouched(fields, existing = {}) {
     ...existing,
   });
 }
+
+export function getDateRangeError(startDate, endDate, { endLabel = "End Date" } = {}) {
+  if (!startDate || !endDate) return "";
+  if (endDate < startDate) {
+    return `${endLabel} cannot be earlier than Start Date`;
+  }
+  return "";
+}
+
+export { getPhoneError } from "./phoneValidation";
 
 /**
  * Show a field error only after the user has blurred the field or submitted the form.

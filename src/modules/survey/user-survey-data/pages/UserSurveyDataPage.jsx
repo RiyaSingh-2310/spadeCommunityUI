@@ -23,6 +23,7 @@ function UserSurveyDataPage({ isDarkMode }) {
     totalPages,
     isLoading,
     pageSize,
+    setPageSize,
   } = useUserSurveyDataList(surveyId);
 
   const paginationFooter = (
@@ -33,6 +34,7 @@ function UserSurveyDataPage({ isDarkMode }) {
       totalItems={totalItems}
       pageSize={pageSize}
       onPageChange={setCurrentPage}
+      onPageSizeChange={setPageSize}
       showWhenEmpty
     />
   );

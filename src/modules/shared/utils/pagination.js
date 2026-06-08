@@ -1,5 +1,7 @@
 export const DEFAULT_PAGE_SIZE = 10;
 
+export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
 export function paginateItems(items, page = 1, pageSize = DEFAULT_PAGE_SIZE) {
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
   const safePage = Math.min(Math.max(1, page), totalPages);
@@ -11,6 +13,14 @@ export function paginateItems(items, page = 1, pageSize = DEFAULT_PAGE_SIZE) {
     totalItems: items.length,
     pageSize,
   };
+}
+
+/** Items visible on the current page (for "Showing X of Y Entries"). */
+export function getVisibleEntryCount(currentPage, pageSize, totalItems) {
+  if (totalItems <= 0) return 0;
+  const safePage = Math.max(1, currentPage);
+  const remaining = totalItems - (safePage - 1) * pageSize;
+  return Math.max(0, Math.min(pageSize, remaining));
 }
 
 export function getPageNumbers(currentPage, totalPages, maxVisible = 5) {

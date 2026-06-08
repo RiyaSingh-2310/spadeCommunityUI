@@ -25,16 +25,162 @@ export function createFullPermissions() {
   }, /** @type {PermissionsMap} */ ({}));
 }
 
+function parseBooleanFlag(value) {
+  if (value === true || value === 1 || value === "1" || value === "true") return true;
+  if (
+    value === false ||
+    value === 0 ||
+    value === "0" ||
+    value === "false" ||
+    value == null
+  ) {
+    return false;
+  }
+  return Boolean(value);
+}
+
 function parsePermissionEntry(entry) {
   if (!entry || typeof entry !== "object") {
     return createEmptyModulePermission();
   }
-  const canRead = Boolean(entry.canRead ?? entry.read);
-  const canWrite = Boolean(entry.canWrite ?? entry.write);
+  const canRead = parseBooleanFlag(
+    entry.canRead ?? entry.read ?? entry.can_read ?? entry.CanRead
+  );
+  const canWrite = parseBooleanFlag(
+    entry.canWrite ?? entry.write ?? entry.can_write ?? entry.CanWrite
+  );
   return {
     canRead: canWrite ? true : canRead,
     canWrite,
   };
+}
+
+function looksLikePermissionFlags(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return (
+    "canRead" in value ||
+    "canWrite" in value ||
+    "read" in value ||
+    "write" in value ||
+    "can_read" in value ||
+    "can_write" in value
+  );
+}
+
+function looksLikePermissionsMap(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.values(value).some((entry) => looksLikePermissionFlags(entry));
+}
+
+function resolveModuleKey(moduleName) {
+  const raw = String(moduleName ?? "").trim();
+  if (!raw) return null;
+
+  const lower = raw.toLowerCase();
+  if (PERMISSION_MODULE_KEYS.includes(lower)) return lower;
+  if (PERMISSION_MODULE_KEYS.includes(raw)) return raw;
+
+  const labelMatch = PERMISSION_MODULES.find(
+    (module) => module.label.toLowerCase() === lower
+  );
+  if (labelMatch) return labelMatch.key;
+
+  const snake = lower.replace(/[\s-]+/g, "_");
+  if (PERMISSION_MODULE_KEYS.includes(snake)) return snake;
+
+  return null;
+}
+
+function permissionsArrayToMap(entries) {
+  const map = /** @type {Record<string, unknown>} */ ({});
+
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object") continue;
+
+    const key = resolveModuleKey(
+      entry.module ??
+        entry.moduleKey ??
+        entry.module_key ??
+        entry.key ??
+        entry.name ??
+        entry.id
+    );
+
+    if (key) {
+      map[key] = entry;
+    }
+  }
+
+  return map;
+}
+
+/**
+ * Resolves nested `{ permissions: ... }` wrappers and encoded permission strings.
+ * @param {unknown} raw
+ */
+function unwrapPermissionsSource(raw) {
+  let current = raw;
+
+  for (let depth = 0; depth < 5; depth += 1) {
+    if (current == null) return null;
+
+    if (typeof current === "string") {
+      const decoded = decodePermissionsRaw(current);
+      if (decoded == null) return null;
+      current = decoded;
+      continue;
+    }
+
+    if (Array.isArray(current)) {
+      return permissionsArrayToMap(current);
+    }
+
+    if (typeof current !== "object") return null;
+
+    if (looksLikePermissionsMap(current)) {
+      return current;
+    }
+
+    const nested = /** @type {{ permissions?: unknown }} */ (current).permissions;
+    if (nested != null) {
+      current = nested;
+      continue;
+    }
+
+    return current;
+  }
+
+  return current;
+}
+
+/**
+ * Decodes API permission payloads (JSON string, base64 JSON, nested object).
+ * @param {unknown} raw
+ */
+export function decodePermissionsRaw(raw) {
+  if (raw == null) return null;
+  if (typeof raw === "object") return raw;
+
+  if (typeof raw !== "string") return null;
+
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    // fall through — may be base64-encoded JSON from the API
+  }
+
+  if (typeof atob !== "function") {
+    return null;
+  }
+
+  try {
+    return JSON.parse(atob(trimmed));
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -44,25 +190,35 @@ function parsePermissionEntry(entry) {
 export function normalizePermissions(raw) {
   const base = createDefaultPermissions();
 
-  if (!raw) return base;
+  if (raw == null || raw === "") return base;
 
-  let parsed = raw;
-  if (typeof raw === "string") {
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      return base;
-    }
-  }
+  const source = unwrapPermissionsSource(raw);
+  if (!source || typeof source !== "object" || Array.isArray(source)) return base;
 
-  const source = parsed?.permissions ?? parsed;
-  if (!source || typeof source !== "object") return base;
+  const map =
+    Array.isArray(source) ? permissionsArrayToMap(source) : /** @type {Record<string, unknown>} */ (source);
 
   for (const key of PERMISSION_MODULE_KEYS) {
-    base[key] = parsePermissionEntry(source[key]);
+    base[key] = parsePermissionEntry(map[key]);
   }
 
   return syncAllParentsFromChildren(base);
+}
+
+/**
+ * Deep equality for permission maps (all module keys).
+ * @param {PermissionsMap | string | null | undefined} a
+ * @param {PermissionsMap | string | null | undefined} b
+ */
+export function permissionsEqual(a, b) {
+  const left = normalizePermissions(a);
+  const right = normalizePermissions(b);
+
+  return PERMISSION_MODULE_KEYS.every((key) => {
+    const l = left[key] ?? createEmptyModulePermission();
+    const r = right[key] ?? createEmptyModulePermission();
+    return l.canRead === r.canRead && l.canWrite === r.canWrite;
+  });
 }
 
 export function hasAnyPermissionGrant(permissions) {
@@ -97,6 +253,21 @@ export function stripUiParentPermissionKeys(permissions) {
     delete next[key];
   }
   return next;
+}
+
+/** Group ids that should expand because a child module has Read/Write access. */
+export function deriveExpandedPermissionGroupIds(permissions) {
+  const expanded = new Set();
+
+  for (const node of getPermissionGroups()) {
+    const hasGrant = node.children.some((child) => {
+      const flags = permissions?.[child.key];
+      return flags?.canRead || flags?.canWrite;
+    });
+    if (hasGrant) expanded.add(node.id);
+  }
+
+  return expanded;
 }
 
 /**

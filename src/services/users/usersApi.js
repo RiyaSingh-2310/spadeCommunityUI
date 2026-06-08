@@ -10,6 +10,7 @@ import {
   formValueToApiStatus,
   formatStatusLabel,
 } from "../../modules/shared/utils/statusLabels";
+import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
 
 function isApiSuccess(data) {
   if (!data || typeof data !== "object") return false;
@@ -156,10 +157,12 @@ export async function getRecords() {
   assertSuccess(data);
 
   const admins = extractAdminsList(data);
+  const total = extractListTotalFromResponse(data, admins.length);
 
   return {
     ...data,
-    count: data.count ?? admins.length,
+    total,
+    count: total,
     items: admins.map((admin) => mapAdminToUserRow(admin)),
   };
 }

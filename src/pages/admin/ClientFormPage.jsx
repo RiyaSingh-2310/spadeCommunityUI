@@ -3,6 +3,7 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../components/admin/AdminPageHeader";
 import FormStatusSelect from "../../components/admin/FormStatusSelect";
+import PhoneInput from "../../components/admin/PhoneInput";
 import ProfileImageUpload from "../../components/admin/ProfileImageUpload";
 import TableCard from "../../components/admin/TableCard";
 import { toastApiError } from "../../services/toast/apiToast";
@@ -11,10 +12,12 @@ import {
   mapClientToForm,
   updateClient,
 } from "../../services/clients/clientsApi";
+import { getDefaultPhoneCountryCode } from "../../modules/shared/data/phoneCountries";
 import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
 import { useFormValidation } from "../../modules/shared/hooks/useFormValidation";
 import {
   getEmailError,
+  getPhoneError,
   getRequiredError,
   getUrlError,
   isFormValid,
@@ -105,10 +108,18 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
   }, [isEdit, id]);
 
   const errors = useMemo(() => {
+    const phoneCountry = getDefaultPhoneCountryCode(form.country);
     const apiFields = {
       name: getRequiredError(form.name, "Name"),
       country: getRequiredError(form.country, "Country"),
-      contactNumber: getRequiredError(form.contactNumber, "Contact Number"),
+      contactNumber: getPhoneError(form.contactNumber, {
+        required: true,
+        label: "Contact Number",
+        defaultCountryCode: phoneCountry,
+      }),
+      website: form.website.trim()
+        ? getUrlError(form.website, { required: false })
+        : "",
     };
 
     if (!isEdit) {
@@ -116,7 +127,6 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
         ...apiFields,
         email: getEmailError(form.email),
         contactPerson: "",
-        website: "",
       };
     }
 
@@ -124,7 +134,6 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
       ...apiFields,
       email: "",
       contactPerson: "",
-      website: getUrlError(form.website, { required: false }),
     };
   }, [form, isEdit]);
 
@@ -193,7 +202,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
         isDarkMode={isDarkMode}
       />
 
-      <form onSubmit={onSubmit} className="space-y-5">
+      <form onSubmit={onSubmit} className="space-y-5" noValidate>
         <TableCard title="Basic Information" isDarkMode={isDarkMode}>
           <div className="mb-4">
             <ProfileImageUpload
@@ -210,7 +219,6 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
               ["Name", "name", true],
               ["Email", "email", !isEdit],
               ["Contact Person", "contactPerson", false],
-              ["Contact Number", "contactNumber", true],
               ["Website URL", "website", false],
             ].map(([label, key, required]) => (
               <div key={key}>
@@ -230,9 +238,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                         ? "Enter Email Address"
                         : key === "contactPerson"
                           ? "Enter Contact Person"
-                          : key === "contactNumber"
-                            ? "Enter Contact Number"
-                            : "Enter Website URL"
+                          : "Enter Website URL"
                   }
                   value={form[key]}
                   onChange={(e) => setField(key, e.target.value)}
@@ -245,6 +251,26 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                 )}
               </div>
             ))}
+            <div>
+              <label className="admin-text mb-2 block text-sm font-semibold">
+                Contact Number
+                <span className="text-[var(--admin-danger-text)]"> *</span>
+              </label>
+              <PhoneInput
+                value={form.contactNumber}
+                onChange={(next) => setField("contactNumber", next)}
+                onBlur={() => touch("contactNumber")}
+                disabled={isSubmitting}
+                formCountryLabel={form.country}
+                inputClassName={inputClass}
+                placeholder="Enter phone number"
+              />
+              {showError("contactNumber") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
+                  {showError("contactNumber")}
+                </p>
+              )}
+            </div>
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">
                 Select Country

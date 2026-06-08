@@ -11,6 +11,7 @@ import { toastApiError } from "../../services/toast/apiToast";
 import {
   createDefaultPermissions,
   normalizePermissions,
+  permissionsEqual,
 } from "../../modules/permissions/permissionsUtils";
 import {
   createUser,
@@ -61,6 +62,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
 
   const { readOnly, showSubmit } = useFormAccess();
   const inputClass = getAdminInputClass();
@@ -95,13 +97,27 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
       setPreview("");
       setImageFile(null);
       setExistingImage("");
+      setInitialSnapshot(null);
       setIsLoadingRecord(true);
       setLoadFailed(false);
       try {
         const admin = await getRecord(id);
         if (cancelled) return;
-        setForm(mapAdminToForm(admin));
+        const mapped = mapAdminToForm(admin);
+        const normalizedPermissions = normalizePermissions(
+          admin?.permissions ?? admin?.permissions_json ?? admin?.permission
+        );
+        setForm({
+          ...mapped,
+          permissions: normalizedPermissions,
+        });
         setExistingImage(admin?.image_url || admin?.imageUrl || "");
+        setInitialSnapshot({
+          name: mapped.name.trim(),
+          status: mapped.status,
+          permission_type: mapped.permission_type,
+          permissions: normalizePermissions(normalizedPermissions),
+        });
       } catch (error) {
         if (cancelled) return;
         setLoadFailed(true);
@@ -117,13 +133,26 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
     };
   }, [isEdit, id, resetValidation]);
 
+  const isClean = useMemo(() => {
+    if (!isEdit || !initialSnapshot) return false;
+
+    if (imageFile) return true;
+    if (form.name.trim() !== initialSnapshot.name) return true;
+    if (form.status !== initialSnapshot.status) return true;
+    if (form.permission_type !== initialSnapshot.permission_type) return true;
+    if (!permissionsEqual(form.permissions, initialSnapshot.permissions)) return true;
+
+    return false;
+  }, [isEdit, initialSnapshot, form, imageFile]);
+
   const canSubmit =
     showSubmit &&
     !readOnly &&
     isFormValid(errors) &&
     !isSubmitting &&
     !isLoadingRecord &&
-    !loadFailed;
+    !loadFailed &&
+    (!isEdit || isClean);
 
   const onSubmit = async (event) => {
     event.preventDefault();
@@ -320,6 +349,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
         <TableCard title="User Permissions" isDarkMode={isDarkMode}>
           <UserPermissionsTable
             permissions={form.permissions}
+            permissionsInitKey={isEdit && initialSnapshot ? id : null}
             onChange={(permissions) => setForm((prev) => ({ ...prev, permissions }))}
             disabled={fieldDisabled(readOnly, isSubmitting)}
           />

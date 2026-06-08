@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import AdminPagination from "../../../../components/admin/AdminPagination";
 import TableCard from "../../../../components/admin/TableCard";
 import { formatStatusLabel } from "../../../shared/utils/statusLabels";
 
@@ -26,18 +27,36 @@ function FindUserTable({
   onToggleAll,
   selectAll,
   isLoading,
-  isLoadingMore,
   hasSearched,
-  hasMore,
-  sentinelRef,
   isDarkMode,
+  currentPage = 1,
+  pageSize = 10,
+  totalItems = 0,
+  totalPages = 1,
+  onPageChange,
+  onPageSizeChange,
 }) {
   const allSelected =
     users.length > 0 && users.every((u) => selectedIds.has(u.id));
   const someSelected = users.some((u) => selectedIds.has(u.id));
 
+  const rowOffset = (currentPage - 1) * pageSize;
+
+  const paginationFooter =
+    hasSearched && totalItems > 0 ? (
+      <AdminPagination
+        isDarkMode={isDarkMode}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        pageSize={pageSize}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+      />
+    ) : null;
+
   return (
-    <TableCard isDarkMode={isDarkMode}>
+    <TableCard isDarkMode={isDarkMode} footer={paginationFooter}>
       <div className="overflow-x-auto">
         <table className="admin-table min-w-full text-sm">
           <thead>
@@ -93,7 +112,7 @@ function FindUserTable({
                   className="border-t align-middle"
                   style={{ borderColor: "var(--admin-header-surface-border)" }}
                 >
-                  <td className="admin-text px-3 py-3 whitespace-nowrap">{idx + 1}</td>
+                  <td className="admin-text px-3 py-3 whitespace-nowrap">{rowOffset + idx + 1}</td>
                   <td className="px-3 py-3">
                     <input
                       type="checkbox"
@@ -132,24 +151,6 @@ function FindUserTable({
           </tbody>
         </table>
       </div>
-
-      {hasSearched && users.length > 0 && (
-        <div
-          ref={sentinelRef}
-          className="flex min-h-[56px] items-center justify-center py-4"
-          aria-hidden={!hasMore && !isLoadingMore}
-        >
-          {isLoadingMore && (
-            <div className="flex items-center gap-2">
-              <Loader2 size={20} className="animate-spin text-[var(--admin-success-text)]" />
-              <span className="admin-text-muted text-sm">Loading more...</span>
-            </div>
-          )}
-          {!hasMore && !isLoadingMore && (
-            <span className="admin-text-subtle text-xs">All records loaded</span>
-          )}
-        </div>
-      )}
     </TableCard>
   );
 }

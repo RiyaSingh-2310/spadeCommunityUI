@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import DebouncedSearchInput from "../../../components/admin/DebouncedSearchInput";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
@@ -18,9 +18,15 @@ function LogActivityPage({ isDarkMode }) {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const handleQueryChange = (value) => {
     setQuery(value);
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (nextSize) => {
+    setPageSize(nextSize);
     setCurrentPage(1);
   };
 
@@ -32,9 +38,14 @@ function LogActivityPage({ isDarkMode }) {
     [rows, debouncedQuery]
   );
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / DEFAULT_PAGE_SIZE) || 1);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
   const safePage = Math.min(currentPage, totalPages);
-  const pagination = paginateItems(filtered, safePage, DEFAULT_PAGE_SIZE);
+  const pagination = paginateItems(filtered, safePage, pageSize);
+
+  useEffect(() => {
+    const pages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
+    setCurrentPage((prev) => Math.min(prev, pages));
+  }, [filtered.length, pageSize, debouncedQuery]);
 
   return (
     <div className="space-y-6">
@@ -52,14 +63,17 @@ function LogActivityPage({ isDarkMode }) {
       <TableCard
         isDarkMode={isDarkMode}
         footer={
-          <AdminPagination
-            isDarkMode={isDarkMode}
-            currentPage={pagination.currentPage}
-            totalPages={pagination.totalPages}
-            totalItems={pagination.totalItems}
-            pageSize={DEFAULT_PAGE_SIZE}
-            onPageChange={setCurrentPage}
-          />
+          filtered.length > 0 ? (
+            <AdminPagination
+              isDarkMode={isDarkMode}
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              totalItems={pagination.totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          ) : null
         }
       >
         <div className="overflow-x-auto">
@@ -78,7 +92,7 @@ function LogActivityPage({ isDarkMode }) {
             </thead>
             <tbody>
               {pagination.items.map((row, idx) => {
-                const globalIdx = (pagination.currentPage - 1) * DEFAULT_PAGE_SIZE + idx;
+                const globalIdx = (pagination.currentPage - 1) * pageSize + idx;
                 return (
                   <tr
                     key={row.id}

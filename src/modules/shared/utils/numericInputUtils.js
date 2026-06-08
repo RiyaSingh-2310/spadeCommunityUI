@@ -36,7 +36,18 @@ export function preventBlockedNumericKeys(event) {
   }
 }
 
-/** Blur on wheel so scrolling the page does not change the input value. */
 export function preventWheelValueChange(event) {
   event.currentTarget.blur();
+}
+
+export function handleIntegerPaste(event, onChange) {
+  event.preventDefault();
+  const pasted = event.clipboardData?.getData("text") ?? "";
+  onChange(sanitizeInteger(pasted));
+}
+
+export function handleDecimalPaste(event, onChange, maxDecimals = DEFAULT_DECIMAL_PLACES) {
+  event.preventDefault();
+  const pasted = event.clipboardData?.getData("text") ?? "";
+  onChange(sanitizeDecimal(pasted, maxDecimals));
 }
