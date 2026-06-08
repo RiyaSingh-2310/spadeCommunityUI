@@ -16,6 +16,15 @@ const HTTP_STATUS_MESSAGES = {
 export function extractErrorMessage(response, data, rawText) {
   if (data?.message) return String(data.message);
   if (data?.error) return String(data.error);
+
+  if (data?.errors && typeof data.errors === "object") {
+    const messages = Object.values(data.errors)
+      .flat()
+      .map((entry) => (typeof entry === "string" ? entry : entry?.message))
+      .filter(Boolean);
+    if (messages.length) return messages.join(" ");
+  }
+
   if (typeof data === "string" && data.trim()) return data.trim();
 
   const preMatch = rawText?.match(/<pre>([^<]+)<\/pre>/i);

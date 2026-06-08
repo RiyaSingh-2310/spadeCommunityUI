@@ -1,3 +1,8 @@
+import {
+  decodePermissionsRaw,
+  normalizePermissions,
+} from "../../permissions/permissionsUtils";
+
 /**
  * Returns a trimmed image URL when present; otherwise null.
  * @param {string | null | undefined} imageUrl
@@ -118,17 +123,14 @@ export function normalizeAdminUser(admin) {
       null
   );
 
-  const permissions =
+  const rawPermissions =
     admin.permissions ??
     (typeof admin.permissions_json === "string"
-      ? (() => {
-          try {
-            return JSON.parse(admin.permissions_json);
-          } catch {
-            return null;
-          }
-        })()
+      ? admin.permissions_json
       : admin.permissions_json);
+
+  const decoded = decodePermissionsRaw(rawPermissions) ?? rawPermissions;
+  const permissions = normalizePermissions(decoded);
 
   return {
     ...admin,

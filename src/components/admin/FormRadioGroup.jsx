@@ -1,4 +1,4 @@
-function FormRadioGroup({ label, name, value, onChange, options, isDarkMode }) {
+function FormRadioGroup({ label, name, value, onChange, options, isDarkMode, disabled = false }) {
   return (
     <div>
       <span className="admin-text mb-2 block text-sm font-semibold">{label}</span>
@@ -6,7 +6,7 @@ function FormRadioGroup({ label, name, value, onChange, options, isDarkMode }) {
         {options.map((option) => (
           <label
             key={option}
-            className="admin-text flex cursor-pointer items-center gap-2 text-sm"
+            className={`admin-text flex items-center gap-2 text-sm ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
           >
             <input
               type="radio"
@@ -14,6 +14,7 @@ function FormRadioGroup({ label, name, value, onChange, options, isDarkMode }) {
               value={option}
               checked={value === option}
               onChange={() => onChange(option)}
+              disabled={disabled}
               className="h-4 w-4 accent-[var(--admin-primary-color)]"
             />
             {option}

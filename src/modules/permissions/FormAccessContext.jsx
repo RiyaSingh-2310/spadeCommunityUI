@@ -44,3 +44,17 @@ export function useFormAccess() {
 export function fieldDisabled(readOnly, extra = false) {
   return readOnly || extra;
 }
+
+/** @param {boolean} [extraDisabled] */
+export function useAdminFormAccess(extraDisabled = false) {
+  const { readOnly, showSubmit, allowed } = useFormAccess();
+
+  return {
+    readOnly,
+    showSubmit,
+    allowed,
+    controlDisabled: readOnly || extraDisabled,
+    canSubmitForm: showSubmit && !readOnly && !extraDisabled,
+    fieldDisabled: (extra = false) => readOnly || extraDisabled || extra,
+  };
+}

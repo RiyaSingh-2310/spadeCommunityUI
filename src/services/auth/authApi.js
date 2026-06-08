@@ -60,7 +60,7 @@ export async function loginAdmin(credentials) {
 
   const url = buildApiUrl(API_ROUTES.admin.login);
 
-  logAuthDebug("Login", "API base URL", API_BASE_URL || "(same-origin — Vite proxy → localhost:5050)");
+  logAuthDebug("Login", "API base URL", API_BASE_URL);
   logAuthDebug("Login", "Request URL", url);
   logAuthDebug("Login", "Request payload", { email: payload.email, password: "***" });
   logAuthDebug("Login", "Login bearer configured", Boolean(API_LOGIN_BEARER_TOKEN));

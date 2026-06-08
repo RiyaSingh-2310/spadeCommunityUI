@@ -13,6 +13,7 @@ import {
   updateClient,
 } from "../../services/clients/clientsApi";
 import { getDefaultPhoneCountryCode } from "../../modules/shared/data/phoneCountries";
+import { useAdminFormAccess } from "../../modules/permissions/FormAccessContext";
 import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
 import { useFormValidation } from "../../modules/shared/hooks/useFormValidation";
 import {
@@ -97,6 +98,8 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { readOnly, showSubmit, controlDisabled, canSubmitForm, fieldDisabled } =
+    useAdminFormAccess(isSubmitting);
   const inputClass = getAdminInputClass();
 
   useEffect(() => {
@@ -142,11 +145,11 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
     fields: CLIENT_FORM_FIELDS,
   });
 
-  const canSubmit = isFormValid(errors) && !isSubmitting;
+  const canSubmit = canSubmitForm && isFormValid(errors);
 
   const onSubmit = async (event) => {
     event.preventDefault();
-    if (!validateSubmit() || !isFormValid(errors)) return;
+    if (readOnly || !showSubmit || !validateSubmit() || !isFormValid(errors)) return;
 
     setIsSubmitting(true);
     try {
@@ -243,7 +246,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                   value={form[key]}
                   onChange={(e) => setField(key, e.target.value)}
                   onBlur={() => touch(key)}
-                  disabled={isSubmitting || (isEdit && key === "email")}
+                  disabled={fieldDisabled(isEdit && key === "email")}
                   readOnly={isEdit && key === "email"}
                 />
                 {showError(key) && (
@@ -260,7 +263,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                 value={form.contactNumber}
                 onChange={(next) => setField("contactNumber", next)}
                 onBlur={() => touch("contactNumber")}
-                disabled={isSubmitting}
+                disabled={controlDisabled}
                 formCountryLabel={form.country}
                 inputClassName={inputClass}
                 placeholder="Enter phone number"
@@ -281,7 +284,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                 value={form.country}
                 onChange={(e) => setField("country", e.target.value)}
                 onBlur={() => touch("country")}
-                disabled={isSubmitting}
+                disabled={controlDisabled}
               >
                 <option value="">Select Country</option>
                 <option value="India">India</option>
@@ -340,6 +343,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
         </TableCard>
 
         <div className="flex items-center gap-3">
+          {showSubmit && !readOnly && (
           <button
             type="submit"
             disabled={!canSubmit}
@@ -354,10 +358,11 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                 ? "Update"
                 : "Submit"}
           </button>
+          )}
           <button
             type="button"
             onClick={() => navigate("/clients")}
-            disabled={isSubmitting}
+            disabled={controlDisabled}
             className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancel

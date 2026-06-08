@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useLocation } from "react-router-dom";
-import { isActionColumn, isDetailsColumn } from "../shared/utils/tableHelpers";
 import { usePermissions } from "./PermissionsContext";
 import { getRoutePermissionAccess } from "./routePermissions";
 
@@ -38,12 +37,7 @@ export function useModulePermission(moduleKey) {
       showSubmit: allowWrite,
       permissions,
       isSuperAdmin,
-      filterColumns: (columns = []) => {
-        if (allowWrite) return columns;
-        return columns.filter(
-          (col) => !isActionColumn(col) && !isDetailsColumn(col)
-        );
-      },
+      filterColumns: (columns = []) => columns,
     };
   }, [moduleKey, canRead, canWrite, permissions, isSuperAdmin]);
 }

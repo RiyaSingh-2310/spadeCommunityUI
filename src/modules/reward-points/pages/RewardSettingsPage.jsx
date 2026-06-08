@@ -67,6 +67,8 @@ function RewardSettingsPage({ isDarkMode }) {
               value={form.registrationReward}
               onChange={(v) => setField("registrationReward", v)}
               onBlur={() => touch("registrationReward")}
+              disabled={readOnly}
+              readOnly={readOnly}
             />
           </FormField>
 
@@ -83,6 +85,8 @@ function RewardSettingsPage({ isDarkMode }) {
                   value={form.minimumPayout}
                   onChange={(v) => setField("minimumPayout", v)}
                   onBlur={() => touch("minimumPayout")}
+                  disabled={readOnly}
+                  readOnly={readOnly}
                 />
               </FormField>
               <FormRadioGroup
@@ -92,6 +96,7 @@ function RewardSettingsPage({ isDarkMode }) {
                 onChange={(v) => setField("amazon", v)}
                 options={["Yes", "No"]}
                 isDarkMode={isDarkMode}
+                disabled={readOnly}
               />
               <FormRadioGroup
                 label="Flipkart"
@@ -100,6 +105,7 @@ function RewardSettingsPage({ isDarkMode }) {
                 onChange={(v) => setField("flipkart", v)}
                 options={["Yes", "No"]}
                 isDarkMode={isDarkMode}
+                disabled={readOnly}
               />
               <FormRadioGroup
                 label="PayPal"
@@ -108,12 +114,13 @@ function RewardSettingsPage({ isDarkMode }) {
                 onChange={(v) => setField("paypal", v)}
                 options={["Yes", "No"]}
                 isDarkMode={isDarkMode}
+                disabled={readOnly}
               />
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
-            {showSubmit && (
+            {showSubmit && !readOnly && (
             <button
               type="button"
               disabled={!canSubmit}

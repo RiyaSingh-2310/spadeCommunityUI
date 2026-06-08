@@ -5,6 +5,7 @@ import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import AdminPagination from "../../../components/admin/AdminPagination";
 import TableCard from "../../../components/admin/TableCard";
 import { useDebouncedValue } from "../../shared/hooks/useDebouncedValue";
+import { useModulePermission } from "../../permissions/useModulePermission";
 import { DEFAULT_PAGE_SIZE, paginateItems } from "../../shared/utils/pagination";
 
 const initialRows = Array.from({ length: 14 }).map((_, idx) => ({
@@ -14,6 +15,7 @@ const initialRows = Array.from({ length: 14 }).map((_, idx) => ({
 }));
 
 function LogActivityPage({ isDarkMode }) {
+  const { canWrite } = useModulePermission("log_activity");
   const [rows, setRows] = useState(initialRows);
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query);
@@ -80,7 +82,7 @@ function LogActivityPage({ isDarkMode }) {
           <table className="admin-table min-w-full text-sm">
             <thead>
               <tr className="admin-text-muted">
-                {["S.No", "Name", "Log Date", "Action"].map((h) => (
+                {["S.No", "Name", "Log Date", ...(canWrite ? ["Action"] : [])].map((h) => (
                   <th
                     key={h}
                     className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap"
@@ -101,6 +103,7 @@ function LogActivityPage({ isDarkMode }) {
                     <td className="admin-text whitespace-nowrap px-4 py-3">{globalIdx + 1}</td>
                     <td className="admin-text whitespace-nowrap px-4 py-3">{row.name}</td>
                     <td className="admin-text whitespace-nowrap px-4 py-3">{row.logDate}</td>
+                    {canWrite && (
                     <td className="whitespace-nowrap px-4 py-3">
                       <button
                         type="button"
@@ -111,6 +114,7 @@ function LogActivityPage({ isDarkMode }) {
                         Delete
                       </button>
                     </td>
+                    )}
                   </tr>
                 );
               })}

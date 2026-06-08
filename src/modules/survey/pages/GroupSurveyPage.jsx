@@ -58,6 +58,11 @@ function GroupSurveyPage({ isDarkMode }) {
         if (id == null) return;
         navigate(`/survey/group/${encodeURIComponent(id)}/projects`);
       }}
+      onView={(row) => {
+        const id = getGroupId(row);
+        if (id == null) return;
+        navigate(`/survey/group/view/${encodeURIComponent(id)}`);
+      }}
       onStatusToggle={onStatusToggle}
       permissionModule="group_survey"
       searchFields={["clientName", "projectName", "clientCode"]}

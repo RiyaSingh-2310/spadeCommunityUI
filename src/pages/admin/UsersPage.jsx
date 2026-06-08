@@ -105,6 +105,16 @@ function UsersPage({ isDarkMode }) {
     }
   };
 
+  const navigateToUserView = (row) => {
+    navigateToUserEdit(row);
+  };
+
+  const navigateToUserPermissions = (row) => {
+    const userId = row?.id ?? row?.admin_id;
+    if (userId == null || String(userId).trim() === "") return;
+    navigate(`/users/${encodeURIComponent(String(userId))}/permissions`);
+  };
+
   return (
     <div className="space-y-4">
       <ModuleListingPage
@@ -117,12 +127,15 @@ function UsersPage({ isDarkMode }) {
         rows={users}
         rowIdKey="id"
         permissionModule="users"
+        actionVariant="user-management"
         searchFields={["name", "email", "emailAddress"]}
         isLoading={isLoading}
         loadingMessage="Loading Admin Users..."
         emptyMessage="No Admin Users Found"
+        onView={navigateToUserView}
         onEdit={navigateToUserEdit}
         onDelete={handleDeleteRequest}
+        onManagePermissions={navigateToUserPermissions}
         onStatusToggle={handleStatusToggle}
         totalRecords={totalRecords}
         pageSize={DEFAULT_PAGE_SIZE}

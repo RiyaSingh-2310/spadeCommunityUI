@@ -91,6 +91,7 @@ const VALUE_FALLBACKS = {
   websiteUrl: ["website"],
   clientCode: ["code"],
   sno: ["id"],
+  createdDate: ["createdAt"],
 };
 
 export function getRowValue(row, columnLabel) {

@@ -29,6 +29,9 @@ function ProjectManagersPage({ isDarkMode }) {
       columns={["S.No", "Name", "Email Address", "Status", "Action"]}
       rows={rows}
       rowIdKey="id"
+      actionVariant="view-edit"
+      editPath="/project-managers"
+      onView={onEdit}
       onEdit={onEdit}
       onDelete={onDelete}
       onStatusToggle={onStatusToggle}

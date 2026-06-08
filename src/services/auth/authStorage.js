@@ -1,4 +1,8 @@
 import {
+  decodePermissionsRaw,
+  normalizePermissions,
+} from "../../modules/permissions/permissionsUtils";
+import {
   getUserDisplayName,
   getUserInitials,
   normalizeAdminUser,
@@ -36,6 +40,10 @@ export function saveAuthSession({ token, refreshToken, admin }) {
 
   const normalizedAdmin = normalizeAdminUser(admin);
   if (normalizedAdmin) {
+    const decoded =
+      decodePermissionsRaw(normalizedAdmin.permissions) ??
+      normalizedAdmin.permissions;
+    normalizedAdmin.permissions = normalizePermissions(decoded);
     localStorage.setItem(ADMIN_KEY, JSON.stringify(normalizedAdmin));
   } else {
     localStorage.removeItem(ADMIN_KEY);

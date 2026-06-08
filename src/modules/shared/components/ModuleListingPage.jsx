@@ -17,6 +17,11 @@ import ViewEditActions from "../../../components/admin/ViewEditActions";
 import SurveyListingActions from "../../../components/admin/SurveyListingActions";
 import StatusToggle from "../../../components/admin/StatusToggle";
 import { useModulePermission } from "../../permissions/useModulePermission";
+import {
+  getModuleListingReadMode,
+  shouldHideActionColumnWhenReadOnly,
+  shouldShowViewOnlyCrudActions,
+} from "../../permissions/moduleListingPermissions";
 import ViewActionButton from "../../../components/admin/ViewActionButton";
 import TableCard from "../../../components/admin/TableCard";
 import {
@@ -161,6 +166,21 @@ function ModuleListingPage({
     }
   }, [pendingDelete, getRowId]);
 
+  const handleView = useCallback(
+    (row, globalIdx) => {
+      if (onView) {
+        onView(row, globalIdx);
+        return;
+      }
+      handleEdit(row, globalIdx);
+    },
+    [onView, handleEdit]
+  );
+
+  const listingReadMode = getModuleListingReadMode(permissionModule);
+  const viewOnlyCrud =
+    shouldShowViewOnlyCrudActions(permissionModule, allowRead, allowWrite);
+
   const canShowEdit = allowWrite && Boolean(onEdit || editPath);
   const canShowDelete =
     allowWrite &&
@@ -259,10 +279,13 @@ function ModuleListingPage({
       />
     ) : null;
 
-  const displayColumns = useMemo(
-    () => filterColumns(columns),
-    [columns, filterColumns]
-  );
+  const displayColumns = useMemo(() => {
+    let cols = filterColumns(columns);
+    if (shouldHideActionColumnWhenReadOnly(permissionModule, allowWrite)) {
+      cols = cols.filter((col) => !isActionColumn(col));
+    }
+    return cols;
+  }, [columns, filterColumns, permissionModule, allowWrite]);
 
   const formatStatusDisplay = (row) =>
     formatStatusLabel(row.statusLabel ?? row.status);
@@ -431,15 +454,38 @@ function ModuleListingPage({
                     );
                   }
                   if (isActionColumn(col)) {
-                    if (!allowWrite && !(groupSurvey && allowRead)) return null;
+                    if (!allowRead) return null;
+
+                    const showReadOnlyActions =
+                      !allowWrite &&
+                      (listingReadMode === "survey-read" ||
+                        listingReadMode === "pdf-only" ||
+                        listingReadMode === "reward-pending-read" ||
+                        listingReadMode === "group-survey-view" ||
+                        viewOnlyCrud ||
+                        actionVariant === "view-edit" ||
+                        actionVariant === "pdf-download" ||
+                        actionVariant === "group-survey" ||
+                        actionVariant === "reward-pending" ||
+                        Boolean(onView));
+
+                    if (!allowWrite && !showReadOnlyActions) {
+                      return null;
+                    }
                     if (actionVariant === "user-management") {
                       return (
                         <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
                           <UserManagementActions
                             isDarkMode={isDarkMode}
+                            showView={allowRead && Boolean(onView || onEdit || editPath)}
                             showManagePermissions={canShowManagePermissions}
                             showEdit={canShowEdit}
                             showDelete={canShowDelete}
+                            onView={
+                              allowRead
+                                ? () => handleView(row, globalIdx)
+                                : undefined
+                            }
                             onManagePermissions={
                               onManagePermissions
                                 ? () => onManagePermissions(row, globalIdx)
@@ -460,24 +506,28 @@ function ModuleListingPage({
                       );
                     }
                     if (actionVariant === "group-survey") {
+                      const readOnlyGroupSurvey =
+                        !allowWrite && listingReadMode === "group-survey-view";
                       return (
                         <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
                           <GroupSurveyListingActions
                             isDarkMode={isDarkMode}
                             onEdit={
-                              canShowEdit
+                              !readOnlyGroupSurvey && canShowEdit
                                 ? () => handleEdit(row, globalIdx)
                                 : undefined
                             }
                             onAddProject={
-                              canShowEdit && onAddProject
+                              !readOnlyGroupSurvey && canShowEdit && onAddProject
                                 ? () => onAddProject(row, globalIdx)
                                 : undefined
                             }
                             onListProjects={
                               allowRead && onListProjects
                                 ? () => onListProjects(row, globalIdx)
-                                : undefined
+                                : readOnlyGroupSurvey && onView
+                                  ? () => handleView(row, globalIdx)
+                                  : undefined
                             }
                           />
                         </td>
@@ -510,7 +560,9 @@ function ModuleListingPage({
                                   : undefined
                               }
                               onSurveyClone={
-                                onSurveyClone ? () => onSurveyClone(row, globalIdx) : undefined
+                                allowWrite && onSurveyClone
+                                  ? () => onSurveyClone(row, globalIdx)
+                                  : undefined
                               }
                               labels={surveyActionLabels}
                             />
@@ -553,10 +605,14 @@ function ModuleListingPage({
                               allowRead && onView ? () => onView(row, globalIdx) : undefined
                             }
                             onApprove={
-                              onApprove ? () => onApprove(row, globalIdx) : undefined
+                              allowWrite && onApprove
+                                ? () => onApprove(row, globalIdx)
+                                : undefined
                             }
                             onReject={
-                              onReject ? () => onReject(row, globalIdx) : undefined
+                              allowWrite && onReject
+                                ? () => onReject(row, globalIdx)
+                                : undefined
                             }
                           />
                         </td>
@@ -564,20 +620,28 @@ function ModuleListingPage({
                     }
                     return (
                       <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
-                        <IconActions
-                          isDarkMode={isDarkMode}
-                          showDelete={canShowDelete}
-                          onEdit={
-                            canShowEdit
-                              ? () => handleEdit(row, globalIdx)
-                              : undefined
-                          }
-                          onDelete={
-                            canShowDelete
-                              ? () => handleDeleteRequest(row, globalIdx)
-                              : undefined
-                          }
-                        />
+                        {viewOnlyCrud || (allowRead && !allowWrite && onView) ? (
+                          <ViewEditActions
+                            isDarkMode={isDarkMode}
+                            onView={() => handleView(row, globalIdx)}
+                            onEdit={canShowEdit ? () => handleEdit(row, globalIdx) : undefined}
+                          />
+                        ) : (
+                          <IconActions
+                            isDarkMode={isDarkMode}
+                            showDelete={canShowDelete}
+                            onEdit={
+                              canShowEdit
+                                ? () => handleEdit(row, globalIdx)
+                                : undefined
+                            }
+                            onDelete={
+                              canShowDelete
+                                ? () => handleDeleteRequest(row, globalIdx)
+                                : undefined
+                            }
+                          />
+                        )}
                       </td>
                     );
                   }

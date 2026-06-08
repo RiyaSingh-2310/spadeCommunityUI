@@ -9,8 +9,10 @@ const ROUTE_RULES = [
   { matcher: /^\/users\/edit\//, module: "users", requiresWrite: true },
   { matcher: /^\/users(\/|$)/, module: "users" },
   { matcher: /^\/clients\/add/, module: "clients", requiresWrite: true },
+  { matcher: /^\/clients\/edit\//, module: "clients" },
   { matcher: /^\/clients(\/|$)/, module: "clients" },
   { matcher: /^\/partners\/add/, module: "partners", requiresWrite: true },
+  { matcher: /^\/partners\/edit\//, module: "partners" },
   { matcher: /^\/partners(\/|$)/, module: "partners" },
   { matcher: /^\/project-managers\/add/, module: "project_managers", requiresWrite: true },
   { matcher: /^\/project-managers(\/|$)/, module: "project_managers" },
@@ -57,6 +59,7 @@ const ROUTE_RULES = [
 const WRITE_PATH_PATTERNS = [
   /\/add\/?$/,
   /\/permissions\/?$/,
+  /\/sort\/?$/,
 ];
 
 /**

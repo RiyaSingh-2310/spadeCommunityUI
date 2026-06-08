@@ -35,5 +35,5 @@ export const MOCK_PERMISSIONS = {
   log_activity: { canRead: true, canWrite: false },
 };
 
-/** Set false when API permissions are wired. */
-export const USE_MOCK_PERMISSIONS = true;
+/** Set false — permissions come from the Admin Login API response. */
+export const USE_MOCK_PERMISSIONS = false;

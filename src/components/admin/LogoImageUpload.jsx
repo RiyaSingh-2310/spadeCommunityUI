@@ -4,7 +4,7 @@ import { getValidImageUrl } from "../../modules/shared/utils/userAvatar";
 
 const ACCEPT = "image/png,image/jpeg,image/jpg,image/svg+xml";
 
-function LogoImageUpload({ isDarkMode, preview, onPreviewChange, existingImage = "" }) {
+function LogoImageUpload({ isDarkMode, preview, onPreviewChange, existingImage = "", disabled = false }) {
   const inputRef = useRef(null);
   const blobUrlRef = useRef("");
   const displayImage = preview || existingImage;
@@ -55,6 +55,7 @@ function LogoImageUpload({ isDarkMode, preview, onPreviewChange, existingImage =
           </div>
         )}
         <div className="flex flex-col gap-2">
+          {!disabled && (
           <label className="inline-flex w-fit cursor-pointer items-center rounded-xl border px-4 py-2.5 text-sm font-semibold transition hover:opacity-90 border-[var(--admin-header-search-border)] admin-text">
             Choose File
             <input
@@ -65,7 +66,8 @@ function LogoImageUpload({ isDarkMode, preview, onPreviewChange, existingImage =
               onChange={handleFile}
             />
           </label>
-          {preview && (
+          )}
+          {preview && !disabled && (
             <button
               type="button"
               onClick={handleRemove}

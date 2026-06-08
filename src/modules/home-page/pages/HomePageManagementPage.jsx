@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
+import { useAdminFormAccess } from "../../permissions/FormAccessContext";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import {
@@ -69,7 +70,8 @@ function HomePageManagementPage({ isDarkMode }) {
     fields: HOME_PAGE_FIELDS,
   });
 
-  const canSubmit = isFormValid(errors);
+  const { readOnly, showSubmit, controlDisabled, canSubmitForm } = useAdminFormAccess();
+  const canSubmit = canSubmitForm && isFormValid(errors);
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -81,7 +83,7 @@ function HomePageManagementPage({ isDarkMode }) {
           className="space-y-5"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!validateSubmit() || !canSubmit) return;
+            if (readOnly || !showSubmit || !validateSubmit() || !canSubmit) return;
             navigate("/");
           }}
           noValidate
@@ -94,6 +96,8 @@ function HomePageManagementPage({ isDarkMode }) {
               value={form.title}
               onChange={(e) => setField("title", e.target.value)}
               onBlur={() => touch("title")}
+              disabled={controlDisabled}
+              readOnly={readOnly}
             />
             {showError("title") && (
               <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("title")}</p>
@@ -107,6 +111,8 @@ function HomePageManagementPage({ isDarkMode }) {
               value={form.keyword}
               onChange={(e) => setField("keyword", e.target.value)}
               onBlur={() => touch("keyword")}
+              disabled={controlDisabled}
+              readOnly={readOnly}
             />
             {showError("keyword") && (
               <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("keyword")}</p>
@@ -120,6 +126,8 @@ function HomePageManagementPage({ isDarkMode }) {
               value={form.description}
               onChange={(e) => setField("description", e.target.value)}
               onBlur={() => touch("description")}
+              disabled={controlDisabled}
+              readOnly={readOnly}
             />
             {showError("description") && (
               <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
@@ -135,6 +143,7 @@ function HomePageManagementPage({ isDarkMode }) {
               onChange={(v) => setField("threeSteps", v)}
               onBlur={() => touch("threeSteps")}
               placeholder="Enter three simple steps content..."
+              disabled={readOnly}
             />
             {showError("threeSteps") && (
               <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
@@ -150,6 +159,7 @@ function HomePageManagementPage({ isDarkMode }) {
               onChange={(v) => setField("chooseReward", v)}
               onBlur={() => touch("chooseReward")}
               placeholder="Enter reward section content..."
+              disabled={readOnly}
             />
             {showError("chooseReward") && (
               <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
@@ -166,12 +176,15 @@ function HomePageManagementPage({ isDarkMode }) {
               onChange={(e) => setField("footerJsx", e.target.value)}
               onBlur={() => touch("footerJsx")}
               spellCheck={false}
+              disabled={controlDisabled}
+              readOnly={readOnly}
             />
             {showError("footerJsx") && (
               <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("footerJsx")}</p>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-3 pt-2">
+            {showSubmit && !readOnly && (
             <button
               type="submit"
               disabled={!canSubmit}
@@ -179,6 +192,7 @@ function HomePageManagementPage({ isDarkMode }) {
             >
               Submit
             </button>
+            )}
             <button
               type="button"
               onClick={() => navigate("/")}

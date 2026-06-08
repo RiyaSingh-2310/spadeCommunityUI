@@ -73,6 +73,7 @@ function InvoiceSettingsPage({ isDarkMode }) {
             isDarkMode={isDarkMode}
             preview={logoPreview}
             onPreviewChange={setLogoPreview}
+            disabled={readOnly}
           />
         </TableCard>
 
@@ -127,7 +128,7 @@ function InvoiceSettingsPage({ isDarkMode }) {
         </TableCard>
 
         <div className="flex flex-wrap items-center gap-3">
-          {showSubmit && (
+          {showSubmit && !readOnly && (
           <button
             type="submit"
             disabled={!canSubmit}
