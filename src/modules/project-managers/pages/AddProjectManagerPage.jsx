@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
-import FormStatusSelect from "../../../components/admin/FormStatusSelect";
 import ProfileImageUpload from "../../../components/admin/ProfileImageUpload";
 import TableCard from "../../../components/admin/TableCard";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
+import { toastApiError } from "../../../services/toast/apiToast";
+import { createProjectManager } from "../../../services/projectManagers/projectManagersApi";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import {
   getConfirmPasswordError,
@@ -22,12 +23,13 @@ function AddProjectManagerPage({ isDarkMode }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [preview, setPreview] = useState("");
+  const [profileImage, setProfileImage] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
-    status: "Active",
   });
 
   const inputClass = getAdminInputClass();
@@ -47,7 +49,35 @@ function AddProjectManagerPage({ isDarkMode }) {
     fields: MANAGER_FORM_FIELDS,
   });
 
-  const canSubmit = isFormValid(errors);
+  const canSubmit = isFormValid(errors) && !isSubmitting;
+
+  const onSubmit = async (event) => {
+    event.preventDefault();
+    if (!validateSubmit() || !isFormValid(errors)) return;
+
+    setIsSubmitting(true);
+    try {
+      const data = await createProjectManager({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        confirmPassword: form.confirmPassword,
+        profileImage,
+      });
+
+      navigate("/project-managers", {
+        replace: true,
+        state: {
+          flash: { type: "success", message: data.message },
+          refresh: true,
+        },
+      });
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -60,19 +90,12 @@ function AddProjectManagerPage({ isDarkMode }) {
         isDarkMode={isDarkMode}
       />
       <TableCard title="Project Manager Details" isDarkMode={isDarkMode}>
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!validateSubmit() || !canSubmit) return;
-            navigate("/project-managers");
-          }}
-          noValidate
-        >
+        <form className="space-y-4" onSubmit={onSubmit} noValidate>
           <ProfileImageUpload
             isDarkMode={isDarkMode}
             preview={preview}
             onPreviewChange={setPreview}
+            onFileChange={setProfileImage}
             name={form.name}
           />
           <div className="grid gap-4 md:grid-cols-2">
@@ -150,23 +173,20 @@ function AddProjectManagerPage({ isDarkMode }) {
                 </p>
               )}
             </div>
-            <FormStatusSelect
-              value={form.status}
-              onChange={(status) => setForm((prev) => ({ ...prev, status }))}
-              inputClass={inputClass}
-            />
           </div>
           <div className="flex items-center gap-3 pt-2">
             <button
               type="submit"
               disabled={!canSubmit}
-              className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]"
             >
+              {isSubmitting && <Loader2 size={16} className="animate-spin" />}
               Submit
             </button>
             <button
               type="button"
               onClick={() => navigate("/project-managers")}
+              disabled={isSubmitting}
               className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel

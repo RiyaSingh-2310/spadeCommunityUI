@@ -1,23 +1,46 @@
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
-import { useListingPageActions } from "../../shared/hooks/useListingPageActions";
+import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
+import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
+import { toastApiError } from "../../../services/toast/apiToast";
+import { getRecords } from "../../../services/projectManagers/projectManagersApi";
 
-const NAMES = ["Aarav Mehta", "Kriti Nair", "Rahul Roy", "Sophia Chen", "Marcus Johnson", "Priya Desai"];
-
-const initialRows = Array.from({ length: 12 }, (_, idx) => ({
-  id: `pm-${idx + 1}`,
-  name: NAMES[idx % NAMES.length],
-  image: idx % 2 === 0 ? `https://i.pravatar.cc/80?img=${15 + idx}` : undefined,
-  emailAddress: `pm${idx + 1}@spadecommunity.com`,
-  status: idx % 4 === 0 ? "Inactive" : "Active",
-}));
+const LIST_COLUMNS = ["S.No", "Name", "Email Address", "Status", "Action"];
 
 function ProjectManagersPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const { rows, onEdit, onDelete, onStatusToggle } = useListingPageActions({
-    initialRows,
-    editPath: "/project-managers",
-  });
+  const location = useLocation();
+  useFlashMessage();
+  const [projectManagers, setProjectManagers] = useState([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchProjectManagers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await getRecords();
+      setProjectManagers(data.items);
+      setTotalRecords(data.total ?? data.count ?? data.items.length);
+    } catch (error) {
+      toastApiError(error);
+      setProjectManagers([]);
+      setTotalRecords(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProjectManagers();
+  }, [fetchProjectManagers]);
+
+  useEffect(() => {
+    if (location.state?.refresh) {
+      fetchProjectManagers();
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, location.pathname, navigate, fetchProjectManagers]);
 
   return (
     <ModuleListingPage
@@ -26,14 +49,19 @@ function ProjectManagersPage({ isDarkMode }) {
       searchPlaceholder="Search project managers..."
       actionLabel="Add Project Manager"
       onActionClick={() => navigate("/project-managers/add")}
-      columns={["S.No", "Name", "Email Address", "Status", "Action"]}
-      rows={rows}
+      columns={LIST_COLUMNS}
+      rows={projectManagers}
       rowIdKey="id"
       editPath="/project-managers"
-      onEdit={onEdit}
-      onDelete={onDelete}
-      onStatusToggle={onStatusToggle}
       permissionModule="project_managers"
+      searchFields={["name", "emailAddress", "code"]}
+      isLoading={isLoading}
+      loadingMessage="Loading project managers..."
+      emptyMessage="No project managers found"
+      statusAsText
+      totalRecords={totalRecords}
+      pageSize={DEFAULT_PAGE_SIZE}
+      showPagination
       nowrapAllCells
     />
   );

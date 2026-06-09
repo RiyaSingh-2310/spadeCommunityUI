@@ -26,6 +26,10 @@ export const API_ROUTES = {
     update: (id) => `/api/admin/partner/${id}`,
     delete: (id) => `/api/admin/partner/${id}`,
   },
+  projectManagers: {
+    list: "/api/projectmanager/list",
+    create: "/api/projectmanager/add",
+  },
 };
 
 export const API_BASE_URL =
