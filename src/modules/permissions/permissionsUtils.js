@@ -153,49 +153,26 @@ function unwrapPermissionsSource(raw) {
   return current;
 }
 
-function padBase64(value) {
-  const remainder = value.length % 4;
-  if (remainder === 0) return value;
-  return value + "=".repeat(4 - remainder);
-}
-
-function parseEncodedPermissionString(value) {
-  const trimmed = String(value ?? "").trim();
-  if (!trimmed) return null;
-
+/**
+ * Decodes base64-encoded permission JSON from the API.
+ * @param {unknown} encoded
+ */
+export function decodePermissions(encoded) {
+  if (!encoded) return null;
   try {
-    return JSON.parse(trimmed);
+    const base64 = String(encoded).trim();
+    const utf8 =
+      typeof Buffer !== "undefined"
+        ? Buffer.from(base64, "base64").toString("utf-8")
+        : atob(base64);
+    return JSON.parse(utf8);
   } catch {
-    // fall through — may be base64-encoded JSON from the API
-  }
-
-  if (typeof atob !== "function") {
-    return null;
-  }
-
-  const candidates = [
-    trimmed,
-    padBase64(trimmed),
-    padBase64(trimmed.replace(/-/g, "+").replace(/_/g, "/")),
-  ];
-
-  for (const candidate of candidates) {
-    try {
-      return JSON.parse(atob(candidate));
-    } catch {
-      // try next encoding variant
-    }
-  }
-
-  try {
-    return JSON.parse(decodeURIComponent(trimmed));
-  } catch {
-    return null;
+    return encoded;
   }
 }
 
 /**
- * Decodes API permission payloads (JSON string, base64 JSON, nested object).
+ * Decodes API permission payloads (base64 JSON, plain JSON string, or object).
  * @param {unknown} raw
  */
 export function decodePermissionsRaw(raw) {
@@ -203,13 +180,20 @@ export function decodePermissionsRaw(raw) {
   if (typeof raw === "object") return raw;
   if (typeof raw !== "string") return null;
 
-  let current = parseEncodedPermissionString(raw);
-  if (current == null) return null;
+  let current = decodePermissions(raw);
+
+  if (typeof current === "string" && current === raw) {
+    try {
+      return JSON.parse(current.trim());
+    } catch {
+      return null;
+    }
+  }
 
   for (let depth = 0; depth < 3 && typeof current === "string"; depth += 1) {
-    const nested = parseEncodedPermissionString(current);
-    if (nested == null) break;
-    current = nested;
+    const next = decodePermissions(current);
+    if (next === current) break;
+    current = next;
   }
 
   return current;

@@ -1,7 +1,10 @@
 import { API_ROUTES } from "../../config/api";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
-import { apiStatusToFormValue } from "../../modules/shared/utils/statusLabels";
+import {
+  apiStatusToFormValue,
+  formValueToApiStatus,
+} from "../../modules/shared/utils/statusLabels";
 
 function assertSuccess(data, fallbackMessage) {
   if (data?.success !== true) {
@@ -51,6 +54,35 @@ export async function updateClient(id, payload) {
       name: payload.name.trim(),
       country: payload.country.trim(),
       contact_no: payload.contact_no?.trim() ?? "",
+    },
+  });
+
+  return assertSuccess(data, "Failed to update client");
+}
+
+/**
+ * PUT /api/clients/update/:id — status toggle from clients listing table.
+ * @param {string|number} id
+ * @param {{
+ *   name: string,
+ *   status: string,
+ *   country?: string,
+ *   contactNumber?: string,
+ * }} payload
+ */
+export async function updateClientStatus(id, { name, status, country, contactNumber }) {
+  const normalizedId = String(id ?? "").trim();
+  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
+    throw new ApiError("Invalid client id.", null);
+  }
+
+  const data = await apiRequest(API_ROUTES.clients.update(normalizedId), {
+    method: "PUT",
+    body: {
+      name: String(name ?? "").trim(),
+      country: String(country ?? "").trim(),
+      contact_no: String(contactNumber ?? "").trim(),
+      status: formValueToApiStatus(status),
     },
   });
 

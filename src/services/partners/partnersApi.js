@@ -249,6 +249,24 @@ export async function createPartner(payload) {
 }
 
 /**
+ * PUT /api/admin/partner/:id — status toggle from partners listing table.
+ * @param {string|number} id
+ * @param {{ name: string, status: string }} payload
+ */
+export async function updatePartnerStatus(id, { name, status }) {
+  const normalizedId = normalizePartnerId(id);
+  const data = await apiRequest(API_ROUTES.partners.update(normalizedId), {
+    method: "PUT",
+    body: {
+      name: String(name ?? "").trim(),
+      status: formValueToApiStatus(status),
+    },
+  });
+
+  return assertSuccess(data);
+}
+
+/**
  * PUT /api/admin/partner/:id
  * @param {string|number} id
  * @param {Parameters<typeof buildUpdatePartnerPayload>[0] | Record<string, unknown>} payload

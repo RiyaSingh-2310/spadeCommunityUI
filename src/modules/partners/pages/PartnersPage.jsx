@@ -7,9 +7,8 @@ import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   deleteRecord,
-  formStatusToApiStatus,
   getRecords,
-  updatePartner,
+  updatePartnerStatus,
 } from "../../../services/partners/partnersApi";
 
 const LIST_COLUMNS = [
@@ -34,6 +33,7 @@ function PartnersPage({ isDarkMode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
   const fetchPartners = useCallback(async () => {
     setIsLoading(true);
@@ -87,16 +87,22 @@ function PartnersPage({ isDarkMode }) {
   };
 
   const handleStatusToggle = async (row) => {
+    if (!row?.id || statusUpdatingId != null) return;
+
     const nextStatus = row.status === "Active" ? "Inactive" : "Active";
+    setStatusUpdatingId(row.id);
+
     try {
-      const data = await updatePartner(row.id, {
+      const data = await updatePartnerStatus(row.id, {
         name: row.name,
-        status: formStatusToApiStatus(nextStatus),
+        status: nextStatus,
       });
       toastApiSuccess(data);
       await fetchPartners();
     } catch (error) {
       toastApiError(error);
+    } finally {
+      setStatusUpdatingId(null);
     }
   };
 
