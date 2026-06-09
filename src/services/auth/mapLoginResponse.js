@@ -1,8 +1,9 @@
+import { prepareAdminSessionUser } from "../../modules/permissions/permissionsUtils";
 import { normalizeAdminUser } from "../../modules/shared/utils/userAvatar";
 
 /**
  * API shape:
- * { success, message, data: { token, admin } }
+ * { success, message, data: { token, admin, permissions? } }
  *
  * @param {object | null | undefined} raw
  */
@@ -30,10 +31,11 @@ export function mapLoginResponse(raw) {
   ).trim();
 
   const adminSource = nested?.admin ?? raw.admin ?? null;
-  const admin =
+  const sessionAdmin =
     adminSource && typeof adminSource === "object"
-      ? normalizeAdminUser(adminSource)
+      ? prepareAdminSessionUser(adminSource, nested, raw)
       : null;
+  const admin = sessionAdmin ? normalizeAdminUser(sessionAdmin) : null;
 
   const success =
     raw.success === true ||

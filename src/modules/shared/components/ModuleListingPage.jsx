@@ -13,14 +13,14 @@ import IconActions from "../../../components/admin/IconActions";
 import InvoicePdfAction from "../../../components/admin/InvoicePdfAction";
 import RewardPendingActions from "../../../components/admin/RewardPendingActions";
 import UserManagementActions from "../../../components/admin/UserManagementActions";
-import ViewEditActions from "../../../components/admin/ViewEditActions";
 import SurveyListingActions from "../../../components/admin/SurveyListingActions";
 import StatusToggle from "../../../components/admin/StatusToggle";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import {
   getModuleListingReadMode,
-  shouldHideActionColumnWhenReadOnly,
-  shouldShowViewOnlyCrudActions,
+  getUserManagementActionFlags,
+  hasNativeReadOnlyListingActions,
+  shouldShowListingActionColumn,
 } from "../../permissions/moduleListingPermissions";
 import ViewActionButton from "../../../components/admin/ViewActionButton";
 import TableCard from "../../../components/admin/TableCard";
@@ -166,20 +166,30 @@ function ModuleListingPage({
     }
   }, [pendingDelete, getRowId]);
 
-  const handleView = useCallback(
-    (row, globalIdx) => {
-      if (onView) {
-        onView(row, globalIdx);
-        return;
-      }
-      handleEdit(row, globalIdx);
-    },
-    [onView, handleEdit]
-  );
-
   const listingReadMode = getModuleListingReadMode(permissionModule);
-  const viewOnlyCrud =
-    shouldShowViewOnlyCrudActions(permissionModule, allowRead, allowWrite);
+
+  const readOnlyListingActions = hasNativeReadOnlyListingActions({
+    permissionModule,
+    actionVariant,
+    onView,
+    onFindUser,
+    onUserSurveyData,
+    onSurveyClone,
+    onPdfDownload,
+    onApprove,
+    onReject,
+    onListProjects,
+  });
+
+  const userMgmtActions = userManagement
+    ? getUserManagementActionFlags({
+        allowWrite,
+        onEdit,
+        editPath,
+        onDelete,
+        showDeleteAction,
+      })
+    : null;
 
   const canShowEdit = allowWrite && Boolean(onEdit || editPath);
   const canShowDelete =
@@ -188,13 +198,12 @@ function ModuleListingPage({
     !editOnly &&
     !viewEdit &&
     !pdfDownload &&
-    !userManagement &&
     !groupSurvey &&
     Boolean(onDelete || hasActionColumn);
   const canShowManagePermissions =
     allowWrite && userManagement && Boolean(onManagePermissions);
   const effectiveStatusToggle = allowWrite ? onStatusToggle : undefined;
-  const effectiveStatusAsText = statusAsText || (showStatus && !allowWrite);
+  const effectiveStatusAsText = statusAsText;
   const showAddButton = Boolean(onActionClick && allowWrite);
   const showSecondaryAction = Boolean(
     onSecondaryActionClick && secondaryActionLabel && allowWrite
@@ -281,11 +290,52 @@ function ModuleListingPage({
 
   const displayColumns = useMemo(() => {
     let cols = filterColumns(columns);
-    if (shouldHideActionColumnWhenReadOnly(permissionModule, allowWrite)) {
+    const showActionColumn = shouldShowListingActionColumn({
+      permissionModule,
+      actionVariant,
+      allowRead,
+      allowWrite,
+      onView,
+      onEdit,
+      onDelete,
+      editPath,
+      showDeleteAction,
+      onManagePermissions,
+      onFindUser,
+      onUserSurveyData,
+      onSurveyClone,
+      onPdfDownload,
+      onApprove,
+      onReject,
+      onListProjects,
+      hasActionColumn,
+    });
+    if (!showActionColumn && hasActionColumn) {
       cols = cols.filter((col) => !isActionColumn(col));
     }
     return cols;
-  }, [columns, filterColumns, permissionModule, allowWrite]);
+  }, [
+    columns,
+    filterColumns,
+    permissionModule,
+    actionVariant,
+    allowRead,
+    allowWrite,
+    onView,
+    onEdit,
+    onDelete,
+    editPath,
+    showDeleteAction,
+    onManagePermissions,
+    onFindUser,
+    onUserSurveyData,
+    onSurveyClone,
+    onPdfDownload,
+    onApprove,
+    onReject,
+    onListProjects,
+    hasActionColumn,
+  ]);
 
   const formatStatusDisplay = (row) =>
     formatStatusLabel(row.statusLabel ?? row.status);
@@ -415,28 +465,33 @@ function ModuleListingPage({
                       <td key={col} className={`admin-table-status-col px-4 py-3 align-middle ${TABLE_STATUS_COL}`}>
                         <StatusToggle
                           checked={String(row.status || "").toLowerCase() === "active"}
-                          onChange={() => {
-                            if (effectiveStatusToggle) {
-                              effectiveStatusToggle(row, globalIdx);
-                              return;
-                            }
-                            setInternalData((prev) =>
-                              prev.map((item) => {
-                                const matches =
-                                  (row.id && item.id === row.id) ||
-                                  (row[rowIdKey] && item[rowIdKey] === row[rowIdKey]) ||
-                                  item === row;
-                                if (!matches) return item;
-                                return {
-                                  ...item,
-                                  status:
-                                    String(item.status).toLowerCase() === "active"
-                                      ? "Inactive"
-                                      : "Active",
-                                };
-                              })
-                            );
-                          }}
+                          readOnly={!allowWrite}
+                          onChange={
+                            allowWrite
+                              ? () => {
+                                  if (effectiveStatusToggle) {
+                                    effectiveStatusToggle(row, globalIdx);
+                                    return;
+                                  }
+                                  setInternalData((prev) =>
+                                    prev.map((item) => {
+                                      const matches =
+                                        (row.id && item.id === row.id) ||
+                                        (row[rowIdKey] && item[rowIdKey] === row[rowIdKey]) ||
+                                        item === row;
+                                      if (!matches) return item;
+                                      return {
+                                        ...item,
+                                        status:
+                                          String(item.status).toLowerCase() === "active"
+                                            ? "Inactive"
+                                            : "Active",
+                                      };
+                                    })
+                                  );
+                                }
+                              : undefined
+                          }
                         />
                       </td>
                     );
@@ -456,48 +511,42 @@ function ModuleListingPage({
                   if (isActionColumn(col)) {
                     if (!allowRead) return null;
 
-                    const showReadOnlyActions =
-                      !allowWrite &&
-                      (listingReadMode === "survey-read" ||
-                        listingReadMode === "pdf-only" ||
-                        listingReadMode === "reward-pending-read" ||
-                        listingReadMode === "group-survey-view" ||
-                        viewOnlyCrud ||
-                        actionVariant === "view-edit" ||
-                        actionVariant === "pdf-download" ||
-                        actionVariant === "group-survey" ||
-                        actionVariant === "reward-pending" ||
-                        Boolean(onView));
-
-                    if (!allowWrite && !showReadOnlyActions) {
+                    if (!allowWrite && !readOnlyListingActions) {
                       return null;
                     }
                     if (actionVariant === "user-management") {
+                      const { showEdit, showDelete } =
+                        userMgmtActions ?? getUserManagementActionFlags({
+                          allowWrite,
+                          onEdit,
+                          editPath,
+                          onDelete,
+                          showDeleteAction,
+                        });
+
+                      if (!showEdit && !showDelete) {
+                        return null;
+                      }
+
                       return (
                         <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
                           <UserManagementActions
                             isDarkMode={isDarkMode}
-                            showView={allowRead && Boolean(onView || onEdit || editPath)}
                             showManagePermissions={canShowManagePermissions}
-                            showEdit={canShowEdit}
-                            showDelete={canShowDelete}
-                            onView={
-                              allowRead
-                                ? () => handleView(row, globalIdx)
-                                : undefined
-                            }
+                            showEdit={showEdit}
+                            showDelete={showDelete}
                             onManagePermissions={
                               onManagePermissions
                                 ? () => onManagePermissions(row, globalIdx)
                                 : undefined
                             }
                             onEdit={
-                              canShowEdit
+                              showEdit
                                 ? () => handleEdit(row, globalIdx)
                                 : undefined
                             }
                             onDelete={
-                              canShowDelete
+                              showDelete
                                 ? () => handleDeleteRequest(row, globalIdx)
                                 : undefined
                             }
@@ -525,9 +574,7 @@ function ModuleListingPage({
                             onListProjects={
                               allowRead && onListProjects
                                 ? () => onListProjects(row, globalIdx)
-                                : readOnlyGroupSurvey && onView
-                                  ? () => handleView(row, globalIdx)
-                                  : undefined
+                                : undefined
                             }
                           />
                         </td>
@@ -536,6 +583,11 @@ function ModuleListingPage({
                     if (actionVariant === "view-edit") {
                       const useSurveyActions =
                         onFindUser || onUserSurveyData || onSurveyClone;
+
+                      if (!useSurveyActions && !allowWrite) {
+                        return null;
+                      }
+
                       return (
                         <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
                           {useSurveyActions ? (
@@ -567,14 +619,17 @@ function ModuleListingPage({
                               labels={surveyActionLabels}
                             />
                           ) : (
-                            <ViewEditActions
+                            <IconActions
                               isDarkMode={isDarkMode}
-                              onView={
-                                allowRead && onView ? () => onView(row, globalIdx) : undefined
-                              }
+                              showDelete={canShowDelete}
                               onEdit={
                                 canShowEdit
                                   ? () => handleEdit(row, globalIdx)
+                                  : undefined
+                              }
+                              onDelete={
+                                canShowDelete
+                                  ? () => handleDeleteRequest(row, globalIdx)
                                   : undefined
                               }
                             />
@@ -618,30 +673,26 @@ function ModuleListingPage({
                         </td>
                       );
                     }
+                    if (!allowWrite) {
+                      return null;
+                    }
+
                     return (
                       <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
-                        {viewOnlyCrud || (allowRead && !allowWrite && onView) ? (
-                          <ViewEditActions
-                            isDarkMode={isDarkMode}
-                            onView={() => handleView(row, globalIdx)}
-                            onEdit={canShowEdit ? () => handleEdit(row, globalIdx) : undefined}
-                          />
-                        ) : (
-                          <IconActions
-                            isDarkMode={isDarkMode}
-                            showDelete={canShowDelete}
-                            onEdit={
-                              canShowEdit
-                                ? () => handleEdit(row, globalIdx)
-                                : undefined
-                            }
-                            onDelete={
-                              canShowDelete
-                                ? () => handleDeleteRequest(row, globalIdx)
-                                : undefined
-                            }
-                          />
-                        )}
+                        <IconActions
+                          isDarkMode={isDarkMode}
+                          showDelete={canShowDelete}
+                          onEdit={
+                            canShowEdit
+                              ? () => handleEdit(row, globalIdx)
+                              : undefined
+                          }
+                          onDelete={
+                            canShowDelete
+                              ? () => handleDeleteRequest(row, globalIdx)
+                              : undefined
+                          }
+                        />
                       </td>
                     );
                   }

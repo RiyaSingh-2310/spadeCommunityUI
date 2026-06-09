@@ -3,7 +3,7 @@ import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
 import {
   buildPermissionsPayload,
-  normalizePermissions,
+  resolvePermissionsFromRecord,
 } from "../../modules/permissions/permissionsUtils";
 import {
   apiStatusToFormValue,
@@ -96,9 +96,7 @@ function splitNameParts(name) {
 }
 
 function resolveAdminPermissions(admin) {
-  return normalizePermissions(
-    admin?.permissions ?? admin?.permissions_json ?? admin?.permission
-  );
+  return resolvePermissionsFromRecord(admin);
 }
 
 export function apiStatusToFormStatus(status) {

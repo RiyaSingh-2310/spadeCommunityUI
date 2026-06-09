@@ -153,17 +153,14 @@ function unwrapPermissionsSource(raw) {
   return current;
 }
 
-/**
- * Decodes API permission payloads (JSON string, base64 JSON, nested object).
- * @param {unknown} raw
- */
-export function decodePermissionsRaw(raw) {
-  if (raw == null) return null;
-  if (typeof raw === "object") return raw;
+function padBase64(value) {
+  const remainder = value.length % 4;
+  if (remainder === 0) return value;
+  return value + "=".repeat(4 - remainder);
+}
 
-  if (typeof raw !== "string") return null;
-
-  const trimmed = raw.trim();
+function parseEncodedPermissionString(value) {
+  const trimmed = String(value ?? "").trim();
   if (!trimmed) return null;
 
   try {
@@ -176,11 +173,137 @@ export function decodePermissionsRaw(raw) {
     return null;
   }
 
+  const candidates = [
+    trimmed,
+    padBase64(trimmed),
+    padBase64(trimmed.replace(/-/g, "+").replace(/_/g, "/")),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(atob(candidate));
+    } catch {
+      // try next encoding variant
+    }
+  }
+
   try {
-    return JSON.parse(atob(trimmed));
+    return JSON.parse(decodeURIComponent(trimmed));
   } catch {
     return null;
   }
+}
+
+/**
+ * Decodes API permission payloads (JSON string, base64 JSON, nested object).
+ * @param {unknown} raw
+ */
+export function decodePermissionsRaw(raw) {
+  if (raw == null) return null;
+  if (typeof raw === "object") return raw;
+  if (typeof raw !== "string") return null;
+
+  let current = parseEncodedPermissionString(raw);
+  if (current == null) return null;
+
+  for (let depth = 0; depth < 3 && typeof current === "string"; depth += 1) {
+    const nested = parseEncodedPermissionString(current);
+    if (nested == null) break;
+    current = nested;
+  }
+
+  return current;
+}
+
+/**
+ * Reads permission payload from admin/user API records (all known field names).
+ * @param {Record<string, unknown> | null | undefined} record
+ */
+export function extractPermissionsRawFromRecord(record) {
+  if (!record || typeof record !== "object") return null;
+
+  return (
+    record.permissions ??
+    record.permissions_json ??
+    record.permissionsJson ??
+    record.permission ??
+    record.permissions_encrypted ??
+    record.encrypted_permissions ??
+    null
+  );
+}
+
+/** Raw/encrypted permission fields — never persist after login. */
+export const ENCRYPTED_PERMISSION_FIELD_KEYS = [
+  "permissions_json",
+  "permissionsJson",
+  "permission",
+  "permissions_encrypted",
+  "encrypted_permissions",
+];
+
+/**
+ * Decrypts and normalizes permissions from an admin/user API record.
+ * @param {Record<string, unknown> | null | undefined} record
+ */
+export function resolvePermissionsFromRecord(record) {
+  return normalizePermissions(extractPermissionsRawFromRecord(record));
+}
+
+/**
+ * Resolves permissions from the first source that contains a payload (login API may
+ * attach permissions on admin, data, or the top-level response).
+ * @param {...(Record<string, unknown> | null | undefined)} sources
+ */
+export function resolvePermissionsFromSources(...sources) {
+  for (const source of sources) {
+    if (!source || typeof source !== "object") continue;
+    const raw = extractPermissionsRawFromRecord(source);
+    if (raw == null) continue;
+    const normalized = normalizePermissions(raw);
+    if (hasAnyPermissionGrant(normalized)) {
+      return normalized;
+    }
+  }
+
+  for (const source of sources) {
+    if (!source || typeof source !== "object") continue;
+    const raw = extractPermissionsRawFromRecord(source);
+    if (raw != null) {
+      return normalizePermissions(raw);
+    }
+  }
+
+  return createDefaultPermissions();
+}
+
+/**
+ * Removes encrypted/raw permission fields from a stored admin session object.
+ * @param {Record<string, unknown>} admin
+ */
+export function stripEncryptedPermissionFields(admin) {
+  const next = { ...admin };
+  for (const key of ENCRYPTED_PERMISSION_FIELD_KEYS) {
+    delete next[key];
+  }
+  return next;
+}
+
+/**
+ * Decrypts permissions and returns a session-safe admin object (no encrypted fields).
+ * @param {Record<string, unknown> | null | undefined} record
+ * @param {...(Record<string, unknown> | null | undefined)} permissionSources
+ */
+export function prepareAdminSessionUser(record, ...permissionSources) {
+  if (!record || typeof record !== "object") return null;
+
+  const permissions = resolvePermissionsFromSources(record, ...permissionSources);
+  const sessionUser = stripEncryptedPermissionFields({
+    ...record,
+    permissions,
+  });
+
+  return sessionUser;
 }
 
 /**

@@ -1,8 +1,7 @@
-import { MOCK_PERMISSIONS, USE_MOCK_PERMISSIONS } from "./mockPermissions";
 import {
   createFullPermissions,
   hasAnyPermissionGrant,
-  normalizePermissions,
+  resolvePermissionsFromRecord,
 } from "./permissionsUtils";
 
 function isSuperAdminUser(admin) {
@@ -12,26 +11,22 @@ function isSuperAdminUser(admin) {
 }
 
 /**
- * Resolves active permissions: API/stored → mock (dev) → full (super admin).
+ * Single source of truth for active session permissions (login API → decrypted storage).
  * @param {object | null} admin
  */
 export function getEffectivePermissions(admin) {
   const superAdmin = isSuperAdminUser(admin);
-  const stored = admin?.permissions;
+  const permissions = resolvePermissionsFromRecord(admin);
 
-  if (USE_MOCK_PERMISSIONS) {
-    return normalizePermissions(MOCK_PERMISSIONS);
-  }
-
-  if (hasAnyPermissionGrant(stored)) {
-    return normalizePermissions(stored);
+  if (hasAnyPermissionGrant(permissions)) {
+    return permissions;
   }
 
   if (superAdmin) {
     return createFullPermissions();
   }
 
-  return normalizePermissions(stored);
+  return permissions;
 }
 
 export { isSuperAdminUser };

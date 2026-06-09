@@ -40,30 +40,33 @@ function GroupSurveyListingActions({
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-1.5">
-      <ActionIconButton
-        isDarkMode={isDarkMode}
-        label="Edit Project"
-        onClick={onEdit}
-        disabled={!onEdit}
-      >
-        <Pencil size={13} />
-      </ActionIconButton>
-      <ActionIconButton
-        isDarkMode={isDarkMode}
-        label="Add Project"
-        onClick={onAddProject}
-        disabled={!onAddProject}
-      >
-        <Plus size={13} />
-      </ActionIconButton>
-      <ActionIconButton
-        isDarkMode={isDarkMode}
-        label="View Projects"
-        onClick={onListProjects}
-        disabled={!onListProjects}
-      >
-        <Eye size={13} />
-      </ActionIconButton>
+      {onEdit && (
+        <ActionIconButton
+          isDarkMode={isDarkMode}
+          label="Edit Project"
+          onClick={onEdit}
+        >
+          <Pencil size={13} />
+        </ActionIconButton>
+      )}
+      {onAddProject && (
+        <ActionIconButton
+          isDarkMode={isDarkMode}
+          label="Add Project"
+          onClick={onAddProject}
+        >
+          <Plus size={13} />
+        </ActionIconButton>
+      )}
+      {onListProjects && (
+        <ActionIconButton
+          isDarkMode={isDarkMode}
+          label="View Projects"
+          onClick={onListProjects}
+        >
+          <Eye size={13} />
+        </ActionIconButton>
+      )}
     </div>
   );
 }

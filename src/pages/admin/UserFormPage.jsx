@@ -10,8 +10,8 @@ import UserPermissionsTable from "../../components/admin/UserPermissionsTable";
 import { toastApiError } from "../../services/toast/apiToast";
 import {
   createDefaultPermissions,
-  normalizePermissions,
   permissionsEqual,
+  resolvePermissionsFromRecord,
 } from "../../modules/permissions/permissionsUtils";
 import {
   createUser,
@@ -104,9 +104,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
         const admin = await getRecord(id);
         if (cancelled) return;
         const mapped = mapAdminToForm(admin);
-        const normalizedPermissions = normalizePermissions(
-          admin?.permissions ?? admin?.permissions_json ?? admin?.permission
-        );
+        const normalizedPermissions = resolvePermissionsFromRecord(admin);
         setForm({
           ...mapped,
           permissions: normalizedPermissions,
@@ -116,7 +114,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
           name: mapped.name.trim(),
           status: mapped.status,
           permission_type: mapped.permission_type,
-          permissions: normalizePermissions(normalizedPermissions),
+          permissions: normalizedPermissions,
         });
       } catch (error) {
         if (cancelled) return;

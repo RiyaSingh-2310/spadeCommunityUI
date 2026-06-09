@@ -52,46 +52,51 @@ function SurveyListingActions({
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-1.5">
-      <ActionIconButton
-        isDarkMode={isDarkMode}
-        label={viewLabel}
-        onClick={onView}
-        disabled={!onView}
-      >
-        <Eye size={13} />
-      </ActionIconButton>
-      <ActionIconButton
-        isDarkMode={isDarkMode}
-        label={editLabel}
-        onClick={onEdit}
-        disabled={!onEdit}
-      >
-        <Pencil size={13} />
-      </ActionIconButton>
-      <ActionIconButton
-        isDarkMode={isDarkMode}
-        label={findUserLabel}
-        onClick={onFindUser}
-        disabled={!onFindUser}
-      >
-        <UserRound size={13} />
-      </ActionIconButton>
-      <ActionIconButton
-        isDarkMode={isDarkMode}
-        label={userSurveyDataLabel}
-        onClick={onUserSurveyData}
-        disabled={!onUserSurveyData}
-      >
-        <LayoutDashboard size={13} />
-      </ActionIconButton>
-      <ActionIconButton
-        isDarkMode={isDarkMode}
-        label={surveyCloneLabel}
-        onClick={onSurveyClone}
-        disabled={!onSurveyClone}
-      >
-        <Copy size={13} />
-      </ActionIconButton>
+      {onView && (
+        <ActionIconButton
+          isDarkMode={isDarkMode}
+          label={viewLabel}
+          onClick={onView}
+        >
+          <Eye size={13} />
+        </ActionIconButton>
+      )}
+      {onEdit && (
+        <ActionIconButton
+          isDarkMode={isDarkMode}
+          label={editLabel}
+          onClick={onEdit}
+        >
+          <Pencil size={13} />
+        </ActionIconButton>
+      )}
+      {onFindUser && (
+        <ActionIconButton
+          isDarkMode={isDarkMode}
+          label={findUserLabel}
+          onClick={onFindUser}
+        >
+          <UserRound size={13} />
+        </ActionIconButton>
+      )}
+      {onUserSurveyData && (
+        <ActionIconButton
+          isDarkMode={isDarkMode}
+          label={userSurveyDataLabel}
+          onClick={onUserSurveyData}
+        >
+          <LayoutDashboard size={13} />
+        </ActionIconButton>
+      )}
+      {onSurveyClone && (
+        <ActionIconButton
+          isDarkMode={isDarkMode}
+          label={surveyCloneLabel}
+          onClick={onSurveyClone}
+        >
+          <Copy size={13} />
+        </ActionIconButton>
+      )}
     </div>
   );
 }

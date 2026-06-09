@@ -105,10 +105,6 @@ function UsersPage({ isDarkMode }) {
     }
   };
 
-  const navigateToUserView = (row) => {
-    navigateToUserEdit(row);
-  };
-
   const navigateToUserPermissions = (row) => {
     const userId = row?.id ?? row?.admin_id;
     if (userId == null || String(userId).trim() === "") return;
@@ -132,7 +128,6 @@ function UsersPage({ isDarkMode }) {
         isLoading={isLoading}
         loadingMessage="Loading Admin Users..."
         emptyMessage="No Admin Users Found"
-        onView={navigateToUserView}
         onEdit={navigateToUserEdit}
         onDelete={handleDeleteRequest}
         onManagePermissions={navigateToUserPermissions}

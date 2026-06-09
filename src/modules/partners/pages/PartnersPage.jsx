@@ -125,9 +125,6 @@ function PartnersPage({ isDarkMode }) {
         isLoading={isLoading}
         loadingMessage="Loading partners..."
         emptyMessage="No partners found"
-        actionVariant="view-edit"
-        editPath="/partners"
-        onView={(row) => navigate(`/partners/edit/${row.id}`)}
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}
         totalRecords={totalRecords}

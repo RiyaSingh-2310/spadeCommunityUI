@@ -1,4 +1,4 @@
-import { Eye, Pencil, Shield, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 
 const iconBtnClass = (isDarkMode) =>
   `inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
@@ -9,40 +9,17 @@ const iconBtnClass = (isDarkMode) =>
 
 function UserManagementActions({
   isDarkMode,
-  onView,
   onEdit,
   onDelete,
   onManagePermissions,
-  showView = true,
   showEdit = true,
   showDelete = true,
   showManagePermissions = true,
 }) {
-  if (!onView && !onEdit && !onDelete && !onManagePermissions) return null;
+  if (!onEdit && !onDelete && !onManagePermissions) return null;
 
   return (
     <div className="flex items-center justify-end gap-1.5">
-      {showView && onView && (
-        <button
-          type="button"
-          onClick={onView}
-          className={iconBtnClass(isDarkMode)}
-          aria-label="View"
-        >
-          <Eye size={13} />
-        </button>
-      )}
-      {showManagePermissions && onManagePermissions && (
-        <button
-          type="button"
-          onClick={onManagePermissions}
-          className={iconBtnClass(isDarkMode)}
-          title="Manage Permissions"
-          aria-label="Manage Permissions"
-        >
-          <Shield size={13} />
-        </button>
-      )}
       {showEdit && onEdit && (
         <button
           type="button"

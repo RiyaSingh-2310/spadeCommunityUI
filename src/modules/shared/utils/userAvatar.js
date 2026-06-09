@@ -1,6 +1,6 @@
 import {
-  decodePermissionsRaw,
-  normalizePermissions,
+  prepareAdminSessionUser,
+  resolvePermissionsFromRecord,
 } from "../../permissions/permissionsUtils";
 
 /**
@@ -123,17 +123,12 @@ export function normalizeAdminUser(admin) {
       null
   );
 
-  const rawPermissions =
-    admin.permissions ??
-    (typeof admin.permissions_json === "string"
-      ? admin.permissions_json
-      : admin.permissions_json);
-
-  const decoded = decodePermissionsRaw(rawPermissions) ?? rawPermissions;
-  const permissions = normalizePermissions(decoded);
+  const sessionAdmin = prepareAdminSessionUser(admin);
+  const permissions =
+    sessionAdmin?.permissions ?? resolvePermissionsFromRecord(admin);
 
   return {
-    ...admin,
+    ...(sessionAdmin ?? admin),
     firstName,
     lastName,
     email: typeof admin.email === "string" ? admin.email : "",

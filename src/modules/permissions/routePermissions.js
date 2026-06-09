@@ -6,7 +6,7 @@ const ROUTE_RULES = [
   { matcher: /^\/$/, module: "dashboard" },
   { matcher: /^\/users\/[^/]+\/permissions/, module: "users", requiresWrite: true },
   { matcher: /^\/users\/add/, module: "users", requiresWrite: true },
-  { matcher: /^\/users\/edit\//, module: "users", requiresWrite: true },
+  { matcher: /^\/users\/edit\//, module: "users" },
   { matcher: /^\/users(\/|$)/, module: "users" },
   { matcher: /^\/clients\/add/, module: "clients", requiresWrite: true },
   { matcher: /^\/clients\/edit\//, module: "clients" },

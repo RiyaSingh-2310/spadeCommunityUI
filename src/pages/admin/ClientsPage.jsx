@@ -114,9 +114,7 @@ function ClientsPage({ isDarkMode }) {
         isLoading={isLoading}
         loadingMessage="Loading clients..."
         emptyMessage="No clients found"
-        actionVariant="view-edit"
         editPath="/clients"
-        onView={(row) => navigate(`/clients/edit/${row.id}`)}
         onEdit={(row) => navigate(`/clients/edit/${row.id}`)}
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}

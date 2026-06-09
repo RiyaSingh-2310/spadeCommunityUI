@@ -6,7 +6,7 @@ import TableCard from "../../components/admin/TableCard";
 import UserPermissionsTable from "../../components/admin/UserPermissionsTable";
 import {
   createDefaultPermissions,
-  normalizePermissions,
+  resolvePermissionsFromRecord,
 } from "../../modules/permissions/permissionsUtils";
 import { toastApiError } from "../../services/toast/apiToast";
 import {
@@ -35,7 +35,7 @@ function UserPermissionsPage({ isDarkMode }) {
         const admin = await getRecord(id);
         if (cancelled) return;
         setUserName(admin?.name ?? `User #${id}`);
-        setPermissions(normalizePermissions(admin?.permissions));
+        setPermissions(resolvePermissionsFromRecord(admin));
       } catch (error) {
         if (cancelled) return;
         setLoadFailed(true);
