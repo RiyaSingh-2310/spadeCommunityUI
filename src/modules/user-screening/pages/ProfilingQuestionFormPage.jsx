@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import NumericInput from "../../../components/admin/NumericInput";
 import FormField from "../../../components/admin/FormField";
+import SearchableSelect from "../../../components/admin/SearchableSelect";
 import FormStatusSelect from "../../../components/admin/FormStatusSelect";
 import QuestionTypeRadioGroup from "../../../components/admin/QuestionTypeRadioGroup";
 import TableCard from "../../../components/admin/TableCard";
@@ -144,19 +145,16 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
         <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
           <div className="grid gap-4 md:grid-cols-2">
             <FormField label="Language" required error={showError("language")}>
-              <select
-                className={inputClass}
+              <SearchableSelect
+                inputClass={inputClass}
                 value={form.language}
-                onChange={(e) => setField("language", e.target.value)}
+                onChange={(language) => setField("language", language)}
                 onBlur={() => touch("language")}
-              >
-                <option value="">Select Language</option>
-                {LANGUAGES.map((lang) => (
-                  <option key={lang} value={lang}>
-                    {lang}
-                  </option>
-                ))}
-              </select>
+                options={LANGUAGES}
+                placeholder="Select Language"
+                searchPlaceholder="Search language..."
+                aria-label="Select language"
+              />
             </FormField>
             <FormField label="Sort Order">
               <NumericInput

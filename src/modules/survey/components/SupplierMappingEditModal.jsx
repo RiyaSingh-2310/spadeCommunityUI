@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import FormField from "../../../components/admin/FormField";
+import SearchableSelect from "../../../components/admin/SearchableSelect";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { SUPPLIER_OPTIONS, getSupplierEditForm } from "../data/surveyDetailsData";
 import { updateSupplierMapping } from "../services/surveyApi";
@@ -104,20 +105,20 @@ function SupplierMappingEditModal({ isOpen, onClose, surveyId, supplierCode, onU
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 space-y-4">
             <FormField label="Supplier">
-              <select
-                className={inputClass}
+              <SearchableSelect
+                inputClass={inputClass}
                 value={form.supplierCode}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, supplierCode: e.target.value }))
+                onChange={(supplierCode) =>
+                  setForm((prev) => ({ ...prev, supplierCode }))
                 }
+                options={SUPPLIER_OPTIONS.map((opt) => ({
+                  value: opt.code,
+                  label: opt.name,
+                }))}
                 disabled={isSubmitting}
-              >
-                {SUPPLIER_OPTIONS.map((opt) => (
-                  <option key={opt.code} value={opt.code}>
-                    {opt.name}
-                  </option>
-                ))}
-              </select>
+                searchPlaceholder="Search supplier..."
+                aria-label="Select supplier"
+              />
             </FormField>
 
             <FormField label="Supplier Quota">

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
+import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 
@@ -47,18 +48,15 @@ function AddPrescreenGroupPage({ isDarkMode }) {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">Language</label>
-              <select
-                className={inputClass}
+              <SearchableSelect
+                inputClass={inputClass}
                 value={form.language}
-                onChange={(e) => setForm((p) => ({ ...p, language: e.target.value }))}
-              >
-                <option value="">Select Language</option>
-                {LANGUAGES.map((lang) => (
-                  <option key={lang} value={lang}>
-                    {lang}
-                  </option>
-                ))}
-              </select>
+                onChange={(language) => setForm((p) => ({ ...p, language }))}
+                options={LANGUAGES}
+                placeholder="Select Language"
+                searchPlaceholder="Search language..."
+                aria-label="Select language"
+              />
             </div>
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">Survey Group Title</label>

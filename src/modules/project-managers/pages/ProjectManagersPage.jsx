@@ -3,8 +3,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
-import { toastApiError } from "../../../services/toast/apiToast";
-import { getRecords } from "../../../services/projectManagers/projectManagersApi";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import {
+  getRecords,
+  updateProjectManagerStatus,
+} from "../../../services/projectManagers/projectManagersApi";
 
 const LIST_COLUMNS = ["S.No", "Name", "Email Address", "Status", "Action"];
 
@@ -15,6 +18,7 @@ function ProjectManagersPage({ isDarkMode }) {
   const [projectManagers, setProjectManagers] = useState([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
   const fetchProjectManagers = useCallback(async () => {
     setIsLoading(true);
@@ -42,6 +46,38 @@ function ProjectManagersPage({ isDarkMode }) {
     }
   }, [location.state, location.pathname, navigate, fetchProjectManagers]);
 
+  const handleStatusToggle = async (row) => {
+    if (!row?.id || statusUpdatingId != null) return;
+
+    const nextStatus = row.status === "Active" ? "Inactive" : "Active";
+    const previousStatus = row.status;
+    setStatusUpdatingId(row.id);
+
+    try {
+      const data = await updateProjectManagerStatus(row.id, {
+        name: row.name,
+        status: nextStatus,
+      });
+      setProjectManagers((prev) =>
+        prev.map((item) =>
+          String(item.id) === String(row.id) ? { ...item, status: nextStatus } : item
+        )
+      );
+      toastApiSuccess(data);
+    } catch (error) {
+      toastApiError(error);
+      setProjectManagers((prev) =>
+        prev.map((item) =>
+          String(item.id) === String(row.id)
+            ? { ...item, status: previousStatus }
+            : item
+        )
+      );
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  };
+
   return (
     <ModuleListingPage
       isDarkMode={isDarkMode}
@@ -58,7 +94,7 @@ function ProjectManagersPage({ isDarkMode }) {
       isLoading={isLoading}
       loadingMessage="Loading project managers..."
       emptyMessage="No project managers found"
-      statusAsText
+      onStatusToggle={handleStatusToggle}
       totalRecords={totalRecords}
       pageSize={DEFAULT_PAGE_SIZE}
       showPagination

@@ -1,4 +1,6 @@
 import { API_ROUTES } from "../../config/api";
+import { formatCountryLabel, getCountries } from "../countries/countriesApi";
+import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
 import {
@@ -93,15 +95,24 @@ export async function updateClientStatus(id, { name, status, country, contactNum
  * Maps GET /api/clients/all client object to listing table row.
  * @param {object} client
  */
+function extractClientsList(data) {
+  if (!data || typeof data !== "object") return [];
+  if (Array.isArray(data.data)) return data.data;
+  if (Array.isArray(data.clients)) return data.clients;
+  return [];
+}
+
 export function mapClientToRow(client) {
   const id = client?.client_id ?? client?.id;
+  const countryValue = client?.country ?? "";
 
   return {
     id,
     clientCode: client?.client_code ?? (id != null ? `CL-${id}` : ""),
     name: client?.client_name ?? client?.name ?? "",
     emailAddress: client?.client_email ?? client?.email ?? "",
-    country: client?.country ?? "",
+    country: countryValue ? formatCountryLabel(countryValue) : "—",
+    countryValue,
     contactNumber: client?.contact_no ?? client?.contactNumber ?? "",
     websiteUrl: client?.website ?? client?.website_url ?? "",
     status: apiStatusToFormValue(client?.status),
@@ -112,14 +123,16 @@ export function mapClientToRow(client) {
 
 /** GET /api/clients/all */
 export async function getRecords() {
-  const data = await apiRequest(API_ROUTES.clients.list);
+  const [, data] = await Promise.all([getCountries(), apiRequest(API_ROUTES.clients.list)]);
   assertSuccess(data, "Failed to load clients");
 
-  const clients = Array.isArray(data.clients) ? data.clients : [];
+  const clients = extractClientsList(data);
+  const total = extractListTotalFromResponse(data, clients.length);
 
   return {
     ...data,
-    count: data.count ?? clients.length,
+    total,
+    count: total,
     items: clients.map((client) => mapClientToRow(client)),
   };
 }

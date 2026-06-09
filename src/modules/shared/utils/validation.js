@@ -107,6 +107,11 @@ export function isFormValid(errors) {
   return Object.values(errors).every((msg) => !msg);
 }
 
+/** True when every listed field has no validation error. */
+export function isFormValidForFields(errors, fields) {
+  return fields.every((field) => !errors[field]);
+}
+
 /** @param {string[]} fields */
 export function createEmptyTouched(fields) {
   return fields.reduce((acc, field) => ({ ...acc, [field]: false }), {});

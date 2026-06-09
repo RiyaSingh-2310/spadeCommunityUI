@@ -1,3 +1,5 @@
+import SearchableSelect from "./SearchableSelect";
+
 const PERMISSION_OPTIONS = [
   { value: "admin", label: "Admin" },
   { value: "all", label: "All" },
@@ -9,21 +11,21 @@ function FormPermissionSelect({
   onChange,
   inputClass,
   label = "Permission Type",
+  disabled = false,
 }) {
   return (
     <div>
       <label className="admin-text mb-2 block text-sm font-semibold">{label}</label>
-      <select
-        className={inputClass}
+      <SearchableSelect
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {PERMISSION_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        onChange={onChange}
+        options={PERMISSION_OPTIONS}
+        placeholder="Select Permission Type"
+        disabled={disabled}
+        inputClass={inputClass}
+        searchable={false}
+        aria-label={label}
+      />
     </div>
   );
 }

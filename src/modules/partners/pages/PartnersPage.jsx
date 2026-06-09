@@ -119,6 +119,7 @@ function PartnersPage({ isDarkMode }) {
         rowIdKey="id"
         editPath="/partners"
         permissionModule="partners"
+        nameAsText
         searchFields={[
           "partnerCode",
           "name",

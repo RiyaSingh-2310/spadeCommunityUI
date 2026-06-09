@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
+import SearchableSelect from "../../../components/admin/SearchableSelect";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
@@ -107,19 +108,17 @@ function SurveySettingsPage({ isDarkMode }) {
             required
             error={showError("language")}
           >
-            <select
-              className={inputClass}
+            <SearchableSelect
+              inputClass={inputClass}
               value={form.language}
-              onChange={(e) => setField("language", e.target.value)}
+              onChange={(language) => setField("language", language)}
               onBlur={() => touch("language")}
+              options={LANGUAGE_OPTIONS}
+              placeholder="Select Language"
               disabled={readOnly}
-            >
-              {LANGUAGE_OPTIONS.map((lang) => (
-                <option key={lang} value={lang}>
-                  {lang}
-                </option>
-              ))}
-            </select>
+              searchPlaceholder="Search language..."
+              aria-label="Select language"
+            />
           </FormField>
         </TableCard>
 

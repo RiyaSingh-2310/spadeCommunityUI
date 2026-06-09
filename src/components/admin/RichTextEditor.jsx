@@ -1,5 +1,15 @@
 import { useEffect, useRef } from "react";
-import { Bold, Italic, List, ListOrdered, Underline } from "lucide-react";
+import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Bold,
+  Italic,
+  Link,
+  List,
+  ListOrdered,
+  Underline,
+} from "lucide-react";
 
 function RichTextEditor({
   value,
@@ -25,6 +35,18 @@ function RichTextEditor({
     onChange(editorRef.current?.innerHTML || "");
   };
 
+  const setHeading = (tag) => {
+    if (disabled || !tag) return;
+    exec("formatBlock", tag);
+  };
+
+  const addLink = () => {
+    if (disabled) return;
+    const url = window.prompt("Enter URL", "https://");
+    if (!url?.trim()) return;
+    exec("createLink", url.trim());
+  };
+
   const toolbarBtn = (active) =>
     `inline-flex h-8 w-8 items-center justify-center rounded-lg transition ${
       active
@@ -35,14 +57,37 @@ function RichTextEditor({
     }`;
 
   const borderClass = isDarkMode ? "border-[#344662]" : "border-[#d8e3ef]";
+  const headingSelectClass = `h-8 rounded-lg border px-2 text-xs font-medium outline-none transition ${
+    isDarkMode
+      ? "border-[#344662] bg-[#101a2a] text-[var(--admin-foreground)]"
+      : "border-[#d8e3ef] bg-white text-[var(--admin-foreground)]"
+  }`;
 
   return (
     <div className={`overflow-hidden rounded-xl border ${borderClass}`}>
       <div
-        className={`flex flex-wrap gap-1 border-b px-2 py-2 ${
+        className={`flex flex-wrap items-center gap-1 border-b px-2 py-2 ${
           isDarkMode ? "border-[#344662] bg-[#101a2a]" : "border-[#d8e3ef] bg-[#f8fafc]"
         }`}
       >
+        <select
+          className={headingSelectClass}
+          defaultValue=""
+          onChange={(e) => {
+            setHeading(e.target.value);
+            e.target.value = "";
+          }}
+          disabled={disabled}
+          aria-label="Heading style"
+        >
+          <option value="" disabled>
+            Heading
+          </option>
+          <option value="<p>">Paragraph</option>
+          <option value="<h1>">Heading 1</option>
+          <option value="<h2>">Heading 2</option>
+          <option value="<h3>">Heading 3</option>
+        </select>
         <button type="button" className={toolbarBtn()} onClick={() => exec("bold")} aria-label="Bold" disabled={disabled}>
           <Bold size={15} />
         </button>
@@ -57,6 +102,18 @@ function RichTextEditor({
         </button>
         <button type="button" className={toolbarBtn()} onClick={() => exec("insertOrderedList")} aria-label="Numbered list" disabled={disabled}>
           <ListOrdered size={15} />
+        </button>
+        <button type="button" className={toolbarBtn()} onClick={() => exec("justifyLeft")} aria-label="Align left" disabled={disabled}>
+          <AlignLeft size={15} />
+        </button>
+        <button type="button" className={toolbarBtn()} onClick={() => exec("justifyCenter")} aria-label="Align center" disabled={disabled}>
+          <AlignCenter size={15} />
+        </button>
+        <button type="button" className={toolbarBtn()} onClick={() => exec("justifyRight")} aria-label="Align right" disabled={disabled}>
+          <AlignRight size={15} />
+        </button>
+        <button type="button" className={toolbarBtn()} onClick={addLink} aria-label="Insert link" disabled={disabled}>
+          <Link size={15} />
         </button>
       </div>
       <div

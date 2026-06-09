@@ -22,6 +22,7 @@ function ClientsPage({ isDarkMode }) {
   const location = useLocation();
   useFlashMessage();
   const [clients, setClients] = useState([]);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
@@ -30,9 +31,11 @@ function ClientsPage({ isDarkMode }) {
     try {
       const data = await getRecords();
       setClients(data.items);
+      setTotalRecords(data.total ?? data.count ?? data.items.length);
     } catch (error) {
       toastApiError(error);
       setClients([]);
+      setTotalRecords(0);
     } finally {
       setIsLoading(false);
     }
@@ -60,7 +63,7 @@ function ClientsPage({ isDarkMode }) {
       const data = await updateClientStatus(row.id, {
         name: row.name,
         status: nextStatus,
-        country: row.country,
+        country: row.countryValue ?? row.country,
         contactNumber: row.contactNumber,
       });
       setClients((prev) =>
@@ -106,6 +109,8 @@ function ClientsPage({ isDarkMode }) {
         emptyMessage="No clients found"
         onStatusToggle={handleStatusToggle}
         permissionModule="clients"
+        nameAsText
+        totalRecords={totalRecords}
         pageSize={DEFAULT_PAGE_SIZE}
         showPagination
         nowrapAllCells

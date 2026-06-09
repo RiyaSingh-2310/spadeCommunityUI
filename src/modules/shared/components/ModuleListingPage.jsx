@@ -86,6 +86,8 @@ function ModuleListingPage({
   searchFields = null,
   /** API total record count (used for pagination summary when not searching). */
   totalRecords = null,
+  /** When true, Name column shows plain text instead of avatar + name. */
+  nameAsText = false,
 }) {
   const navigate = useNavigate();
   const {
@@ -702,7 +704,7 @@ function ModuleListingPage({
                         key={col}
                         className={`px-4 py-3 align-middle ${nowrapAllCells ? "whitespace-nowrap" : ""}`}
                       >
-                        {hasProfileImageColumn ? (
+                        {hasProfileImageColumn || nameAsText ? (
                           <span className="admin-text min-w-0 truncate">{row.name || "-"}</span>
                         ) : (
                           <AvatarNameCell record={row} size="table" />

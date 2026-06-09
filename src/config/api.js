@@ -19,16 +19,27 @@ export const API_ROUTES = {
     create: "/api/clients/add",
     update: (id) => `/api/clients/update/${id}`,
   },
+  countries: {
+    list: "/api/countries/list",
+  },
   partners: {
-    list: "/api/admin/partner/list",
-    byId: (id) => `/api/admin/partner/${id}`,
-    create: "/api/admin/partner/add",
+    list: "/api/partner/list",
+    byId: (id) => `/api/partner/${id}`,
+    create: "/api/partner/add",
     update: (id) => `/api/admin/partner/${id}`,
     delete: (id) => `/api/admin/partner/${id}`,
   },
   projectManagers: {
     list: "/api/projectmanager/list",
     create: "/api/projectmanager/add",
+    byId: (id) => `/api/projectmanager/${id}`,
+    update: (id) => `/api/projectmanager/${id}`,
+  },
+  salesProjects: {
+    list: "/api/sales/project/list",
+    create: "/api/sales/project/add",
+    byId: (id) => `/api/sales/project/${id}`,
+    update: (id) => `/api/sales/project/${id}`,
   },
 };
 

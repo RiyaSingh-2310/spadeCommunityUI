@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import SearchableSelect from "./SearchableSelect";
 import {
   getVisibleEntryCount,
   PAGE_SIZE_OPTIONS,
@@ -45,8 +45,8 @@ function AdminPagination({
     ? "h-9 appearance-none rounded-full border border-[#344662] bg-[#131f31] pl-3 pr-8 text-sm font-semibold text-[var(--admin-foreground)] outline-none focus:border-[#10a950]"
     : "h-9 appearance-none rounded-full border border-[#d8e3ef] bg-white pl-3 pr-8 text-sm font-semibold text-[var(--admin-foreground)] outline-none focus:border-[#10a950]";
 
-  const handlePageSizeChange = (event) => {
-    const nextSize = Number(event.target.value);
+  const handlePageSizeChange = (nextValue) => {
+    const nextSize = Number(nextValue);
     if (!Number.isFinite(nextSize) || nextSize <= 0) return;
     onPageSizeChange?.(nextSize);
   };
@@ -59,25 +59,14 @@ function AdminPagination({
       {showPageSizeSelector ? (
         <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
           <span className="admin-text-muted text-sm">Show</span>
-          <div className="relative inline-flex items-center">
-            <select
-              value={pageSize}
-              onChange={handlePageSizeChange}
-              className={selectClass}
-              aria-label="Entries per page"
-            >
-              {pageSizeOptions.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              size={14}
-              className="pointer-events-none absolute right-2.5 admin-text-subtle"
-              aria-hidden
-            />
-          </div>
+          <SearchableSelect
+            value={String(pageSize)}
+            onChange={handlePageSizeChange}
+            options={pageSizeOptions}
+            inputClass={selectClass}
+            searchable={false}
+            aria-label="Entries per page"
+          />
           <span className="admin-text-muted text-sm">Entries</span>
         </div>
       ) : (

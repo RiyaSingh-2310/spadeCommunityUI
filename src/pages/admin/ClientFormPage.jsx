@@ -3,8 +3,8 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../components/admin/AdminPageHeader";
 import FormStatusSelect from "../../components/admin/FormStatusSelect";
+import CountrySelect from "../../components/admin/CountrySelect";
 import PhoneInput from "../../components/admin/PhoneInput";
-import ProfileImageUpload from "../../components/admin/ProfileImageUpload";
 import TableCard from "../../components/admin/TableCard";
 import { toastApiError } from "../../services/toast/apiToast";
 import {
@@ -14,15 +14,24 @@ import {
 } from "../../services/clients/clientsApi";
 import { getDefaultPhoneCountryCode } from "../../modules/shared/data/phoneCountries";
 import { useAdminFormAccess } from "../../modules/permissions/FormAccessContext";
-import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
 import { useFormValidation } from "../../modules/shared/hooks/useFormValidation";
 import {
   getEmailError,
   getPhoneError,
   getRequiredError,
   getUrlError,
-  isFormValid,
+  isFormValidForFields,
 } from "../../modules/shared/utils/validation";
+
+const CLIENT_ADD_REQUIRED_FIELDS = [
+  "name",
+  "email",
+  "country",
+  "contactNumber",
+  "website",
+];
+
+const CLIENT_EDIT_REQUIRED_FIELDS = ["name", "country", "contactNumber"];
 
 const CLIENT_FORM_FIELDS = [
   "name",
@@ -34,7 +43,6 @@ const CLIENT_FORM_FIELDS = [
 ];
 
 const CLIENT_NAMES = ["Alpha Corp", "Beta Labs", "Gamma Tech", "Delta Works", "Epsilon Ltd"];
-const COUNTRIES = ["India", "UAE", "USA", "UK", "Canada"];
 
 function getDemoClientById(clientId) {
   const numId = Number(clientId);
@@ -51,13 +59,12 @@ function getDemoClientById(clientId) {
       passwordType: "Bearer",
       apiHeaderKey: "Authorization",
       status: "Active",
-      image: "https://i.pravatar.cc/80?img=15",
     };
   }
   return {
     name: CLIENT_NAMES[(numId - 1) % CLIENT_NAMES.length],
     email: `contact${numId}@client.com`,
-    country: COUNTRIES[(numId - 1) % COUNTRIES.length],
+    country: "India",
     contactPerson: `Contact ${numId}`,
     contactNumber: `+1 555${String(1000 + numId - 1).slice(-4)}`,
     website: `https://client${numId}.com`,
@@ -66,7 +73,6 @@ function getDemoClientById(clientId) {
     passwordType: "Bearer",
     apiHeaderKey: "Authorization",
     status: numId % 5 === 0 ? "Inactive" : "Active",
-    image: numId % 3 === 0 ? `https://i.pravatar.cc/80?img=${20 + numId - 1}` : "",
   };
 }
 
@@ -92,27 +98,25 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
         }
   );
   const [showSecret, setShowSecret] = useState(false);
-  const [preview, setPreview] = useState("");
-  const [existingImage, setExistingImage] = useState(
-    isEdit ? getDemoClientById(id).image : ""
-  );
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { readOnly, showSubmit, controlDisabled, canSubmitForm, fieldDisabled } =
     useAdminFormAccess(isSubmitting);
-  const inputClass = getAdminInputClass();
+  const inputClass = `h-11 w-full rounded-xl border px-3 text-sm outline-none transition ${
+    isDarkMode
+      ? "border-[#344662] bg-[#101a2a] text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)]"
+      : "border-[#d8e3ef] bg-white text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)]"
+  }`;
 
   useEffect(() => {
     if (!isEdit || !id) return undefined;
     const demo = getDemoClientById(id);
     setForm(mapClientToForm(demo));
-    setExistingImage(demo.image || "");
     return undefined;
   }, [isEdit, id]);
 
   const errors = useMemo(() => {
     const phoneCountry = getDefaultPhoneCountryCode(form.country);
-    const apiFields = {
+    const shared = {
       name: getRequiredError(form.name, "Name"),
       country: getRequiredError(form.country, "Country"),
       contactNumber: getPhoneError(form.contactNumber, {
@@ -120,23 +124,23 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
         label: "Contact Number",
         defaultCountryCode: phoneCountry,
       }),
-      website: form.website.trim()
-        ? getUrlError(form.website, { required: false })
-        : "",
+      contactPerson: "",
     };
 
     if (!isEdit) {
       return {
-        ...apiFields,
+        ...shared,
         email: getEmailError(form.email),
-        contactPerson: "",
+        website: getUrlError(form.website, { required: true }),
       };
     }
 
     return {
-      ...apiFields,
+      ...shared,
       email: "",
-      contactPerson: "",
+      website: form.website.trim()
+        ? getUrlError(form.website, { required: false })
+        : "",
     };
   }, [form, isEdit]);
 
@@ -145,11 +149,23 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
     fields: CLIENT_FORM_FIELDS,
   });
 
-  const canSubmit = canSubmitForm && isFormValid(errors);
+  const requiredFields = isEdit ? CLIENT_EDIT_REQUIRED_FIELDS : CLIENT_ADD_REQUIRED_FIELDS;
+
+  const canSubmit =
+    canSubmitForm &&
+    isFormValidForFields(errors, requiredFields) &&
+    !isSubmitting;
 
   const onSubmit = async (event) => {
     event.preventDefault();
-    if (readOnly || !showSubmit || !validateSubmit() || !isFormValid(errors)) return;
+    if (
+      readOnly ||
+      !showSubmit ||
+      !validateSubmit() ||
+      !isFormValidForFields(errors, requiredFields)
+    ) {
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -207,22 +223,12 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
 
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
         <TableCard title="Basic Information" isDarkMode={isDarkMode}>
-          <div className="mb-4">
-            <ProfileImageUpload
-              isDarkMode={isDarkMode}
-              preview={preview}
-              onPreviewChange={setPreview}
-              existingImage={existingImage}
-              showCurrentLabel={isEdit}
-              name={form.name}
-            />
-          </div>
           <div className="grid gap-4 md:grid-cols-2">
             {[
               ["Name", "name", true],
               ["Email", "email", !isEdit],
               ["Contact Person", "contactPerson", false],
-              ["Website URL", "website", false],
+              ["Website URL", "website", !isEdit],
             ].map(([label, key, required]) => (
               <div key={key}>
                 <label className="admin-text mb-2 block text-sm font-semibold">
@@ -256,6 +262,22 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
             ))}
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">
+                Select Country
+                <span className="text-[var(--admin-danger-text)]"> *</span>
+              </label>
+              <CountrySelect
+                inputClass={inputClass}
+                value={form.country}
+                onChange={(country) => setField("country", country)}
+                onBlur={() => touch("country")}
+                disabled={controlDisabled}
+              />
+              {showError("country") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("country")}</p>
+              )}
+            </div>
+            <div>
+              <label className="admin-text mb-2 block text-sm font-semibold">
                 Contact Number
                 <span className="text-[var(--admin-danger-text)]"> *</span>
               </label>
@@ -274,27 +296,6 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                 </p>
               )}
             </div>
-            <div>
-              <label className="admin-text mb-2 block text-sm font-semibold">
-                Select Country
-                <span className="text-[var(--admin-danger-text)]"> *</span>
-              </label>
-              <select
-                className={inputClass}
-                value={form.country}
-                onChange={(e) => setField("country", e.target.value)}
-                onBlur={() => touch("country")}
-                disabled={controlDisabled}
-              >
-                <option value="">Select Country</option>
-                <option value="India">India</option>
-                <option value="UAE">UAE</option>
-                <option value="USA">USA</option>
-              </select>
-              {showError("country") && (
-                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("country")}</p>
-              )}
-            </div>
             <FormStatusSelect
               value={form.status}
               onChange={(status) => setField("status", status)}
@@ -307,7 +308,6 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
           <div className="grid gap-4 md:grid-cols-2">
             {[
               ["API Base URL", "apiBaseUrl", "Enter API Base URL"],
-              ["Password Type", "passwordType", "Enter Password Type"],
               ["API Header Key", "apiHeaderKey", "Enter API Header Key"],
             ].map(([label, key, placeholder]) => (
               <div key={key}>

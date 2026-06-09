@@ -1,4 +1,6 @@
 import { useRef } from "react";
+import CountrySelect from "../../../components/admin/CountrySelect";
+import SearchableSelect from "../../../components/admin/SearchableSelect";
 import { Download } from "lucide-react";
 import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
@@ -8,7 +10,6 @@ import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import {
-  COUNTRY_OPTIONS,
   CURRENCY_OPTIONS,
   LANGUAGE_OPTIONS,
   PROJECT_LINK_TYPES,
@@ -92,20 +93,17 @@ function SurveyForm({
           ) : null}
 
           <FormField label="Client" required error={showError("client")}>
-            <select
-              className={`${selectClass} ${readOnlyClient ? "opacity-70" : ""}`}
+            <SearchableSelect
+              inputClass={`${selectClass} ${readOnlyClient ? "opacity-70" : ""}`}
               value={form.client}
-              onChange={(e) => setField("client", e.target.value)}
+              onChange={(next) => setField("client", next)}
               onBlur={() => touch("client")}
+              options={clientOptions}
+              placeholder="Select Client"
               disabled={disabled || readOnlyClient}
-            >
-              <option value="">Select Client</option>
-              {clientOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              searchPlaceholder="Search client..."
+              aria-label="Select client"
+            />
           </FormField>
 
           <FormField label="Project Name" required error={showError("projectName")}>
@@ -120,69 +118,53 @@ function SurveyForm({
           </FormField>
 
           <FormField label="Project Manager" required error={showError("projectManager")}>
-            <select
-              className={selectClass}
+            <SearchableSelect
+              inputClass={selectClass}
               value={form.projectManager}
-              onChange={(e) => setField("projectManager", e.target.value)}
+              onChange={(next) => setField("projectManager", next)}
               onBlur={() => touch("projectManager")}
+              options={projectManagerOptions}
+              placeholder="Select Project Manager"
               disabled={disabled}
-            >
-              <option value="">Select Project Manager</option>
-              {projectManagerOptions.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
+              searchPlaceholder="Search project manager..."
+              aria-label="Select project manager"
+            />
           </FormField>
 
           <FormField label="Project Country" required error={showError("projectCountry")}>
-            <select
-              className={selectClass}
+            <CountrySelect
+              inputClass={selectClass}
               value={form.projectCountry}
-              onChange={(e) => setField("projectCountry", e.target.value)}
+              onChange={(country) => setField("projectCountry", country)}
               onBlur={() => touch("projectCountry")}
               disabled={disabled}
-            >
-              <option value="">Select Country</option>
-              {COUNTRY_OPTIONS.map((country) => (
-                <option key={country} value={country}>
-                  {country}
-                </option>
-              ))}
-            </select>
+            />
           </FormField>
 
           <FormField label="Sales Manager" error={showError("salesManager")}>
-            <select
-              className={selectClass}
+            <SearchableSelect
+              inputClass={selectClass}
               value={form.salesManager}
-              onChange={(e) => setField("salesManager", e.target.value)}
+              onChange={(next) => setField("salesManager", next)}
+              options={salesManagerOptions}
+              placeholder="Select Sales Manager"
               disabled={disabled}
-            >
-              <option value="">Select Sales Manager</option>
-              {salesManagerOptions.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
+              searchPlaceholder="Search sales manager..."
+              aria-label="Select sales manager"
+            />
           </FormField>
 
           <FormField label="Sales Project" error={showError("salesProject")}>
-            <select
-              className={selectClass}
+            <SearchableSelect
+              inputClass={selectClass}
               value={form.salesProject}
-              onChange={(e) => setField("salesProject", e.target.value)}
+              onChange={(next) => setField("salesProject", next)}
+              options={SALES_PROJECT_OPTIONS}
+              placeholder="Select Sales Project"
               disabled={disabled}
-            >
-              <option value="">Select Sales Project</option>
-              {SALES_PROJECT_OPTIONS.map((code) => (
-                <option key={code} value={code}>
-                  {code}
-                </option>
-              ))}
-            </select>
+              searchPlaceholder="Search sales project..."
+              aria-label="Select sales project"
+            />
           </FormField>
         </div>
 
@@ -235,20 +217,17 @@ function SurveyForm({
           </FormField>
 
           <FormField label="Currency" required error={showError("currency")}>
-            <select
-              className={selectClass}
+            <SearchableSelect
+              inputClass={selectClass}
               value={form.currency}
-              onChange={(e) => setField("currency", e.target.value)}
+              onChange={(next) => setField("currency", next)}
               onBlur={() => touch("currency")}
+              options={CURRENCY_OPTIONS}
+              placeholder="Select Currency"
               disabled={disabled}
-            >
-              <option value="">Select Currency</option>
-              {CURRENCY_OPTIONS.map((cur) => (
-                <option key={cur} value={cur}>
-                  {cur}
-                </option>
-              ))}
-            </select>
+              searchPlaceholder="Search currency..."
+              aria-label="Select currency"
+            />
           </FormField>
 
           <FormField label="CPI" required error={showError("cpi")}>
@@ -401,36 +380,30 @@ function SurveyForm({
         {form.filters.preScreen && (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <FormField label="Language" required error={showError("language")}>
-              <select
-                className={selectClass}
+              <SearchableSelect
+                inputClass={selectClass}
                 value={form.language}
-                onChange={(e) => setField("language", e.target.value)}
+                onChange={(next) => setField("language", next)}
                 onBlur={() => touch("language")}
+                options={LANGUAGE_OPTIONS}
+                placeholder="Select Language"
                 disabled={disabled}
-              >
-                <option value="">Select Language</option>
-                {LANGUAGE_OPTIONS.map((lang) => (
-                  <option key={lang} value={lang}>
-                    {lang}
-                  </option>
-                ))}
-              </select>
+                searchPlaceholder="Search language..."
+                aria-label="Select language"
+              />
             </FormField>
             <FormField label="Survey Group" required error={showError("surveyGroup")}>
-              <select
-                className={selectClass}
+              <SearchableSelect
+                inputClass={selectClass}
                 value={form.surveyGroup}
-                onChange={(e) => setField("surveyGroup", e.target.value)}
+                onChange={(next) => setField("surveyGroup", next)}
                 onBlur={() => touch("surveyGroup")}
+                options={SURVEY_GROUP_OPTIONS}
+                placeholder="Select Survey Group"
                 disabled={disabled}
-              >
-                <option value="">Select Survey Group</option>
-                {SURVEY_GROUP_OPTIONS.map((group) => (
-                  <option key={group.value} value={group.value}>
-                    {group.label}
-                  </option>
-                ))}
-              </select>
+                searchPlaceholder="Search survey group..."
+                aria-label="Select survey group"
+              />
             </FormField>
           </div>
         )}

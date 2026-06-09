@@ -1,4 +1,5 @@
 import TableCard from "../../../components/admin/TableCard";
+import { formatCountryLabel } from "../../../services/countries/countriesApi";
 import {
   getSupplierLinksRows,
   getSupplierMappedLiveRows,
@@ -85,7 +86,10 @@ function ProjectDetailsTab({ project, isDarkMode }) {
           <DetailField label="Client Name" value={project.clientName} />
           <DetailField label="Project Name" value={project.projectName} />
           <DetailField label="Project Manager" value={project.projectManager} />
-          <DetailField label="Project Country" value={project.projectCountry} />
+          <DetailField
+            label="Project Country"
+            value={formatCountryLabel(project.projectCountry)}
+          />
           <DetailField label="Description" value={project.description} className="sm:col-span-2" />
           <DetailField label="Survey ID" value={project.surveyId} />
           <DetailField label="Sales Manager" value={project.salesManager} />

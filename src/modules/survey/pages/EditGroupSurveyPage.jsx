@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
+import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
@@ -85,20 +86,17 @@ function EditGroupSurveyPage({ isDarkMode }) {
         <TableCard title="Project Details" isDarkMode={isDarkMode}>
           <div className="grid gap-4 md:grid-cols-2">
             <FormField label="Client" required error={showError("client")}>
-              <select
-                className={selectClass}
+              <SearchableSelect
+                inputClass={selectClass}
                 value={form.client}
-                onChange={(e) => setField("client", e.target.value)}
+                onChange={(next) => setField("client", next)}
                 onBlur={() => touch("client")}
+                options={GROUP_SURVEY_CLIENT_OPTIONS}
+                placeholder="Select Client"
                 disabled={fieldDisabled(readOnly, isSubmitting)}
-              >
-                <option value="">Select Client</option>
-                {GROUP_SURVEY_CLIENT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+                searchPlaceholder="Search client..."
+                aria-label="Select client"
+              />
             </FormField>
 
             <FormField

@@ -1,4 +1,5 @@
 import { API_ROUTES } from "../../config/api";
+import { formatCountryLabel, getCountries } from "../countries/countriesApi";
 import { getDefaultPhoneCountryCode } from "../../modules/shared/data/phoneCountries";
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
 import {
@@ -104,7 +105,8 @@ export function mapPartnerToRow(partner) {
     partnerCode: partner?.code ?? "",
     name: partner?.name ?? "",
     emailAddress: partner?.email ?? "",
-    country: country || "—",
+    country: country ? formatCountryLabel(country) : "—",
+    countryValue: country,
     contactNumber: partner?.contact_no ?? "—",
     websiteUrl: partner?.website_url ?? "—",
     status: apiStatusToFormValue(partner?.status),
@@ -134,9 +136,9 @@ export function mapPartnerToForm(partner) {
     surveyClose: String(partner?.survey_close_val ?? partner?.survey_close ?? ""),
     aboutPartner: partner?.about_partner ?? "",
     status: apiStatusToFormValue(partner?.status),
-    apiBaseUrl: "",
-    apiSecretKey: "",
-    apiBody: "",
+    apiBaseUrl: partner?.api_base_url ?? partner?.apiBaseUrl ?? "",
+    apiSecretKey: partner?.api_secret_key ?? partner?.apiSecretKey ?? "",
+    apiBody: partner?.api_body ?? partner?.apiBody ?? "",
   };
 }
 
@@ -177,13 +179,34 @@ function buildPartnerSurveyPayload(form) {
   };
 }
 
+function buildPartnerApiFields(form) {
+  const apiBaseUrl = String(form.apiBaseUrl ?? "").trim();
+  const apiSecretKey = String(form.apiSecretKey ?? "").trim();
+  const apiBody = String(form.apiBody ?? "").trim();
+
+  const fields = {};
+  if (apiBaseUrl) fields.api_base_url = apiBaseUrl;
+  if (apiSecretKey) fields.api_secret_key = apiSecretKey;
+  if (apiBody) fields.api_body = apiBody;
+
+  return fields;
+}
+
 export function buildCreatePartnerPayload(form) {
   return {
-    code: form.code.trim(),
     name: form.name.trim(),
     email: form.email.trim(),
-    status: formValueToApiStatus(form.status),
-    ...buildPartnerSurveyPayload(form),
+    contact_no: resolvePartnerContactNo(form.contactNumber, form.country),
+    country: form.country.trim(),
+    contact_person: form.contactPerson.trim(),
+    website_url: form.website.trim(),
+    complete: String(form.complete ?? "").trim(),
+    terminate: String(form.terminate ?? "").trim(),
+    over_quota: String(form.overQuota ?? "").trim(),
+    quality_term: String(form.qualityTerm ?? "").trim(),
+    survey_close: String(form.surveyClose ?? "").trim(),
+    about_partner: form.aboutPartner.trim(),
+    ...buildPartnerApiFields(form),
   };
 }
 
@@ -196,6 +219,7 @@ export function buildUpdatePartnerPayload(form) {
     email: form.email.trim(),
     status: formValueToApiStatus(form.status),
     ...buildPartnerSurveyPayload(form),
+    ...buildPartnerApiFields(form),
   };
 }
 
@@ -203,9 +227,9 @@ export function formStatusToApiStatus(status) {
   return formValueToApiStatus(status);
 }
 
-/** GET /api/admin/partner/list */
+/** GET /api/partner/list */
 export async function getRecords() {
-  const data = await apiRequest(API_ROUTES.partners.list);
+  const [, data] = await Promise.all([getCountries(), apiRequest(API_ROUTES.partners.list)]);
   assertSuccess(data);
 
   const partners = extractPartnersList(data);
@@ -219,7 +243,7 @@ export async function getRecords() {
   };
 }
 
-/** GET /api/admin/partner/:id */
+/** GET /api/partner/:id */
 export async function getRecord(id) {
   const normalizedId = normalizePartnerId(id);
   const data = await apiRequest(API_ROUTES.partners.byId(normalizedId));
@@ -234,7 +258,7 @@ export async function getRecord(id) {
 }
 
 /**
- * POST /api/admin/partner/add
+ * POST /api/partner/add
  * @param {Parameters<typeof buildCreatePartnerPayload>[0]} payload
  */
 export async function createPartner(payload) {

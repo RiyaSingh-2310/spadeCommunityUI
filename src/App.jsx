@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { preloadCountries } from "./services/countries/countriesApi";
 import { Route, Routes, useParams } from "react-router-dom";
 import ToastContainer from "./components/shared/ToastContainer";
 import GuestOnly from "./components/auth/GuestOnly";
@@ -76,6 +77,10 @@ function EditEmailTemplateRoute({ isDarkMode }) {
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
+  useEffect(() => {
+    preloadCountries();
+  }, []);
+
   const toggleTheme = () => {
     setIsDarkMode((prev) => !prev);
   };
@@ -133,6 +138,7 @@ function App() {
         />
         <Route path="/sales/rfq" element={<RfqPage isDarkMode={isDarkMode} />} />
         <Route path="/sales/rfq/add" element={<AddRfqPage isDarkMode={isDarkMode} />} />
+        <Route path="/sales/rfq/edit/:id" element={<AddRfqPage isDarkMode={isDarkMode} />} />
         <Route path="/sales/sales-manager" element={<SalesManagerPage isDarkMode={isDarkMode} />} />
         <Route path="/sales/sales-manager/add" element={<AddSalesManagerPage isDarkMode={isDarkMode} />} />
         <Route

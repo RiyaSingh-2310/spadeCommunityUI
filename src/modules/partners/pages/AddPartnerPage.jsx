@@ -4,8 +4,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormStatusSelect from "../../../components/admin/FormStatusSelect";
 import NumericInput from "../../../components/admin/NumericInput";
+import CountrySelect from "../../../components/admin/CountrySelect";
 import PhoneInput from "../../../components/admin/PhoneInput";
-import ProfileImageUpload from "../../../components/admin/ProfileImageUpload";
 import TableCard from "../../../components/admin/TableCard";
 import { getDefaultPhoneCountryCode } from "../../shared/data/phoneCountries";
 import { useAdminFormAccess } from "../../permissions/FormAccessContext";
@@ -22,8 +22,25 @@ import {
   getPhoneError,
   getRequiredError,
   getUrlError,
-  isFormValid,
+  isFormValidForFields,
 } from "../../shared/utils/validation";
+
+const PARTNER_ADD_REQUIRED_FIELDS = ["name", "email", "country", "contactNumber"];
+
+const PARTNER_EDIT_REQUIRED_FIELDS = [
+  "name",
+  "country",
+  "contactNumber",
+  "contactPerson",
+  "website",
+  "panelSize",
+  "complete",
+  "terminate",
+  "overQuota",
+  "qualityTerm",
+  "surveyClose",
+  "aboutPartner",
+];
 
 const PARTNER_FORM_FIELDS = [
   "code",
@@ -68,7 +85,6 @@ function AddPartnerPage({ isDarkMode }) {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const [showSecret, setShowSecret] = useState(false);
-  const [preview, setPreview] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -76,18 +92,41 @@ function AddPartnerPage({ isDarkMode }) {
   const { readOnly, showSubmit, controlDisabled, canSubmitForm, fieldDisabled } =
     useAdminFormAccess(isSubmitting);
 
-  const errors = useMemo(
-    () => ({
-      code: isEdit ? "" : getRequiredError(form.code, "Partner Code"),
+  const errors = useMemo(() => {
+    const shared = {
       name: getRequiredError(form.name, "Name"),
-      email: isEdit ? "" : getEmailError(form.email),
       country: getRequiredError(form.country, "Country"),
-      contactPerson: getRequiredError(form.contactPerson, "Contact Person"),
       contactNumber: getPhoneError(form.contactNumber, {
         required: true,
         label: "Contact Number",
         defaultCountryCode: getDefaultPhoneCountryCode(form.country),
       }),
+    };
+
+    if (!isEdit) {
+      return {
+        ...shared,
+        code: "",
+        email: getEmailError(form.email),
+        contactPerson: "",
+        website: form.website.trim()
+          ? getUrlError(form.website, { required: false })
+          : "",
+        panelSize: "",
+        complete: "",
+        terminate: "",
+        overQuota: "",
+        qualityTerm: "",
+        surveyClose: "",
+        aboutPartner: "",
+      };
+    }
+
+    return {
+      ...shared,
+      code: "",
+      email: "",
+      contactPerson: getRequiredError(form.contactPerson, "Contact Person"),
       website: getUrlError(form.website, { required: true }),
       panelSize: getRequiredError(form.panelSize, "Panel Size"),
       complete: getRequiredError(form.complete, "Complete"),
@@ -96,9 +135,8 @@ function AddPartnerPage({ isDarkMode }) {
       qualityTerm: getRequiredError(form.qualityTerm, "Quality Term"),
       surveyClose: getRequiredError(form.surveyClose, "Survey Close"),
       aboutPartner: getRequiredError(form.aboutPartner, "About Partner"),
-    }),
-    [form, isEdit]
-  );
+    };
+  }, [form, isEdit]);
 
   const { showError, touch, validateSubmit, resetValidation } = useFormValidation({
     errors,
@@ -113,7 +151,6 @@ function AddPartnerPage({ isDarkMode }) {
     const loadPartner = async () => {
       resetValidation();
       setForm(EMPTY_FORM);
-      setPreview("");
       setIsLoadingRecord(true);
       setLoadFailed(false);
       try {
@@ -135,8 +172,14 @@ function AddPartnerPage({ isDarkMode }) {
     };
   }, [id, isEdit, resetValidation]);
 
+  const requiredFields = isEdit ? PARTNER_EDIT_REQUIRED_FIELDS : PARTNER_ADD_REQUIRED_FIELDS;
+
   const canSubmit =
-    canSubmitForm && isFormValid(errors) && !isLoadingRecord && !loadFailed;
+    canSubmitForm &&
+    isFormValidForFields(errors, requiredFields) &&
+    !isSubmitting &&
+    !isLoadingRecord &&
+    !loadFailed;
 
   const inputClass = `h-11 w-full rounded-xl border px-3 text-sm outline-none transition ${
     isDarkMode
@@ -148,7 +191,14 @@ function AddPartnerPage({ isDarkMode }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (isSubmitting || isLoadingRecord || readOnly || !showSubmit || !validateSubmit() || !isFormValid(errors)) {
+    if (
+      isSubmitting ||
+      isLoadingRecord ||
+      readOnly ||
+      !showSubmit ||
+      !validateSubmit() ||
+      !isFormValidForFields(errors, requiredFields)
+    ) {
       return;
     }
 
@@ -218,32 +268,29 @@ function AddPartnerPage({ isDarkMode }) {
 
       <form className="space-y-4" onSubmit={handleSubmit} noValidate>
         <TableCard title="Basic Information" isDarkMode={isDarkMode}>
-          <div className="mb-4">
-            <ProfileImageUpload
-              isDarkMode={isDarkMode}
-              preview={preview}
-              onPreviewChange={setPreview}
-              name={form.name}
-            />
-          </div>
           <div className="grid gap-4 md:grid-cols-2">
             {[
-              ["Partner Code", "code", "Enter Partner Code", "text"],
-              ["Name", "name", "Enter Name", "text"],
-              ["Email Address", "email", "Enter Email Address", "email"],
-              ["Contact Person", "contactPerson", "Enter Contact Person", "text"],
-              ["Website URL", "website", "Enter Website URL", "url"],
-              ["Panel Size", "panelSize", "Enter Panel Size", "numeric"],
-              ["Complete", "complete", "Enter Complete", "numeric"],
-              ["Terminate", "terminate", "Enter Terminate", "numeric"],
-              ["Over Quota", "overQuota", "Enter Over Quota", "numeric"],
-              ["Quality Term", "qualityTerm", "Enter Quality Term", "numeric"],
-              ["Survey Close", "surveyClose", "Enter Survey Close", "numeric"],
-            ].map(([label, key, placeholder, fieldType]) => {
+              ...(isEdit ? [["Partner Code", "code", "Enter Partner Code", "text", false]] : []),
+              ["Name", "name", "Enter Name", "text", true],
+              ["Email Address", "email", "Enter Email Address", "email", !isEdit],
+              ["Contact Person", "contactPerson", "Enter Contact Person", "text", isEdit],
+              ["Website URL", "website", "Enter Website URL", "url", isEdit],
+              ...(isEdit ? [["Panel Size", "panelSize", "Enter Panel Size", "numeric", true]] : []),
+              ["Complete", "complete", "Enter Complete", "numeric", isEdit],
+              ["Terminate", "terminate", "Enter Terminate", "numeric", isEdit],
+              ["Over Quota", "overQuota", "Enter Over Quota", "numeric", isEdit],
+              ["Quality Term", "qualityTerm", "Enter Quality Term", "numeric", isEdit],
+              ["Survey Close", "surveyClose", "Enter Survey Close", "numeric", isEdit],
+            ].map(([label, key, placeholder, fieldType, required]) => {
               const readOnlyField = readOnly || (isEdit && (key === "code" || key === "email"));
               return (
                 <div key={key}>
-                  <label className="admin-text mb-2 block text-sm font-semibold">{label}</label>
+                  <label className="admin-text mb-2 block text-sm font-semibold">
+                    {label}
+                    {required && (
+                      <span className="text-[var(--admin-danger-text)]"> *</span>
+                    )}
+                  </label>
                   {fieldType === "numeric" ? (
                     <NumericInput
                       className={inputClass}
@@ -271,8 +318,28 @@ function AddPartnerPage({ isDarkMode }) {
                 </div>
               );
             })}
+            
             <div>
-              <label className="admin-text mb-2 block text-sm font-semibold">Contact Number</label>
+              <label className="admin-text mb-2 block text-sm font-semibold">
+                Select Country
+                <span className="text-[var(--admin-danger-text)]"> *</span>
+              </label>
+              <CountrySelect
+                inputClass={inputClass}
+                value={form.country}
+                onChange={(country) => setField("country", country)}
+                onBlur={() => touch("country")}
+                disabled={controlDisabled}
+              />
+              {showError("country") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("country")}</p>
+              )}
+            </div>
+            <div>
+              <label className="admin-text mb-2 block text-sm font-semibold">
+                Contact Number
+                <span className="text-[var(--admin-danger-text)]"> *</span>
+              </label>
               <PhoneInput
                 value={form.contactNumber}
                 onChange={(next) => setField("contactNumber", next)}
@@ -288,32 +355,16 @@ function AddPartnerPage({ isDarkMode }) {
                 </p>
               )}
             </div>
-            <div>
-              <label className="admin-text mb-2 block text-sm font-semibold">Select Country</label>
-              <select
-                className={inputClass}
-                value={form.country}
-                onChange={(e) => setField("country", e.target.value)}
-                onBlur={() => touch("country")}
-                disabled={controlDisabled}
-              >
-                <option value="">Select Country</option>
-                <option value="India">India</option>
-                <option value="UAE">UAE</option>
-                <option value="USA">USA</option>
-                <option value="UK">UK</option>
-              </select>
-              {showError("country") && (
-                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("country")}</p>
-              )}
-            </div>
             <FormStatusSelect
               value={form.status}
               onChange={(status) => setField("status", status)}
               inputClass={inputClass}
             />
             <div className="md:col-span-2">
-              <label className="admin-text mb-2 block text-sm font-semibold">About Partner</label>
+              <label className="admin-text mb-2 block text-sm font-semibold">
+                About Partner
+                {isEdit && <span className="text-[var(--admin-danger-text)]"> *</span>}
+              </label>
               <textarea
                 className={`${inputClass} h-24 py-2`}
                 placeholder="Enter About Partner"

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { getSupplierMappingRows } from "../data/surveyDetailsData";
 import { primaryBtnClass, secondaryBtnClass } from "./surveyDetailsShared";
@@ -14,6 +15,14 @@ function ReportSection({ title, children, isDarkMode }) {
 
 function ProjectReportTab({ isDarkMode }) {
   const suppliers = useMemo(() => getSupplierMappingRows(), []);
+  const supplierOptions = useMemo(
+    () =>
+      suppliers.map((row) => ({
+        value: row.supplierCode,
+        label: `${row.supplierName} (${row.supplierCode})`,
+      })),
+    [suppliers]
+  );
   const [selectedSupplier, setSelectedSupplier] = useState(
     () => suppliers[0]?.supplierCode ?? ""
   );
@@ -64,21 +73,14 @@ function ProjectReportTab({ isDarkMode }) {
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <label className="admin-text flex min-w-0 flex-1 flex-col gap-2 text-sm font-semibold sm:max-w-xs">
             <span>Select Supplier</span>
-            <select
-              className="admin-text h-10 rounded-xl border px-3 text-sm font-medium outline-none"
-              style={{
-                borderColor: "var(--admin-header-search-border)",
-                backgroundColor: "var(--admin-header-search-bg)",
-              }}
+            <SearchableSelect
+              inputClass="admin-text h-10 rounded-xl border border-[var(--admin-header-search-border)] bg-[var(--admin-header-search-bg)] px-3 text-sm font-medium outline-none"
               value={selectedSupplier}
-              onChange={(e) => setSelectedSupplier(e.target.value)}
-            >
-              {suppliers.map((row) => (
-                <option key={row.supplierCode} value={row.supplierCode}>
-                  {row.supplierName} ({row.supplierCode})
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedSupplier}
+              options={supplierOptions}
+              searchPlaceholder="Search supplier..."
+              aria-label="Select supplier"
+            />
           </label>
           <div className="flex flex-wrap gap-3">
             <button

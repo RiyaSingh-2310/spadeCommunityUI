@@ -1,5 +1,8 @@
 import { Plus, Search } from "lucide-react";
+import SearchableSelect from "../../../../components/admin/SearchableSelect";
+import { mapCountryToSelectOption } from "../../../shared/utils/dropdownSearch";
 import { getAdminInputClass } from "../../../shared/utils/formStyles";
+import { useCountries } from "../../../shared/hooks/useCountries";
 import {
   getAnswersForQuestion,
   QUESTION_OPTIONS,
@@ -17,6 +20,7 @@ function FindUserFilters({
   isSearching,
   disabled = false,
 }) {
+  const { countries } = useCountries();
   const inputClass = getAdminInputClass();
 
   const updateRow = (id, patch) => {
@@ -30,51 +34,50 @@ function FindUserFilters({
   return (
     <div className="space-y-4">
       {filters.map((row, index) => {
-        const answers = getAnswersForQuestion(row.questionId);
+        const answerOptions =
+          row.questionId === "country"
+            ? countries.map((country) => mapCountryToSelectOption(country))
+            : getAnswersForQuestion(row.questionId).map((opt) => ({
+                value: opt,
+                label: opt,
+              }));
+
         return (
-          <div
-            key={row.id}
-            className="grid gap-3 md:grid-cols-2"
-          >
+          <div key={row.id} className="grid gap-3 md:grid-cols-2">
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">
                 {index === 0 ? "Question Filter" : `Question Filter ${index + 1}`}
               </label>
-              <select
-                className={inputClass}
+              <SearchableSelect
+                inputClass={inputClass}
                 value={row.questionId}
-                onChange={(e) =>
-                  updateRow(row.id, { questionId: e.target.value, answer: "" })
+                onChange={(questionId) =>
+                  updateRow(row.id, { questionId, answer: "" })
                 }
+                options={QUESTION_OPTIONS.map((q) => ({
+                  value: q.id,
+                  label: q.label,
+                }))}
+                placeholder="Select Question"
                 disabled={disabled || isSearching}
-              >
-                <option value="">Select Question</option>
-                {QUESTION_OPTIONS.map((q) => (
-                  <option key={q.id} value={q.id}>
-                    {q.label}
-                  </option>
-                ))}
-              </select>
+                searchPlaceholder="Search question..."
+                aria-label="Select question filter"
+              />
             </div>
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">
                 Answer Filter
               </label>
-              <select
-                className={inputClass}
+              <SearchableSelect
+                inputClass={inputClass}
                 value={row.answer}
-                onChange={(e) => updateRow(row.id, { answer: e.target.value })}
+                onChange={(answer) => updateRow(row.id, { answer })}
+                options={answerOptions}
+                placeholder={row.questionId ? "Select Answer" : "Select question first"}
                 disabled={disabled || isSearching || !row.questionId}
-              >
-                <option value="">
-                  {row.questionId ? "Select Answer" : "Select question first"}
-                </option>
-                {answers.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
+                searchPlaceholder="Search answer..."
+                aria-label="Select answer filter"
+              />
             </div>
           </div>
         );

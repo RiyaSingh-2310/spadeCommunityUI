@@ -1,7 +1,7 @@
 import {
   findPhoneCountry,
+  getPhoneCountries,
   getPhoneCountryByCode,
-  PHONE_COUNTRIES,
 } from "../data/phoneCountries";
 
 /** Digits-only national number (no country code). */
@@ -25,7 +25,7 @@ export function parsePhoneValue(fullValue, fallbackCountryCode = "IN") {
 
   if (trimmed.startsWith("+")) {
     const digits = sanitizePhoneDigits(trimmed);
-    const sorted = [...PHONE_COUNTRIES].sort(
+    const sorted = [...getPhoneCountries()].sort(
       (a, b) => b.dialCode.length - a.dialCode.length
     );
 

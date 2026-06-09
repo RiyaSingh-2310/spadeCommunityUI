@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import SearchableSelect from "../../../components/admin/SearchableSelect";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import { PROJECT_STATUS_OPTIONS } from "../data/surveyDetailsData";
 import { primaryBtnClass } from "./surveyDetailsShared";
@@ -66,23 +67,15 @@ function SurveyDetailsHeader({
           <label className="admin-text-muted text-xs font-semibold uppercase tracking-wide sm:sr-only">
             Project Status
           </label>
-          <select
-            className="admin-text h-10 min-w-[140px] rounded-xl border px-3 text-sm font-medium outline-none"
-            style={{
-              borderColor: "var(--admin-header-search-border)",
-              backgroundColor: "var(--admin-header-search-bg)",
-            }}
+          <SearchableSelect
+            inputClass="admin-text h-10 min-w-[140px] rounded-xl border border-[var(--admin-header-search-border)] bg-[var(--admin-header-search-bg)] px-3 text-sm font-medium outline-none"
             value={draftStatus}
-            onChange={(e) => onStatusChange(e.target.value)}
+            onChange={onStatusChange}
+            options={PROJECT_STATUS_OPTIONS}
             disabled={!canWrite || isUpdatingStatus}
+            searchable={false}
             aria-label="Project status"
-          >
-            {PROJECT_STATUS_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
+          />
           {canWrite && (
             <button
               type="button"

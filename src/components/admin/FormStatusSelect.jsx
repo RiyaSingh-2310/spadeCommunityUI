@@ -2,15 +2,27 @@ import {
   STATUS_UI_ACTIVE,
   STATUS_UI_INACTIVE,
 } from "../../modules/shared/utils/statusLabels";
+import SearchableSelect from "./SearchableSelect";
 
-function FormStatusSelect({ value, onChange, inputClass, label = "Status" }) {
+const STATUS_OPTIONS = [
+  { value: STATUS_UI_ACTIVE, label: STATUS_UI_ACTIVE },
+  { value: STATUS_UI_INACTIVE, label: STATUS_UI_INACTIVE },
+];
+
+function FormStatusSelect({ value, onChange, inputClass, label = "Status", disabled = false }) {
   return (
     <div>
       <label className="admin-text mb-2 block text-sm font-semibold">{label}</label>
-      <select className={inputClass} value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value={STATUS_UI_ACTIVE}>{STATUS_UI_ACTIVE}</option>
-        <option value={STATUS_UI_INACTIVE}>{STATUS_UI_INACTIVE}</option>
-      </select>
+      <SearchableSelect
+        value={value}
+        onChange={onChange}
+        options={STATUS_OPTIONS}
+        placeholder="Select Status"
+        disabled={disabled}
+        inputClass={inputClass}
+        searchable={false}
+        aria-label={label}
+      />
     </div>
   );
 }

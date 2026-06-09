@@ -1,3 +1,4 @@
+import SearchableSelect from "../../../../components/admin/SearchableSelect";
 import { getAdminInputClass } from "../../../shared/utils/formStyles";
 import { EMAIL_TEMPLATE_OPTIONS } from "../utils/filterOptions";
 
@@ -36,19 +37,16 @@ function FindUserToolbar({
             <label className="admin-text mb-2 block text-sm font-semibold">
               Email Template
             </label>
-            <select
-              className={inputClass}
+            <SearchableSelect
+              inputClass={inputClass}
               value={emailTemplate}
-              onChange={(e) => onEmailTemplateChange(e.target.value)}
+              onChange={onEmailTemplateChange}
+              options={EMAIL_TEMPLATE_OPTIONS}
+              placeholder="Select Email Template"
               disabled={disabled}
-            >
-              <option value="">Select Email Template</option>
-              {EMAIL_TEMPLATE_OPTIONS.map((tpl) => (
-                <option key={tpl} value={tpl}>
-                  {tpl}
-                </option>
-              ))}
-            </select>
+              searchPlaceholder="Search template..."
+              aria-label="Select email template"
+            />
           </div>
           <button
             type="button"
