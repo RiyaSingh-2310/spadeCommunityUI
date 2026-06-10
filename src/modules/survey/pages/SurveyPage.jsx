@@ -1,31 +1,59 @@
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
-import { useListingPageActions } from "../../shared/hooks/useListingPageActions";
-
-const CLIENT_CODES = ["CL-1001", "CL-1002", "CL-1003", "CL-1004", "CL-1005"];
-const PROJECTS = [
-  "Brand Tracker Q2",
-  "CX Pulse Study",
-  "Product Launch Survey",
-  "Employee NPS Wave",
-  "Market Sizing Study",
-];
-
-const initialRows = Array.from({ length: 12 }, (_, idx) => ({
-  id: `SV-${1001 + idx}`,
-  projectName: PROJECTS[idx % PROJECTS.length],
-  clientCode: CLIENT_CODES[idx % CLIENT_CODES.length],
-  startDate: `${String(1 + (idx % 28)).padStart(2, "0")}/03/2026`,
-  endDate: `${String(10 + (idx % 18)).padStart(2, "0")}/04/2026`,
-  status: idx % 4 === 0 ? "Inactive" : "Active",
-}));
+import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
+import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
+import { toastApiError } from "../../../services/toast/apiToast";
+import { getRecords } from "../services/surveyApi";
 
 function SurveyPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const { rows, onStatusToggle } = useListingPageActions({
-    initialRows,
-    editPath: "/survey",
-  });
+  const location = useLocation();
+  useFlashMessage();
+  const [rows, setRows] = useState([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchSurveys = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await getRecords();
+      setRows(data.items);
+      setTotalRecords(data.total ?? data.count ?? data.items.length);
+    } catch (error) {
+      toastApiError(error);
+      setRows([]);
+      setTotalRecords(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSurveys();
+  }, [fetchSurveys]);
+
+  useEffect(() => {
+    if (location.state?.refresh) {
+      fetchSurveys();
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, location.pathname, navigate, fetchSurveys]);
+
+  const handleStatusToggle = (row) => {
+    if (!row?.recordId) return;
+    setRows((prev) =>
+      prev.map((item) =>
+        String(item.recordId) === String(row.recordId)
+          ? {
+              ...item,
+              status:
+                String(item.status).toLowerCase() === "active" ? "Inactive" : "Active",
+            }
+          : item
+      )
+    );
+  };
 
   return (
     <ModuleListingPage
@@ -45,17 +73,17 @@ function SurveyPage({ isDarkMode }) {
         "Action",
       ]}
       rows={rows}
-      rowIdKey="id"
+      rowIdKey="recordId"
       actionVariant="view-edit"
       showDeleteAction={false}
       editPath="/survey"
       onView={(row) => {
-        const id = row.id;
+        const id = row.recordId;
         if (id == null) return;
         navigate(`/survey/view/${encodeURIComponent(id)}`);
       }}
       onFindUser={(row) => {
-        const id = row.id;
+        const id = row.recordId;
         if (id == null) return;
         navigate(`/survey/${encodeURIComponent(id)}/find-user`, {
           state: {
@@ -64,7 +92,7 @@ function SurveyPage({ isDarkMode }) {
         });
       }}
       onUserSurveyData={(row) => {
-        const id = row.id;
+        const id = row.recordId;
         if (id == null) return;
         navigate(`/survey/${encodeURIComponent(id)}/user-survey-data`, {
           state: {
@@ -75,7 +103,7 @@ function SurveyPage({ isDarkMode }) {
       onSurveyClone={() => {
         // Future implementation: clone survey project
       }}
-      onStatusToggle={onStatusToggle}
+      onStatusToggle={handleStatusToggle}
       permissionModule="survey"
       searchFields={[
         "id",
@@ -84,6 +112,11 @@ function SurveyPage({ isDarkMode }) {
         "startDate",
         "endDate",
       ]}
+      isLoading={isLoading}
+      emptyMessage="No Data Available"
+      totalRecords={totalRecords}
+      pageSize={DEFAULT_PAGE_SIZE}
+      showPagination
       nowrapAllCells
     />
   );

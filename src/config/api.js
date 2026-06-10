@@ -18,6 +18,7 @@ export const API_ROUTES = {
     list: "/api/clients/all",
     create: "/api/clients/add",
     update: (id) => `/api/clients/update/${id}`,
+    delete: (id) => `/api/clients/delete/${id}`,
   },
   countries: {
     list: "/api/countries/list",
@@ -40,10 +41,24 @@ export const API_ROUTES = {
     create: "/api/sales/project/add",
     byId: (id) => `/api/sales/project/${id}`,
     update: (id) => `/api/sales/project/${id}`,
+    delete: (id) => `/api/sales/project/${id}`,
+    logs: (id) => `/api/sales/project/log/list/${id}`,
+    createLog: "/api/sales/project/log/add",
   },
   salesManagers: {
     list: "/api/salesmanager/list",
     create: "/api/salesmanager",
+  },
+  prescreenGroup: {
+    list: "/api/prescreen/list",
+    create: "/api/prescreen/add",
+    byId: (id) => `/api/prescreen/${id}`,
+    update: (id) => `/api/prescreen/${id}`,
+  },
+  survey: {
+    list: "/api/survey/list",
+    create: "/api/survey/add",
+    update: (id) => `/api/survey/${id}`,
   },
 };
 

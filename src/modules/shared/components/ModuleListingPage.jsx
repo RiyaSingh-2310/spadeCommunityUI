@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Minus, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DebouncedSearchInput from "../../../components/admin/DebouncedSearchInput";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
@@ -14,6 +15,7 @@ import InvoicePdfAction from "../../../components/admin/InvoicePdfAction";
 import RewardPendingActions from "../../../components/admin/RewardPendingActions";
 import UserManagementActions from "../../../components/admin/UserManagementActions";
 import SurveyListingActions from "../../../components/admin/SurveyListingActions";
+import RfqListingActions from "../../../components/admin/RfqListingActions";
 import StatusToggle from "../../../components/admin/StatusToggle";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import {
@@ -73,6 +75,8 @@ function ModuleListingPage({
   onSurveyClone,
   onAddProject,
   onListProjects,
+  onAddLog,
+  onViewLogs,
   surveyActionLabels,
   onApprove,
   onReject,
@@ -81,13 +85,14 @@ function ModuleListingPage({
   /** Permission module key, e.g. "clients" — gates add/edit/delete/status */
   permissionModule = null,
   isLoading = false,
-  loadingMessage = "Loading...",
   emptyMessage = "No records found",
   searchFields = null,
   /** API total record count (used for pagination summary when not searching). */
   totalRecords = null,
   /** When true, Name column shows plain text instead of avatar + name. */
   nameAsText = false,
+  /** When set, prepends an expand column and renders content below expanded rows. */
+  renderExpandedContent = null,
 }) {
   const navigate = useNavigate();
   const {
@@ -102,6 +107,8 @@ function ModuleListingPage({
   const [internalData, setInternalData] = useState(rows);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [expandedRowIds, setExpandedRowIds] = useState(() => new Set());
+  const hasExpandColumn = Boolean(renderExpandedContent);
 
   const hasActionColumn = columns.some(isActionColumn);
   const isExternallyManaged = Boolean(
@@ -117,6 +124,18 @@ function ModuleListingPage({
   const pdfDownload = actionVariant === "pdf-download";
   const userManagement = actionVariant === "user-management";
   const groupSurvey = actionVariant === "group-survey";
+  const rfq = actionVariant === "rfq";
+
+  const toggleRowExpanded = useCallback((rowId) => {
+    if (rowId == null) return;
+    setExpandedRowIds((prev) => {
+      const next = new Set(prev);
+      const key = String(rowId);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
 
   const getRowId = useCallback(
     (row) => row?.[rowIdKey] ?? row?.id,
@@ -181,6 +200,7 @@ function ModuleListingPage({
     onApprove,
     onReject,
     onListProjects,
+    onViewLogs,
   });
 
   const userMgmtActions = userManagement
@@ -310,6 +330,8 @@ function ModuleListingPage({
       onApprove,
       onReject,
       onListProjects,
+      onAddLog,
+      onViewLogs,
       hasActionColumn,
     });
     if (!showActionColumn && hasActionColumn) {
@@ -336,6 +358,8 @@ function ModuleListingPage({
     onApprove,
     onReject,
     onListProjects,
+    onAddLog,
+    onViewLogs,
     hasActionColumn,
   ]);
 
@@ -383,13 +407,15 @@ function ModuleListingPage({
       </div>
 
       <TableCard isDarkMode={isDarkMode} footer={paginationFooter}>
-        {isLoading && (
-          <p className="admin-text-muted mb-3 px-1 text-sm">{loadingMessage}</p>
-        )}
         <div className="overflow-x-auto">
           <table className="admin-table min-w-full text-sm">
           <thead>
             <tr className="admin-text-muted">
+              {hasExpandColumn && (
+                <th className={`${TABLE_HEAD_BASE} w-12 text-left`} aria-label="Expand row">
+                  <span className="sr-only">Expand</span>
+                </th>
+              )}
               {displayColumns.map((h) => (
                 <th
                   key={h}
@@ -405,8 +431,7 @@ function ModuleListingPage({
           <tbody>
             {isLoading ? (
               <TableLoadingSkeleton
-                columns={displayColumns}
-                isDarkMode={isDarkMode}
+                columns={hasExpandColumn ? ["", ...displayColumns] : displayColumns}
               />
             ) : filtered.length === 0 ? (
               <tr>
@@ -420,11 +445,31 @@ function ModuleListingPage({
             ) : (
             pagination.items.map((row, idx) => {
               const globalIdx = (pagination.currentPage - 1) * pageSize + idx;
+              const rowKey = row[rowIdKey] || row.id || row.name || idx;
+              const rowId = getRowId(row);
+              const isExpanded = hasExpandColumn && expandedRowIds.has(String(rowId));
               return (
+              <Fragment key={rowKey}>
               <tr
-                key={row[rowIdKey] || row.id || row.name || idx}
                 className={`border-t align-middle ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}
               >
+                {hasExpandColumn && (
+                  <td className="px-3 py-3 align-middle whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => toggleRowExpanded(rowId)}
+                      className={`inline-flex h-7 w-7 items-center justify-center rounded-full border transition hover:opacity-90 ${
+                        isExpanded
+                          ? "border-[var(--admin-danger-text)] text-[var(--admin-danger-text)]"
+                          : "border-[var(--admin-primary-color)] text-[var(--admin-primary-color)]"
+                      }`}
+                      aria-label={isExpanded ? "Collapse row" : "Expand row"}
+                      aria-expanded={isExpanded}
+                    >
+                      {isExpanded ? <Minus size={14} strokeWidth={2.5} /> : <Plus size={14} strokeWidth={2.5} />}
+                    </button>
+                  </td>
+                )}
                 {displayColumns.map((col) => {
                   const key = getColumnKey(col);
                   if (isSnoColumn(col)) {
@@ -550,6 +595,43 @@ function ModuleListingPage({
                             onDelete={
                               showDelete
                                 ? () => handleDeleteRequest(row, globalIdx)
+                                : undefined
+                            }
+                          />
+                        </td>
+                      );
+                    }
+                    if (rfq) {
+                      const hasRfqActions =
+                        (allowWrite && (editPath || onDelete || onAddLog)) ||
+                        (allowRead && onViewLogs);
+
+                      if (!hasRfqActions) {
+                        return null;
+                      }
+
+                      return (
+                        <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
+                          <RfqListingActions
+                            isDarkMode={isDarkMode}
+                            onEdit={
+                              canShowEdit
+                                ? () => handleEdit(row, globalIdx)
+                                : undefined
+                            }
+                            onDelete={
+                              canShowDelete
+                                ? () => handleDeleteRequest(row, globalIdx)
+                                : undefined
+                            }
+                            onAddLog={
+                              allowWrite && onAddLog
+                                ? () => onAddLog(row, globalIdx)
+                                : undefined
+                            }
+                            onViewLogs={
+                              allowRead && onViewLogs
+                                ? () => onViewLogs(row, globalIdx)
                                 : undefined
                             }
                           />
@@ -727,6 +809,19 @@ function ModuleListingPage({
                   );
                 })}
               </tr>
+              {isExpanded && renderExpandedContent ? (
+                <tr
+                  className={`border-t align-middle ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}
+                >
+                  <td
+                    colSpan={displayColumns.length + 1}
+                    className="bg-[var(--admin-permissions-table-head-bg)] px-4 py-4"
+                  >
+                    {renderExpandedContent(row)}
+                  </td>
+                </tr>
+              ) : null}
+              </Fragment>
             );
             })
             )}

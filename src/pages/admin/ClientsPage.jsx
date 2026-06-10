@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import DeleteConfirmModal from "../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../modules/shared/components/ModuleListingPage";
 import { useFlashMessage } from "../../modules/shared/hooks/useFlashMessage";
 import { DEFAULT_PAGE_SIZE } from "../../modules/shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../services/toast/apiToast";
-import { getRecords, updateClientStatus } from "../../services/clients/clientsApi";
+import {
+  deleteRecord,
+  getRecords,
+  updateClientStatus,
+} from "../../services/clients/clientsApi";
 
 const LIST_COLUMNS = [
   "S.No",
@@ -15,6 +20,7 @@ const LIST_COLUMNS = [
   "Contact Number",
   "Website URL",
   "Status",
+  "Action",
 ];
 
 function ClientsPage({ isDarkMode }) {
@@ -24,6 +30,8 @@ function ClientsPage({ isDarkMode }) {
   const [clients, setClients] = useState([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
   const fetchClients = useCallback(async () => {
@@ -51,6 +59,31 @@ function ClientsPage({ isDarkMode }) {
       navigate(location.pathname, { replace: true, state: null });
     }
   }, [location.state, location.pathname, navigate, fetchClients]);
+
+  const handleDeleteRequest = (row) => {
+    setDeleteTarget(row);
+  };
+
+  const handleDeleteCancel = () => {
+    if (isDeleting) return;
+    setDeleteTarget(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget?.id) return;
+
+    setIsDeleting(true);
+    try {
+      const data = await deleteRecord(deleteTarget.id);
+      setDeleteTarget(null);
+      toastApiSuccess(data);
+      await fetchClients();
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleStatusToggle = async (row) => {
     if (!row?.id || statusUpdatingId != null) return;
@@ -97,6 +130,8 @@ function ClientsPage({ isDarkMode }) {
         columns={LIST_COLUMNS}
         rows={clients}
         rowIdKey="id"
+        editPath="/clients"
+        onDelete={handleDeleteRequest}
         searchFields={[
           "name",
           "emailAddress",
@@ -105,7 +140,6 @@ function ClientsPage({ isDarkMode }) {
           "clientCode",
         ]}
         isLoading={isLoading}
-        loadingMessage="Loading clients..."
         emptyMessage="No clients found"
         onStatusToggle={handleStatusToggle}
         permissionModule="clients"
@@ -114,6 +148,13 @@ function ClientsPage({ isDarkMode }) {
         pageSize={DEFAULT_PAGE_SIZE}
         showPagination
         nowrapAllCells
+      />
+
+      <DeleteConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        onCancel={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
       />
     </div>
   );

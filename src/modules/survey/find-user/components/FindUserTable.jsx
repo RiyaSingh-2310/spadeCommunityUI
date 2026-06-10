@@ -1,6 +1,6 @@
-import { Loader2 } from "lucide-react";
 import AdminPagination from "../../../../components/admin/AdminPagination";
 import TableCard from "../../../../components/admin/TableCard";
+import TableLoadingSkeleton from "../../../../components/admin/TableLoadingSkeleton";
 import { formatStatusLabel } from "../../../shared/utils/statusLabels";
 
 const COLUMNS = [
@@ -84,15 +84,7 @@ function FindUserTable({
           </thead>
           <tbody>
             {isLoading && users.length === 0 ? (
-              <tr>
-                <td colSpan={COLUMNS.length} className="px-4 py-16 text-center">
-                  <Loader2
-                    size={28}
-                    className="mx-auto animate-spin text-[var(--admin-success-text)]"
-                  />
-                  <p className="admin-text-muted mt-3 text-sm">Loading users...</p>
-                </td>
-              </tr>
+              <TableLoadingSkeleton columns={COLUMNS} />
             ) : !hasSearched ? (
               <tr>
                 <td colSpan={COLUMNS.length} className="admin-text-muted px-4 py-16 text-center text-sm">

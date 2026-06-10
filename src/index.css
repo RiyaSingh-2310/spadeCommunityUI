@@ -35,6 +35,9 @@ body {
   --admin-sidebar-active-bg: #e6f6ee;
   --admin-header-search-bg: #f4f8fc;
   --admin-header-search-border: #d8e3ef;
+  --admin-input-bg: #ffffff;
+  --admin-input-border: #d8e3ef;
+  --admin-skeleton-bg: #e6edf5;
   --admin-header-surface: #ffffff;
   --admin-header-surface-border: #dce6f2;
   --admin-header-overlay: rgba(15, 23, 36, 0.45);
@@ -71,6 +74,9 @@ body {
   --admin-sidebar-active-bg: rgba(24, 163, 84, 0.18);
   --admin-header-search-bg: #101a2a;
   --admin-header-search-border: #344662;
+  --admin-input-bg: #101a2a;
+  --admin-input-border: #344662;
+  --admin-skeleton-bg: #263850;
   --admin-header-surface: #121d2f;
   --admin-header-surface-border: #32445f;
   --admin-header-overlay: rgba(2, 6, 23, 0.65);

@@ -112,6 +112,17 @@ export function mapPartnerToRow(partner) {
     status: apiStatusToFormValue(partner?.status),
     createdDate: formatPartnerListDate(createdRaw),
     createdAt: createdRaw,
+    contactPerson: partner?.contact_person ?? "",
+    panelSize: partner?.panel_size ?? "",
+    completeUrl: partner?.complete_val ?? partner?.complete ?? "",
+    terminateUrl: partner?.terminate_val ?? partner?.terminate ?? "",
+    overQuotaUrl: partner?.over_quota_val ?? partner?.over_quota ?? "",
+    qualityTermsUrl: partner?.quality_term_val ?? partner?.quality_term ?? "",
+    surveyCloseUrl: partner?.survey_close_val ?? partner?.survey_close ?? "",
+    apiBaseUrl: partner?.api_base_url ?? partner?.apiBaseUrl ?? "",
+    apiSecretKey: partner?.api_secret_key ?? partner?.apiSecretKey ?? "",
+    apiBody: partner?.api_body ?? partner?.apiBody ?? "",
+    aboutPartner: partner?.about_partner ?? "",
   };
 }
 

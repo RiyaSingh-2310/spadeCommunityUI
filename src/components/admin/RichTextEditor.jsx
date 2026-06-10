@@ -32,17 +32,14 @@ function RichTextEditor({
     [isDarkMode, placeholder, height]
   );
 
-  const borderClass = isDarkMode ? "border-[#344662]" : "border-[#d8e3ef]";
   const fallbackHeight = typeof height === "number" ? height : 240;
 
   return (
-    <div className={`overflow-hidden rounded-xl border ${borderClass}`}>
+    <div className="overflow-hidden rounded-xl border border-[var(--admin-input-border)]">
       <Suspense
         fallback={
           <div
-            className={`admin-text flex items-center justify-center text-sm ${
-              isDarkMode ? "bg-[#101a2a]" : "bg-[var(--admin-header-search-bg)]"
-            }`}
+            className="admin-text flex items-center justify-center bg-[var(--admin-input-bg)] text-sm"
             style={{ minHeight: fallbackHeight }}
           >
             Loading editor...

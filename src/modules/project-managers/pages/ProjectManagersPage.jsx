@@ -92,7 +92,6 @@ function ProjectManagersPage({ isDarkMode }) {
       permissionModule="project_managers"
       searchFields={["name", "emailAddress", "code"]}
       isLoading={isLoading}
-      loadingMessage="Loading project managers..."
       emptyMessage="No project managers found"
       onStatusToggle={handleStatusToggle}
       totalRecords={totalRecords}

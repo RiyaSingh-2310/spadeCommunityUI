@@ -64,7 +64,6 @@ function SalesManagerPage({ isDarkMode }) {
       permissionModule="sales_manager"
       searchFields={["name", "emailAddress", "code"]}
       isLoading={isLoading}
-      loadingMessage="Loading sales managers..."
       emptyMessage="No sales managers found"
       statusAsText
       totalRecords={totalRecords}

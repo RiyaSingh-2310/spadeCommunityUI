@@ -1,5 +1,14 @@
+const ADMIN_INPUT_BASE =
+  "h-11 w-full rounded-xl border px-3 text-sm outline-none transition border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)] disabled:cursor-not-allowed disabled:opacity-60";
+
+/** Theme-aware form input styling (matches Partner / Client modules). */
 export function getAdminInputClass() {
-  return "h-11 w-full rounded-xl border px-3 text-sm outline-none transition border-[var(--admin-header-search-border)] bg-[var(--admin-header-search-bg)] text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)]";
+  return ADMIN_INPUT_BASE;
+}
+
+/** Theme-aware textarea styling — same as inputs with flexible height. */
+export function getAdminTextareaClass(extraClass = "") {
+  return `${ADMIN_INPUT_BASE} min-h-[112px] resize-y py-3 ${extraClass}`.trim();
 }
 
 /** Theme-aware secondary/cancel button (uses .admin-btn-cancel in index.css). */

@@ -23,6 +23,7 @@ const ROUTE_RULES = [
   { matcher: /^\/sales\/sales-manager(\/|$)/, module: "sales_manager" },
   { matcher: /^\/sales(\/|$)/, module: "sales" },
   { matcher: /^\/prescreen\/group\/add/, module: "prescreen_group", requiresWrite: true },
+  { matcher: /^\/prescreen\/group\/edit\//, module: "prescreen_group" },
   { matcher: /^\/prescreen\/group(\/|$)/, module: "prescreen_group" },
   { matcher: /^\/prescreen\/add/, module: "prescreen", requiresWrite: true },
   { matcher: /^\/prescreen(\/|$)/, module: "prescreen" },

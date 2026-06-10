@@ -74,7 +74,7 @@ function ProjectReportTab({ isDarkMode }) {
           <label className="admin-text flex min-w-0 flex-1 flex-col gap-2 text-sm font-semibold sm:max-w-xs">
             <span>Select Supplier</span>
             <SearchableSelect
-              inputClass="admin-text h-10 rounded-xl border border-[var(--admin-header-search-border)] bg-[var(--admin-header-search-bg)] px-3 text-sm font-medium outline-none"
+              inputClass="admin-text h-10 rounded-xl border border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] px-3 text-sm font-medium outline-none"
               value={selectedSupplier}
               onChange={setSelectedSupplier}
               options={supplierOptions}

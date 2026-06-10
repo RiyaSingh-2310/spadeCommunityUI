@@ -1,5 +1,6 @@
 import { Eye, Pencil } from "lucide-react";
 import TableCard from "../../../../components/admin/TableCard";
+import TableLoadingSkeleton from "../../../../components/admin/TableLoadingSkeleton";
 import { formatStatusLabel } from "../../../shared/utils/statusLabels";
 import { EMPTY_TABLE_MESSAGE } from "../utils/constants";
 
@@ -46,11 +47,7 @@ function UserSurveyDataTable({ rows, isLoading, isDarkMode, footer }) {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr>
-                <td colSpan={COLUMNS.length} className="admin-text-muted px-4 py-16 text-center text-sm">
-                  Loading...
-                </td>
-              </tr>
+              <TableLoadingSkeleton columns={COLUMNS} />
             ) : !hasData ? (
               <tr>
                 <td colSpan={COLUMNS.length} className="admin-text-muted px-4 py-16 text-center text-sm">

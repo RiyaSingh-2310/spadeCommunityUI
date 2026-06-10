@@ -72,6 +72,7 @@ export function hasNativeReadOnlyListingActions({
   onApprove,
   onReject,
   onListProjects,
+  onViewLogs,
 }) {
   const mode = getModuleListingReadMode(permissionModule);
 
@@ -111,6 +112,10 @@ export function hasNativeReadOnlyListingActions({
     return Boolean(onListProjects);
   }
 
+  if (actionVariant === "rfq") {
+    return Boolean(onViewLogs);
+  }
+
   return false;
 }
 
@@ -135,6 +140,8 @@ export function shouldShowListingActionColumn({
   onApprove,
   onReject,
   onListProjects,
+  onAddLog,
+  onViewLogs,
   hasActionColumn = true,
 }) {
   if (!hasActionColumn || !allowRead) return false;
@@ -166,7 +173,9 @@ export function shouldShowListingActionColumn({
         onListProjects ||
         actionVariant === "pdf-download" ||
         actionVariant === "reward-pending" ||
-        actionVariant === "group-survey"
+        actionVariant === "group-survey" ||
+        actionVariant === "rfq" ||
+        onAddLog
     );
   }
 
@@ -181,5 +190,6 @@ export function shouldShowListingActionColumn({
     onApprove,
     onReject,
     onListProjects,
+    onViewLogs,
   });
 }

@@ -20,6 +20,7 @@ import {
   getRequiredError,
   isFormValidForFields,
 } from "../../shared/utils/validation";
+import { getAdminInputClass } from "../../shared/utils/formStyles";
 
 const RFQ_REQUIRED_FIELDS = ["clientName", "email", "country", "subject", "status"];
 
@@ -155,11 +156,7 @@ function AddRfqPage({ isDarkMode }) {
     }
   };
 
-  const inputClass = `h-11 w-full rounded-xl border px-3 text-sm outline-none transition ${
-    isDarkMode
-      ? "border-[#344662] bg-[#101a2a] text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)]"
-      : "border-[#d8e3ef] bg-white text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)]"
-  }`;
+  const inputClass = getAdminInputClass();
 
   const renderField = (label, key, placeholder, type = "text", required = false) => (
     <div>

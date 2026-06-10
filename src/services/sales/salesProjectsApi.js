@@ -95,6 +95,43 @@ export function mapSalesProjectToForm(project) {
   };
 }
 
+function formatSalesLogDate(value) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  return parsed.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function stripHtmlContent(value) {
+  const plain = String(value ?? "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return plain || "—";
+}
+
+function extractSalesLogsList(data) {
+  if (!data || typeof data !== "object") return [];
+  if (Array.isArray(data.data)) return data.data;
+  if (Array.isArray(data.logs)) return data.logs;
+  return [];
+}
+
+function formCommentByToApi(commentBy) {
+  return String(commentBy ?? "Sales").trim().toLowerCase() === "client" ? "client" : "sales";
+}
+
+function apiCommentByToForm(commentBy) {
+  return String(commentBy ?? "").trim().toLowerCase() === "client" ? "Client" : "Sales";
+}
+
 export function mapSalesProjectToRow(project) {
   const status = String(project?.status ?? "").toLowerCase();
   const isWon = status === "won";
@@ -106,8 +143,25 @@ export function mapSalesProjectToRow(project) {
     projectId: isWon ? (project?.project_id ?? "") : "",
     country: project?.country ?? "",
     status: apiStatusToFormStatus(project?.status),
+    emailSubject: project?.email_subject ?? "",
+    salesManager: project?.sales_manager_name ?? project?.sales_manager ?? "",
     createdAt: project?.created_at ?? "",
     recordId: project?.id,
+  };
+}
+
+/**
+ * @param {object} log
+ */
+export function mapSalesLogToRow(log) {
+  return {
+    id: log?.id,
+    emailSubject: log?.email_subject ?? "",
+    comment: stripHtmlContent(log?.comment),
+    commentBy: apiCommentByToForm(log?.comment_by),
+    createdBy: log?.created_by ?? log?.created_by_name ?? "",
+    createdDate: formatSalesLogDate(log?.created_at),
+    createdAt: log?.created_at ?? "",
   };
 }
 
@@ -189,6 +243,53 @@ export async function updateSalesProject(id, payload) {
   const data = await apiRequest(API_ROUTES.salesProjects.update(normalizedId), {
     method: "PUT",
     body: buildSalesProjectBody(payload),
+  });
+
+  return assertSuccess(data);
+}
+
+/** DELETE /api/sales/project/:id */
+export async function deleteSalesProject(id) {
+  const normalizedId = normalizeSalesProjectId(id);
+  const data = await apiRequest(API_ROUTES.salesProjects.delete(normalizedId), {
+    method: "DELETE",
+  });
+
+  return assertSuccess(data);
+}
+
+/** GET /api/sales/project/log/list/:id */
+export async function getSalesLogs(projectId) {
+  const normalizedId = normalizeSalesProjectId(projectId);
+  const data = await apiRequest(API_ROUTES.salesProjects.logs(normalizedId));
+  assertSuccess(data);
+
+  const logs = extractSalesLogsList(data);
+  const total = extractListTotalFromResponse(data, logs.length);
+
+  return {
+    ...data,
+    total,
+    count: total,
+    items: logs.map((log) => mapSalesLogToRow(log)),
+  };
+}
+
+/**
+ * POST /api/sales/project/log/add
+ * @param {string|number} projectId
+ * @param {{ subject: string, comment: string, commentBy: string }} payload
+ */
+export async function createSalesLog(projectId, payload) {
+  const numericId = Number(String(projectId ?? "").trim());
+  const data = await apiRequest(API_ROUTES.salesProjects.createLog, {
+    method: "POST",
+    body: {
+      project_id: numericId,
+      email_subject: payload.subject.trim(),
+      comment: payload.comment ?? "",
+      comment_by: formCommentByToApi(payload.commentBy),
+    },
   });
 
   return assertSuccess(data);

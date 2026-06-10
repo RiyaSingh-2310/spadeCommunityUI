@@ -68,7 +68,7 @@ export function FilterCheckbox({ label, checked, isDarkMode }) {
   return (
     <label
       className={`flex cursor-not-allowed items-center gap-2 rounded-xl border px-3 py-2.5 opacity-80 ${
-        isDarkMode ? "border-[#344662] bg-[#101a2a]" : "border-[#d5deea] bg-[#f4f8fc]"
+        "border-[var(--admin-input-border)] bg-[var(--admin-input-bg)]"
       }`}
     >
       <input

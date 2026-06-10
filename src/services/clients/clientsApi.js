@@ -121,6 +121,24 @@ export function mapClientToRow(client) {
   };
 }
 
+function normalizeClientId(id) {
+  const normalizedId = String(id ?? "").trim();
+  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
+    throw new ApiError("Invalid client id.", null);
+  }
+  return encodeURIComponent(normalizedId);
+}
+
+/** DELETE /api/clients/delete/:id */
+export async function deleteRecord(id) {
+  const normalizedId = normalizeClientId(id);
+  const data = await apiRequest(API_ROUTES.clients.delete(normalizedId), {
+    method: "DELETE",
+  });
+
+  return assertSuccess(data, "Failed to delete client");
+}
+
 /** GET /api/clients/all */
 export async function getRecords() {
   const [, data] = await Promise.all([getCountries(), apiRequest(API_ROUTES.clients.list)]);

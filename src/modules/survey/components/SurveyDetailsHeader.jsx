@@ -68,7 +68,7 @@ function SurveyDetailsHeader({
             Project Status
           </label>
           <SearchableSelect
-            inputClass="admin-text h-10 min-w-[140px] rounded-xl border border-[var(--admin-header-search-border)] bg-[var(--admin-header-search-bg)] px-3 text-sm font-medium outline-none"
+            inputClass="admin-text h-10 min-w-[140px] rounded-xl border border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] px-3 text-sm font-medium outline-none"
             value={draftStatus}
             onChange={onStatusChange}
             options={PROJECT_STATUS_OPTIONS}

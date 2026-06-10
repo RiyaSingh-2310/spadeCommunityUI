@@ -22,6 +22,7 @@ import {
   getUrlError,
   isFormValidForFields,
 } from "../../modules/shared/utils/validation";
+import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
 
 const CLIENT_ADD_REQUIRED_FIELDS = [
   "name",
@@ -101,11 +102,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { readOnly, showSubmit, controlDisabled, canSubmitForm, fieldDisabled } =
     useAdminFormAccess(isSubmitting);
-  const inputClass = `h-11 w-full rounded-xl border px-3 text-sm outline-none transition ${
-    isDarkMode
-      ? "border-[#344662] bg-[#101a2a] text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)]"
-      : "border-[#d8e3ef] bg-white text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)]"
-  }`;
+  const inputClass = getAdminInputClass();
 
   useEffect(() => {
     if (!isEdit || !id) return undefined;

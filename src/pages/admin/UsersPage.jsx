@@ -126,7 +126,6 @@ function UsersPage({ isDarkMode }) {
         actionVariant="user-management"
         searchFields={["name", "email", "emailAddress"]}
         isLoading={isLoading}
-        loadingMessage="Loading Admin Users..."
         emptyMessage="No Admin Users Found"
         onEdit={navigateToUserEdit}
         onDelete={handleDeleteRequest}

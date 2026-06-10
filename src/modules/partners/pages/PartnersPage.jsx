@@ -10,6 +10,7 @@ import {
   getRecords,
   updatePartnerStatus,
 } from "../../../services/partners/partnersApi";
+import PartnerExpandableDetails from "../components/PartnerExpandableDetails";
 
 const LIST_COLUMNS = [
   "S.No",
@@ -130,7 +131,6 @@ function PartnersPage({ isDarkMode }) {
           "createdDate",
         ]}
         isLoading={isLoading}
-        loadingMessage="Loading partners..."
         emptyMessage="No partners found"
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}
@@ -138,6 +138,7 @@ function PartnersPage({ isDarkMode }) {
         pageSize={DEFAULT_PAGE_SIZE}
         showPagination
         nowrapAllCells
+        renderExpandedContent={(row) => <PartnerExpandableDetails row={row} />}
       />
 
       <DeleteConfirmModal

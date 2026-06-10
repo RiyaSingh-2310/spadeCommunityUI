@@ -98,3 +98,59 @@ export const SURVEY_FORM_FIELDS = [
   "userTerminationPoint",
   "userCompletionPoint",
 ];
+
+const SURVEY_FORM_SCALAR_KEYS = [
+  "client",
+  "projectName",
+  "projectManager",
+  "projectCountry",
+  "salesManager",
+  "salesProject",
+  "description",
+  "loi",
+  "ir",
+  "sampleSize",
+  "currency",
+  "cpi",
+  "startDate",
+  "endDate",
+  "projectLinkType",
+  "liveLink",
+  "testLink",
+  "language",
+  "surveyGroup",
+  "userTerminationPoint",
+  "userCompletionPoint",
+  "notes",
+];
+
+const SURVEY_FILTER_KEYS = ["geoLocation", "urlProtection", "uniqueIp", "preScreen"];
+
+/**
+ * Deep equality check for survey form dirty-state detection.
+ * @param {ReturnType<import('../data/surveyFormData').createEmptySurveyForm>} current
+ * @param {ReturnType<import('../data/surveyFormData').createEmptySurveyForm>} original
+ */
+export function areSurveyFormsEqual(current, original) {
+  if (!current || !original) return current === original;
+
+  for (const key of SURVEY_FORM_SCALAR_KEYS) {
+    if (String(current[key] ?? "") !== String(original[key] ?? "")) {
+      return false;
+    }
+  }
+
+  for (const key of SURVEY_FILTER_KEYS) {
+    if (Boolean(current.filters?.[key]) !== Boolean(original.filters?.[key])) {
+      return false;
+    }
+  }
+
+  const currentFileName = current.surveyCsvFile?.name ?? "";
+  const originalFileName = original.surveyCsvFile?.name ?? "";
+  if (currentFileName !== originalFileName) {
+    return false;
+  }
+
+  return true;
+}

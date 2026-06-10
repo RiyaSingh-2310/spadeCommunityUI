@@ -1,44 +1,74 @@
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
-import { useListingPageActions } from "../../shared/hooks/useListingPageActions";
+import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
+import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
+import { isAuthenticated } from "../../../services/auth/authStorage";
+import { getRecords } from "../../../services/prescreen/prescreenGroupApi";
+import { toastApiError } from "../../../services/toast/apiToast";
 
-const TITLES = [
-  "Checking Bots",
-  "Arabic Survey",
-  "German Survey",
-  "Security Checks",
-  "Questions For Bots",
-  "Fraud Detection Pack",
-];
-
-const initialRows = Array.from({ length: 12 }, (_, idx) => ({
-  id: `pg-${idx + 1}`,
-  surveyTitle: TITLES[idx % TITLES.length],
-  language: ["English", "Arabic", "German", "French", "Spanish"][idx % 5],
-  status: idx % 4 === 0 ? "Inactive" : "Active",
-}));
+const LIST_COLUMNS = ["S.No", "Survey Title", "Language", "Status", "Action"];
 
 function PrescreenGroupPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const { rows, onEdit, onDelete, onStatusToggle } = useListingPageActions({
-    initialRows,
-    editPath: "/prescreen/group",
-  });
+  const location = useLocation();
+  useFlashMessage();
+  const [rows, setRows] = useState([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchPrescreenGroups = useCallback(async () => {
+    if (!isAuthenticated()) {
+      setRows([]);
+      setTotalRecords(0);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const data = await getRecords();
+      setRows(data.items);
+      setTotalRecords(data.total ?? data.count ?? data.items.length);
+    } catch (error) {
+      toastApiError(error);
+      setRows([]);
+      setTotalRecords(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPrescreenGroups();
+  }, [fetchPrescreenGroups]);
+
+  useEffect(() => {
+    if (location.state?.refresh) {
+      fetchPrescreenGroups();
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, location.pathname, navigate, fetchPrescreenGroups]);
 
   return (
     <ModuleListingPage
       isDarkMode={isDarkMode}
       title="Prescreen Group"
       searchPlaceholder="Search prescreen groups..."
-      actionLabel="Add Prescreen Group"
+      actionLabel="Add Survey Group"
       onActionClick={() => navigate("/prescreen/group/add")}
-      columns={["S.No", "Survey Title", "Language", "Status", "Action"]}
+      columns={LIST_COLUMNS}
       rows={rows}
       rowIdKey="id"
-      onEdit={onEdit}
-      onDelete={onDelete}
-      onStatusToggle={onStatusToggle}
+      editPath="/prescreen/group"
       permissionModule="prescreen_group"
+      searchFields={["surveyTitle", "language"]}
+      isLoading={isLoading}
+      emptyMessage="No prescreen groups found"
+      statusAsText
+      totalRecords={totalRecords}
+      pageSize={DEFAULT_PAGE_SIZE}
+      showPagination
       nowrapAllCells
     />
   );
