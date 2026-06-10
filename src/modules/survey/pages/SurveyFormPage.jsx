@@ -5,10 +5,8 @@ import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminCancelButtonClass } from "../../shared/utils/formStyles";
 import SurveyForm from "../components/SurveyForm";
-import {
-  createEmptySurveyForm,
-  getDemoSurveyFormForEdit,
-} from "../data/surveyFormData";
+import { createEmptySurveyForm } from "../data/surveyFormData";
+import { useSurveyFormSelectOptions } from "../hooks/useSurveyFormSelectOptions";
 import {
   createSurvey,
   getRecord,
@@ -35,6 +33,13 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
   const [loadFailed, setLoadFailed] = useState(false);
+  const {
+    clientOptions,
+    projectManagerOptions,
+    salesManagerOptions,
+    salesProjectOptions,
+    isLoading: isLoadingOptions,
+  } = useSurveyFormSelectOptions();
 
   const errors = useMemo(() => getSurveyFormErrors(form), [form]);
   const { showError, touch, validateSubmit, resetValidation } = useFormValidation({
@@ -56,17 +61,16 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
       try {
         const record = await getRecord(id);
         if (cancelled) return;
-        const fallback = getDemoSurveyFormForEdit(id);
-        const mapped = mapSurveyToForm(record, fallback);
+        const mapped = mapSurveyToForm(record, createEmptySurveyForm());
         setForm(mapped);
         setInitialSnapshot(mapped);
       } catch (error) {
         if (cancelled) return;
         toastApiError(error);
         setLoadFailed(true);
-        const fallback = getDemoSurveyFormForEdit(id);
-        setForm(fallback);
-        setInitialSnapshot(fallback);
+        const empty = createEmptySurveyForm();
+        setForm(empty);
+        setInitialSnapshot(empty);
       } finally {
         if (!cancelled) setIsLoadingRecord(false);
       }
@@ -89,6 +93,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     isSurveyFormSubmittable(form) &&
     !isSubmitting &&
     !isLoadingRecord &&
+    !isLoadingOptions &&
     !loadFailed &&
     (!isEdit || isDirty);
 
@@ -125,7 +130,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
       ]
     : [{ label: "Survey", to: "/survey" }, { label: "Create Survey" }];
 
-  if (isEdit && isLoadingRecord) {
+  if ((isEdit && isLoadingRecord) || isLoadingOptions) {
     return (
       <div className="space-y-6">
         <AdminPageHeader
@@ -136,7 +141,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
         />
         <div className="admin-text flex items-center gap-2 text-sm">
           <Loader2 size={16} className="animate-spin" />
-          Loading survey...
+          Loading...
         </div>
       </div>
     );
@@ -160,6 +165,10 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
           touch={touch}
           isDarkMode={isDarkMode}
           disabled={fieldDisabled(readOnly, isSubmitting)}
+          clientOptions={clientOptions}
+          projectManagerOptions={projectManagerOptions}
+          salesManagerOptions={salesManagerOptions}
+          salesProjectOptions={salesProjectOptions}
         />
 
         <div className="admin-form-actions flex flex-wrap items-center gap-3">

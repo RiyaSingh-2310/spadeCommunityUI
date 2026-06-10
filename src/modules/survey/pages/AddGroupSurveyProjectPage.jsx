@@ -7,12 +7,11 @@ import { getAdminCancelButtonClass } from "../../shared/utils/formStyles";
 import SurveyForm from "../components/SurveyForm";
 import {
   ADD_PROJECT_DEFAULTS,
-  GROUP_PROJECT_MANAGER_OPTIONS,
-  GROUP_SALES_MANAGER_OPTIONS,
   GROUP_SURVEY_CLIENT_OPTIONS,
   getDemoGroupSurveyRow,
 } from "../data/groupSurveyData";
 import { createEmptySurveyForm } from "../data/surveyFormData";
+import { useSurveyFormSelectOptions } from "../hooks/useSurveyFormSelectOptions";
 import { createGroupSurveyProject } from "../services/groupSurveyApi";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
@@ -35,6 +34,12 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
     notes: ADD_PROJECT_DEFAULTS.notes,
   }));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const {
+    projectManagerOptions,
+    salesManagerOptions,
+    salesProjectOptions,
+    isLoading: isLoadingOptions,
+  } = useSurveyFormSelectOptions();
 
   const errors = useMemo(() => getSurveyFormErrors(form), [form]);
   const { showError, touch, validateSubmit } = useFormValidation({
@@ -42,7 +47,11 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
     fields: SURVEY_FORM_FIELDS,
   });
   const canSubmit =
-    showSubmit && !readOnly && isSurveyFormSubmittable(form) && !isSubmitting;
+    showSubmit &&
+    !readOnly &&
+    isSurveyFormSubmittable(form) &&
+    !isSubmitting &&
+    !isLoadingOptions;
 
   const onSubmit = async (event) => {
     event.preventDefault();
@@ -92,8 +101,9 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
           disabled={fieldDisabled(readOnly, isSubmitting)}
           groupProject={group.groupProject}
           clientOptions={GROUP_SURVEY_CLIENT_OPTIONS}
-          projectManagerOptions={GROUP_PROJECT_MANAGER_OPTIONS}
-          salesManagerOptions={GROUP_SALES_MANAGER_OPTIONS}
+          projectManagerOptions={projectManagerOptions}
+          salesManagerOptions={salesManagerOptions}
+          salesProjectOptions={salesProjectOptions}
         />
 
         <div className="admin-form-actions flex flex-wrap items-center gap-3">

@@ -13,10 +13,6 @@ import {
   CURRENCY_OPTIONS,
   LANGUAGE_OPTIONS,
   PROJECT_LINK_TYPES,
-  PROJECT_MANAGER_OPTIONS,
-  SALES_MANAGER_OPTIONS,
-  SALES_PROJECT_OPTIONS,
-  SURVEY_CLIENT_OPTIONS,
   SURVEY_GROUP_OPTIONS,
   downloadSurveySampleCsv,
 } from "../data/surveyFormData";
@@ -46,9 +42,10 @@ function SurveyForm({
   disabled = false,
   groupProject = "",
   readOnlyClient = false,
-  clientOptions = SURVEY_CLIENT_OPTIONS,
-  projectManagerOptions = PROJECT_MANAGER_OPTIONS,
-  salesManagerOptions = SALES_MANAGER_OPTIONS,
+  clientOptions = [],
+  projectManagerOptions = [],
+  salesManagerOptions = [],
+  salesProjectOptions = [],
 }) {
   const fileInputRef = useRef(null);
   const inputClass = getAdminInputClass();
@@ -159,7 +156,7 @@ function SurveyForm({
               inputClass={selectClass}
               value={form.salesProject}
               onChange={(next) => setField("salesProject", next)}
-              options={SALES_PROJECT_OPTIONS}
+              options={salesProjectOptions}
               placeholder="Select Sales Project"
               disabled={disabled}
               searchPlaceholder="Search sales project..."

@@ -132,15 +132,26 @@ function apiCommentByToForm(commentBy) {
   return String(commentBy ?? "").trim().toLowerCase() === "client" ? "Client" : "Sales";
 }
 
+function resolveLinkedSurveyProjectId(project) {
+  return (
+    project?.survey_id ??
+    project?.survey_project_id ??
+    project?.linked_survey_id ??
+    ""
+  );
+}
+
 export function mapSalesProjectToRow(project) {
   const status = String(project?.status ?? "").toLowerCase();
   const isWon = status === "won";
+  const linkedSurveyProjectId = resolveLinkedSurveyProjectId(project);
 
   return {
     id: project?.project_id ?? project?.id,
     name: project?.client_name ?? "",
     emailAddress: project?.email ?? "",
-    projectId: isWon ? (project?.project_id ?? "") : "",
+    projectId: isWon ? String(linkedSurveyProjectId || "") : "",
+    linkedSurveyRecordId: project?.survey_record_id ?? project?.survey_db_id ?? "",
     country: project?.country ?? "",
     status: apiStatusToFormStatus(project?.status),
     emailSubject: project?.email_subject ?? "",

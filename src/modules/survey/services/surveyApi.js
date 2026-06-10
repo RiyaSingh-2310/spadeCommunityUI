@@ -131,17 +131,53 @@ export function buildCreateSurveyPayload(form) {
  * @param {object} survey
  * @param {object} [fallback]
  */
+function resolveSurveyFormId(survey, idKeys, nameKeys, fallback = "") {
+  for (const key of idKeys) {
+    const value = survey?.[key];
+    if (value != null && value !== "") {
+      return String(value);
+    }
+  }
+
+  for (const key of nameKeys) {
+    const value = survey?.[key];
+    if (value != null && value !== "") {
+      return String(value);
+    }
+  }
+
+  return fallback;
+}
+
 export function mapSurveyToForm(survey, fallback = null) {
   const base = fallback ?? createEmptySurveyForm();
 
   return {
     ...base,
-    client:
-      survey?.client_code != null ? String(survey.client_code) : base.client,
+    client: resolveSurveyFormId(
+      survey,
+      ["client_id"],
+      [],
+      survey?.client_code != null ? String(survey.client_code) : base.client
+    ),
     projectName: pickSurveyFormValue(survey?.project_name, base.projectName),
-    projectManager: pickSurveyFormValue(
-      survey?.project_manager_name,
+    projectManager: resolveSurveyFormId(
+      survey,
+      ["project_manager_id"],
+      ["project_manager_name"],
       base.projectManager
+    ),
+    salesManager: resolveSurveyFormId(
+      survey,
+      ["sales_manager_id"],
+      ["sales_manager_name"],
+      base.salesManager
+    ),
+    salesProject: resolveSurveyFormId(
+      survey,
+      ["sales_project_id"],
+      [],
+      base.salesProject
     ),
     projectCountry: pickSurveyFormValue(survey?.project_country, base.projectCountry),
     loi: survey?.loi != null ? String(survey.loi) : base.loi,
