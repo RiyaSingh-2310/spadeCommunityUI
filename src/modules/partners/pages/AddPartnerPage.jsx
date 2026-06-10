@@ -21,9 +21,11 @@ import {
   getEmailError,
   getPhoneError,
   getRequiredError,
+  getRichTextError,
   getUrlError,
   isFormValidForFields,
 } from "../../shared/utils/validation";
+import RichTextEditor from "../../../components/admin/RichTextEditor";
 
 const PARTNER_ADD_REQUIRED_FIELDS = ["name", "email", "country", "contactNumber"];
 
@@ -134,7 +136,9 @@ function AddPartnerPage({ isDarkMode }) {
       overQuota: getRequiredError(form.overQuota, "Over Quota"),
       qualityTerm: getRequiredError(form.qualityTerm, "Quality Term"),
       surveyClose: getRequiredError(form.surveyClose, "Survey Close"),
-      aboutPartner: getRequiredError(form.aboutPartner, "About Partner"),
+      aboutPartner: isEdit
+        ? getRichTextError(form.aboutPartner, "About Partner")
+        : "",
     };
   }, [form, isEdit]);
 
@@ -365,13 +369,14 @@ function AddPartnerPage({ isDarkMode }) {
                 About Partner
                 {isEdit && <span className="text-[var(--admin-danger-text)]"> *</span>}
               </label>
-              <textarea
-                className={`${inputClass} h-24 py-2`}
-                placeholder="Enter About Partner"
+              <RichTextEditor
+                isDarkMode={isDarkMode}
                 value={form.aboutPartner}
-                onChange={(e) => setField("aboutPartner", e.target.value)}
+                onChange={(value) => setField("aboutPartner", value)}
                 onBlur={() => touch("aboutPartner")}
+                placeholder="Enter About Partner"
                 disabled={controlDisabled}
+                height={200}
               />
               {showError("aboutPartner") && (
                 <p className="mt-1 text-xs text-[var(--admin-danger-text)]">

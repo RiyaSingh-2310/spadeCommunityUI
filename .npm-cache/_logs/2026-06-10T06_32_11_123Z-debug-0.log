@@ -1,0 +1,465 @@
+0 verbose cli /Users/riya_singh/.nvm/versions/node/v22.22.1/bin/node /Users/riya_singh/.nvm/versions/node/v22.22.1/bin/npm
+1 info using npm@10.9.4
+2 info using node@v22.22.1
+3 silly config load:file:/Users/riya_singh/.nvm/versions/node/v22.22.1/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/.npmrc
+5 silly config load:file:/Users/riya_singh/.npmrc
+6 silly config load:file:/Users/riya_singh/.nvm/versions/node/v22.22.1/etc/npmrc
+7 verbose title npm install @tinymce/tinymce-react tinymce
+8 verbose argv "install" "@tinymce/tinymce-react" "tinymce" "--cache" "./.npm-cache"
+9 verbose logfile logs-max:10 dir:/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/.npm-cache/_logs/2026-06-10T06_32_11_123Z-
+10 verbose logfile /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/.npm-cache/_logs/2026-06-10T06_32_11_123Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:2197815296 maxSize:549453824 maxEntrySize:274726912
+13 silly idealTree buildDeps
+14 silly fetch manifest @tinymce/tinymce-react@*
+15 silly packumentCache full:https://registry.npmjs.org/@tinymce%2ftinymce-react cache-miss
+16 http fetch GET 200 https://registry.npmjs.org/npm 218ms
+17 http fetch GET 200 https://registry.npmjs.org/@tinymce%2ftinymce-react 176ms (cache miss)
+18 silly packumentCache full:https://registry.npmjs.org/@tinymce%2ftinymce-react set size:undefined disposed:false
+19 silly fetch manifest react@^19.2.6
+20 silly packumentCache full:https://registry.npmjs.org/react cache-miss
+21 http fetch GET 200 https://registry.npmjs.org/react 141ms (cache miss)
+22 silly packumentCache full:https://registry.npmjs.org/react set size:undefined disposed:false
+23 silly fetch manifest react-dom@^19.2.6
+24 silly packumentCache full:https://registry.npmjs.org/react-dom cache-miss
+25 http fetch GET 200 https://registry.npmjs.org/react-dom 194ms (cache miss)
+26 silly packumentCache full:https://registry.npmjs.org/react-dom set size:undefined disposed:false
+27 silly fetch manifest tinymce@*
+28 silly packumentCache full:https://registry.npmjs.org/tinymce cache-miss
+29 http fetch GET 200 https://registry.npmjs.org/tinymce 31ms (cache miss)
+30 silly packumentCache full:https://registry.npmjs.org/tinymce set size:undefined disposed:false
+31 silly placeDep ROOT @tinymce/tinymce-react@6.3.0 OK for: spade@0.0.0 want: *
+32 silly placeDep ROOT tinymce@8.6.0 OK for: spade@0.0.0 want: *
+33 silly fetch manifest prop-types@^15.6.2
+34 silly packumentCache full:https://registry.npmjs.org/prop-types cache-miss
+35 http fetch GET 200 https://registry.npmjs.org/prop-types 28ms (cache miss)
+36 silly packumentCache full:https://registry.npmjs.org/prop-types set size:undefined disposed:false
+37 silly placeDep ROOT prop-types@15.8.1 OK for: @tinymce/tinymce-react@6.3.0 want: ^15.6.2
+38 silly fetch manifest loose-envify@^1.4.0
+39 silly packumentCache full:https://registry.npmjs.org/loose-envify cache-miss
+40 silly fetch manifest object-assign@^4.1.1
+41 silly packumentCache full:https://registry.npmjs.org/object-assign cache-miss
+42 silly fetch manifest react-is@^16.13.1
+43 silly packumentCache full:https://registry.npmjs.org/react-is cache-miss
+44 http fetch GET 200 https://registry.npmjs.org/object-assign 31ms (cache miss)
+45 silly packumentCache full:https://registry.npmjs.org/object-assign set size:undefined disposed:false
+46 http fetch GET 200 https://registry.npmjs.org/loose-envify 32ms (cache miss)
+47 silly packumentCache full:https://registry.npmjs.org/loose-envify set size:undefined disposed:false
+48 http fetch GET 200 https://registry.npmjs.org/react-is 182ms (cache miss)
+49 silly packumentCache full:https://registry.npmjs.org/react-is set size:undefined disposed:false
+50 silly placeDep ROOT loose-envify@1.4.0 OK for: prop-types@15.8.1 want: ^1.4.0
+51 silly placeDep ROOT object-assign@4.1.1 OK for: prop-types@15.8.1 want: ^4.1.1
+52 silly placeDep ROOT react-is@16.13.1 OK for: prop-types@15.8.1 want: ^16.13.1
+53 silly reify moves {}
+54 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-wasm32-wasi
+55 silly reify mark deleted [
+55 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-wasm32-wasi'
+55 silly reify ]
+56 silly audit bulk request {
+56 silly audit   '@babel/code-frame': [ '7.29.7' ],
+56 silly audit   '@babel/compat-data': [ '7.29.7' ],
+56 silly audit   '@babel/core': [ '7.29.7' ],
+56 silly audit   '@babel/generator': [ '7.29.7' ],
+56 silly audit   '@babel/helper-compilation-targets': [ '7.29.7' ],
+56 silly audit   '@babel/helper-globals': [ '7.29.7' ],
+56 silly audit   '@babel/helper-module-imports': [ '7.29.7' ],
+56 silly audit   '@babel/helper-module-transforms': [ '7.29.7' ],
+56 silly audit   '@babel/helper-string-parser': [ '7.29.7' ],
+56 silly audit   '@babel/helper-validator-identifier': [ '7.29.7' ],
+56 silly audit   '@babel/helper-validator-option': [ '7.29.7' ],
+56 silly audit   '@babel/helpers': [ '7.29.7' ],
+56 silly audit   '@babel/parser': [ '7.29.7' ],
+56 silly audit   '@babel/template': [ '7.29.7' ],
+56 silly audit   '@babel/traverse': [ '7.29.7' ],
+56 silly audit   '@babel/types': [ '7.29.7' ],
+56 silly audit   '@emnapi/core': [ '1.10.0' ],
+56 silly audit   '@emnapi/runtime': [ '1.10.0' ],
+56 silly audit   '@emnapi/wasi-threads': [ '1.2.1' ],
+56 silly audit   '@eslint-community/eslint-utils': [ '4.9.1' ],
+56 silly audit   'eslint-visitor-keys': [ '3.4.3', '5.0.1' ],
+56 silly audit   '@eslint-community/regexpp': [ '4.12.2' ],
+56 silly audit   '@eslint/config-array': [ '0.23.5' ],
+56 silly audit   '@eslint/config-helpers': [ '0.6.0' ],
+56 silly audit   '@eslint/core': [ '1.2.1' ],
+56 silly audit   '@eslint/js': [ '10.0.1' ],
+56 silly audit   '@eslint/object-schema': [ '3.0.5' ],
+56 silly audit   '@eslint/plugin-kit': [ '0.7.2' ],
+56 silly audit   '@humanfs/core': [ '0.19.2' ],
+56 silly audit   '@humanfs/node': [ '0.16.8' ],
+56 silly audit   '@humanfs/types': [ '0.15.0' ],
+56 silly audit   '@humanwhocodes/module-importer': [ '1.0.1' ],
+56 silly audit   '@humanwhocodes/retry': [ '0.4.3' ],
+56 silly audit   '@jridgewell/gen-mapping': [ '0.3.13' ],
+56 silly audit   '@jridgewell/remapping': [ '2.3.5' ],
+56 silly audit   '@jridgewell/resolve-uri': [ '3.1.2' ],
+56 silly audit   '@jridgewell/sourcemap-codec': [ '1.5.5' ],
+56 silly audit   '@jridgewell/trace-mapping': [ '0.3.31' ],
+56 silly audit   '@napi-rs/wasm-runtime': [ '1.1.4' ],
+56 silly audit   '@oxc-project/types': [ '0.133.0' ],
+56 silly audit   '@rolldown/binding-android-arm64': [ '1.0.3' ],
+56 silly audit   '@rolldown/binding-darwin-arm64': [ '1.0.3' ],
+56 silly audit   '@rolldown/binding-darwin-x64': [ '1.0.3' ],
+56 silly audit   '@rolldown/binding-freebsd-x64': [ '1.0.3' ],
+56 silly audit   '@rolldown/binding-linux-arm-gnueabihf': [ '1.0.3' ],
+56 silly audit   '@rolldown/binding-linux-arm64-gnu': [ '1.0.3' ],
+56 silly audit   '@rolldown/binding-linux-arm64-musl': [ '1.0.3' ],
+56 silly audit   '@rolldown/binding-linux-ppc64-gnu': [ '1.0.3' ],
+56 silly audit   '@rolldown/binding-linux-s390x-gnu': [ '1.0.3' ],
+56 silly audit   '@rolldown/binding-linux-x64-gnu': [ '1.0.3' ],
+56 silly audit   '@rolldown/binding-linux-x64-musl': [ '1.0.3' ],
+56 silly audit   '@rolldown/binding-openharmony-arm64': [ '1.0.3' ],
+56 silly audit   '@rolldown/binding-wasm32-wasi': [ '1.0.3' ],
+56 silly audit   '@rolldown/binding-win32-arm64-msvc': [ '1.0.3' ],
+56 silly audit   '@rolldown/binding-win32-x64-msvc': [ '1.0.3' ],
+56 silly audit   '@rolldown/pluginutils': [ '1.0.1' ],
+56 silly audit   '@tailwindcss/node': [ '4.3.0' ],
+56 silly audit   '@tailwindcss/oxide': [ '4.3.0' ],
+56 silly audit   '@tailwindcss/oxide-android-arm64': [ '4.3.0' ],
+56 silly audit   '@tailwindcss/oxide-darwin-arm64': [ '4.3.0' ],
+56 silly audit   '@tailwindcss/oxide-darwin-x64': [ '4.3.0' ],
+56 silly audit   '@tailwindcss/oxide-freebsd-x64': [ '4.3.0' ],
+56 silly audit   '@tailwindcss/oxide-linux-arm-gnueabihf': [ '4.3.0' ],
+56 silly audit   '@tailwindcss/oxide-linux-arm64-gnu': [ '4.3.0' ],
+56 silly audit   '@tailwindcss/oxide-linux-arm64-musl': [ '4.3.0' ],
+56 silly audit   '@tailwindcss/oxide-linux-x64-gnu': [ '4.3.0' ],
+56 silly audit   '@tailwindcss/oxide-linux-x64-musl': [ '4.3.0' ],
+56 silly audit   '@tailwindcss/oxide-win32-arm64-msvc': [ '4.3.0' ],
+56 silly audit   '@tailwindcss/oxide-win32-x64-msvc': [ '4.3.0' ],
+56 silly audit   '@tailwindcss/vite': [ '4.3.0' ],
+56 silly audit   '@tybys/wasm-util': [ '0.10.2' ],
+56 silly audit   '@types/esrecurse': [ '4.3.1' ],
+56 silly audit   '@types/estree': [ '1.0.9' ],
+56 silly audit   '@types/json-schema': [ '7.0.15' ],
+56 silly audit   '@types/react': [ '19.2.15' ],
+56 silly audit   '@types/react-dom': [ '19.2.3' ],
+56 silly audit   '@vitejs/plugin-react': [ '6.0.2' ],
+56 silly audit   acorn: [ '8.16.0' ],
+56 silly audit   'acorn-jsx': [ '5.3.2' ],
+56 silly audit   ajv: [ '6.15.0' ],
+56 silly audit   'balanced-match': [ '4.0.4' ],
+56 silly audit   'baseline-browser-mapping': [ '2.10.33' ],
+56 silly audit   'brace-expansion': [ '5.0.6' ],
+56 silly audit   browserslist: [ '4.28.2' ],
+56 silly audit   'caniuse-lite': [ '1.0.30001793' ],
+56 silly audit   'convert-source-map': [ '2.0.0' ],
+56 silly audit   cookie: [ '1.1.1' ],
+56 silly audit   'cross-spawn': [ '7.0.6' ],
+56 silly audit   csstype: [ '3.2.3' ],
+56 silly audit   debug: [ '4.4.3' ],
+56 silly audit   'deep-is': [ '0.1.4' ],
+56 silly audit   'detect-libc': [ '2.1.2' ],
+56 silly audit   'electron-to-chromium': [ '1.5.364' ],
+56 silly audit   'enhanced-resolve': [ '5.22.1' ],
+56 silly audit   escalade: [ '3.2.0' ],
+56 silly audit   'escape-string-regexp': [ '4.0.0' ],
+56 silly audit   eslint: [ '10.4.1' ],
+56 silly audit   'eslint-plugin-react-hooks': [ '7.1.1' ],
+56 silly audit   'eslint-plugin-react-refresh': [ '0.5.2' ],
+56 silly audit   'eslint-scope': [ '9.1.2' ],
+56 silly audit   espree: [ '11.2.0' ],
+56 silly audit   esquery: [ '1.7.0' ],
+56 silly audit   esrecurse: [ '4.3.0' ],
+56 silly audit   estraverse: [ '5.3.0' ],
+56 silly audit   esutils: [ '2.0.3' ],
+56 silly audit   'fast-deep-equal': [ '3.1.3' ],
+56 silly audit   'fast-json-stable-stringify': [ '2.1.0' ],
+56 silly audit   'fast-levenshtein': [ '2.0.6' ],
+56 silly audit   fdir: [ '6.5.0' ],
+56 silly audit   'file-entry-cache': [ '8.0.0' ],
+56 silly audit   'find-up': [ '5.0.0' ],
+56 silly audit   'flat-cache': [ '4.0.1' ],
+56 silly audit   flatted: [ '3.4.2' ],
+56 silly audit   fsevents: [ '2.3.3' ],
+56 silly audit   gensync: [ '1.0.0-beta.2' ],
+56 silly audit   'glob-parent': [ '6.0.2' ],
+56 silly audit   globals: [ '17.6.0' ],
+56 silly audit   'graceful-fs': [ '4.2.11' ],
+56 silly audit   'hermes-estree': [ '0.25.1' ],
+56 silly audit   'hermes-parser': [ '0.25.1' ],
+56 silly audit   ignore: [ '5.3.2' ],
+56 silly audit   imurmurhash: [ '0.1.4' ],
+56 silly audit   'is-extglob': [ '2.1.1' ],
+56 silly audit   'is-glob': [ '4.0.3' ],
+56 silly audit   isexe: [ '2.0.0' ],
+56 silly audit   jiti: [ '2.7.0' ],
+56 silly audit   'js-tokens': [ '4.0.0' ],
+56 silly audit   jsesc: [ '3.1.0' ],
+56 silly audit   'json-buffer': [ '3.0.1' ],
+56 silly audit   'json-schema-traverse': [ '0.4.1' ],
+56 silly audit   'json-stable-stringify-without-jsonify': [ '1.0.1' ],
+56 silly audit   json5: [ '2.2.3' ],
+56 silly audit   keyv: [ '4.5.4' ],
+56 silly audit   levn: [ '0.4.1' ],
+56 silly audit   lightningcss: [ '1.32.0' ],
+56 silly audit   'lightningcss-android-arm64': [ '1.32.0' ],
+56 silly audit   'lightningcss-darwin-arm64': [ '1.32.0' ],
+56 silly audit   'lightningcss-darwin-x64': [ '1.32.0' ],
+56 silly audit   'lightningcss-freebsd-x64': [ '1.32.0' ],
+56 silly audit   'lightningcss-linux-arm-gnueabihf': [ '1.32.0' ],
+56 silly audit   'lightningcss-linux-arm64-gnu': [ '1.32.0' ],
+56 silly audit   'lightningcss-linux-arm64-musl': [ '1.32.0' ],
+56 silly audit   'lightningcss-linux-x64-gnu': [ '1.32.0' ],
+56 silly audit   'lightningcss-linux-x64-musl': [ '1.32.0' ],
+56 silly audit   'lightningcss-win32-arm64-msvc': [ '1.32.0' ],
+56 silly audit   'lightningcss-win32-x64-msvc': [ '1.32.0' ],
+56 silly audit   'locate-path': [ '6.0.0' ],
+56 silly audit   'lru-cache': [ '5.1.1' ],
+56 silly audit   'lucide-react': [ '1.17.0' ],
+56 silly audit   'magic-string': [ '0.30.21' ],
+56 silly audit   minimatch: [ '10.2.5' ],
+56 silly audit   ms: [ '2.1.3' ],
+56 silly audit   nanoid: [ '3.3.12' ],
+56 silly audit   'natural-compare': [ '1.4.0' ],
+56 silly audit   'node-releases': [ '2.0.46' ],
+56 silly audit   optionator: [ '0.9.4' ],
+56 silly audit   'p-limit': [ '3.1.0' ],
+56 silly audit   'p-locate': [ '5.0.0' ],
+56 silly audit   'path-exists': [ '4.0.0' ],
+56 silly audit   'path-key': [ '3.1.1' ],
+56 silly audit   picocolors: [ '1.1.1' ],
+56 silly audit   picomatch: [ '4.0.4' ],
+56 silly audit   postcss: [ '8.5.15' ],
+56 silly audit   'prelude-ls': [ '1.2.1' ],
+56 silly audit   punycode: [ '2.3.1' ],
+56 silly audit   react: [ '19.2.6' ],
+56 silly audit   'react-dom': [ '19.2.6' ],
+56 silly audit   'react-router': [ '7.16.0' ],
+56 silly audit   'react-router-dom': [ '7.16.0' ],
+56 silly audit   rolldown: [ '1.0.3' ],
+56 silly audit   scheduler: [ '0.27.0' ],
+56 silly audit   semver: [ '6.3.1' ],
+56 silly audit   'set-cookie-parser': [ '2.7.2' ],
+56 silly audit   'shebang-command': [ '2.0.0' ],
+56 silly audit   'shebang-regex': [ '3.0.0' ],
+56 silly audit   'source-map-js': [ '1.2.1' ],
+56 silly audit   tailwindcss: [ '4.3.0' ],
+56 silly audit   tapable: [ '2.3.3' ],
+56 silly audit   tinyglobby: [ '0.2.17' ],
+56 silly audit   tslib: [ '2.8.1' ],
+56 silly audit   'type-check': [ '0.4.0' ],
+56 silly audit   'update-browserslist-db': [ '1.2.3' ],
+56 silly audit   'uri-js': [ '4.4.1' ],
+56 silly audit   vite: [ '8.0.15' ],
+56 silly audit   which: [ '2.0.2' ],
+56 silly audit   'word-wrap': [ '1.2.5' ],
+56 silly audit   yallist: [ '3.1.1' ],
+56 silly audit   'yocto-queue': [ '0.1.0' ],
+56 silly audit   zod: [ '4.4.3' ],
+56 silly audit   'zod-validation-error': [ '4.0.2' ],
+56 silly audit   '@tinymce/tinymce-react': [ '6.3.0' ],
+56 silly audit   tinymce: [ '8.6.0' ],
+56 silly audit   'prop-types': [ '15.8.1' ],
+56 silly audit   'loose-envify': [ '1.4.0' ],
+56 silly audit   'object-assign': [ '4.1.1' ],
+56 silly audit   'react-is': [ '16.13.1' ],
+56 silly audit   '@tailwindcss/oxide-wasm32-wasi': [ '4.3.0' ]
+56 silly audit }
+57 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-win32-x64-msvc
+58 silly reify mark deleted [
+58 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-win32-x64-msvc'
+58 silly reify ]
+59 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-win32-arm64-msvc
+60 silly reify mark deleted [
+60 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-win32-arm64-msvc'
+60 silly reify ]
+61 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-linux-x64-musl
+62 silly reify mark deleted [
+62 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-linux-x64-musl'
+62 silly reify ]
+63 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-linux-x64-gnu
+64 silly reify mark deleted [
+64 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-linux-x64-gnu'
+64 silly reify ]
+65 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-linux-arm64-musl
+66 silly reify mark deleted [
+66 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-linux-arm64-musl'
+66 silly reify ]
+67 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-linux-arm64-gnu
+68 silly reify mark deleted [
+68 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-linux-arm64-gnu'
+68 silly reify ]
+69 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-linux-arm-gnueabihf
+70 silly reify mark deleted [
+70 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-linux-arm-gnueabihf'
+70 silly reify ]
+71 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-freebsd-x64
+72 silly reify mark deleted [
+72 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-freebsd-x64'
+72 silly reify ]
+73 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-darwin-x64
+74 silly reify mark deleted [
+74 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-darwin-x64'
+74 silly reify ]
+75 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-android-arm64
+76 silly reify mark deleted [
+76 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/lightningcss-android-arm64'
+76 silly reify ]
+77 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-win32-x64-msvc
+78 silly reify mark deleted [
+78 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-win32-x64-msvc'
+78 silly reify ]
+79 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-win32-arm64-msvc
+80 silly reify mark deleted [
+80 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-win32-arm64-msvc'
+80 silly reify ]
+81 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-linux-x64-musl
+82 silly reify mark deleted [
+82 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-linux-x64-musl'
+82 silly reify ]
+83 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-linux-x64-gnu
+84 silly reify mark deleted [
+84 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-linux-x64-gnu'
+84 silly reify ]
+85 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-linux-arm64-musl
+86 silly reify mark deleted [
+86 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-linux-arm64-musl'
+86 silly reify ]
+87 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-linux-arm64-gnu
+88 silly reify mark deleted [
+88 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-linux-arm64-gnu'
+88 silly reify ]
+89 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-linux-arm-gnueabihf
+90 silly reify mark deleted [
+90 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-linux-arm-gnueabihf'
+90 silly reify ]
+91 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-freebsd-x64
+92 silly reify mark deleted [
+92 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-freebsd-x64'
+92 silly reify ]
+93 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-darwin-x64
+94 silly reify mark deleted [
+94 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-darwin-x64'
+94 silly reify ]
+95 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-android-arm64
+96 silly reify mark deleted [
+96 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@tailwindcss/oxide-android-arm64'
+96 silly reify ]
+97 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-win32-x64-msvc
+98 silly reify mark deleted [
+98 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-win32-x64-msvc'
+98 silly reify ]
+99 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-win32-arm64-msvc
+100 silly reify mark deleted [
+100 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-win32-arm64-msvc'
+100 silly reify ]
+101 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-wasm32-wasi
+102 silly reify mark deleted [
+102 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-wasm32-wasi'
+102 silly reify ]
+103 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-openharmony-arm64
+104 silly reify mark deleted [
+104 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-openharmony-arm64'
+104 silly reify ]
+105 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-linux-x64-musl
+106 silly reify mark deleted [
+106 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-linux-x64-musl'
+106 silly reify ]
+107 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-linux-x64-gnu
+108 silly reify mark deleted [
+108 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-linux-x64-gnu'
+108 silly reify ]
+109 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-linux-s390x-gnu
+110 silly reify mark deleted [
+110 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-linux-s390x-gnu'
+110 silly reify ]
+111 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-linux-ppc64-gnu
+112 silly reify mark deleted [
+112 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-linux-ppc64-gnu'
+112 silly reify ]
+113 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-linux-arm64-musl
+114 silly reify mark deleted [
+114 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-linux-arm64-musl'
+114 silly reify ]
+115 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-linux-arm64-gnu
+116 silly reify mark deleted [
+116 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-linux-arm64-gnu'
+116 silly reify ]
+117 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-linux-arm-gnueabihf
+118 silly reify mark deleted [
+118 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-linux-arm-gnueabihf'
+118 silly reify ]
+119 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-freebsd-x64
+120 silly reify mark deleted [
+120 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-freebsd-x64'
+120 silly reify ]
+121 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-darwin-x64
+122 silly reify mark deleted [
+122 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-darwin-x64'
+122 silly reify ]
+123 verbose reify failed optional dependency /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-android-arm64
+124 silly reify mark deleted [
+124 silly reify   '/Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI/node_modules/@rolldown/binding-android-arm64'
+124 silly reify ]
+125 http cache object-assign@https://registry.npmjs.org/object-assign/-/object-assign-4.1.1.tgz 1ms (cache hit)
+126 http cache prop-types@https://registry.npmjs.org/prop-types/-/prop-types-15.8.1.tgz 0ms (cache hit)
+127 http cache loose-envify@https://registry.npmjs.org/loose-envify/-/loose-envify-1.4.0.tgz 0ms (cache hit)
+128 http cache tinymce@https://registry.npmjs.org/tinymce/-/tinymce-8.6.0.tgz 0ms (cache hit)
+129 http cache @tinymce/tinymce-react@https://registry.npmjs.org/@tinymce/tinymce-react/-/tinymce-react-6.3.0.tgz 0ms (cache hit)
+130 http cache react-is@https://registry.npmjs.org/react-is/-/react-is-16.13.1.tgz 0ms (cache hit)
+131 silly tarball no local data for object-assign@https://registry.npmjs.org/object-assign/-/object-assign-4.1.1.tgz. Extracting by manifest.
+132 silly tarball no local data for prop-types@https://registry.npmjs.org/prop-types/-/prop-types-15.8.1.tgz. Extracting by manifest.
+133 silly tarball no local data for loose-envify@https://registry.npmjs.org/loose-envify/-/loose-envify-1.4.0.tgz. Extracting by manifest.
+134 silly tarball no local data for tinymce@https://registry.npmjs.org/tinymce/-/tinymce-8.6.0.tgz. Extracting by manifest.
+135 silly tarball no local data for @tinymce/tinymce-react@https://registry.npmjs.org/@tinymce/tinymce-react/-/tinymce-react-6.3.0.tgz. Extracting by manifest.
+136 silly tarball no local data for react-is@https://registry.npmjs.org/react-is/-/react-is-16.13.1.tgz. Extracting by manifest.
+137 http fetch GET 200 https://registry.npmjs.org/object-assign/-/object-assign-4.1.1.tgz 50ms (cache miss)
+138 http fetch GET 200 https://registry.npmjs.org/prop-types/-/prop-types-15.8.1.tgz 49ms (cache miss)
+139 http fetch GET 200 https://registry.npmjs.org/loose-envify/-/loose-envify-1.4.0.tgz 86ms (cache miss)
+140 http fetch GET 200 https://registry.npmjs.org/react-is/-/react-is-16.13.1.tgz 86ms (cache miss)
+141 http fetch GET 200 https://registry.npmjs.org/tinymce/-/tinymce-8.6.0.tgz 212ms (cache miss)
+142 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 262ms
+143 silly audit report {}
+144 http fetch GET 200 https://registry.npmjs.org/@tinymce/tinymce-react/-/tinymce-react-6.3.0.tgz 346ms (cache miss)
+145 silly ADD node_modules/react-is
+146 silly ADD node_modules/object-assign
+147 silly ADD node_modules/loose-envify
+148 silly ADD node_modules/prop-types
+149 silly ADD node_modules/tinymce
+150 silly ADD node_modules/@tinymce/tinymce-react
+151 silly ADD
+152 silly ADD
+153 silly ADD
+154 silly ADD
+155 silly ADD
+156 silly ADD
+157 silly ADD
+158 silly ADD
+159 silly ADD
+160 silly ADD
+161 silly ADD
+162 silly ADD
+163 silly ADD
+164 silly ADD
+165 silly ADD
+166 silly ADD
+167 silly ADD
+168 silly ADD
+169 silly ADD
+170 silly ADD
+171 silly ADD
+172 silly ADD
+173 silly ADD
+174 silly ADD
+175 silly ADD
+176 silly ADD
+177 silly ADD
+178 silly ADD
+179 silly ADD
+180 silly ADD
+181 silly ADD
+182 silly ADD
+183 silly ADD
+184 silly ADD
+185 silly ADD
+186 verbose cwd /Users/riya_singh/Desktop/Rgot/spadeCommunity/spadeCommunityUI
+187 verbose os Darwin 25.5.0
+188 verbose node v22.22.1
+189 verbose npm  v10.9.4
+190 notice
+190 notice New major version of npm available! 10.9.4 -> 11.16.0
+190 notice Changelog: https://github.com/npm/cli/releases/tag/v11.16.0
+190 notice To update run: npm install -g npm@11.16.0
+190 notice  { force: true, [Symbol(proc-log.meta)]: true }
+191 verbose exit 0
+192 info ok

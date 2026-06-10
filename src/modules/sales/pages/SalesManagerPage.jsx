@@ -1,23 +1,54 @@
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
-import { useListingPageActions } from "../../shared/hooks/useListingPageActions";
+import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
+import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
+import { isAuthenticated } from "../../../services/auth/authStorage";
+import { toastApiError } from "../../../services/toast/apiToast";
+import { getRecords } from "../../../services/sales/salesManagersApi";
 
-const NAMES = ["Arun Kumar", "Meera Singh", "David Roy", "Sarah Khan", "Ahmed Khan", "Emma Wilson"];
-
-const initialRows = Array.from({ length: 12 }, (_, idx) => ({
-  id: `sm-${idx + 1}`,
-  name: NAMES[idx % NAMES.length],
-  emailAddress: `manager${idx + 1}@spadecommunity.com`,
-  status: idx % 4 === 0 ? "Inactive" : "Active",
-  image: idx % 2 === 0 ? `https://i.pravatar.cc/80?img=${11 + idx}` : undefined,
-}));
+const LIST_COLUMNS = ["S.No", "Name", "Email Address", "Status", "Action"];
 
 function SalesManagerPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const { rows, onEdit, onDelete, onStatusToggle } = useListingPageActions({
-    initialRows,
-    editPath: "/sales/sales-manager",
-  });
+  const location = useLocation();
+  useFlashMessage();
+  const [salesManagers, setSalesManagers] = useState([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchSalesManagers = useCallback(async () => {
+    if (!isAuthenticated()) {
+      setSalesManagers([]);
+      setTotalRecords(0);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const data = await getRecords();
+      setSalesManagers(data.items);
+      setTotalRecords(data.total ?? data.count ?? data.items.length);
+    } catch (error) {
+      toastApiError(error);
+      setSalesManagers([]);
+      setTotalRecords(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSalesManagers();
+  }, [fetchSalesManagers]);
+
+  useEffect(() => {
+    if (location.state?.refresh) {
+      fetchSalesManagers();
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, location.pathname, navigate, fetchSalesManagers]);
 
   return (
     <ModuleListingPage
@@ -26,13 +57,19 @@ function SalesManagerPage({ isDarkMode }) {
       searchPlaceholder="Search sales managers..."
       actionLabel="Add Sales Manager"
       onActionClick={() => navigate("/sales/sales-manager/add")}
-      columns={["S.No", "Name", "Email Address", "Status", "Action"]}
-      rows={rows}
+      columns={LIST_COLUMNS}
+      rows={salesManagers}
       rowIdKey="id"
-      onEdit={onEdit}
-      onDelete={onDelete}
-      onStatusToggle={onStatusToggle}
+      editPath="/sales/sales-manager"
       permissionModule="sales_manager"
+      searchFields={["name", "emailAddress", "code"]}
+      isLoading={isLoading}
+      loadingMessage="Loading sales managers..."
+      emptyMessage="No sales managers found"
+      statusAsText
+      totalRecords={totalRecords}
+      pageSize={DEFAULT_PAGE_SIZE}
+      showPagination
       nowrapAllCells
     />
   );

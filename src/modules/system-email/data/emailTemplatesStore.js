@@ -1,13 +1,18 @@
 const STORAGE_KEY = "system-email-templates";
 
-export const DEFAULT_EMAIL_DESCRIPTION = `<p>Dear {USER_NAME},</p>
-<p>You recently signed up with Speed Community.</p>
-<p>Please click on the activation link below to verify your email address.</p>
-<p>Click here to activate your account:</p>
-<p>Activation Link:<br/>{ACTIVATION_LINK}</p>
-<p>If you run into any problems, simply copy and paste the entire link into your web browser.</p>
-<p>Thank you,</p>
-<p>Speed Community</p>`;
+export const DEFAULT_EMAIL_DESCRIPTION = `Dear {user_name},
+
+You recently signed up with Spade Community.
+Please click on the Activation link below to verify your email id. 
+Click here to activate your account.
+Activation link: {activationlink}
+
+(If you run into any problems, simply copy and paste the entire link into your web browser.)
+
+By clicking above you will be helping to ensure the highest deliverability of future emails. If you ever change your mind, just let us know by sending mail to support@spade-community.com and we'll stop sending you emails immediately.
+
+Thank You,
+Spade Community`;
 
 const DEFAULT_BODY = DEFAULT_EMAIL_DESCRIPTION;
 

@@ -4,8 +4,8 @@ import { ApiError } from "./ApiError";
 
 const HTTP_STATUS_MESSAGES = {
   400: "Bad request. Please check your input.",
-  401: "Unauthorized. Please check your credentials.",
-  403: "Access forbidden.",
+  401: "Your session has expired. Please log in again.",
+  403: "You do not have permission to perform this action.",
   404: "The requested resource was not found.",
   500: "Internal server error. Please try again later.",
   502: "The API server is unavailable (502 Bad Gateway). Ensure the backend is running and reachable.",
@@ -71,17 +71,22 @@ export async function apiRequest(path, options = {}) {
     headers: extraHeaders = {},
   } = options;
 
+  const hasBody = body !== undefined;
   const isFormDataBody = typeof FormData !== "undefined" && body instanceof FormData;
   const headers = {
-    ...(isFormDataBody ? {} : { "Content-Type": "application/json" }),
+    ...(hasBody && !isFormDataBody ? { "Content-Type": "application/json" } : {}),
     ...extraHeaders,
   };
 
   if (auth) {
     const token = getAuthToken();
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
+    if (!token) {
+      if (API_DEBUG) {
+        console.error("[API] Missing auth token for protected request:", path);
+      }
+      throw new ApiError(HTTP_STATUS_MESSAGES[401], null, 401);
     }
+    headers.Authorization = `Bearer ${token}`;
   } else if (loginBearer && API_LOGIN_BEARER_TOKEN) {
     headers.Authorization = `Bearer ${API_LOGIN_BEARER_TOKEN}`;
   }
@@ -91,7 +96,8 @@ export async function apiRequest(path, options = {}) {
   if (API_DEBUG) {
     console.log("[API] Request URL:", url);
     console.log("[API] Method:", method);
-    if (body !== undefined) {
+    console.log("[API] Auth:", auth ? (headers.Authorization ? "Bearer <token>" : "missing") : "disabled");
+    if (hasBody) {
       console.log("[API] Payload:", body);
     }
   }

@@ -3,7 +3,6 @@ import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
-import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
@@ -17,13 +16,6 @@ import {
   getEmailTemplateById,
   saveEmailTemplate,
 } from "../data/emailTemplatesStore";
-
-function stripHtml(html) {
-  return String(html ?? "")
-    .replace(/<[^>]*>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .trim();
-}
 
 function buildInitialDescription(template) {
   const body = template?.body?.trim();
@@ -45,10 +37,7 @@ function EditEmailTemplatePage({ isDarkMode }) {
 
   const errors = useMemo(
     () => ({
-      description: getRequiredError(
-        stripHtml(description),
-        "Email Description"
-      ),
+      description: getRequiredError(description, "Email Description"),
     }),
     [description]
   );
@@ -121,10 +110,10 @@ function EditEmailTemplatePage({ isDarkMode }) {
             required
             error={showError("description")}
           >
-            <RichTextEditor
-              isDarkMode={isDarkMode}
+            <textarea
+              className={`${inputClass} min-h-[240px] resize-y py-3`}
               value={description}
-              onChange={setDescription}
+              onChange={(e) => setDescription(e.target.value)}
               onBlur={() => touch("description")}
               placeholder="Enter email description"
               disabled={fieldDisabled(readOnly, isSubmitting)}

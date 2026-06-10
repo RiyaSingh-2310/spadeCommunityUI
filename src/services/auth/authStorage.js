@@ -22,7 +22,7 @@ function notifyAuthSessionChanged() {
  * @param {{ token: string, refreshToken?: string, admin?: object | null }} session
  */
 export function saveAuthSession({ token, refreshToken, admin }) {
-  const normalizedToken = String(token ?? "").trim();
+  const normalizedToken = normalizeAuthToken(token);
   if (!normalizedToken) {
     throw new Error("Cannot save auth session without a token.");
   }
@@ -59,8 +59,26 @@ export function getRefreshToken() {
   return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
+/** Strips accidental Bearer prefix, quotes, and whitespace from stored tokens. */
+export function normalizeAuthToken(token) {
+  const raw = String(token ?? "").trim();
+  if (!raw || raw === "undefined" || raw === "null") return "";
+
+  let normalized = raw.replace(/^Bearer\s+/i, "").trim();
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1).trim();
+  }
+
+  return normalized;
+}
+
 export function getAuthToken() {
-  return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+  const stored =
+    localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+  return normalizeAuthToken(stored);
 }
 
 export function isAuthenticated() {

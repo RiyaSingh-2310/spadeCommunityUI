@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
+import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
@@ -117,11 +118,13 @@ function EditGroupSurveyPage({ isDarkMode }) {
 
           <div className="mt-4 space-y-4">
             <FormField label="Project Description">
-              <textarea
-                className={`${inputClass} min-h-[120px] resize-y py-3`}
+              <RichTextEditor
+                isDarkMode={isDarkMode}
                 value={form.description}
-                onChange={(e) => setField("description", e.target.value)}
+                onChange={(value) => setField("description", value)}
+                placeholder="Enter project description"
                 disabled={fieldDisabled(readOnly, isSubmitting)}
+                height={200}
               />
             </FormField>
             <FormField label="Notes">

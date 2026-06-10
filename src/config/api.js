@@ -41,6 +41,10 @@ export const API_ROUTES = {
     byId: (id) => `/api/sales/project/${id}`,
     update: (id) => `/api/sales/project/${id}`,
   },
+  salesManagers: {
+    list: "/api/salesmanager/list",
+    create: "/api/salesmanager",
+  },
 };
 
 export const API_BASE_URL =

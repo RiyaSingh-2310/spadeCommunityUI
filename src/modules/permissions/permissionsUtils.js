@@ -72,6 +72,14 @@ function looksLikePermissionsMap(value) {
   return Object.values(value).some((entry) => looksLikePermissionFlags(entry));
 }
 
+/** API/backend aliases that differ from frontend module keys. */
+const MODULE_KEY_ALIASES = {
+  salesmanager: "sales_manager",
+  salesmanagers: "sales_manager",
+  projectmanager: "project_managers",
+  projectmanagers: "project_managers",
+};
+
 function resolveModuleKey(moduleName) {
   const raw = String(moduleName ?? "").trim();
   if (!raw) return null;
@@ -88,7 +96,23 @@ function resolveModuleKey(moduleName) {
   const snake = lower.replace(/[\s-]+/g, "_");
   if (PERMISSION_MODULE_KEYS.includes(snake)) return snake;
 
+  if (MODULE_KEY_ALIASES[lower]) return MODULE_KEY_ALIASES[lower];
+  if (MODULE_KEY_ALIASES[snake]) return MODULE_KEY_ALIASES[snake];
+
   return null;
+}
+
+function permissionsObjectToMap(source) {
+  const map = /** @type {Record<string, unknown>} */ ({});
+
+  for (const [rawKey, entry] of Object.entries(source)) {
+    const key = resolveModuleKey(rawKey);
+    if (key) {
+      map[key] = entry;
+    }
+  }
+
+  return map;
 }
 
 function permissionsArrayToMap(entries) {
@@ -302,8 +326,9 @@ export function normalizePermissions(raw) {
   const source = unwrapPermissionsSource(raw);
   if (!source || typeof source !== "object" || Array.isArray(source)) return base;
 
-  const map =
-    Array.isArray(source) ? permissionsArrayToMap(source) : /** @type {Record<string, unknown>} */ (source);
+  const map = Array.isArray(source)
+    ? permissionsArrayToMap(source)
+    : permissionsObjectToMap(source);
 
   for (const key of PERMISSION_MODULE_KEYS) {
     base[key] = parsePermissionEntry(map[key]);
