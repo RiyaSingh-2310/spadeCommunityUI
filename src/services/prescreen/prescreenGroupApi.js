@@ -1,5 +1,6 @@
 import { API_ROUTES } from "../../config/api";
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
+import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import {
   apiStatusToFormValue,
   formValueToApiStatus,
@@ -210,8 +211,10 @@ export function mapPrescreenGroupToForm(prescreen) {
 }
 
 /** GET /api/prescreen-survey/list */
-export async function getRecords() {
-  const data = await apiRequest(API_ROUTES.prescreenSurvey.list);
+export async function getRecords({ page, limit, search } = {}) {
+  const data = await apiRequest(
+    appendListQuery(API_ROUTES.prescreenSurvey.list, { page, limit, search })
+  );
   assertSuccess(data);
 
   const prescreens = extractPrescreenSurveyList(data);

@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../modules/shared/components/ModuleListingPage";
+import { useApiListing } from "../../modules/shared/hooks/useApiListing";
 import { useFlashMessage } from "../../modules/shared/hooks/useFlashMessage";
+import { useListingRefresh } from "../../modules/shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../modules/shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../services/toast/apiToast";
 import {
@@ -22,84 +24,22 @@ const LIST_COLUMNS = [
 
 function UsersPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const location = useLocation();
   useFlashMessage();
-  const [users, setUsers] = useState([]);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    rows: users,
+    totalRecords,
+    isLoading,
+    currentPage,
+    pageSize,
+    handleSearch,
+    handlePageChange,
+    handlePageSizeChange,
+    refresh: fetchUsers,
+  } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
+  useListingRefresh(fetchUsers);
+
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const fetchRequestIdRef = useRef(0);
-
-  const fetchUsers = useCallback(async () => {
-    const requestId = ++fetchRequestIdRef.current;
-    setIsLoading(true);
-
-    try {
-      const data = await getRecords({ page: currentPage, limit: pageSize });
-
-      if (requestId !== fetchRequestIdRef.current) {
-        return;
-      }
-
-      const total = data.total ?? data.count ?? 0;
-      const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
-
-      if (data.items.length === 0 && currentPage > 1 && total > 0) {
-        setCurrentPage((prev) => Math.max(1, Math.min(prev, totalPages) - 1));
-        return;
-      }
-
-      setUsers(data.items);
-      setTotalRecords(total);
-
-      if (currentPage > totalPages) {
-        setCurrentPage(totalPages);
-      }
-    } catch (error) {
-      if (requestId !== fetchRequestIdRef.current) {
-        return;
-      }
-      toastApiError(error);
-      setUsers([]);
-      setTotalRecords(0);
-    } finally {
-      if (requestId === fetchRequestIdRef.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [currentPage, pageSize]);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
-  useEffect(() => {
-    if (location.state?.refresh) {
-      fetchUsers();
-      navigate(location.pathname, { replace: true, state: null });
-    }
-  }, [location.state, location.pathname, navigate, fetchUsers]);
-
-  const handlePageChange = useCallback(
-    (nextPage) => {
-      const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize) || 1);
-      if (nextPage < 1 || nextPage > totalPages || nextPage === currentPage) {
-        return;
-      }
-      setCurrentPage(nextPage);
-    },
-    [currentPage, pageSize, totalRecords]
-  );
-
-  const handlePageSizeChange = useCallback((nextSize) => {
-    const safeSize = Number(nextSize);
-    if (!Number.isFinite(safeSize) || safeSize <= 0) return;
-    setPageSize(safeSize);
-    setCurrentPage(1);
-  }, []);
 
   const handleDeleteRequest = (row) => {
     setDeleteTarget(row);
@@ -169,15 +109,16 @@ function UsersPage({ isDarkMode }) {
         rowIdKey="id"
         permissionModule="users"
         actionVariant="user-management"
-        searchFields={["name", "email", "emailAddress"]}
         isLoading={isLoading}
         emptyMessage="No Admin Users Found"
         onEdit={navigateToUserEdit}
         onDelete={handleDeleteRequest}
         onManagePermissions={navigateToUserPermissions}
         onStatusToggle={handleStatusToggle}
+        onSearch={handleSearch}
         totalRecords={totalRecords}
         serverPaginated
+        serverSearch
         paginationPage={currentPage}
         onPaginationPageChange={handlePageChange}
         paginationPageSize={pageSize}

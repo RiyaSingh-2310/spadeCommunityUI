@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
+import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import {
   deleteRecord,
@@ -15,40 +17,23 @@ const LIST_COLUMNS = ["S.No", "Title", "Language", "Right Answer", "Status", "Ac
 
 function PrescreenPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const location = useLocation();
   useFlashMessage();
-  const [rows, setRows] = useState([]);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    rows,
+    totalRecords,
+    isLoading,
+    currentPage,
+    pageSize,
+    handleSearch,
+    handlePageChange,
+    handlePageSizeChange,
+    refresh: fetchPrescreens,
+  } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
+  useListingRefresh(fetchPrescreens);
+
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
-
-  const fetchPrescreens = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const data = await getRecords();
-      setRows(data.items);
-      setTotalRecords(data.total ?? data.count ?? data.items.length);
-    } catch (error) {
-      toastApiError(error);
-      setRows([]);
-      setTotalRecords(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchPrescreens();
-  }, [fetchPrescreens]);
-
-  useEffect(() => {
-    if (location.state?.refresh) {
-      fetchPrescreens();
-      navigate(location.pathname, { replace: true, state: null });
-    }
-  }, [location.state, location.pathname, navigate, fetchPrescreens]);
 
   const handleEdit = (row) => {
     if (!row?.id) return;
@@ -84,7 +69,6 @@ function PrescreenPage({ isDarkMode }) {
     if (!row?.id || statusUpdatingId != null) return;
 
     const nextStatus = row.status === "Active" ? "Inactive" : "Active";
-    const previousStatus = row.status;
     setStatusUpdatingId(row.id);
 
     try {
@@ -95,19 +79,10 @@ function PrescreenPage({ isDarkMode }) {
         options: row.options,
         status: nextStatus,
       });
-      setRows((prev) =>
-        prev.map((item) =>
-          String(item.id) === String(row.id) ? { ...item, status: nextStatus } : item
-        )
-      );
       toastApiSuccess(data);
+      await fetchPrescreens();
     } catch (error) {
       toastApiError(error);
-      setRows((prev) =>
-        prev.map((item) =>
-          String(item.id) === String(row.id) ? { ...item, status: previousStatus } : item
-        )
-      );
     } finally {
       setStatusUpdatingId(null);
     }
@@ -128,11 +103,16 @@ function PrescreenPage({ isDarkMode }) {
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}
         permissionModule="prescreen"
-        searchFields={["title", "language", "rightAnswer"]}
         isLoading={isLoading}
         emptyMessage="No prescreens found"
+        onSearch={handleSearch}
         totalRecords={totalRecords}
-        pageSize={DEFAULT_PAGE_SIZE}
+        serverPaginated
+        serverSearch
+        paginationPage={currentPage}
+        onPaginationPageChange={handlePageChange}
+        paginationPageSize={pageSize}
+        onPaginationPageSizeChange={handlePageSizeChange}
         showPagination
         nowrapAllCells
       />

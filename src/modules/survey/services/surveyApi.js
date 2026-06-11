@@ -1,5 +1,6 @@
 import { API_ROUTES } from "../../../config/api";
 import { extractListTotalFromResponse } from "../../shared/utils/listResponse";
+import { appendListQuery } from "../../shared/utils/listQueryParams";
 import {
   apiStatusToFormValue,
   formValueToApiStatus,
@@ -312,29 +313,20 @@ export function buildUpdateSurveyPayload(form) {
   return buildCreateSurveyPayload(form);
 }
 
-function buildSurveyListPath({ page, limit, groupProjectId } = {}) {
-  const params = new URLSearchParams();
-  const safePage = Number(page);
-  const safeLimit = Number(limit);
-  const safeGroupProjectId = Number(groupProjectId);
-
-  if (Number.isFinite(safePage) && safePage > 0) {
-    params.set("page", String(safePage));
-  }
-  if (Number.isFinite(safeLimit) && safeLimit > 0) {
-    params.set("limit", String(safeLimit));
-  }
-  if (Number.isFinite(safeGroupProjectId) && safeGroupProjectId > 0) {
-    params.set("group_project_id", String(safeGroupProjectId));
-  }
-
-  const query = params.toString();
-  return query ? `${API_ROUTES.survey.list}?${query}` : API_ROUTES.survey.list;
-}
-
 /** GET /api/survey/list */
-export async function getRecords({ page, limit, groupProjectId } = {}) {
-  const data = await apiRequest(buildSurveyListPath({ page, limit, groupProjectId }));
+export async function getRecords({ page, limit, search, groupProjectId } = {}) {
+  const safeGroupProjectId = Number(groupProjectId);
+  const data = await apiRequest(
+    appendListQuery(API_ROUTES.survey.list, {
+      page,
+      limit,
+      search,
+      extra:
+        Number.isFinite(safeGroupProjectId) && safeGroupProjectId > 0
+          ? { group_project_id: safeGroupProjectId }
+          : undefined,
+    })
+  );
   assertSuccess(data);
 
   const surveys = extractSurveysList(data);

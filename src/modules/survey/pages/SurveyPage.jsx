@@ -1,44 +1,27 @@
-import { useCallback, useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
+import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
-import { toastApiError } from "../../../services/toast/apiToast";
 import { getRecords } from "../services/surveyApi";
 
 function SurveyPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const location = useLocation();
   useFlashMessage();
-  const [rows, setRows] = useState([]);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchSurveys = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const data = await getRecords();
-      setRows(data.items);
-      setTotalRecords(data.total ?? data.count ?? data.items.length);
-    } catch (error) {
-      toastApiError(error);
-      setRows([]);
-      setTotalRecords(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchSurveys();
-  }, [fetchSurveys]);
-
-  useEffect(() => {
-    if (location.state?.refresh) {
-      fetchSurveys();
-      navigate(location.pathname, { replace: true, state: null });
-    }
-  }, [location.state, location.pathname, navigate, fetchSurveys]);
+  const {
+    rows,
+    setRows,
+    totalRecords,
+    isLoading,
+    currentPage,
+    pageSize,
+    handleSearch,
+    handlePageChange,
+    handlePageSizeChange,
+    refresh: fetchSurveys,
+  } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
+  useListingRefresh(fetchSurveys);
 
   const handleStatusToggle = (row) => {
     if (!row?.recordId) return;
@@ -105,17 +88,16 @@ function SurveyPage({ isDarkMode }) {
       }}
       onStatusToggle={handleStatusToggle}
       permissionModule="survey"
-      searchFields={[
-        "id",
-        "projectName",
-        "clientCode",
-        "startDate",
-        "endDate",
-      ]}
       isLoading={isLoading}
       emptyMessage="No Data Available"
+      onSearch={handleSearch}
       totalRecords={totalRecords}
-      pageSize={DEFAULT_PAGE_SIZE}
+      serverPaginated
+      serverSearch
+      paginationPage={currentPage}
+      onPaginationPageChange={handlePageChange}
+      paginationPageSize={pageSize}
+      onPaginationPageSizeChange={handlePageSizeChange}
       showPagination
       nowrapAllCells
     />

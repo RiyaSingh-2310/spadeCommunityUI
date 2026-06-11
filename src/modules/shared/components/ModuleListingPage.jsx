@@ -92,6 +92,8 @@ function ModuleListingPage({
   totalRecords = null,
   /** When true, rows are already paginated by the API; parent controls page + page size. */
   serverPaginated = false,
+  /** When true, search is API-driven; disables client-side filtering. */
+  serverSearch = false,
   paginationPage = 1,
   onPaginationPageChange,
   paginationPageSize,
@@ -111,8 +113,9 @@ function ModuleListingPage({
   const debouncedQuery = useDebouncedValue(query);
   const [internalCurrentPage, setInternalCurrentPage] = useState(1);
   const [internalPageSize, setInternalPageSize] = useState(initialPageSize);
-  const currentPage = serverPaginated ? paginationPage : internalCurrentPage;
-  const pageSize = serverPaginated ? (paginationPageSize ?? initialPageSize) : internalPageSize;
+  const usesServerListing = serverPaginated || serverSearch;
+  const currentPage = usesServerListing ? paginationPage : internalCurrentPage;
+  const pageSize = usesServerListing ? (paginationPageSize ?? initialPageSize) : internalPageSize;
   const [internalData, setInternalData] = useState(rows);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -252,57 +255,61 @@ function ModuleListingPage({
 
   const handlePageChange = useCallback(
     (nextPage) => {
-      if (serverPaginated) {
+      if (usesServerListing) {
         onPaginationPageChange?.(nextPage);
         return;
       }
       setInternalCurrentPage(nextPage);
     },
-    [serverPaginated, onPaginationPageChange]
+    [usesServerListing, onPaginationPageChange]
   );
 
   const handlePageSizeChange = useCallback(
     (nextSize) => {
-      if (serverPaginated) {
+      if (usesServerListing) {
         onPaginationPageSizeChange?.(nextSize);
         return;
       }
       setInternalPageSize(nextSize);
       setInternalCurrentPage(1);
     },
-    [serverPaginated, onPaginationPageSizeChange]
+    [usesServerListing, onPaginationPageSizeChange]
   );
 
   const handleQueryChange = (value) => {
     setQuery(value);
-    if (!serverPaginated) {
+    if (!usesServerListing) {
       setInternalCurrentPage(1);
     }
   };
 
   const normalizedQuery = debouncedQuery.trim().toLowerCase();
 
-  const filtered = data.filter((row) => {
-    if (!normalizedQuery) return true;
-    if (searchFields?.length) {
-      return searchFields.some((field) =>
-        String(row[field] ?? "")
+  const filtered = usesServerListing
+    ? data
+    : data.filter((row) => {
+        if (!normalizedQuery) return true;
+        if (searchFields?.length) {
+          return searchFields.some((field) =>
+            String(row[field] ?? "")
+              .toLowerCase()
+              .includes(normalizedQuery)
+          );
+        }
+        return Object.values(row)
+          .join(" ")
           .toLowerCase()
-          .includes(normalizedQuery)
-      );
-    }
-    return Object.values(row)
-      .join(" ")
-      .toLowerCase()
-      .includes(normalizedQuery);
-  });
+          .includes(normalizedQuery);
+      });
 
-  const paginationTotalItems = normalizedQuery
-    ? filtered.length
-    : totalRecords ?? filtered.length;
+  const paginationTotalItems = usesServerListing
+    ? totalRecords ?? filtered.length
+    : normalizedQuery
+      ? filtered.length
+      : totalRecords ?? filtered.length;
 
   const pagination = useMemo(() => {
-    if (serverPaginated && !normalizedQuery) {
+    if (usesServerListing) {
       const totalPages = Math.max(1, Math.ceil(paginationTotalItems / pageSize) || 1);
       const safePage = Math.min(Math.max(1, currentPage), totalPages);
 
@@ -328,30 +335,29 @@ function ModuleListingPage({
     currentPage,
     pageSize,
     paginationTotalItems,
-    serverPaginated,
-    normalizedQuery,
+    usesServerListing,
   ]);
 
   useEffect(() => {
-    if (serverPaginated) return;
+    if (usesServerListing) return;
     const pages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
     setInternalCurrentPage((prev) => Math.min(prev, pages));
-  }, [filtered.length, pageSize, debouncedQuery, serverPaginated]);
+  }, [filtered.length, pageSize, debouncedQuery, usesServerListing]);
 
   const hasProfileImageColumn = columns.some(isProfileImageColumn);
 
   const paginationFooter =
     showPagination &&
     !isLoading &&
-    (filtered.length > 0 || (serverPaginated && (totalRecords ?? 0) > 0)) ? (
+    (filtered.length > 0 || (usesServerListing && (totalRecords ?? 0) > 0)) ? (
       <AdminPagination
         isDarkMode={isDarkMode}
         currentPage={pagination.currentPage}
         totalPages={pagination.totalPages}
         totalItems={pagination.totalItems}
         visibleItemCount={
-          totalRecords != null && !normalizedQuery
-            ? serverPaginated
+          totalRecords != null && (usesServerListing || !normalizedQuery)
+            ? usesServerListing
               ? pagination.currentPage >= pagination.totalPages
                 ? pagination.totalItems
                 : Math.min(pagination.currentPage * pageSize, pagination.totalItems)

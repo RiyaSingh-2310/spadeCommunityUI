@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
+import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { isAuthenticated } from "../../../services/auth/authStorage";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
@@ -16,47 +18,31 @@ const LIST_COLUMNS = ["S.No", "Name", "Email Address", "Status", "Action"];
 
 function SalesManagerPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const location = useLocation();
   useFlashMessage();
-  const [salesManagers, setSalesManagers] = useState([]);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchSalesManagers = useCallback(async (params) => {
+    if (!isAuthenticated()) {
+      return { items: [], total: 0 };
+    }
+    return getRecords(params);
+  }, []);
+
+  const {
+    rows: salesManagers,
+    totalRecords,
+    isLoading,
+    currentPage,
+    pageSize,
+    handleSearch,
+    handlePageChange,
+    handlePageSizeChange,
+    refresh: refreshSalesManagers,
+  } = useApiListing({ fetchFn: fetchSalesManagers, initialPageSize: DEFAULT_PAGE_SIZE });
+  useListingRefresh(refreshSalesManagers);
+
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const fetchSalesManagers = useCallback(async () => {
-    if (!isAuthenticated()) {
-      setSalesManagers([]);
-      setTotalRecords(0);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const data = await getRecords();
-      setSalesManagers(data.items);
-      setTotalRecords(data.total ?? data.count ?? data.items.length);
-    } catch (error) {
-      toastApiError(error);
-      setSalesManagers([]);
-      setTotalRecords(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchSalesManagers();
-  }, [fetchSalesManagers]);
-
-  useEffect(() => {
-    if (location.state?.refresh) {
-      fetchSalesManagers();
-      navigate(location.pathname, { replace: true, state: null });
-    }
-  }, [location.state, location.pathname, navigate, fetchSalesManagers]);
 
   const handleDeleteRequest = (row) => {
     setDeleteTarget(row);
@@ -75,7 +61,7 @@ function SalesManagerPage({ isDarkMode }) {
       const data = await deleteSalesManager(deleteTarget.id);
       setDeleteTarget(null);
       toastApiSuccess(data);
-      await fetchSalesManagers();
+      await refreshSalesManagers();
     } catch (error) {
       toastApiError(error);
     } finally {
@@ -87,28 +73,16 @@ function SalesManagerPage({ isDarkMode }) {
     if (!row?.id || statusUpdatingId != null) return;
 
     const nextStatus = row.status === "Active" ? "Inactive" : "Active";
-    const previousStatus = row.status;
     setStatusUpdatingId(row.id);
 
     try {
       const data = await updateSalesManagerStatus(row.id, {
         status: nextStatus,
       });
-      setSalesManagers((prev) =>
-        prev.map((item) =>
-          String(item.id) === String(row.id) ? { ...item, status: nextStatus } : item
-        )
-      );
       toastApiSuccess(data);
+      await refreshSalesManagers();
     } catch (error) {
       toastApiError(error);
-      setSalesManagers((prev) =>
-        prev.map((item) =>
-          String(item.id) === String(row.id)
-            ? { ...item, status: previousStatus }
-            : item
-        )
-      );
     } finally {
       setStatusUpdatingId(null);
     }
@@ -127,13 +101,18 @@ function SalesManagerPage({ isDarkMode }) {
         rowIdKey="id"
         editPath="/sales/sales-manager"
         permissionModule="sales_manager"
-        searchFields={["name", "emailAddress", "code"]}
         isLoading={isLoading}
         emptyMessage="No sales managers found"
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}
+        onSearch={handleSearch}
         totalRecords={totalRecords}
-        pageSize={DEFAULT_PAGE_SIZE}
+        serverPaginated
+        serverSearch
+        paginationPage={currentPage}
+        onPaginationPageChange={handlePageChange}
+        paginationPageSize={pageSize}
+        onPaginationPageSizeChange={handlePageSizeChange}
         showPagination
         nowrapAllCells
       />

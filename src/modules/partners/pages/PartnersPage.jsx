@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
+import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
@@ -28,41 +30,29 @@ const LIST_COLUMNS = [
 
 function PartnersPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const location = useLocation();
   useFlashMessage();
-  const [partners, setPartners] = useState([]);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchPartners = useCallback(async (params) => {
+    clearPartnerDetailCache();
+    return getRecords(params);
+  }, []);
+
+  const {
+    rows: partners,
+    totalRecords,
+    isLoading,
+    currentPage,
+    pageSize,
+    handleSearch,
+    handlePageChange,
+    handlePageSizeChange,
+    refresh: refreshPartners,
+  } = useApiListing({ fetchFn: fetchPartners, initialPageSize: DEFAULT_PAGE_SIZE });
+  useListingRefresh(refreshPartners);
+
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
-
-  const fetchPartners = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      clearPartnerDetailCache();
-      const data = await getRecords();
-      setPartners(data.items);
-      setTotalRecords(data.total ?? data.count ?? data.items.length);
-    } catch (error) {
-      toastApiError(error);
-      setPartners([]);
-      setTotalRecords(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchPartners();
-  }, [fetchPartners]);
-
-  useEffect(() => {
-    if (location.state?.refresh) {
-      fetchPartners();
-      navigate(location.pathname, { replace: true, state: null });
-    }
-  }, [location.state, location.pathname, navigate, fetchPartners]);
 
   const handleDeleteRequest = (row) => {
     setDeleteTarget(row);
@@ -81,7 +71,7 @@ function PartnersPage({ isDarkMode }) {
       const data = await deleteRecord(deleteTarget.id);
       setDeleteTarget(null);
       toastApiSuccess(data);
-      await fetchPartners();
+      await refreshPartners();
     } catch (error) {
       toastApiError(error);
     } finally {
@@ -101,7 +91,7 @@ function PartnersPage({ isDarkMode }) {
         status: nextStatus,
       });
       toastApiSuccess(data);
-      await fetchPartners();
+      await refreshPartners();
     } catch (error) {
       toastApiError(error);
     } finally {
@@ -123,21 +113,18 @@ function PartnersPage({ isDarkMode }) {
         editPath="/partners"
         permissionModule="partners"
         nameAsText
-        searchFields={[
-          "partnerCode",
-          "name",
-          "emailAddress",
-          "country",
-          "contactNumber",
-          "websiteUrl",
-          "createdDate",
-        ]}
         isLoading={isLoading}
         emptyMessage="No partners found"
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}
+        onSearch={handleSearch}
         totalRecords={totalRecords}
-        pageSize={DEFAULT_PAGE_SIZE}
+        serverPaginated
+        serverSearch
+        paginationPage={currentPage}
+        onPaginationPageChange={handlePageChange}
+        paginationPageSize={pageSize}
+        onPaginationPageSizeChange={handlePageSizeChange}
         showPagination
         nowrapAllCells
         renderExpandedContent={(row) => <PartnerExpandableDetails partnerId={row.id} />}

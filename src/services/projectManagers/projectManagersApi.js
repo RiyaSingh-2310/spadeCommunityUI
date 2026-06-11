@@ -1,5 +1,6 @@
 import { API_ROUTES } from "../../config/api";
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
+import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import { resolveMediaUrl, splitFullName } from "../../modules/shared/utils/userAvatar";
 import {
   apiStatusToFormValue,
@@ -94,8 +95,10 @@ export function formStatusToApiStatus(status) {
 }
 
 /** GET /api/projectmanager/list */
-export async function getRecords() {
-  const data = await apiRequest(API_ROUTES.projectManagers.list);
+export async function getRecords({ page, limit, search } = {}) {
+  const data = await apiRequest(
+    appendListQuery(API_ROUTES.projectManagers.list, { page, limit, search })
+  );
   assertSuccess(data);
 
   const projectManagers = extractProjectManagersList(data);

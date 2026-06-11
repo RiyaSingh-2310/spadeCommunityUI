@@ -1,5 +1,6 @@
 import { API_ROUTES } from "../../config/api";
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
+import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import { resolveMediaUrl, splitFullName } from "../../modules/shared/utils/userAvatar";
 import {
   apiStatusToFormValue,
@@ -104,8 +105,10 @@ export async function getRecord(id) {
 }
 
 /** GET /api/salesmanager/list */
-export async function getRecords() {
-  const data = await apiRequest(API_ROUTES.salesManagers.list);
+export async function getRecords({ page, limit, search } = {}) {
+  const data = await apiRequest(
+    appendListQuery(API_ROUTES.salesManagers.list, { page, limit, search })
+  );
   assertSuccess(data);
 
   const salesManagers = extractSalesManagersList(data);

@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
+import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
@@ -13,65 +15,36 @@ const LIST_COLUMNS = ["S.No", "Name", "Email Address", "Status", "Action"];
 
 function ProjectManagersPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const location = useLocation();
   useFlashMessage();
-  const [projectManagers, setProjectManagers] = useState([]);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    rows: projectManagers,
+    totalRecords,
+    isLoading,
+    currentPage,
+    pageSize,
+    handleSearch,
+    handlePageChange,
+    handlePageSizeChange,
+    refresh: fetchProjectManagers,
+  } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
+  useListingRefresh(fetchProjectManagers);
+
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
-
-  const fetchProjectManagers = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const data = await getRecords();
-      setProjectManagers(data.items);
-      setTotalRecords(data.total ?? data.count ?? data.items.length);
-    } catch (error) {
-      toastApiError(error);
-      setProjectManagers([]);
-      setTotalRecords(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchProjectManagers();
-  }, [fetchProjectManagers]);
-
-  useEffect(() => {
-    if (location.state?.refresh) {
-      fetchProjectManagers();
-      navigate(location.pathname, { replace: true, state: null });
-    }
-  }, [location.state, location.pathname, navigate, fetchProjectManagers]);
 
   const handleStatusToggle = async (row) => {
     if (!row?.id || statusUpdatingId != null) return;
 
     const nextStatus = row.status === "Active" ? "Inactive" : "Active";
-    const previousStatus = row.status;
     setStatusUpdatingId(row.id);
 
     try {
       const data = await updateProjectManagerStatus(row.id, {
         status: nextStatus,
       });
-      setProjectManagers((prev) =>
-        prev.map((item) =>
-          String(item.id) === String(row.id) ? { ...item, status: nextStatus } : item
-        )
-      );
       toastApiSuccess(data);
+      await fetchProjectManagers();
     } catch (error) {
       toastApiError(error);
-      setProjectManagers((prev) =>
-        prev.map((item) =>
-          String(item.id) === String(row.id)
-            ? { ...item, status: previousStatus }
-            : item
-        )
-      );
     } finally {
       setStatusUpdatingId(null);
     }
@@ -89,12 +62,17 @@ function ProjectManagersPage({ isDarkMode }) {
       rowIdKey="id"
       editPath="/project-managers"
       permissionModule="project_managers"
-      searchFields={["name", "emailAddress", "code"]}
       isLoading={isLoading}
       emptyMessage="No project managers found"
       onStatusToggle={handleStatusToggle}
+      onSearch={handleSearch}
       totalRecords={totalRecords}
-      pageSize={DEFAULT_PAGE_SIZE}
+      serverPaginated
+      serverSearch
+      paginationPage={currentPage}
+      onPaginationPageChange={handlePageChange}
+      paginationPageSize={pageSize}
+      onPaginationPageSizeChange={handlePageSizeChange}
       showPagination
       nowrapAllCells
     />

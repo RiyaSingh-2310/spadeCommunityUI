@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
+import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { deleteSurvey, updateSurveyStatus } from "../services/surveyApi";
@@ -10,50 +12,64 @@ import { getGroupProjectSurveys, getRecord } from "../services/groupSurveyApi";
 
 function GroupSurveyProjectsListPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const location = useLocation();
   const { groupId } = useParams();
   useFlashMessage();
 
   const [groupRecord, setGroupRecord] = useState(null);
-  const [rows, setRows] = useState([]);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
-  const fetchProjects = useCallback(async () => {
-    if (!groupId) return;
+  const fetchProjects = useCallback(
+    async (params) => {
+      if (!groupId) {
+        return { items: [], total: 0 };
+      }
+      return getGroupProjectSurveys(groupId, params);
+    },
+    [groupId]
+  );
 
-    setIsLoading(true);
-    try {
-      const [group, surveys] = await Promise.all([
-        getRecord(groupId),
-        getGroupProjectSurveys(groupId),
-      ]);
-      setGroupRecord(group);
-      setRows(surveys.items);
-      setTotalRecords(surveys.total ?? surveys.count ?? surveys.items.length);
-    } catch (error) {
-      toastApiError(error);
+  const {
+    rows,
+    setRows,
+    totalRecords,
+    isLoading,
+    currentPage,
+    pageSize,
+    handleSearch,
+    handlePageChange,
+    handlePageSizeChange,
+    refresh: refreshProjects,
+  } = useApiListing({
+    fetchFn: fetchProjects,
+    initialPageSize: DEFAULT_PAGE_SIZE,
+    enabled: Boolean(groupId),
+  });
+  useListingRefresh(refreshProjects);
+
+  useEffect(() => {
+    if (!groupId) {
       setGroupRecord(null);
-      setRows([]);
-      setTotalRecords(0);
-    } finally {
-      setIsLoading(false);
+      return;
     }
+
+    let cancelled = false;
+    getRecord(groupId)
+      .then((group) => {
+        if (!cancelled) setGroupRecord(group);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          toastApiError(error);
+          setGroupRecord(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [groupId]);
-
-  useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
-
-  useEffect(() => {
-    if (location.state?.refresh) {
-      fetchProjects();
-      navigate(location.pathname, { replace: true, state: null });
-    }
-  }, [location.state, location.pathname, navigate, fetchProjects]);
 
   const handleDeleteRequest = (row) => {
     setDeleteTarget(row);
@@ -73,7 +89,7 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
       const data = await deleteSurvey(recordId);
       setDeleteTarget(null);
       toastApiSuccess(data);
-      await fetchProjects();
+      await refreshProjects();
     } catch (error) {
       toastApiError(error);
     } finally {
@@ -156,19 +172,16 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
         }}
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}
-        searchFields={[
-          "id",
-          "projectName",
-          "clientCode",
-          "startDate",
-          "endDate",
-          "loi",
-          "ir",
-        ]}
         isLoading={isLoading}
         emptyMessage="No projects found"
+        onSearch={handleSearch}
         totalRecords={totalRecords}
-        pageSize={DEFAULT_PAGE_SIZE}
+        serverPaginated
+        serverSearch
+        paginationPage={currentPage}
+        onPaginationPageChange={handlePageChange}
+        paginationPageSize={pageSize}
+        onPaginationPageSizeChange={handlePageSizeChange}
         showPagination
         nowrapAllCells
       />

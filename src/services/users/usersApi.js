@@ -11,6 +11,7 @@ import {
   formatStatusLabel,
 } from "../../modules/shared/utils/statusLabels";
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
+import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import { resolveMediaUrl } from "../../modules/shared/utils/userAvatar";
 
 function isApiSuccess(data) {
@@ -152,28 +153,14 @@ export function mapAdminToForm(admin) {
   };
 }
 
-function buildAdminListPath({ page, limit } = {}) {
-  const params = new URLSearchParams();
-  const safePage = Number(page);
-  const safeLimit = Number(limit);
-
-  if (Number.isFinite(safePage) && safePage > 0) {
-    params.set("page", String(safePage));
-  }
-  if (Number.isFinite(safeLimit) && safeLimit > 0) {
-    params.set("limit", String(safeLimit));
-  }
-
-  const query = params.toString();
-  return query ? `${API_ROUTES.admin.all}?${query}` : API_ROUTES.admin.all;
-}
-
 /**
  * GET /api/admin/all — paginated admin list for listing page.
- * @param {{ page?: number, limit?: number }} [options]
+ * @param {{ page?: number, limit?: number, search?: string }} [options]
  */
-export async function getRecords({ page = 1, limit = 10 } = {}) {
-  const data = await apiRequest(buildAdminListPath({ page, limit }));
+export async function getRecords({ page = 1, limit = 10, search } = {}) {
+  const data = await apiRequest(
+    appendListQuery(API_ROUTES.admin.all, { page, limit, search })
+  );
   assertSuccess(data);
 
   const admins = extractAdminsList(data);

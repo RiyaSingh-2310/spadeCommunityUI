@@ -6,6 +6,7 @@ import {
 } from "../../shared/utils/statusLabels";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
+import { appendListQuery } from "../../shared/utils/listQueryParams";
 import { createSurvey, getRecords as getSurveyRecords } from "./surveyApi";
 
 function isApiSuccess(data) {
@@ -30,21 +31,6 @@ function normalizeGroupProjectId(id) {
   return encodeURIComponent(normalizedId);
 }
 
-function buildListPath({ page, limit } = {}) {
-  const params = new URLSearchParams();
-  const safePage = Number(page);
-  const safeLimit = Number(limit);
-
-  if (Number.isFinite(safePage) && safePage > 0) {
-    params.set("page", String(safePage));
-  }
-  if (Number.isFinite(safeLimit) && safeLimit > 0) {
-    params.set("limit", String(safeLimit));
-  }
-
-  const query = params.toString();
-  return query ? `${API_ROUTES.groupSurvey.list}?${query}` : API_ROUTES.groupSurvey.list;
-}
 
 function extractGroupProjectsList(data) {
   if (!data || typeof data !== "object") return [];
@@ -163,8 +149,10 @@ export function createEmptyGroupProjectForm() {
 }
 
 /** GET /api/survey/groupproject/list */
-export async function getRecords({ page, limit } = {}) {
-  const data = await apiRequest(buildListPath({ page, limit }));
+export async function getRecords({ page, limit, search } = {}) {
+  const data = await apiRequest(
+    appendListQuery(API_ROUTES.groupSurvey.list, { page, limit, search })
+  );
   assertSuccess(data);
 
   const projects = extractGroupProjectsList(data);

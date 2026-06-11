@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../modules/shared/components/ModuleListingPage";
+import { useApiListing } from "../../modules/shared/hooks/useApiListing";
 import { useFlashMessage } from "../../modules/shared/hooks/useFlashMessage";
+import { useListingRefresh } from "../../modules/shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../modules/shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../services/toast/apiToast";
 import {
@@ -25,40 +27,23 @@ const LIST_COLUMNS = [
 
 function ClientsPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const location = useLocation();
   useFlashMessage();
-  const [clients, setClients] = useState([]);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    rows: clients,
+    totalRecords,
+    isLoading,
+    currentPage,
+    pageSize,
+    handleSearch,
+    handlePageChange,
+    handlePageSizeChange,
+    refresh: fetchClients,
+  } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
+  useListingRefresh(fetchClients);
+
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
-
-  const fetchClients = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const data = await getRecords();
-      setClients(data.items);
-      setTotalRecords(data.total ?? data.count ?? data.items.length);
-    } catch (error) {
-      toastApiError(error);
-      setClients([]);
-      setTotalRecords(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchClients();
-  }, [fetchClients]);
-
-  useEffect(() => {
-    if (location.state?.refresh) {
-      fetchClients();
-      navigate(location.pathname, { replace: true, state: null });
-    }
-  }, [location.state, location.pathname, navigate, fetchClients]);
 
   const handleDeleteRequest = (row) => {
     setDeleteTarget(row);
@@ -89,7 +74,6 @@ function ClientsPage({ isDarkMode }) {
     if (!row?.id || statusUpdatingId != null) return;
 
     const nextStatus = row.status === "Active" ? "Inactive" : "Active";
-    const previousStatus = row.status;
     setStatusUpdatingId(row.id);
 
     try {
@@ -99,21 +83,10 @@ function ClientsPage({ isDarkMode }) {
         country: row.countryValue ?? row.country,
         contactNumber: row.contactNumber,
       });
-      setClients((prev) =>
-        prev.map((item) =>
-          String(item.id) === String(row.id) ? { ...item, status: nextStatus } : item
-        )
-      );
       toastApiSuccess(data);
+      await fetchClients();
     } catch (error) {
       toastApiError(error);
-      setClients((prev) =>
-        prev.map((item) =>
-          String(item.id) === String(row.id)
-            ? { ...item, status: previousStatus }
-            : item
-        )
-      );
     } finally {
       setStatusUpdatingId(null);
     }
@@ -132,20 +105,19 @@ function ClientsPage({ isDarkMode }) {
         rowIdKey="id"
         editPath="/clients"
         onDelete={handleDeleteRequest}
-        searchFields={[
-          "name",
-          "emailAddress",
-          "country",
-          "contactNumber",
-          "clientCode",
-        ]}
         isLoading={isLoading}
         emptyMessage="No clients found"
         onStatusToggle={handleStatusToggle}
         permissionModule="clients"
         nameAsText
+        onSearch={handleSearch}
         totalRecords={totalRecords}
-        pageSize={DEFAULT_PAGE_SIZE}
+        serverPaginated
+        serverSearch
+        paginationPage={currentPage}
+        onPaginationPageChange={handlePageChange}
+        paginationPageSize={pageSize}
+        onPaginationPageSizeChange={handlePageSizeChange}
         showPagination
         nowrapAllCells
       />

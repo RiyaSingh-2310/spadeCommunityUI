@@ -1,5 +1,6 @@
 import { API_ROUTES } from "../../config/api";
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
+import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
 
@@ -199,8 +200,10 @@ export function mapSalesLogToRow(log) {
 export { resolveSalesProjectLogId };
 
 /** GET /api/sales/project/list */
-export async function getRecords() {
-  const data = await apiRequest(API_ROUTES.salesProjects.list);
+export async function getRecords({ page, limit, search } = {}) {
+  const data = await apiRequest(
+    appendListQuery(API_ROUTES.salesProjects.list, { page, limit, search })
+  );
   assertSuccess(data);
 
   const projects = extractSalesProjectsList(data);

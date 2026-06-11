@@ -2,6 +2,7 @@ import { API_ROUTES } from "../../config/api";
 import { formatCountryLabel, getCountries } from "../countries/countriesApi";
 import { getDefaultPhoneCountryCode } from "../../modules/shared/data/phoneCountries";
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
+import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import {
   apiStatusToFormValue,
   formValueToApiStatus,
@@ -239,8 +240,11 @@ export function formStatusToApiStatus(status) {
 }
 
 /** GET /api/partner/list */
-export async function getRecords() {
-  const [, data] = await Promise.all([getCountries(), apiRequest(API_ROUTES.partners.list)]);
+export async function getRecords({ page, limit, search } = {}) {
+  const [, data] = await Promise.all([
+    getCountries(),
+    apiRequest(appendListQuery(API_ROUTES.partners.list, { page, limit, search })),
+  ]);
   assertSuccess(data);
 
   const partners = extractPartnersList(data);
