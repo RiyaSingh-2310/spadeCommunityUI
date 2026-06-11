@@ -34,6 +34,7 @@ function RfqPage({ isDarkMode }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [addLogTarget, setAddLogTarget] = useState(null);
   const [viewLogsTarget, setViewLogsTarget] = useState(null);
+  const [logsRefreshKey, setLogsRefreshKey] = useState(0);
 
   const fetchProjects = useCallback(async () => {
     setIsLoading(true);
@@ -127,13 +128,17 @@ function RfqPage({ isDarkMode }) {
         row={addLogTarget}
         isDarkMode={isDarkMode}
         onClose={() => setAddLogTarget(null)}
-        onSubmitted={fetchProjects}
+        onSubmitted={() => {
+          fetchProjects();
+          setLogsRefreshKey((key) => key + 1);
+        }}
       />
 
       <RfqSalesLogListModal
         isOpen={Boolean(viewLogsTarget)}
         row={viewLogsTarget}
         isDarkMode={isDarkMode}
+        refreshKey={logsRefreshKey}
         onClose={() => setViewLogsTarget(null)}
       />
     </div>

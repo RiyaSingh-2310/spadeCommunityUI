@@ -254,6 +254,37 @@ export async function getRecords() {
   };
 }
 
+const partnerDetailCache = new Map();
+
+/** Clears cached partner detail responses (all rows or one id). */
+export function clearPartnerDetailCache(id) {
+  if (id == null || String(id).trim() === "") {
+    partnerDetailCache.clear();
+    return;
+  }
+  partnerDetailCache.delete(String(id));
+}
+
+/**
+ * GET /api/partner/:id with in-memory cache for expandable rows.
+ * @param {string|number} id
+ * @param {{ force?: boolean }} [options]
+ */
+export async function getPartnerDetailCached(id, { force = false } = {}) {
+  const cacheKey = String(id ?? "").trim();
+  if (!cacheKey) {
+    throw new ApiError("Invalid partner id.", null);
+  }
+
+  if (!force && partnerDetailCache.has(cacheKey)) {
+    return partnerDetailCache.get(cacheKey);
+  }
+
+  const partner = await getRecord(id);
+  partnerDetailCache.set(cacheKey, partner);
+  return partner;
+}
+
 /** GET /api/partner/:id */
 export async function getRecord(id) {
   const normalizedId = normalizePartnerId(id);
@@ -266,6 +297,97 @@ export async function getRecord(id) {
   }
 
   return partner;
+}
+
+const PARTNER_EXPANDABLE_FIELD_CONFIG = [
+  { label: "Contact Person", rowKey: "contactPerson", apiKeys: ["contact_person"] },
+  { label: "Panel Size", rowKey: "panelSize", apiKeys: ["panel_size"] },
+  { label: "Complete URL", rowKey: "completeUrl", apiKeys: ["complete_val", "complete"] },
+  { label: "Terminate URL", rowKey: "terminateUrl", apiKeys: ["terminate_val", "terminate"] },
+  { label: "Over Quota URL", rowKey: "overQuotaUrl", apiKeys: ["over_quota_val", "over_quota"] },
+  {
+    label: "Quality Terms URL",
+    rowKey: "qualityTermsUrl",
+    apiKeys: ["quality_term_val", "quality_term"],
+  },
+  {
+    label: "Survey Close URL",
+    rowKey: "surveyCloseUrl",
+    apiKeys: ["survey_close_val", "survey_close"],
+  },
+  { label: "API Based URL", rowKey: "apiBaseUrl", apiKeys: ["api_base_url", "apiBaseUrl"] },
+  { label: "API Secret Key", rowKey: "apiSecretKey", apiKeys: ["api_secret_key", "apiSecretKey"] },
+  { label: "API Body", rowKey: "apiBody", apiKeys: ["api_body", "apiBody"] },
+  { label: "About Partner", rowKey: "aboutPartner", apiKeys: ["about_partner"], fullWidth: true },
+];
+
+const PARTNER_TABLE_API_KEYS = new Set([
+  "id",
+  "code",
+  "name",
+  "email",
+  "website_url",
+  "contact_no",
+  "country",
+  "status",
+  "created_at",
+]);
+
+function hasPartnerApiValue(partner, apiKeys) {
+  return apiKeys.some((key) => {
+    if (!(key in partner)) return false;
+    const value = partner[key];
+    return value != null && String(value).trim() !== "";
+  });
+}
+
+function formatPartnerDetailExtraValue(key, value) {
+  if (key.endsWith("_at") && value) {
+    return formatPartnerListDate(value);
+  }
+  return String(value);
+}
+
+function formatPartnerApiKeyLabel(key) {
+  return String(key)
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+/**
+ * Builds expandable-row fields from Partner Detail API response.
+ * @param {object} partner
+ */
+export function getPartnerExpandableFields(partner) {
+  if (!partner || typeof partner !== "object") return [];
+
+  const row = mapPartnerToRow(partner);
+  const consumedApiKeys = new Set();
+  const fields = [];
+
+  for (const config of PARTNER_EXPANDABLE_FIELD_CONFIG) {
+    config.apiKeys.forEach((key) => consumedApiKeys.add(key));
+    if (!hasPartnerApiValue(partner, config.apiKeys)) continue;
+
+    fields.push({
+      label: config.label,
+      value: row[config.rowKey] ?? "",
+      fullWidth: Boolean(config.fullWidth),
+    });
+  }
+
+  for (const [key, value] of Object.entries(partner)) {
+    if (consumedApiKeys.has(key) || PARTNER_TABLE_API_KEYS.has(key)) continue;
+    if (value == null || String(value).trim() === "") continue;
+
+    fields.push({
+      label: formatPartnerApiKeyLabel(key),
+      value: formatPartnerDetailExtraValue(key, value),
+      fullWidth: key === "about_partner",
+    });
+  }
+
+  return fields;
 }
 
 /**

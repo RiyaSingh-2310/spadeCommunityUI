@@ -1,0 +1,201 @@
+import { useEffect, useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader";
+import FormField from "../../../components/admin/FormField";
+import RichTextEditor from "../../../components/admin/RichTextEditor";
+import SearchableMultiSelect from "../../../components/admin/SearchableMultiSelect";
+import TableCard from "../../../components/admin/TableCard";
+import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
+import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
+import { useFormValidation } from "../../shared/hooks/useFormValidation";
+import { getRequiredError, isFormValidForFields } from "../../shared/utils/validation";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { mapClientsToSelectOptions } from "../hooks/useSurveyFormSelectOptions";
+import { getRecords as getClients } from "../../../services/clients/clientsApi";
+import {
+  createGroupProject,
+  createEmptyGroupProjectForm,
+} from "../services/groupSurveyApi";
+
+const GROUP_SURVEY_FORM_FIELDS = ["projectName", "clientIds"];
+
+const GROUP_SURVEY_REQUIRED_FIELDS = ["projectName", "clientIds"];
+
+function getClientIdsError(clientIds) {
+  if (!Array.isArray(clientIds) || clientIds.length === 0) {
+    return "At least one client is required";
+  }
+  return "";
+}
+
+function AddGroupSurveyPage({ isDarkMode }) {
+  const navigate = useNavigate();
+  const { readOnly, showSubmit } = useFormAccess();
+  const [form, setForm] = useState(createEmptyGroupProjectForm);
+  const [clientOptions, setClientOptions] = useState([]);
+  const [isLoadingClients, setIsLoadingClients] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const inputClass = getAdminInputClass();
+  const selectClass = `${inputClass} appearance-none`;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadClients = async () => {
+      setIsLoadingClients(true);
+      try {
+        const data = await getClients();
+        if (!cancelled) {
+          setClientOptions(mapClientsToSelectOptions(data.items));
+        }
+      } catch {
+        if (!cancelled) setClientOptions([]);
+      } finally {
+        if (!cancelled) setIsLoadingClients(false);
+      }
+    };
+
+    loadClients();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const errors = useMemo(
+    () => ({
+      projectName: getRequiredError(form.projectName, "Project Name"),
+      clientIds: getClientIdsError(form.clientIds),
+    }),
+    [form]
+  );
+
+  const { showError, touch, validateSubmit } = useFormValidation({
+    errors,
+    fields: GROUP_SURVEY_FORM_FIELDS,
+  });
+
+  const canSubmit =
+    showSubmit &&
+    !readOnly &&
+    isFormValidForFields(errors, GROUP_SURVEY_REQUIRED_FIELDS) &&
+    !isSubmitting &&
+    !isLoadingClients;
+
+  const onSubmit = async (event) => {
+    event.preventDefault();
+    if (!validateSubmit() || !isFormValidForFields(errors, GROUP_SURVEY_REQUIRED_FIELDS)) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const data = await createGroupProject(form);
+      toastApiSuccess(data);
+      navigate("/survey/group", {
+        replace: true,
+        state: {
+          flash: data.message ? { type: "success", message: data.message } : null,
+          refresh: true,
+        },
+      });
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  return (
+    <div className="space-y-6">
+      <AdminPageHeader
+        title="Add Group Survey"
+        breadcrumbs={[
+          { label: "Group Survey", to: "/survey/group" },
+          { label: "Add Group Survey" },
+        ]}
+        isDarkMode={isDarkMode}
+      />
+
+      <form onSubmit={onSubmit} className="space-y-5" noValidate>
+        <TableCard title="Project Details" isDarkMode={isDarkMode}>
+          <div className="grid gap-4 md:grid-cols-2">
+            <FormField label="Project Name" required error={showError("projectName")}>
+              <input
+                className={inputClass}
+                placeholder="Enter Project Name"
+                value={form.projectName}
+                onChange={(e) => setField("projectName", e.target.value)}
+                onBlur={() => touch("projectName")}
+                disabled={fieldDisabled(readOnly, isSubmitting)}
+              />
+            </FormField>
+
+            <FormField label="Clients" required error={showError("clientIds")}>
+              <SearchableMultiSelect
+                inputClass={selectClass}
+                value={form.clientIds}
+                onChange={(clientIds) => setField("clientIds", clientIds)}
+                onBlur={() => touch("clientIds")}
+                options={clientOptions}
+                placeholder="Select Clients"
+                disabled={fieldDisabled(readOnly, isSubmitting)}
+                loading={isLoadingClients}
+                loadingLabel="Loading clients..."
+                searchPlaceholder="Search clients..."
+                aria-label="Select clients"
+              />
+            </FormField>
+          </div>
+
+          <div className="mt-4 space-y-4">
+            <FormField label="Project Description">
+              <RichTextEditor
+                isDarkMode={isDarkMode}
+                value={form.description}
+                onChange={(value) => setField("description", value)}
+                placeholder="Enter project description"
+                disabled={fieldDisabled(readOnly, isSubmitting)}
+                height={200}
+              />
+            </FormField>
+            <FormField label="Notes">
+              <textarea
+                className={`${inputClass} min-h-[120px] resize-y py-3`}
+                placeholder="Enter Project Notes"
+                value={form.notes}
+                onChange={(e) => setField("notes", e.target.value)}
+                disabled={fieldDisabled(readOnly, isSubmitting)}
+              />
+            </FormField>
+          </div>
+        </TableCard>
+
+        <div className="admin-form-actions flex flex-wrap items-center gap-3">
+          {showSubmit && !readOnly && (
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]"
+            >
+              {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+              {isSubmitting ? "Submitting..." : "Submit"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => navigate("/survey/group", { replace: true })}
+            disabled={isSubmitting}
+            className={getAdminCancelButtonClass()}
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+export default AddGroupSurveyPage;

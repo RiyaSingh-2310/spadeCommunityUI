@@ -1,5 +1,6 @@
 import { API_ROUTES } from "../../config/api";
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
+import { resolveMediaUrl, splitFullName } from "../../modules/shared/utils/userAvatar";
 import {
   apiStatusToFormValue,
   formValueToApiStatus,
@@ -52,12 +53,24 @@ function extractProjectManagerRecord(data) {
  * @param {object} projectManager
  */
 export function mapProjectManagerToRow(projectManager) {
+  const { firstName, lastName } = splitFullName(projectManager?.name);
+  const imageUrl = resolveMediaUrl(
+    projectManager?.profile_image ??
+      projectManager?.image_url ??
+      projectManager?.imageUrl ??
+      null
+  );
+
   return {
     id: projectManager?.id,
     code: projectManager?.code ?? "",
     name: projectManager?.name ?? "",
+    firstName,
+    lastName,
     emailAddress: projectManager?.email ?? "",
-    image: projectManager?.profile_image ?? "",
+    image: imageUrl || undefined,
+    imageUrl,
+    profile_image: imageUrl || undefined,
     status: apiStatusToFormValue(projectManager?.status),
     createdAt: projectManager?.created_at ?? "",
   };
@@ -125,7 +138,10 @@ export async function createProjectManager(payload) {
   body.append("name", payload.name.trim());
   body.append("email", payload.email.trim());
   body.append("password", payload.password);
-  body.append("confirm_password", payload.confirmPassword);
+  body.append(
+    "confirm_password",
+    String(payload.confirmPassword ?? payload.password ?? "")
+  );
 
   if (payload.profileImage instanceof File) {
     body.append("profile_image", payload.profileImage);
@@ -140,16 +156,15 @@ export async function createProjectManager(payload) {
 }
 
 /**
- * PUT /api/projectmanager/:id — status toggle from listing table.
+ * PATCH /api/projectmanager/:id/status — status toggle from listing table.
  * @param {string|number} id
- * @param {{ name: string, status: string }} payload
+ * @param {{ status: string }} payload
  */
-export async function updateProjectManagerStatus(id, { name, status }) {
+export async function updateProjectManagerStatus(id, { status }) {
   const normalizedId = normalizeProjectManagerId(id);
-  const data = await apiRequest(API_ROUTES.projectManagers.update(normalizedId), {
-    method: "PUT",
+  const data = await apiRequest(API_ROUTES.projectManagers.updateStatus(normalizedId), {
+    method: "PATCH",
     body: {
-      name: String(name ?? "").trim(),
       status: formValueToApiStatus(status),
     },
   });

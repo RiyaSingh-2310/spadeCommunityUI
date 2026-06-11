@@ -11,6 +11,7 @@ export const MODULE_LISTING_READ_MODES = {
   clients: "hide-action-column",
   partners: "hide-action-column",
   project_managers: "hide-action-column",
+  sales_manager: "hide-action-column",
   survey: "survey-read",
   group_survey: "group-survey-view",
   recontact_survey: "hide-action-column",
@@ -174,6 +175,7 @@ export function shouldShowListingActionColumn({
         actionVariant === "pdf-download" ||
         actionVariant === "reward-pending" ||
         actionVariant === "group-survey" ||
+        actionVariant === "group-survey-projects" ||
         actionVariant === "rfq" ||
         onAddLog
     );

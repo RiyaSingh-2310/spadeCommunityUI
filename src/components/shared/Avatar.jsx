@@ -30,7 +30,7 @@ function Avatar({
 }) {
   const [imageFailed, setImageFailed] = useState(false);
 
-  const { resolvedFirst, resolvedLast, validUrl, initials, label } = useMemo(() => {
+  const { validUrl, initials, label } = useMemo(() => {
     const hasParts = Boolean(firstName?.trim() || lastName?.trim());
     const parsed = hasParts
       ? { firstName: firstName.trim(), lastName: lastName.trim() }
@@ -38,7 +38,7 @@ function Avatar({
 
     const f = parsed.firstName;
     const l = parsed.lastName;
-    const url = getValidImageUrl(imageUrl);
+    const url = imageUrl;
 
     return {
       resolvedFirst: f,
@@ -49,20 +49,17 @@ function Avatar({
     };
   }, [imageUrl, firstName, lastName, name, alt]);
 
-  const showImage = Boolean(validUrl) && !imageFailed;
+  const showImage = imageUrl!==null?true:false;
   const sizeConfig = AVATAR_SIZE[size] ?? AVATAR_SIZE.header;
   const px = sizeConfig.px;
 
-  useEffect(() => {
-    setImageFailed(false);
-  }, [validUrl]);
 
   const baseClass = `relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full ${sizeConfig.className}`;
 
   if (showImage) {
     return (
       <img
-        src={validUrl}
+        src={imageUrl}
         alt={label}
         width={px}
         height={px}

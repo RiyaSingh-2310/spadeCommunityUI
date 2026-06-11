@@ -1,16 +1,31 @@
+import { API_BASE_URL } from "../../../config/api";
 import {
   prepareAdminSessionUser,
   resolvePermissionsFromRecord,
 } from "../../permissions/permissionsUtils";
 
 /**
- * Returns a trimmed image URL when present; otherwise null.
+ * Resolves API upload paths to a full URL for display.
+ * @param {string | null | undefined} imageUrl
+ */
+export function resolveMediaUrl(imageUrl) {
+  if (imageUrl == null) return null;
+  const trimmed = String(imageUrl).trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("blob:") || trimmed.startsWith("data:")) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  const origin = API_BASE_URL.replace(/\/api\/?$/, "");
+  if (trimmed.startsWith("/")) return `${origin}${trimmed}`;
+  return `${origin}/${trimmed}`;
+}
+
+/**
+ * Returns a display-ready image URL when present; otherwise null.
  * @param {string | null | undefined} imageUrl
  */
 export function getValidImageUrl(imageUrl) {
-  if (imageUrl == null) return null;
-  const trimmed = String(imageUrl).trim();
-  return trimmed.length > 0 ? trimmed : null;
+  return resolveMediaUrl(imageUrl);
 }
 
 /**
@@ -82,6 +97,7 @@ export function resolveAvatarFromRecord(record = {}) {
   const imageUrl = getValidImageUrl(
     record.imageUrl ??
       record.image_url ??
+      record.profile_image ??
       record.image ??
       record.avatar ??
       null

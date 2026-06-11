@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminCancelButtonClass } from "../../shared/utils/formStyles";
 import SurveyForm from "../components/SurveyForm";
-import { createEmptySurveyForm } from "../data/surveyFormData";
-import { useSurveyFormSelectOptions } from "../hooks/useSurveyFormSelectOptions";
+import { createEmptySurveyForm, SURVEY_GROUP_OPTIONS } from "../data/surveyFormData";
+import {
+  mergeSelectOption,
+  useSurveyFormSelectOptions,
+} from "../hooks/useSurveyFormSelectOptions";
 import {
   createSurvey,
   getRecord,
@@ -16,6 +19,7 @@ import {
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   areSurveyFormsEqual,
+  cloneSurveyForm,
   getSurveyFormErrors,
   isSurveyFormSubmittable,
   SURVEY_FORM_FIELDS,
@@ -24,12 +28,15 @@ import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast
 
 function SurveyFormPage({ isDarkMode, mode = "create" }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
   const isEdit = mode === "edit";
+  const returnTo = location.state?.returnTo;
   const { readOnly, showSubmit } = useFormAccess();
 
   const [form, setForm] = useState(createEmptySurveyForm);
   const [initialSnapshot, setInitialSnapshot] = useState(null);
+  const [loadedRecord, setLoadedRecord] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -41,6 +48,58 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     isLoading: isLoadingOptions,
   } = useSurveyFormSelectOptions();
 
+  const mergedClientOptions = useMemo(
+    () =>
+      mergeSelectOption(
+        clientOptions,
+        loadedRecord?.client_id ?? loadedRecord?.client_code,
+        loadedRecord?.client_name
+      ),
+    [clientOptions, loadedRecord]
+  );
+
+  const mergedProjectManagerOptions = useMemo(
+    () =>
+      mergeSelectOption(
+        projectManagerOptions,
+        loadedRecord?.project_manager_id,
+        loadedRecord?.project_manager_name
+      ),
+    [projectManagerOptions, loadedRecord]
+  );
+
+  const mergedSalesManagerOptions = useMemo(
+    () =>
+      mergeSelectOption(
+        salesManagerOptions,
+        loadedRecord?.sales_manager_id,
+        loadedRecord?.sales_manager_name
+      ),
+    [salesManagerOptions, loadedRecord]
+  );
+
+  const mergedSalesProjectOptions = useMemo(
+    () =>
+      mergeSelectOption(
+        salesProjectOptions,
+        loadedRecord?.sales_project_id,
+        loadedRecord?.sales_project_name
+      ),
+    [salesProjectOptions, loadedRecord]
+  );
+
+  const mergedSurveyGroupOptions = useMemo(
+    () =>
+      mergeSelectOption(
+        SURVEY_GROUP_OPTIONS,
+        loadedRecord?.prescreen_survey_id ?? loadedRecord?.survey_group_id,
+        loadedRecord?.prescreen_survey_title ??
+          loadedRecord?.survey_group_name ??
+          loadedRecord?.survey_group_title
+      ),
+    [loadedRecord]
+  );
+
   const errors = useMemo(() => getSurveyFormErrors(form), [form]);
   const { showError, touch, validateSubmit, resetValidation } = useFormValidation({
     errors,
@@ -48,29 +107,30 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
   });
 
   useEffect(() => {
-    if (!isEdit || !id) return undefined;
+    if (!isEdit || !id || isLoadingOptions) return undefined;
 
     let cancelled = false;
 
     const loadSurvey = async () => {
       resetValidation();
       setInitialSnapshot(null);
+      setLoadedRecord(null);
       setIsLoadingRecord(true);
       setLoadFailed(false);
 
       try {
         const record = await getRecord(id);
         if (cancelled) return;
+
         const mapped = mapSurveyToForm(record, createEmptySurveyForm());
+        setLoadedRecord(record);
         setForm(mapped);
-        setInitialSnapshot(mapped);
+        setInitialSnapshot(cloneSurveyForm(mapped));
       } catch (error) {
         if (cancelled) return;
         toastApiError(error);
         setLoadFailed(true);
-        const empty = createEmptySurveyForm();
-        setForm(empty);
-        setInitialSnapshot(empty);
+        setInitialSnapshot(null);
       } finally {
         if (!cancelled) setIsLoadingRecord(false);
       }
@@ -80,7 +140,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     return () => {
       cancelled = true;
     };
-  }, [id, isEdit, resetValidation]);
+  }, [id, isEdit, isLoadingOptions, resetValidation]);
 
   const isDirty = useMemo(() => {
     if (!isEdit || !initialSnapshot) return false;
@@ -113,7 +173,10 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
         ? await updateSurvey(id, form)
         : await createSurvey(form);
       toastApiSuccess(data);
-      navigate("/survey", { replace: true, state: { refresh: true } });
+      navigate(returnTo ?? "/survey", {
+        replace: true,
+        state: { refresh: true },
+      });
     } catch (err) {
       toastApiError(err);
     } finally {
@@ -165,10 +228,11 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
           touch={touch}
           isDarkMode={isDarkMode}
           disabled={fieldDisabled(readOnly, isSubmitting)}
-          clientOptions={clientOptions}
-          projectManagerOptions={projectManagerOptions}
-          salesManagerOptions={salesManagerOptions}
-          salesProjectOptions={salesProjectOptions}
+          clientOptions={mergedClientOptions}
+          projectManagerOptions={mergedProjectManagerOptions}
+          salesManagerOptions={mergedSalesManagerOptions}
+          salesProjectOptions={mergedSalesProjectOptions}
+          surveyGroupOptions={mergedSurveyGroupOptions}
         />
 
         <div className="admin-form-actions flex flex-wrap items-center gap-3">
@@ -190,11 +254,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
           )}
           <button
             type="button"
-            onClick={() =>
-              isEdit
-                ? navigate(`/survey/view/${encodeURIComponent(id)}`)
-                : navigate("/survey")
-            }
+            onClick={() => navigate(returnTo ?? "/survey")}
             disabled={isSubmitting}
             className={getAdminCancelButtonClass()}
           >

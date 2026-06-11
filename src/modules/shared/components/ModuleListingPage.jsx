@@ -10,6 +10,7 @@ import Avatar from "../../../components/shared/Avatar";
 import { resolveAvatarFromRecord } from "../utils/userAvatar";
 import TableLoadingSkeleton from "../../../components/admin/TableLoadingSkeleton";
 import GroupSurveyListingActions from "../../../components/admin/GroupSurveyListingActions";
+import GroupSurveyProjectListingActions from "../../../components/admin/GroupSurveyProjectListingActions";
 import IconActions from "../../../components/admin/IconActions";
 import InvoicePdfAction from "../../../components/admin/InvoicePdfAction";
 import RewardPendingActions from "../../../components/admin/RewardPendingActions";
@@ -89,6 +90,12 @@ function ModuleListingPage({
   searchFields = null,
   /** API total record count (used for pagination summary when not searching). */
   totalRecords = null,
+  /** When true, rows are already paginated by the API; parent controls page + page size. */
+  serverPaginated = false,
+  paginationPage = 1,
+  onPaginationPageChange,
+  paginationPageSize,
+  onPaginationPageSizeChange,
   /** When true, Name column shows plain text instead of avatar + name. */
   nameAsText = false,
   /** When set, prepends an expand column and renders content below expanded rows. */
@@ -102,8 +109,10 @@ function ModuleListingPage({
   } = useModulePermission(permissionModule);
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(initialPageSize);
+  const [internalCurrentPage, setInternalCurrentPage] = useState(1);
+  const [internalPageSize, setInternalPageSize] = useState(initialPageSize);
+  const currentPage = serverPaginated ? paginationPage : internalCurrentPage;
+  const pageSize = serverPaginated ? (paginationPageSize ?? initialPageSize) : internalPageSize;
   const [internalData, setInternalData] = useState(rows);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -124,6 +133,7 @@ function ModuleListingPage({
   const pdfDownload = actionVariant === "pdf-download";
   const userManagement = actionVariant === "user-management";
   const groupSurvey = actionVariant === "group-survey";
+  const groupSurveyProjects = actionVariant === "group-survey-projects";
   const rfq = actionVariant === "rfq";
 
   const toggleRowExpanded = useCallback((rowId) => {
@@ -240,9 +250,34 @@ function ModuleListingPage({
 
   const data = isExternallyManaged ? rows : internalData;
 
+  const handlePageChange = useCallback(
+    (nextPage) => {
+      if (serverPaginated) {
+        onPaginationPageChange?.(nextPage);
+        return;
+      }
+      setInternalCurrentPage(nextPage);
+    },
+    [serverPaginated, onPaginationPageChange]
+  );
+
+  const handlePageSizeChange = useCallback(
+    (nextSize) => {
+      if (serverPaginated) {
+        onPaginationPageSizeChange?.(nextSize);
+        return;
+      }
+      setInternalPageSize(nextSize);
+      setInternalCurrentPage(1);
+    },
+    [serverPaginated, onPaginationPageSizeChange]
+  );
+
   const handleQueryChange = (value) => {
     setQuery(value);
-    setCurrentPage(1);
+    if (!serverPaginated) {
+      setInternalCurrentPage(1);
+    }
   };
 
   const normalizedQuery = debouncedQuery.trim().toLowerCase();
@@ -262,35 +297,53 @@ function ModuleListingPage({
       .includes(normalizedQuery);
   });
 
-  const handlePageSizeChange = (nextSize) => {
-    setPageSize(nextSize);
-    setCurrentPage(1);
-  };
-
   const paginationTotalItems = normalizedQuery
     ? filtered.length
     : totalRecords ?? filtered.length;
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
-  const safePage = Math.min(currentPage, totalPages);
-
   const pagination = useMemo(() => {
+    if (serverPaginated && !normalizedQuery) {
+      const totalPages = Math.max(1, Math.ceil(paginationTotalItems / pageSize) || 1);
+      const safePage = Math.min(Math.max(1, currentPage), totalPages);
+
+      return {
+        items: filtered,
+        currentPage: safePage,
+        totalPages,
+        totalItems: paginationTotalItems,
+        pageSize,
+      };
+    }
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
+    const safePage = Math.min(currentPage, totalPages);
     const slice = paginateItems(filtered, safePage, pageSize);
+
     return {
       ...slice,
       totalItems: paginationTotalItems,
     };
-  }, [filtered, safePage, pageSize, paginationTotalItems]);
+  }, [
+    filtered,
+    currentPage,
+    pageSize,
+    paginationTotalItems,
+    serverPaginated,
+    normalizedQuery,
+  ]);
 
   useEffect(() => {
+    if (serverPaginated) return;
     const pages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
-    setCurrentPage((prev) => Math.min(prev, pages));
-  }, [filtered.length, pageSize, debouncedQuery]);
+    setInternalCurrentPage((prev) => Math.min(prev, pages));
+  }, [filtered.length, pageSize, debouncedQuery, serverPaginated]);
 
   const hasProfileImageColumn = columns.some(isProfileImageColumn);
 
   const paginationFooter =
-    showPagination && !isLoading && filtered.length > 0 ? (
+    showPagination &&
+    !isLoading &&
+    (filtered.length > 0 || (serverPaginated && (totalRecords ?? 0) > 0)) ? (
       <AdminPagination
         isDarkMode={isDarkMode}
         currentPage={pagination.currentPage}
@@ -298,14 +351,18 @@ function ModuleListingPage({
         totalItems={pagination.totalItems}
         visibleItemCount={
           totalRecords != null && !normalizedQuery
-            ? Math.min(
-                (pagination.currentPage - 1) * pageSize + pagination.items.length,
-                pagination.totalItems
-              )
+            ? serverPaginated
+              ? pagination.currentPage >= pagination.totalPages
+                ? pagination.totalItems
+                : Math.min(pagination.currentPage * pageSize, pagination.totalItems)
+              : Math.min(
+                  (pagination.currentPage - 1) * pageSize + pagination.items.length,
+                  pagination.totalItems
+                )
             : null
         }
         pageSize={pageSize}
-        onPageChange={setCurrentPage}
+        onPageChange={handlePageChange}
         onPageSizeChange={handlePageSizeChange}
       />
     ) : null;
@@ -632,6 +689,30 @@ function ModuleListingPage({
                             onViewLogs={
                               allowRead && onViewLogs
                                 ? () => onViewLogs(row, globalIdx)
+                                : undefined
+                            }
+                          />
+                        </td>
+                      );
+                    }
+                    if (groupSurveyProjects) {
+                      return (
+                        <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
+                          <GroupSurveyProjectListingActions
+                            isDarkMode={isDarkMode}
+                            onEdit={
+                              allowWrite && canShowEdit
+                                ? () => handleEdit(row, globalIdx)
+                                : undefined
+                            }
+                            onAddProject={
+                              allowWrite && onAddProject
+                                ? () => onAddProject(row, globalIdx)
+                                : undefined
+                            }
+                            onDelete={
+                              canShowDelete
+                                ? () => handleDeleteRequest(row, globalIdx)
                                 : undefined
                             }
                           />

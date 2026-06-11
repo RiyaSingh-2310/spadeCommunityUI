@@ -6,6 +6,7 @@ import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
+  clearPartnerDetailCache,
   deleteRecord,
   getRecords,
   updatePartnerStatus,
@@ -39,6 +40,7 @@ function PartnersPage({ isDarkMode }) {
   const fetchPartners = useCallback(async () => {
     setIsLoading(true);
     try {
+      clearPartnerDetailCache();
       const data = await getRecords();
       setPartners(data.items);
       setTotalRecords(data.total ?? data.count ?? data.items.length);
@@ -138,7 +140,7 @@ function PartnersPage({ isDarkMode }) {
         pageSize={DEFAULT_PAGE_SIZE}
         showPagination
         nowrapAllCells
-        renderExpandedContent={(row) => <PartnerExpandableDetails row={row} />}
+        renderExpandedContent={(row) => <PartnerExpandableDetails partnerId={row.id} />}
       />
 
       <DeleteConfirmModal

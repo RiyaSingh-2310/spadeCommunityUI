@@ -35,6 +35,7 @@ export const API_ROUTES = {
     create: "/api/projectmanager/add",
     byId: (id) => `/api/projectmanager/${id}`,
     update: (id) => `/api/projectmanager/${id}`,
+    updateStatus: (id) => `/api/projectmanager/${id}/status`,
   },
   salesProjects: {
     list: "/api/sales/project/list",
@@ -48,17 +49,39 @@ export const API_ROUTES = {
   salesManagers: {
     list: "/api/salesmanager/list",
     create: "/api/salesmanager",
+    byId: (id) => `/api/salesmanager/${id}`,
+    update: (id) => `/api/salesmanager/${id}`,
+    updateStatus: (id) => `/api/salesmanager/status/${id}`,
+    delete: (id) => `/api/salesmanager/${id}`,
   },
-  prescreenGroup: {
+  prescreen: {
     list: "/api/prescreen/list",
     create: "/api/prescreen/add",
     byId: (id) => `/api/prescreen/${id}`,
+    byLanguage: (language) => `/api/prescreen/language/${encodeURIComponent(language)}`,
     update: (id) => `/api/prescreen/${id}`,
+    delete: (id) => `/api/prescreen/${id}`,
+  },
+  prescreenSurvey: {
+    list: "/api/prescreen-survey/list",
+    create: "/api/prescreen-survey/add",
+    byId: (id) => `/api/prescreen-survey/${id}`,
+    update: (id) => `/api/prescreen-survey/${id}`,
   },
   survey: {
     list: "/api/survey/list",
     create: "/api/survey/add",
+    byId: (id) => `/api/survey/${id}`,
     update: (id) => `/api/survey/${id}`,
+    delete: (id) => `/api/survey/${id}`,
+  },
+  groupSurvey: {
+    list: "/api/survey/groupproject/list",
+    create: "/api/survey/groupproject/add",
+    byId: (id) => `/api/survey/groupproject/${id}`,
+    update: (id) => `/api/survey/groupproject/${id}`,
+    updateStatus: (id) => `/api/survey/groupproject/${id}/status`,
+    delete: (id) => `/api/survey/groupproject/${id}`,
   },
 };
 

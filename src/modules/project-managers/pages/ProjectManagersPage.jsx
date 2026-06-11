@@ -55,7 +55,6 @@ function ProjectManagersPage({ isDarkMode }) {
 
     try {
       const data = await updateProjectManagerStatus(row.id, {
-        name: row.name,
         status: nextStatus,
       });
       setProjectManagers((prev) =>

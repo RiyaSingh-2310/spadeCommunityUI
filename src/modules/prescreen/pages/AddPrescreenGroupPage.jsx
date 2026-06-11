@@ -11,7 +11,7 @@ import {
   mapPrescreenGroupToForm,
   updatePrescreenGroup,
 } from "../../../services/prescreen/prescreenGroupApi";
-import { getQuestionnaireTitlesForLanguage } from "../../../services/prescreen/prescreenQuestionnairesApi";
+import { getQuestionnaireOptionsForLanguage } from "../../../services/prescreen/prescreenQuestionnairesApi";
 import { PRESCREEN_LANGUAGES } from "../data/prescreenLanguages";
 import { useAdminFormAccess } from "../../permissions/FormAccessContext";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
@@ -22,15 +22,17 @@ import {
   isFormValidForFields,
 } from "../../shared/utils/validation";
 
-const PRESCREEN_GROUP_FORM_FIELDS = ["language", "surveyTitle", "selectedQuestionnaire"];
+const PRESCREEN_GROUP_FORM_FIELDS = ["language", "surveyTitle", "selectedPrescreenId"];
 
-const PRESCREEN_GROUP_REQUIRED_FIELDS = ["language", "surveyTitle", "selectedQuestionnaire"];
+const PRESCREEN_GROUP_REQUIRED_FIELDS = ["language", "surveyTitle", "selectedPrescreenId"];
 
 const EMPTY_FORM = {
   language: "",
   surveyTitle: "",
-  selectedQuestionnaire: "",
+  selectedPrescreenId: "",
+  selectedQuestionnaireLabel: "",
   status: STATUS_UI_ACTIVE,
+  prescreenIds: [],
 };
 
 function AddPrescreenGroupPage({ isDarkMode }) {
@@ -52,7 +54,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
     () => ({
       language: getRequiredError(form.language, "Language"),
       surveyTitle: getRequiredError(form.surveyTitle, "Survey Group Title"),
-      selectedQuestionnaire: getRequiredError(form.selectedQuestionnaire, "Select Questionnaire"),
+      selectedPrescreenId: getRequiredError(form.selectedPrescreenId, "Select Questionnaire"),
     }),
     [form]
   );
@@ -69,8 +71,6 @@ function AddPrescreenGroupPage({ isDarkMode }) {
 
     const loadPrescreenGroup = async () => {
       resetValidation();
-      setForm(EMPTY_FORM);
-      setInitialSnapshot(null);
       setIsLoadingRecord(true);
       setLoadFailed(false);
 
@@ -78,6 +78,33 @@ function AddPrescreenGroupPage({ isDarkMode }) {
         const record = await getRecord(id);
         if (cancelled) return;
         const mapped = mapPrescreenGroupToForm(record);
+
+        if (mapped.language) {
+          setIsLoadingQuestionnaires(true);
+          try {
+            const options = await getQuestionnaireOptionsForLanguage(
+              mapped.language,
+              mapped.language
+            );
+            if (cancelled) return;
+
+            const selectedId = String(mapped.selectedPrescreenId ?? "").trim();
+            if (
+              selectedId &&
+              !options.some((option) => String(option.value) === selectedId)
+            ) {
+              options.unshift({
+                value: selectedId,
+                label: mapped.selectedQuestionnaireLabel || `Question #${selectedId}`,
+              });
+            }
+
+            setQuestionnaireOptions(options);
+          } finally {
+            if (!cancelled) setIsLoadingQuestionnaires(false);
+          }
+        }
+
         setForm(mapped);
         setInitialSnapshot(mapped);
       } catch (error) {
@@ -96,8 +123,8 @@ function AddPrescreenGroupPage({ isDarkMode }) {
   }, [id, isEdit, resetValidation]);
 
   useEffect(() => {
-    if (!form.language) {
-      setQuestionnaireOptions([]);
+    if (isEdit || !form.language) {
+      if (!form.language) setQuestionnaireOptions([]);
       return undefined;
     }
 
@@ -106,8 +133,8 @@ function AddPrescreenGroupPage({ isDarkMode }) {
     const loadQuestionnaires = async () => {
       setIsLoadingQuestionnaires(true);
       try {
-        const titles = await getQuestionnaireTitlesForLanguage(form.language);
-        if (!cancelled) setQuestionnaireOptions(titles);
+        const options = await getQuestionnaireOptionsForLanguage(form.language, form.language);
+        if (!cancelled) setQuestionnaireOptions(options);
       } catch {
         if (!cancelled) setQuestionnaireOptions([]);
       } finally {
@@ -119,13 +146,13 @@ function AddPrescreenGroupPage({ isDarkMode }) {
     return () => {
       cancelled = true;
     };
-  }, [form.language]);
+  }, [form.language, isEdit]);
 
   const isDirty = useMemo(() => {
     if (!isEdit || !initialSnapshot) return false;
     return (
       form.surveyTitle !== initialSnapshot.surveyTitle ||
-      form.selectedQuestionnaire !== initialSnapshot.selectedQuestionnaire
+      form.selectedPrescreenId !== initialSnapshot.selectedPrescreenId
     );
   }, [isEdit, initialSnapshot, form]);
 
@@ -145,7 +172,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
     setForm((prev) => ({
       ...prev,
       language,
-      selectedQuestionnaire: isEdit ? prev.selectedQuestionnaire : "",
+      selectedPrescreenId: isEdit ? prev.selectedPrescreenId : "",
     }));
     touch("language");
   };
@@ -164,8 +191,11 @@ function AddPrescreenGroupPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
+      const payload = isEdit
+        ? { ...form, status: initialSnapshot?.status ?? form.status }
+        : form;
       const data = isEdit
-        ? await updatePrescreenGroup(id, form)
+        ? await updatePrescreenGroup(id, payload)
         : await createPrescreenGroup(form);
 
       toastApiSuccess(data);
@@ -286,12 +316,19 @@ function AddPrescreenGroupPage({ isDarkMode }) {
               </label>
               <SearchableSelect
                 inputClass={inputClass}
-                value={form.selectedQuestionnaire}
-                onChange={(selectedQuestionnaire) => {
-                  setField("selectedQuestionnaire", selectedQuestionnaire);
-                  touch("selectedQuestionnaire");
+                value={form.selectedPrescreenId}
+                onChange={(selectedPrescreenId) => {
+                  const selected = questionnaireOptions.find(
+                    (option) => String(option.value) === String(selectedPrescreenId)
+                  );
+                  setForm((prev) => ({
+                    ...prev,
+                    selectedPrescreenId,
+                    selectedQuestionnaireLabel: selected?.label ?? "",
+                  }));
+                  touch("selectedPrescreenId");
                 }}
-                onBlur={() => touch("selectedQuestionnaire")}
+                onBlur={() => touch("selectedPrescreenId")}
                 options={questionnaireOptions}
                 placeholder="Select Questionnaire"
                 searchPlaceholder="Search questionnaire..."
@@ -305,9 +342,9 @@ function AddPrescreenGroupPage({ isDarkMode }) {
                 aria-label="Select questionnaire"
                 disabled={controlDisabled || !form.language}
               />
-              {showError("selectedQuestionnaire") && (
+              {showError("selectedPrescreenId") && (
                 <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
-                  {showError("selectedQuestionnaire")}
+                  {showError("selectedPrescreenId")}
                 </p>
               )}
             </div>

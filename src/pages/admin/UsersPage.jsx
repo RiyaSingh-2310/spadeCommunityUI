@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../modules/shared/components/ModuleListingPage";
@@ -26,24 +26,51 @@ function UsersPage({ isDarkMode }) {
   useFlashMessage();
   const [users, setUsers] = useState([]);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const fetchRequestIdRef = useRef(0);
 
   const fetchUsers = useCallback(async () => {
+    const requestId = ++fetchRequestIdRef.current;
     setIsLoading(true);
+
     try {
-      const data = await getRecords();
+      const data = await getRecords({ page: currentPage, limit: pageSize });
+
+      if (requestId !== fetchRequestIdRef.current) {
+        return;
+      }
+
+      const total = data.total ?? data.count ?? 0;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
+
+      if (data.items.length === 0 && currentPage > 1 && total > 0) {
+        setCurrentPage((prev) => Math.max(1, Math.min(prev, totalPages) - 1));
+        return;
+      }
+
       setUsers(data.items);
-      setTotalRecords(data.total ?? data.count ?? data.items.length);
+      setTotalRecords(total);
+
+      if (currentPage > totalPages) {
+        setCurrentPage(totalPages);
+      }
     } catch (error) {
+      if (requestId !== fetchRequestIdRef.current) {
+        return;
+      }
       toastApiError(error);
       setUsers([]);
       setTotalRecords(0);
     } finally {
-      setIsLoading(false);
+      if (requestId === fetchRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
-  }, []);
+  }, [currentPage, pageSize]);
 
   useEffect(() => {
     fetchUsers();
@@ -55,6 +82,24 @@ function UsersPage({ isDarkMode }) {
       navigate(location.pathname, { replace: true, state: null });
     }
   }, [location.state, location.pathname, navigate, fetchUsers]);
+
+  const handlePageChange = useCallback(
+    (nextPage) => {
+      const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize) || 1);
+      if (nextPage < 1 || nextPage > totalPages || nextPage === currentPage) {
+        return;
+      }
+      setCurrentPage(nextPage);
+    },
+    [currentPage, pageSize, totalRecords]
+  );
+
+  const handlePageSizeChange = useCallback((nextSize) => {
+    const safeSize = Number(nextSize);
+    if (!Number.isFinite(safeSize) || safeSize <= 0) return;
+    setPageSize(safeSize);
+    setCurrentPage(1);
+  }, []);
 
   const handleDeleteRequest = (row) => {
     setDeleteTarget(row);
@@ -132,7 +177,11 @@ function UsersPage({ isDarkMode }) {
         onManagePermissions={navigateToUserPermissions}
         onStatusToggle={handleStatusToggle}
         totalRecords={totalRecords}
-        pageSize={DEFAULT_PAGE_SIZE}
+        serverPaginated
+        paginationPage={currentPage}
+        onPaginationPageChange={handlePageChange}
+        paginationPageSize={pageSize}
+        onPaginationPageSizeChange={handlePageSizeChange}
         showPagination
         nowrapAllCells
       />

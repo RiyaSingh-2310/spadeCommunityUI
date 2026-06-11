@@ -1,9 +1,15 @@
 /** Shared language options for Prescreen and Prescreen Group modules. */
 export const PRESCREEN_LANGUAGES = [
-  "English",
-  "Hindi",
   "Arabic",
-  "German",
+  "Chinese",
+  "Dutch",
+  "English",
   "French",
+  "German",
+  "Hindi",
+  "Italian",
+  "Japanese",
+  "Korean",
+  "Russian",
   "Spanish",
 ];

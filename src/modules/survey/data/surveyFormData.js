@@ -80,6 +80,8 @@ export function createEmptySurveyForm() {
     liveLink: "",
     testLink: "",
     surveyCsvFile: null,
+    existingSurveyCsvFileName: "",
+    existingMultiLinkSurvey: false,
     filters: {
       geoLocation: false,
       urlProtection: false,

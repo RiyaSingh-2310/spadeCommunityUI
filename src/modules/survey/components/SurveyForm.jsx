@@ -42,10 +42,13 @@ function SurveyForm({
   disabled = false,
   groupProject = "",
   readOnlyClient = false,
+  lockedClientLabel = "",
+  readOnlyProjectName = false,
   clientOptions = [],
   projectManagerOptions = [],
   salesManagerOptions = [],
   salesProjectOptions = [],
+  surveyGroupOptions = SURVEY_GROUP_OPTIONS,
 }) {
   const fileInputRef = useRef(null);
   const inputClass = getAdminInputClass();
@@ -90,17 +93,26 @@ function SurveyForm({
           ) : null}
 
           <FormField label="Client" required error={showError("client")}>
-            <SearchableSelect
-              inputClass={`${selectClass} ${readOnlyClient ? "opacity-70" : ""}`}
-              value={form.client}
-              onChange={(next) => setField("client", next)}
-              onBlur={() => touch("client")}
-              options={clientOptions}
-              placeholder="Select Client"
-              disabled={disabled || readOnlyClient}
-              searchPlaceholder="Search client..."
-              aria-label="Select client"
-            />
+            {lockedClientLabel ? (
+              <input
+                className={`${inputClass} opacity-70`}
+                value={lockedClientLabel}
+                disabled
+                readOnly
+              />
+            ) : (
+              <SearchableSelect
+                inputClass={`${selectClass} ${readOnlyClient ? "opacity-70" : ""}`}
+                value={form.client}
+                onChange={(next) => setField("client", next)}
+                onBlur={() => touch("client")}
+                options={clientOptions}
+                placeholder="Select Client"
+                disabled={disabled || readOnlyClient}
+                searchPlaceholder="Search client..."
+                aria-label="Select client"
+              />
+            )}
           </FormField>
 
           <FormField label="Project Name" required error={showError("projectName")}>
@@ -110,7 +122,6 @@ function SurveyForm({
               value={form.projectName}
               onChange={(e) => setField("projectName", e.target.value)}
               onBlur={() => touch("projectName")}
-              disabled={disabled}
             />
           </FormField>
 
@@ -283,7 +294,7 @@ function SurveyForm({
 
         {isSingleLink ? (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <FormField label="Live Link" required error={showError("liveLink")}>
+            <FormField label="Live Link" error={showError("liveLink")}>
               <input
                 className={inputClass}
                 placeholder="Enter Live Link"
@@ -293,7 +304,7 @@ function SurveyForm({
                 disabled={disabled}
               />
             </FormField>
-            <FormField label="Test Link" required error={showError("testLink")}>
+            <FormField label="Test Link" error={showError("testLink")}>
               <input
                 className={inputClass}
                 placeholder="Enter Test Link"
@@ -306,11 +317,7 @@ function SurveyForm({
           </div>
         ) : (
           <div className="mt-4 space-y-3">
-            <FormField
-              label="Upload Survey File"
-              required
-              error={showError("surveyCsvFile")}
-            >
+            <FormField label="Upload Survey File" error={showError("surveyCsvFile")}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <input
                   ref={fileInputRef}
@@ -329,7 +336,9 @@ function SurveyForm({
                   Choose File
                 </button>
                 <span className="admin-text-muted text-sm">
-                  {form.surveyCsvFile?.name ?? "No file selected"}
+                  {form.surveyCsvFile?.name ??
+                    form.existingSurveyCsvFileName ??
+                    "No file selected"}
                 </span>
               </div>
               <p className="admin-text-subtle mt-1 text-xs">Supported format: CSV</p>
@@ -389,13 +398,13 @@ function SurveyForm({
                 aria-label="Select language"
               />
             </FormField>
-            <FormField label="Survey Group" required error={showError("surveyGroup")}>
+            <FormField label="Survey Group" error={showError("surveyGroup")}>
               <SearchableSelect
                 inputClass={selectClass}
                 value={form.surveyGroup}
                 onChange={(next) => setField("surveyGroup", next)}
                 onBlur={() => touch("surveyGroup")}
-                options={SURVEY_GROUP_OPTIONS}
+                options={surveyGroupOptions}
                 placeholder="Select Survey Group"
                 disabled={disabled}
                 searchPlaceholder="Search survey group..."

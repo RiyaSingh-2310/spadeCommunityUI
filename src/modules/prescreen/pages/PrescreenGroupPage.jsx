@@ -3,9 +3,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
-import { isAuthenticated } from "../../../services/auth/authStorage";
-import { getRecords } from "../../../services/prescreen/prescreenGroupApi";
-import { toastApiError } from "../../../services/toast/apiToast";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import {
+  getRecords,
+  updatePrescreenGroupStatus,
+} from "../../../services/prescreen/prescreenGroupApi";
 
 const LIST_COLUMNS = ["S.No", "Survey Title", "Language", "Status", "Action"];
 
@@ -16,15 +18,9 @@ function PrescreenGroupPage({ isDarkMode }) {
   const [rows, setRows] = useState([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
   const fetchPrescreenGroups = useCallback(async () => {
-    if (!isAuthenticated()) {
-      setRows([]);
-      setTotalRecords(0);
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(true);
     try {
       const data = await getRecords();
@@ -50,6 +46,38 @@ function PrescreenGroupPage({ isDarkMode }) {
     }
   }, [location.state, location.pathname, navigate, fetchPrescreenGroups]);
 
+  const handleStatusToggle = async (row) => {
+    if (!row?.id || statusUpdatingId != null) return;
+
+    const nextStatus = row.status === "Active" ? "Inactive" : "Active";
+    const previousStatus = row.status;
+    setStatusUpdatingId(row.id);
+
+    try {
+      const data = await updatePrescreenGroupStatus(row.id, {
+        surveyTitle: row.surveyTitle,
+        language: row.language,
+        prescreenIds: row.prescreenIds,
+        status: nextStatus,
+      });
+      setRows((prev) =>
+        prev.map((item) =>
+          String(item.id) === String(row.id) ? { ...item, status: nextStatus } : item
+        )
+      );
+      toastApiSuccess(data);
+    } catch (error) {
+      toastApiError(error);
+      setRows((prev) =>
+        prev.map((item) =>
+          String(item.id) === String(row.id) ? { ...item, status: previousStatus } : item
+        )
+      );
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  };
+
   return (
     <ModuleListingPage
       isDarkMode={isDarkMode}
@@ -63,9 +91,9 @@ function PrescreenGroupPage({ isDarkMode }) {
       editPath="/prescreen/group"
       permissionModule="prescreen_group"
       searchFields={["surveyTitle", "language"]}
+      onStatusToggle={handleStatusToggle}
       isLoading={isLoading}
       emptyMessage="No prescreen groups found"
-      statusAsText
       totalRecords={totalRecords}
       pageSize={DEFAULT_PAGE_SIZE}
       showPagination

@@ -5,7 +5,12 @@ import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { PRESCREEN_LANGUAGES } from "../data/prescreenLanguages";
-import { getRecord, saveRecord } from "../../../services/prescreen/prescreenQuestionnairesApi";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import {
+  getRecord,
+  mapPrescreenToForm,
+  saveRecord,
+} from "../../../services/prescreen/prescreenQuestionnairesApi";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 
 const MAPPED_OPTIONS_MAX_HEIGHT = 200;
@@ -15,6 +20,7 @@ const EMPTY_FORM = {
   questionTitle: "",
   mappedOptions: "",
   rightAnswer: "",
+  status: "Active",
 };
 
 function parseMappedOptionsText(text) {
@@ -30,18 +36,22 @@ function syncRightAnswer(rightAnswer, options) {
   return options.includes(trimmed) ? trimmed : "";
 }
 
-function mapRecordToForm(record) {
-  const optionRows = Array.isArray(record?.options) ? record.options : [];
-  const mappedLines = optionRows
-    .map((opt) => String(opt.mappedOption ?? opt.optionText ?? "").trim())
-    .filter(Boolean);
+function isPrescreenFormDirty(current, original) {
+  if (!original) return false;
+  return (
+    current.language !== original.language ||
+    current.questionTitle !== original.questionTitle ||
+    current.mappedOptions !== original.mappedOptions ||
+    current.rightAnswer !== original.rightAnswer
+  );
+}
 
-  return {
-    language: record?.language ?? "",
-    questionTitle: record?.questionnaireTitle ?? record?.title ?? "",
-    mappedOptions: mappedLines.join("\n"),
-    rightAnswer: record?.rightAnswer ?? "",
-  };
+function isPrescreenFormValid(form) {
+  const rightAnswerOptions = parseMappedOptionsText(form.mappedOptions);
+  if (!form.language.trim() || !form.questionTitle.trim()) return false;
+  if (!rightAnswerOptions.length) return false;
+  if (!form.rightAnswer.trim()) return false;
+  return rightAnswerOptions.includes(form.rightAnswer.trim());
 }
 
 function AddPrescreenPage({ isDarkMode }) {
@@ -49,9 +59,11 @@ function AddPrescreenPage({ isDarkMode }) {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
   const [optionDraft, setOptionDraft] = useState("");
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const mappedOptionsRef = useRef(null);
 
   const inputClass = getAdminInputClass();
@@ -79,7 +91,9 @@ function AddPrescreenPage({ isDarkMode }) {
       try {
         const record = await getRecord(id);
         if (cancelled) return;
-        setForm(mapRecordToForm(record));
+        const mapped = mapPrescreenToForm(record);
+        setForm(mapped);
+        setInitialSnapshot(mapped);
       } catch {
         if (cancelled) return;
         setLoadFailed(true);
@@ -98,17 +112,27 @@ function AddPrescreenPage({ isDarkMode }) {
     adjustMappedOptionsHeight();
   }, [form.mappedOptions, adjustMappedOptionsHeight]);
 
-  const rightAnswerOptions = useMemo(
-    () => parseMappedOptionsText(form.mappedOptions),
-    [form.mappedOptions],
+  const rightAnswerOptions = useMemo(() => {
+    const options = parseMappedOptionsText(form.mappedOptions);
+    const savedAnswer = form.rightAnswer.trim();
+    if (savedAnswer && !options.includes(savedAnswer)) {
+      return [...options, savedAnswer];
+    }
+    return options;
+  }, [form.mappedOptions, form.rightAnswer]);
+
+  const isDirty = useMemo(
+    () => isEdit && isPrescreenFormDirty(form, initialSnapshot),
+    [isEdit, form, initialSnapshot],
   );
 
   const canSubmit = useMemo(() => {
-    if (!form.language.trim() || !form.questionTitle.trim()) return false;
-    if (!rightAnswerOptions.length) return false;
-    if (!form.rightAnswer.trim()) return false;
-    return rightAnswerOptions.includes(form.rightAnswer.trim());
-  }, [form, rightAnswerOptions]);
+    if (!isPrescreenFormValid(form) || isSubmitting || isLoadingRecord || loadFailed) {
+      return false;
+    }
+    if (isEdit) return isDirty;
+    return true;
+  }, [form, isSubmitting, isEdit, isDirty, isLoadingRecord, loadFailed]);
 
   const setField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -145,27 +169,35 @@ function AddPrescreenPage({ isDarkMode }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || (isEdit && !isDirty)) return;
 
     const mappedLines = parseMappedOptionsText(form.mappedOptions);
 
-    await saveRecord({
-      id: isEdit ? id : undefined,
-      language: form.language.trim(),
-      questionnaireTitle: form.questionTitle.trim(),
-      rightAnswer: form.rightAnswer.trim(),
-      status: "Active",
-      options: mappedLines.map((line) => ({
-        optionText: line,
-        mappedOption: line,
+    setIsSubmitting(true);
+    try {
+      const data = await saveRecord({
+        id: isEdit ? id : undefined,
+        language: form.language.trim(),
+        questionnaireTitle: form.questionTitle.trim(),
         rightAnswer: form.rightAnswer.trim(),
-      })),
-    });
+        status: isEdit ? initialSnapshot?.status ?? form.status : "Active",
+        options: mappedLines,
+      });
 
-    navigate("/prescreen", {
-      replace: true,
-      state: { refresh: true },
-    });
+      toastApiSuccess(data);
+
+      navigate("/prescreen", {
+        replace: true,
+        state: {
+          flash: data.message ? { type: "success", message: data.message } : null,
+          refresh: true,
+        },
+      });
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isEdit && isLoadingRecord) {
@@ -310,8 +342,9 @@ function AddPrescreenPage({ isDarkMode }) {
             <button
               type="submit"
               disabled={!canSubmit}
-              className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50"
             >
+              {isSubmitting && <Loader2 size={16} className="animate-spin" />}
               {isEdit ? "Update" : "Submit"}
             </button>
             <button

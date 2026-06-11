@@ -4,6 +4,7 @@ import {
   apiStatusToFormValue,
   formValueToApiStatus,
 } from "../../modules/shared/utils/statusLabels";
+import { getPrescreensByLanguage } from "./prescreenQuestionnairesApi";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
 
@@ -21,26 +22,7 @@ function assertSuccess(data) {
   return data;
 }
 
-function extractPrescreenList(data) {
-  if (!data || typeof data !== "object") return [];
-  if (Array.isArray(data.data)) return data.data;
-  if (Array.isArray(data.prescreens)) return data.prescreens;
-  return [];
-}
-
-function extractPrescreenRecord(data) {
-  if (!data || typeof data !== "object") return null;
-  if (data.data && typeof data.data === "object" && !Array.isArray(data.data)) {
-    return data.data;
-  }
-  if (data.prescreen && typeof data.prescreen === "object") {
-    return data.prescreen;
-  }
-  if (data.id != null) return data;
-  return null;
-}
-
-function normalizePrescreenId(id) {
+function normalizePrescreenSurveyId(id) {
   const normalizedId = String(id ?? "").trim();
   if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
     throw new ApiError("", null);
@@ -48,153 +30,284 @@ function normalizePrescreenId(id) {
   return encodeURIComponent(normalizedId);
 }
 
-export function parseQuestionsFromText(text) {
-  return String(text ?? "")
-    .split("\n")
-    .map((question) => question.trim())
-    .filter(Boolean);
+function extractPrescreenSurveyList(data) {
+  if (!data || typeof data !== "object") return [];
+  if (Array.isArray(data.data)) return data.data;
+  if (Array.isArray(data.prescreenSurveys)) return data.prescreenSurveys;
+  return [];
 }
 
-/** API may return questions as strings or as { id, question } objects. */
-export function normalizeQuestionItem(item) {
-  if (item == null) return "";
-  if (typeof item === "string") return item.trim();
-  if (typeof item === "object") {
-    return String(item.question ?? item.title ?? item.text ?? "").trim();
+function extractPrescreenSurveyRecord(data) {
+  if (!data || typeof data !== "object") return null;
+  if (data.data && typeof data.data === "object" && !Array.isArray(data.data)) {
+    return data.data;
   }
-  return String(item).trim();
+  if (data.prescreenSurvey && typeof data.prescreenSurvey === "object") {
+    return data.prescreenSurvey;
+  }
+  if (data.id != null) return data;
+  return null;
 }
 
-export function formatQuestionsForText(questions) {
-  if (!Array.isArray(questions)) return "";
-  return questions.map(normalizeQuestionItem).filter(Boolean).join("\n");
+function normalizePrescreenIds(ids) {
+  if (!Array.isArray(ids)) return [];
+  return ids
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id));
 }
 
-function resolveSelectedQuestions(payload) {
-  const single = String(payload.selectedQuestionnaire ?? "").trim();
-  if (single) return [single];
-
-  if (Array.isArray(payload.selectedQuestionnaires)) {
-    return payload.selectedQuestionnaires.map((question) => String(question ?? "").trim()).filter(Boolean);
+function resolvePrescreenIds(payload) {
+  if (Array.isArray(payload.prescreenIds)) {
+    return normalizePrescreenIds(payload.prescreenIds);
   }
 
-  return parseQuestionsFromText(payload.questionnaireList);
+  const single = payload.selectedPrescreenId ?? payload.selectedQuestionnaire;
+  if (single == null || String(single).trim() === "") return [];
+
+  const parsed = Number(single);
+  return Number.isFinite(parsed) ? [parsed] : [];
 }
 
-function buildPrescreenBody(payload) {
+function buildPrescreenSurveyBody(payload) {
   return {
-    survey_title: payload.surveyTitle.trim(),
-    language: payload.language.trim(),
+    survey_title: String(payload.surveyTitle ?? "").trim(),
+    language: String(payload.language ?? "").trim(),
     status: formValueToApiStatus(payload.status),
-    questions: resolveSelectedQuestions(payload),
+    prescreen_ids: resolvePrescreenIds(payload),
   };
+}
+
+function getQuestionItemsFromRecord(prescreen) {
+  if (Array.isArray(prescreen?.questions) && prescreen.questions.length) {
+    return prescreen.questions;
+  }
+
+  if (Array.isArray(prescreen?.prescreens) && prescreen.prescreens.length) {
+    return prescreen.prescreens;
+  }
+
+  return [];
+}
+
+function extractPrescreenIdsFromRecord(prescreen) {
+  if (Array.isArray(prescreen?.prescreen_ids)) {
+    return normalizePrescreenIds(prescreen.prescreen_ids);
+  }
+
+  if (Array.isArray(prescreen?.prescreenIds)) {
+    return normalizePrescreenIds(prescreen.prescreenIds);
+  }
+
+  if (prescreen?.prescreen_id != null) {
+    const parsed = Number(prescreen.prescreen_id);
+    return Number.isFinite(parsed) ? [parsed] : [];
+  }
+
+  const questionItems = getQuestionItemsFromRecord(prescreen);
+  if (questionItems.length) {
+    return questionItems
+      .map((item) => item?.id)
+      .filter((item) => item != null)
+      .map((item) => Number(item))
+      .filter((item) => Number.isFinite(item));
+  }
+
+  return [];
 }
 
 /**
  * @param {object} prescreen
  */
 export function mapPrescreenGroupToRow(prescreen) {
+  const createdRaw = prescreen?.created_at ?? prescreen?.createdAt ?? "";
+  const prescreenIds = extractPrescreenIdsFromRecord(prescreen);
+
   return {
     id: prescreen?.id,
     surveyTitle: prescreen?.survey_title ?? "",
     language: prescreen?.language ?? "",
     status: apiStatusToFormValue(prescreen?.status),
-    createdAt: prescreen?.created_at ?? "",
-    createdDate: prescreen?.created_at ?? "",
+    prescreenIds,
+    createdAt: createdRaw,
+    createdDate: createdRaw,
   };
 }
 
-/**
- * @param {object} prescreen
- */
+async function enrichPrescreenSurveyRecord(record) {
+  if (!record) return record;
+
+  const prescreenIds = extractPrescreenIdsFromRecord(record);
+  const questionItems = getQuestionItemsFromRecord(record);
+
+  if (questionItems.length > 0) {
+    return {
+      ...record,
+      prescreen_ids: prescreenIds,
+      questions: questionItems,
+      prescreens: questionItems,
+    };
+  }
+
+  const language = String(record.language ?? "").trim();
+
+  if (language && prescreenIds.length > 0) {
+    try {
+      const questions = await getPrescreensByLanguage(language);
+      const prescreens = prescreenIds.map((prescreenId) => {
+        const match = questions.find((item) => String(item.id) === String(prescreenId));
+        return (
+          match ?? {
+            id: prescreenId,
+            question_title: record.selected_question_title ?? "",
+          }
+        );
+      });
+
+      return {
+        ...record,
+        prescreen_ids: prescreenIds,
+        prescreens,
+      };
+    } catch {
+      return {
+        ...record,
+        prescreen_ids: prescreenIds,
+      };
+    }
+  }
+
+  if (prescreenIds.length > 0) {
+    return {
+      ...record,
+      prescreen_ids: prescreenIds,
+    };
+  }
+
+  return record;
+}
+
 export function mapPrescreenGroupToForm(prescreen) {
-  const selectedQuestionnaires = Array.isArray(prescreen?.questions)
-    ? prescreen.questions.map(normalizeQuestionItem).filter(Boolean)
-    : [];
+  const prescreenIds = extractPrescreenIdsFromRecord(prescreen);
+  const questionItems = getQuestionItemsFromRecord(prescreen);
+  const selectedItem =
+    questionItems.find((item) => String(item?.id) === String(prescreenIds[0])) ??
+    questionItems[0];
+  const selectedQuestionnaireLabel = String(
+    selectedItem?.question_title ??
+      selectedItem?.title ??
+      prescreen?.selected_question_title ??
+      ""
+  ).trim();
 
   return {
     surveyTitle: prescreen?.survey_title ?? "",
     language: prescreen?.language ?? "",
     status: apiStatusToFormValue(prescreen?.status),
-    selectedQuestionnaire: selectedQuestionnaires[0] ?? "",
-    selectedQuestionnaires,
+    selectedPrescreenId: prescreenIds[0] != null ? String(prescreenIds[0]) : "",
+    selectedQuestionnaireLabel,
+    prescreenIds,
   };
 }
 
-/** GET /api/prescreen/list */
+/** GET /api/prescreen-survey/list */
 export async function getRecords() {
-  const data = await apiRequest(API_ROUTES.prescreenGroup.list);
+  const data = await apiRequest(API_ROUTES.prescreenSurvey.list);
   assertSuccess(data);
 
-  const prescreens = extractPrescreenList(data);
+  const prescreens = extractPrescreenSurveyList(data);
   const total = extractListTotalFromResponse(data, prescreens.length);
 
   return {
     ...data,
     total,
     count: total,
+    page: data.page ?? 1,
+    limit: data.limit ?? prescreens.length,
+    totalPages: data.totalPages ?? 1,
     items: prescreens.map((prescreen) => mapPrescreenGroupToRow(prescreen)),
   };
 }
 
-/** GET /api/prescreen/:id — falls back to list lookup when detail endpoint is unavailable. */
+/** GET /api/prescreen-survey/:id — falls back to list lookup when detail endpoint is unavailable. */
 export async function getRecord(id) {
-  const normalizedId = normalizePrescreenId(id);
+  const normalizedId = normalizePrescreenSurveyId(id);
 
   try {
-    const data = await apiRequest(API_ROUTES.prescreenGroup.byId(normalizedId));
+    const data = await apiRequest(API_ROUTES.prescreenSurvey.byId(normalizedId));
     assertSuccess(data);
-    const record = extractPrescreenRecord(data);
-    if (record) return record;
+    const record = extractPrescreenSurveyRecord(data);
+    if (record) return enrichPrescreenSurveyRecord(record);
   } catch {
     // Fall back to list lookup below.
   }
 
-  const data = await apiRequest(API_ROUTES.prescreenGroup.list);
+  const data = await apiRequest(API_ROUTES.prescreenSurvey.list);
   assertSuccess(data);
 
-  const prescreens = extractPrescreenList(data);
+  const prescreens = extractPrescreenSurveyList(data);
   const match = prescreens.find((prescreen) => String(prescreen.id) === String(id));
   if (!match) {
     throw new ApiError("Prescreen group not found", null);
   }
 
-  return match;
+  return enrichPrescreenSurveyRecord(match);
 }
 
 /**
- * POST /api/prescreen/add
+ * POST /api/prescreen-survey/add
  * @param {{
  *   surveyTitle: string,
  *   language: string,
  *   status: string,
- *   questionnaireList: string,
+ *   selectedPrescreenId?: string|number,
+ *   prescreenIds?: Array<string|number>,
  * }} payload
  */
 export async function createPrescreenGroup(payload) {
-  const data = await apiRequest(API_ROUTES.prescreenGroup.create, {
+  const data = await apiRequest(API_ROUTES.prescreenSurvey.create, {
     method: "POST",
-    body: buildPrescreenBody(payload),
+    body: buildPrescreenSurveyBody(payload),
   });
 
   return assertSuccess(data);
 }
 
 /**
- * PUT /api/prescreen/:id
+ * PUT /api/prescreen-survey/:id
  * @param {string|number} id
- * @param {{
- *   surveyTitle: string,
- *   language: string,
- *   status: string,
- *   questionnaireList: string,
- * }} payload
+ * @param {Parameters<typeof createPrescreenGroup>[0]} payload
  */
 export async function updatePrescreenGroup(id, payload) {
-  const normalizedId = normalizePrescreenId(id);
-  const data = await apiRequest(API_ROUTES.prescreenGroup.update(normalizedId), {
+  const normalizedId = normalizePrescreenSurveyId(id);
+  const data = await apiRequest(API_ROUTES.prescreenSurvey.update(normalizedId), {
     method: "PUT",
-    body: buildPrescreenBody(payload),
+    body: buildPrescreenSurveyBody(payload),
+  });
+
+  return assertSuccess(data);
+}
+
+/**
+ * PUT /api/prescreen-survey/:id — status toggle from listing table only.
+ * @param {string|number} id
+ * @param {{
+ *   surveyTitle?: string,
+ *   language?: string,
+ *   prescreenIds?: Array<string|number>,
+ *   status: string,
+ * }} payload
+ */
+export async function updatePrescreenGroupStatus(id, payload) {
+  const normalizedId = normalizePrescreenSurveyId(id);
+  const data = await apiRequest(API_ROUTES.prescreenSurvey.update(normalizedId), {
+    method: "PUT",
+    body: buildPrescreenSurveyBody({
+      surveyTitle: payload.surveyTitle,
+      language: payload.language,
+      prescreenIds: payload.prescreenIds,
+      selectedPrescreenId: payload.prescreenIds?.[0],
+      status: payload.status,
+    }),
   });
 
   return assertSuccess(data);

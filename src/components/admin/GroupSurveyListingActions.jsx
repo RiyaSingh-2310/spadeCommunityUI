@@ -1,12 +1,16 @@
 import { Eye, Pencil, Plus } from "lucide-react";
 
-const iconBtnClass = (isDarkMode, { disabled = false } = {}) =>
+const iconBtnClass = (isDarkMode, { disabled = false, danger = false } = {}) =>
   `inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
     disabled
       ? "cursor-not-allowed opacity-40"
-      : isDarkMode
-        ? "text-[#9fb0c8] hover:bg-[#1e2e45] hover:text-[#f8fafc]"
-        : "text-[#5e718a] hover:bg-[#eef4fb] hover:text-[#203148]"
+      : danger
+        ? isDarkMode
+          ? "text-[#f18484] hover:bg-[#301f2d]"
+          : "text-[#de3d3d] hover:bg-[#fff1f1]"
+        : isDarkMode
+          ? "text-[#9fb0c8] hover:bg-[#1e2e45] hover:text-[#f8fafc]"
+          : "text-[#5e718a] hover:bg-[#eef4fb] hover:text-[#203148]"
   }`;
 
 function ActionIconButton({
@@ -14,6 +18,7 @@ function ActionIconButton({
   label,
   onClick,
   disabled = false,
+  danger = false,
   children,
 }) {
   return (
@@ -21,7 +26,7 @@ function ActionIconButton({
       type="button"
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
-      className={iconBtnClass(isDarkMode, { disabled })}
+      className={iconBtnClass(isDarkMode, { disabled, danger })}
       aria-label={label}
       title={label}
     >
@@ -43,7 +48,7 @@ function GroupSurveyListingActions({
       {onEdit && (
         <ActionIconButton
           isDarkMode={isDarkMode}
-          label="Edit Project"
+          label="Edit Group Survey"
           onClick={onEdit}
         >
           <Pencil size={13} />

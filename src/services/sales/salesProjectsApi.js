@@ -121,7 +121,27 @@ function extractSalesLogsList(data) {
   if (!data || typeof data !== "object") return [];
   if (Array.isArray(data.data)) return data.data;
   if (Array.isArray(data.logs)) return data.logs;
+  if (Array.isArray(data.sales_logs)) return data.sales_logs;
+  if (data.data && typeof data.data === "object" && Array.isArray(data.data.logs)) {
+    return data.data.logs;
+  }
   return [];
+}
+
+function resolveSalesProjectLogId(project) {
+  const recordId = String(project?.recordId ?? "").trim();
+  if (recordId && recordId !== "undefined" && recordId !== "null") {
+    return recordId;
+  }
+
+  const numericCandidates = [project?.id, project?.project_id];
+  for (const candidate of numericCandidates) {
+    const normalized = String(candidate ?? "").trim();
+    if (!normalized || normalized === "undefined" || normalized === "null") continue;
+    if (/^\d+$/.test(normalized)) return normalized;
+  }
+
+  return "";
 }
 
 function formCommentByToApi(commentBy) {
@@ -167,14 +187,16 @@ export function mapSalesProjectToRow(project) {
 export function mapSalesLogToRow(log) {
   return {
     id: log?.id,
-    emailSubject: log?.email_subject ?? "",
+    emailSubject: log?.email_subject ?? log?.emailSubject ?? "",
     comment: stripHtmlContent(log?.comment),
-    commentBy: apiCommentByToForm(log?.comment_by),
-    createdBy: log?.created_by ?? log?.created_by_name ?? "",
-    createdDate: formatSalesLogDate(log?.created_at),
-    createdAt: log?.created_at ?? "",
+    commentBy: apiCommentByToForm(log?.comment_by ?? log?.commentBy),
+    createdBy: log?.created_by ?? log?.created_by_name ?? log?.createdBy ?? "",
+    createdDate: formatSalesLogDate(log?.created_at ?? log?.createdAt),
+    createdAt: log?.created_at ?? log?.createdAt ?? "",
   };
 }
+
+export { resolveSalesProjectLogId };
 
 /** GET /api/sales/project/list */
 export async function getRecords() {
@@ -269,9 +291,17 @@ export async function deleteSalesProject(id) {
   return assertSuccess(data);
 }
 
+function normalizeSalesLogProjectId(projectId) {
+  const normalized = String(projectId ?? "").trim();
+  if (!normalized || normalized === "undefined" || normalized === "null") {
+    throw new ApiError("Invalid sales project id.", null);
+  }
+  return normalized;
+}
+
 /** GET /api/sales/project/log/list/:id */
 export async function getSalesLogs(projectId) {
-  const normalizedId = normalizeSalesProjectId(projectId);
+  const normalizedId = normalizeSalesLogProjectId(projectId);
   const data = await apiRequest(API_ROUTES.salesProjects.logs(normalizedId));
   assertSuccess(data);
 
@@ -292,11 +322,12 @@ export async function getSalesLogs(projectId) {
  * @param {{ subject: string, comment: string, commentBy: string }} payload
  */
 export async function createSalesLog(projectId, payload) {
-  const numericId = Number(String(projectId ?? "").trim());
+  const normalizedId = normalizeSalesLogProjectId(projectId);
+  const numericId = Number(normalizedId);
   const data = await apiRequest(API_ROUTES.salesProjects.createLog, {
     method: "POST",
     body: {
-      project_id: numericId,
+      project_id: Number.isFinite(numericId) ? numericId : normalizedId,
       email_subject: payload.subject.trim(),
       comment: payload.comment ?? "",
       comment_by: formCommentByToApi(payload.commentBy),

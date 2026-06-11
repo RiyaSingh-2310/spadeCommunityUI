@@ -7,7 +7,7 @@ import ProfileImageUpload from "../../../components/admin/ProfileImageUpload";
 import TableCard from "../../../components/admin/TableCard";
 import { useAdminFormAccess } from "../../permissions/FormAccessContext";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
-import { toastApiError } from "../../../services/toast/apiToast";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   createProjectManager,
   getRecord,
@@ -15,6 +15,7 @@ import {
   updateProjectManager,
 } from "../../../services/projectManagers/projectManagersApi";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
+import { resolveMediaUrl } from "../../shared/utils/userAvatar";
 import {
   getConfirmPasswordError,
   getEmailError,
@@ -22,6 +23,9 @@ import {
   getRequiredError,
   isFormValidForFields,
 } from "../../shared/utils/validation";
+
+/** Backend accepts passwords of at least 6 characters (e.g. 123456). */
+const PROJECT_MANAGER_PASSWORD_MIN_LENGTH = 6;
 
 const MANAGER_FORM_FIELDS = ["name", "email", "password", "confirmPassword"];
 
@@ -60,7 +64,9 @@ function AddProjectManagerPage({ isDarkMode }) {
     () => ({
       name: getRequiredError(form.name, "Name"),
       email: isEdit ? "" : getEmailError(form.email),
-      password: isEdit ? "" : getPasswordError(form.password),
+      password: isEdit
+        ? ""
+        : getPasswordError(form.password, PROJECT_MANAGER_PASSWORD_MIN_LENGTH),
       confirmPassword: isEdit ? "" : getConfirmPasswordError(form.password, form.confirmPassword),
     }),
     [form, isEdit]
@@ -92,7 +98,14 @@ function AddProjectManagerPage({ isDarkMode }) {
 
         const mapped = mapProjectManagerToForm(projectManager);
         setForm(mapped);
-        setExistingImage(projectManager?.profile_image ?? "");
+        setExistingImage(
+          resolveMediaUrl(
+            projectManager?.profile_image ??
+              projectManager?.image_url ??
+              projectManager?.imageUrl ??
+              ""
+          ) ?? ""
+        );
         setInitialSnapshot({
           name: mapped.name.trim(),
           status: mapped.status,
@@ -160,6 +173,8 @@ function AddProjectManagerPage({ isDarkMode }) {
             confirmPassword: form.confirmPassword,
             profileImage,
           });
+
+      toastApiSuccess(data);
 
       navigate("/project-managers", {
         replace: true,

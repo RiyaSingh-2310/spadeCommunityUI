@@ -25,7 +25,6 @@ import {
   getUrlError,
   isFormValidForFields,
 } from "../../shared/utils/validation";
-import RichTextEditor from "../../../components/admin/RichTextEditor";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 
 const PARTNER_ADD_REQUIRED_FIELDS = ["name", "email", "country", "contactNumber"];
@@ -366,14 +365,13 @@ function AddPartnerPage({ isDarkMode }) {
                 About Partner
                 {isEdit && <span className="text-[var(--admin-danger-text)]"> *</span>}
               </label>
-              <RichTextEditor
-                isDarkMode={isDarkMode}
-                value={form.aboutPartner}
-                onChange={(value) => setField("aboutPartner", value)}
-                onBlur={() => touch("aboutPartner")}
+              <textarea
+                className={`${inputClass} min-h-[200px] resize-y py-3`}
                 placeholder="Enter About Partner"
+                value={form.aboutPartner}
+                onChange={(e) => setField("aboutPartner", e.target.value)}
+                onBlur={() => touch("aboutPartner")}
                 disabled={controlDisabled}
-                height={200}
               />
               {showError("aboutPartner") && (
                 <p className="mt-1 text-xs text-[var(--admin-danger-text)]">

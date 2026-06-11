@@ -4,6 +4,20 @@ import { getRecords as getProjectManagers } from "../../../services/projectManag
 import { getRecords as getSalesManagers } from "../../../services/sales/salesManagersApi";
 import { getRecords as getSalesProjects } from "../../../services/sales/salesProjectsApi";
 
+export function mergeSelectOption(options = [], value, label) {
+  const normalizedValue = String(value ?? "").trim();
+  if (!normalizedValue) return options;
+
+  if (options.some((option) => String(option.value) === normalizedValue)) {
+    return options;
+  }
+
+  const normalizedLabel = String(label ?? "").trim();
+  if (!normalizedLabel) return options;
+
+  return [{ value: normalizedValue, label: normalizedLabel }, ...options];
+}
+
 export function mapClientsToSelectOptions(items = []) {
   return items
     .map((item) => ({

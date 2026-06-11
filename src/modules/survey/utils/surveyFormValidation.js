@@ -53,18 +53,8 @@ export function getSurveyFormErrors(form) {
     errors.endDate = dateRangeError;
   }
 
-  if (form.projectLinkType === "Single Link") {
-    errors.liveLink = getRequiredError(form.liveLink, "Live Link");
-    errors.testLink = getRequiredError(form.testLink, "Test Link");
-  } else if (form.projectLinkType === "Multi Link") {
-    if (!form.surveyCsvFile) {
-      errors.surveyCsvFile = "Survey file is required";
-    }
-  }
-
   if (form.filters.preScreen) {
     errors.language = getRequiredError(form.language, "Language");
-    errors.surveyGroup = getRequiredError(form.surveyGroup, "Survey Group");
   }
 
   return errors;
@@ -122,7 +112,10 @@ const SURVEY_FORM_SCALAR_KEYS = [
   "userTerminationPoint",
   "userCompletionPoint",
   "notes",
+  "existingSurveyCsvFileName",
 ];
+
+const SURVEY_FORM_META_KEYS = ["existingMultiLinkSurvey"];
 
 const SURVEY_FILTER_KEYS = ["geoLocation", "urlProtection", "uniqueIp", "preScreen"];
 
@@ -146,11 +139,31 @@ export function areSurveyFormsEqual(current, original) {
     }
   }
 
-  const currentFileName = current.surveyCsvFile?.name ?? "";
-  const originalFileName = original.surveyCsvFile?.name ?? "";
+  const currentFileName =
+    current.surveyCsvFile?.name ?? current.existingSurveyCsvFileName ?? "";
+  const originalFileName =
+    original.surveyCsvFile?.name ?? original.existingSurveyCsvFileName ?? "";
   if (currentFileName !== originalFileName) {
     return false;
   }
 
+  for (const key of SURVEY_FORM_META_KEYS) {
+    if (Boolean(current[key]) !== Boolean(original[key])) {
+      return false;
+    }
+  }
+
   return true;
+}
+
+/**
+ * Clone survey form state for dirty-state snapshots.
+ * @param {ReturnType<import('../data/surveyFormData').createEmptySurveyForm>} form
+ */
+export function cloneSurveyForm(form) {
+  return {
+    ...form,
+    filters: { ...form.filters },
+    surveyCsvFile: null,
+  };
 }

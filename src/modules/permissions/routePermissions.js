@@ -27,6 +27,7 @@ const ROUTE_RULES = [
   { matcher: /^\/prescreen\/group(\/|$)/, module: "prescreen_group" },
   { matcher: /^\/prescreen\/add/, module: "prescreen", requiresWrite: true },
   { matcher: /^\/prescreen(\/|$)/, module: "prescreen" },
+  { matcher: /^\/survey\/group\/add/, module: "group_survey", requiresWrite: true },
   { matcher: /^\/survey\/group\/[^/]+\/add-project/, module: "group_survey", requiresWrite: true },
   { matcher: /^\/survey\/group\/[^/]+\/projects/, module: "group_survey" },
   { matcher: /^\/survey\/group\/edit/, module: "group_survey", requiresWrite: true },

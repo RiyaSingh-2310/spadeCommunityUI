@@ -1,18 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminCancelButtonClass } from "../../shared/utils/formStyles";
 import SurveyForm from "../components/SurveyForm";
-import {
-  ADD_PROJECT_DEFAULTS,
-  GROUP_SURVEY_CLIENT_OPTIONS,
-  getDemoGroupSurveyRow,
-} from "../data/groupSurveyData";
 import { createEmptySurveyForm } from "../data/surveyFormData";
 import { useSurveyFormSelectOptions } from "../hooks/useSurveyFormSelectOptions";
-import { createGroupSurveyProject } from "../services/groupSurveyApi";
+import {
+  createGroupSurveyProject,
+  getRecord,
+  resolveGroupClientNames,
+  resolveGroupPrimaryClientId,
+} from "../services/groupSurveyApi";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   getSurveyFormErrors,
@@ -24,34 +24,73 @@ import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast
 function AddGroupSurveyProjectPage({ isDarkMode }) {
   const navigate = useNavigate();
   const { groupId } = useParams();
-  const group = useMemo(() => getDemoGroupSurveyRow(groupId), [groupId]);
   const { readOnly, showSubmit } = useFormAccess();
-
-  const [form, setForm] = useState(() => ({
-    ...createEmptySurveyForm(),
-    client: group.client,
-    description: ADD_PROJECT_DEFAULTS.description,
-    notes: ADD_PROJECT_DEFAULTS.notes,
-  }));
+  const [groupRecord, setGroupRecord] = useState(null);
+  const [isLoadingGroup, setIsLoadingGroup] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [form, setForm] = useState(createEmptySurveyForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const {
+    clientOptions,
     projectManagerOptions,
     salesManagerOptions,
     salesProjectOptions,
     isLoading: isLoadingOptions,
   } = useSurveyFormSelectOptions();
 
+  useEffect(() => {
+    if (!groupId) return undefined;
+
+    let cancelled = false;
+
+    const loadGroup = async () => {
+      setIsLoadingGroup(true);
+      setLoadFailed(false);
+
+      try {
+        const project = await getRecord(groupId);
+        if (cancelled) return;
+
+        setGroupRecord(project);
+        setForm({
+          ...createEmptySurveyForm(),
+          client: resolveGroupPrimaryClientId(project),
+          groupProjectId: groupId,
+        });
+      } catch (error) {
+        if (cancelled) return;
+        toastApiError(error);
+        setLoadFailed(true);
+      } finally {
+        if (!cancelled) setIsLoadingGroup(false);
+      }
+    };
+
+    loadGroup();
+    return () => {
+      cancelled = true;
+    };
+  }, [groupId]);
+
+  const lockedClientLabel = useMemo(
+    () => resolveGroupClientNames(groupRecord),
+    [groupRecord]
+  );
+
   const errors = useMemo(() => getSurveyFormErrors(form), [form]);
   const { showError, touch, validateSubmit } = useFormValidation({
     errors,
     fields: SURVEY_FORM_FIELDS,
   });
+
   const canSubmit =
     showSubmit &&
     !readOnly &&
     isSurveyFormSubmittable(form) &&
     !isSubmitting &&
-    !isLoadingOptions;
+    !isLoadingGroup &&
+    !isLoadingOptions &&
+    !loadFailed;
 
   const onSubmit = async (event) => {
     event.preventDefault();
@@ -59,13 +98,11 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
-      const data = await createGroupSurveyProject(groupId, {
-        ...form,
-        groupProject: group.groupProject,
-      });
+      const data = await createGroupSurveyProject(groupId, form);
       toastApiSuccess(data);
       navigate(`/survey/group/${encodeURIComponent(groupId)}/projects`, {
         replace: true,
+        state: { refresh: true },
       });
     } catch (err) {
       toastApiError(err);
@@ -74,11 +111,44 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
     }
   };
 
+  if (isLoadingGroup || isLoadingOptions) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-[#10a950]" />
+      </div>
+    );
+  }
+
+  if (loadFailed || !groupRecord) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          title="Add Survey Project"
+          breadcrumbs={[
+            { label: "Group Survey", to: "/survey/group" },
+            { label: "Add Survey Project" },
+          ]}
+          isDarkMode={isDarkMode}
+        />
+        <div className="admin-text rounded-xl border border-[var(--admin-border)] p-6 text-sm">
+          Unable to load group survey details.
+          <button
+            type="button"
+            onClick={() => navigate("/survey/group")}
+            className="ml-2 font-semibold text-[#10a950] hover:underline"
+          >
+            Back to Group Survey
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
         title="Add Survey Project"
-        subtitle={group.groupProject}
+        subtitle={groupRecord.project_name}
         breadcrumbs={[
           { label: "Group Survey", to: "/survey/group" },
           {
@@ -99,8 +169,9 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
           touch={touch}
           isDarkMode={isDarkMode}
           disabled={fieldDisabled(readOnly, isSubmitting)}
-          groupProject={group.groupProject}
-          clientOptions={GROUP_SURVEY_CLIENT_OPTIONS}
+          groupProject={groupRecord.project_name}
+          lockedClientLabel={lockedClientLabel}
+          clientOptions={clientOptions}
           projectManagerOptions={projectManagerOptions}
           salesManagerOptions={salesManagerOptions}
           salesProjectOptions={salesProjectOptions}
@@ -120,7 +191,7 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
           <button
             type="button"
             onClick={() =>
-              navigate(`/survey/group`)
+              navigate(`/survey/group/${encodeURIComponent(groupId)}/projects`)
             }
             disabled={isSubmitting}
             className={getAdminCancelButtonClass()}

@@ -1,6 +1,9 @@
 import { API_ROUTES } from "../../../config/api";
 import { extractListTotalFromResponse } from "../../shared/utils/listResponse";
-import { apiStatusToFormValue } from "../../shared/utils/statusLabels";
+import {
+  apiStatusToFormValue,
+  formValueToApiStatus,
+} from "../../shared/utils/statusLabels";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import { createEmptySurveyForm } from "../data/surveyFormData";
@@ -53,6 +56,31 @@ function formLinkTypeToApi(projectLinkType) {
   return "unique";
 }
 
+function apiLinkTypeToForm(linkType) {
+  if (String(linkType ?? "").toLowerCase() === "multi") return "Multi Link";
+  return "Single Link";
+}
+
+function resolveBooleanFlag(survey, keys, fallback = false) {
+  for (const key of keys) {
+    const value = survey?.[key];
+    if (value != null) return Boolean(value);
+  }
+  return fallback;
+}
+
+function extractSurveyRecord(data) {
+  if (!data || typeof data !== "object") return null;
+  if (data.data && typeof data.data === "object" && !Array.isArray(data.data)) {
+    return data.data;
+  }
+  if (data.survey && typeof data.survey === "object") {
+    return data.survey;
+  }
+  if (data.id != null) return data;
+  return null;
+}
+
 function toDateInputValue(value) {
   if (!value) return "";
   const parsed = new Date(value);
@@ -85,6 +113,8 @@ export function mapSurveyToRow(survey) {
     clientCode: clientCode != null && clientCode !== "" ? String(clientCode) : "—",
     startDate: formatSurveyListDate(survey?.start_date),
     endDate: formatSurveyListDate(survey?.end_date),
+    loi: survey?.loi != null ? String(survey.loi) : "—",
+    ir: survey?.ir != null ? String(survey.ir) : "—",
     status: apiStatusToFormValue(survey?.status),
     clientName: survey?.client_name ?? "",
     projectManagerName: survey?.project_manager_name ?? "",
@@ -124,22 +154,30 @@ export function buildCreateSurveyPayload(form) {
     payload.test_url = form.testLink?.trim();
   }
 
+  payload.geo_location = Boolean(form.filters?.geoLocation);
+  payload.url_protection = Boolean(form.filters?.urlProtection);
+  payload.unique_ip = Boolean(form.filters?.uniqueIp);
+  payload.prescreen = Boolean(form.filters?.preScreen);
+
+  if (form.filters?.preScreen) {
+    if (form.language) payload.language = form.language;
+    const prescreenSurveyId = resolveNumericId(form.surveyGroup);
+    if (prescreenSurveyId != null) payload.prescreen_survey_id = prescreenSurveyId;
+  }
+
+  const groupProjectId = resolveNumericId(form.groupProjectId);
+  if (groupProjectId != null) payload.group_project_id = groupProjectId;
+
   return payload;
 }
 
 /**
  * @param {object} survey
- * @param {object} [fallback]
+ * @param {string[]} idKeys
+ * @param {string} [fallback]
  */
-function resolveSurveyFormId(survey, idKeys, nameKeys, fallback = "") {
+function resolveSurveyFormId(survey, idKeys, fallback = "") {
   for (const key of idKeys) {
-    const value = survey?.[key];
-    if (value != null && value !== "") {
-      return String(value);
-    }
-  }
-
-  for (const key of nameKeys) {
     const value = survey?.[key];
     if (value != null && value !== "") {
       return String(value);
@@ -151,35 +189,41 @@ function resolveSurveyFormId(survey, idKeys, nameKeys, fallback = "") {
 
 export function mapSurveyToForm(survey, fallback = null) {
   const base = fallback ?? createEmptySurveyForm();
+  const linkType = apiLinkTypeToForm(survey?.link_type);
+  const existingCsvFileName = pickSurveyFormValue(
+    survey?.survey_file_name ??
+      survey?.csv_file_name ??
+      survey?.file_name ??
+      survey?.survey_file ??
+      survey?.uploaded_file_name,
+    ""
+  );
 
   return {
     ...base,
     client: resolveSurveyFormId(
       survey,
       ["client_id"],
-      [],
       survey?.client_code != null ? String(survey.client_code) : base.client
     ),
     projectName: pickSurveyFormValue(survey?.project_name, base.projectName),
     projectManager: resolveSurveyFormId(
       survey,
       ["project_manager_id"],
-      ["project_manager_name"],
       base.projectManager
     ),
     salesManager: resolveSurveyFormId(
       survey,
       ["sales_manager_id"],
-      ["sales_manager_name"],
       base.salesManager
     ),
     salesProject: resolveSurveyFormId(
       survey,
       ["sales_project_id"],
-      [],
       base.salesProject
     ),
     projectCountry: pickSurveyFormValue(survey?.project_country, base.projectCountry),
+    description: pickSurveyFormValue(survey?.description, base.description),
     loi: survey?.loi != null ? String(survey.loi) : base.loi,
     ir: survey?.ir != null ? String(survey.ir) : base.ir,
     sampleSize:
@@ -188,25 +232,70 @@ export function mapSurveyToForm(survey, fallback = null) {
     cpi: survey?.cpi != null ? String(survey.cpi) : base.cpi,
     startDate: toDateInputValue(survey?.start_date) || base.startDate,
     endDate: toDateInputValue(survey?.end_date) || base.endDate,
+    projectLinkType: linkType,
+    liveLink: pickSurveyFormValue(survey?.live_url, base.liveLink),
+    testLink: pickSurveyFormValue(survey?.test_url, base.testLink),
+    surveyCsvFile: null,
+    existingSurveyCsvFileName: existingCsvFileName,
+    existingMultiLinkSurvey: linkType === "Multi Link",
+    filters: {
+      geoLocation: resolveBooleanFlag(
+        survey,
+        ["geo_location", "geoLocation"],
+        base.filters.geoLocation
+      ),
+      urlProtection: resolveBooleanFlag(
+        survey,
+        ["url_protection", "urlProtection"],
+        base.filters.urlProtection
+      ),
+      uniqueIp: resolveBooleanFlag(
+        survey,
+        ["unique_ip", "uniqueIp"],
+        base.filters.uniqueIp
+      ),
+      preScreen: resolveBooleanFlag(
+        survey,
+        ["prescreen", "pre_screen", "preScreen"],
+        base.filters.preScreen
+      ),
+    },
+    language: pickSurveyFormValue(survey?.language, base.language),
+    surveyGroup: resolveSurveyFormId(
+      survey,
+      ["prescreen_survey_id", "survey_group_id"],
+      base.surveyGroup
+    ),
+    userTerminationPoint:
+      survey?.term_point != null ? String(survey.term_point) : base.userTerminationPoint,
+    userCompletionPoint:
+      survey?.comp_point != null ? String(survey.comp_point) : base.userCompletionPoint,
     notes: pickSurveyFormValue(survey?.notes, base.notes),
   };
 }
 
-/** GET /api/survey/list — resolve a single survey by numeric id or survey_id. */
+/** GET /api/survey/:id — falls back to list lookup when detail endpoint is unavailable. */
 export async function getRecord(id) {
-  const normalizedId = String(id ?? "").trim();
-  if (!normalizedId) {
-    throw new ApiError("", null);
+  const normalizedId = normalizeSurveyId(id);
+
+  try {
+    const data = await apiRequest(API_ROUTES.survey.byId(normalizedId));
+    assertSuccess(data);
+
+    const record = extractSurveyRecord(data);
+    if (record) return record;
+  } catch {
+    // Fall back to list lookup below.
   }
 
+  const listId = decodeURIComponent(normalizedId);
   const data = await apiRequest(API_ROUTES.survey.list);
   assertSuccess(data);
 
   const surveys = extractSurveysList(data);
   const record = surveys.find(
     (survey) =>
-      String(survey?.id) === normalizedId ||
-      String(survey?.survey_id) === normalizedId
+      String(survey?.id) === listId || String(survey?.survey_id) === listId
   );
 
   if (!record) {
@@ -220,23 +309,32 @@ export async function getRecord(id) {
  * @param {object} form
  */
 export function buildUpdateSurveyPayload(form) {
-  return {
-    project_name: form.projectName?.trim(),
-    project_country: form.projectCountry?.trim(),
-    loi: Number(form.loi),
-    ir: Number(form.ir),
-    sample_size: Number(form.sampleSize),
-    currency: form.currency,
-    start_date: form.startDate,
-    end_date: form.endDate,
-    cpi: Number(form.cpi),
-    notes: form.notes?.trim() || undefined,
-  };
+  return buildCreateSurveyPayload(form);
+}
+
+function buildSurveyListPath({ page, limit, groupProjectId } = {}) {
+  const params = new URLSearchParams();
+  const safePage = Number(page);
+  const safeLimit = Number(limit);
+  const safeGroupProjectId = Number(groupProjectId);
+
+  if (Number.isFinite(safePage) && safePage > 0) {
+    params.set("page", String(safePage));
+  }
+  if (Number.isFinite(safeLimit) && safeLimit > 0) {
+    params.set("limit", String(safeLimit));
+  }
+  if (Number.isFinite(safeGroupProjectId) && safeGroupProjectId > 0) {
+    params.set("group_project_id", String(safeGroupProjectId));
+  }
+
+  const query = params.toString();
+  return query ? `${API_ROUTES.survey.list}?${query}` : API_ROUTES.survey.list;
 }
 
 /** GET /api/survey/list */
-export async function getRecords() {
-  const data = await apiRequest(API_ROUTES.survey.list);
+export async function getRecords({ page, limit, groupProjectId } = {}) {
+  const data = await apiRequest(buildSurveyListPath({ page, limit, groupProjectId }));
   assertSuccess(data);
 
   const surveys = extractSurveysList(data);
@@ -272,6 +370,27 @@ export async function updateSurvey(surveyId, form) {
   const data = await apiRequest(API_ROUTES.survey.update(normalizedId), {
     method: "PUT",
     body: buildUpdateSurveyPayload(form),
+  });
+  return assertSuccess(data);
+}
+
+/** PUT /api/survey/:id — status toggle from listing table. */
+export async function updateSurveyStatus(surveyId, { status }) {
+  const normalizedId = normalizeSurveyId(surveyId);
+  const data = await apiRequest(API_ROUTES.survey.update(normalizedId), {
+    method: "PUT",
+    body: {
+      status: formValueToApiStatus(status),
+    },
+  });
+  return assertSuccess(data);
+}
+
+/** DELETE /api/survey/:id */
+export async function deleteSurvey(surveyId) {
+  const normalizedId = normalizeSurveyId(surveyId);
+  const data = await apiRequest(API_ROUTES.survey.delete(normalizedId), {
+    method: "DELETE",
   });
   return assertSuccess(data);
 }

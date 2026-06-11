@@ -25,6 +25,7 @@ import {
   useFormAccess,
 } from "../../modules/permissions/FormAccessContext";
 import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
+import { resolveMediaUrl } from "../../modules/shared/utils/userAvatar";
 import { useFormValidation } from "../../modules/shared/hooks/useFormValidation";
 import {
   getConfirmPasswordError,
@@ -109,7 +110,9 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
           ...mapped,
           permissions: normalizedPermissions,
         });
-        setExistingImage(admin?.image_url || admin?.imageUrl || "");
+        setExistingImage(
+          resolveMediaUrl(admin?.image_url || admin?.imageUrl || admin?.image || "") ?? ""
+        );
         setInitialSnapshot({
           name: mapped.name.trim(),
           status: mapped.status,
@@ -180,6 +183,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
         name: form.name,
         email: form.email,
         password: form.password,
+        confirmPassword: form.confirmPassword,
         contact_no: "",
         imageFile,
         permission_type: form.permission_type,

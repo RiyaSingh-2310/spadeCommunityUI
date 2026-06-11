@@ -3,39 +3,130 @@ import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
-import SearchableSelect from "../../../components/admin/SearchableSelect";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
+import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
-import { getRequiredError, isFormValid } from "../../shared/utils/validation";
-
-const GROUP_SURVEY_EDIT_FIELDS = ["client", "projectName"];
-import {
-  GROUP_SURVEY_CLIENT_OPTIONS,
-  getDemoGroupSurveyRow,
-  getDemoGroupSurveySimpleEditForm,
-} from "../data/groupSurveyData";
-import { updateGroupSurveyProject } from "../services/groupSurveyApi";
+import { getRequiredError, isFormValidForFields } from "../../shared/utils/validation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { getRecords as getClients } from "../../../services/clients/clientsApi";
+import {
+  mapClientsToSelectOptions,
+  mergeSelectOption,
+} from "../hooks/useSurveyFormSelectOptions";
+import {
+  getRecord,
+  mapGroupProjectToForm,
+  updateGroupProject,
+} from "../services/groupSurveyApi";
+
+const GROUP_SURVEY_EDIT_FIELDS = ["projectName", "clientId"];
+
+const GROUP_SURVEY_EDIT_REQUIRED_FIELDS = ["projectName", "clientId"];
 
 function EditGroupSurveyPage({ isDarkMode }) {
   const navigate = useNavigate();
   const { id } = useParams();
-  const group = useMemo(() => getDemoGroupSurveyRow(id), [id]);
   const { readOnly, showSubmit } = useFormAccess();
-
-  const initialForm = useMemo(() => getDemoGroupSurveySimpleEditForm(id), [id]);
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState({
+    projectName: "",
+    description: "",
+    notes: "",
+    clientId: "",
+  });
+  const [clientOptions, setClientOptions] = useState([]);
+  const [loadedRecord, setLoadedRecord] = useState(null);
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
+  const [isLoadingRecord, setIsLoadingRecord] = useState(true);
+  const [isLoadingClients, setIsLoadingClients] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputClass = getAdminInputClass();
   const selectClass = `${inputClass} appearance-none`;
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadClients = async () => {
+      setIsLoadingClients(true);
+      try {
+        const data = await getClients();
+        if (!cancelled) {
+          setClientOptions(mapClientsToSelectOptions(data.items));
+        }
+      } catch {
+        if (!cancelled) setClientOptions([]);
+      } finally {
+        if (!cancelled) setIsLoadingClients(false);
+      }
+    };
+
+    loadClients();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!id || isLoadingClients) return undefined;
+
+    let cancelled = false;
+
+    const loadGroupProject = async () => {
+      setIsLoadingRecord(true);
+      setLoadFailed(false);
+
+      try {
+        const project = await getRecord(id);
+        if (cancelled) return;
+
+        const mapped = mapGroupProjectToForm(project);
+        setLoadedRecord(project);
+        setForm({
+          projectName: mapped.projectName,
+          description: mapped.description,
+          notes: mapped.notes,
+          clientId: mapped.clientId,
+        });
+        setInitialSnapshot({
+          projectName: mapped.projectName.trim(),
+          description: mapped.description ?? "",
+          notes: mapped.notes ?? "",
+          clientId: String(mapped.clientId ?? ""),
+        });
+      } catch (error) {
+        if (cancelled) return;
+        toastApiError(error);
+        setLoadFailed(true);
+      } finally {
+        if (!cancelled) setIsLoadingRecord(false);
+      }
+    };
+
+    loadGroupProject();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, isLoadingClients]);
+
+  const mergedClientOptions = useMemo(() => {
+    const savedClient = loadedRecord?.clients?.find(
+      (client) => String(client?.id) === String(form.clientId)
+    );
+
+    return mergeSelectOption(
+      clientOptions,
+      form.clientId,
+      savedClient?.name ?? loadedRecord?.client_names
+    );
+  }, [clientOptions, form.clientId, loadedRecord]);
+
   const errors = useMemo(
     () => ({
-      client: getRequiredError(form.client, "Client"),
       projectName: getRequiredError(form.projectName, "Project Name"),
+      clientId: getRequiredError(form.clientId, "Client"),
     }),
     [form]
   );
@@ -46,24 +137,53 @@ function EditGroupSurveyPage({ isDarkMode }) {
   });
 
   useEffect(() => {
-    setForm(initialForm);
     resetValidation();
-  }, [initialForm, resetValidation]);
+  }, [id, resetValidation]);
+
+  const isDirty = useMemo(() => {
+    if (!initialSnapshot) return false;
+
+    if (form.projectName.trim() !== initialSnapshot.projectName) return true;
+    if (String(form.description ?? "") !== String(initialSnapshot.description ?? "")) return true;
+    if (String(form.notes ?? "") !== String(initialSnapshot.notes ?? "")) return true;
+    if (String(form.clientId ?? "") !== String(initialSnapshot.clientId ?? "")) return true;
+
+    return false;
+  }, [form, initialSnapshot]);
 
   const canSubmit =
-    showSubmit && !readOnly && isFormValid(errors) && !isSubmitting;
+    showSubmit &&
+    !readOnly &&
+    isFormValidForFields(errors, GROUP_SURVEY_EDIT_REQUIRED_FIELDS) &&
+    !isSubmitting &&
+    !isLoadingRecord &&
+    !isLoadingClients &&
+    !loadFailed &&
+    isDirty;
 
   const onSubmit = async (event) => {
     event.preventDefault();
-    if (!validateSubmit() || !isFormValid(errors)) return;
+    if (
+      !validateSubmit() ||
+      !isFormValidForFields(errors, GROUP_SURVEY_EDIT_REQUIRED_FIELDS) ||
+      !isDirty
+    ) {
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      const data = await updateGroupSurveyProject(id, form);
+      const data = await updateGroupProject(id, form);
       toastApiSuccess(data);
-      navigate("/survey/group", { replace: true });
-    } catch (err) {
-      toastApiError(err);
+      navigate("/survey/group", {
+        replace: true,
+        state: {
+          flash: data.message ? { type: "success", message: data.message } : null,
+          refresh: true,
+        },
+      });
+    } catch (error) {
+      toastApiError(error);
     } finally {
       setIsSubmitting(false);
     }
@@ -71,14 +191,47 @@ function EditGroupSurveyPage({ isDarkMode }) {
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
+  if (isLoadingRecord || isLoadingClients) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-[#10a950]" />
+      </div>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          title="Edit Group Survey"
+          breadcrumbs={[
+            { label: "Group Survey", to: "/survey/group" },
+            { label: "Edit Group Survey" },
+          ]}
+          isDarkMode={isDarkMode}
+        />
+        <div className="admin-text rounded-xl border border-[var(--admin-border)] p-6 text-sm">
+          Unable to load group survey details.
+          <button
+            type="button"
+            onClick={() => navigate("/survey/group")}
+            className="ml-2 font-semibold text-[#10a950] hover:underline"
+          >
+            Back to Group Survey
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="Edit Project"
-        subtitle={group.groupProject}
+        title="Edit Group Survey"
+        subtitle={form.projectName}
         breadcrumbs={[
           { label: "Group Survey", to: "/survey/group" },
-          { label: "Edit Project" },
+          { label: "Edit Group Survey" },
         ]}
         isDarkMode={isDarkMode}
       />
@@ -86,25 +239,23 @@ function EditGroupSurveyPage({ isDarkMode }) {
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
         <TableCard title="Project Details" isDarkMode={isDarkMode}>
           <div className="grid gap-4 md:grid-cols-2">
-            <FormField label="Client" required error={showError("client")}>
+            <FormField label="Clients" required error={showError("clientId")}>
               <SearchableSelect
                 inputClass={selectClass}
-                value={form.client}
-                onChange={(next) => setField("client", next)}
-                onBlur={() => touch("client")}
-                options={GROUP_SURVEY_CLIENT_OPTIONS}
+                value={form.clientId}
+                onChange={(clientId) => setField("clientId", clientId)}
+                onBlur={() => touch("clientId")}
+                options={mergedClientOptions}
                 placeholder="Select Client"
                 disabled={fieldDisabled(readOnly, isSubmitting)}
+                loading={isLoadingClients}
+                loadingLabel="Loading clients..."
                 searchPlaceholder="Search client..."
                 aria-label="Select client"
               />
             </FormField>
 
-            <FormField
-              label="Project Name"
-              required
-              error={showError("projectName")}
-            >
+            <FormField label="Project Name" required error={showError("projectName")}>
               <input
                 className={inputClass}
                 placeholder="Enter Project Name"

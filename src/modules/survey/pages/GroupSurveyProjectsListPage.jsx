@@ -1,97 +1,185 @@
-import { useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
-import { useListingPageActions } from "../../shared/hooks/useListingPageActions";
-import {
-  getDemoGroupProjects,
-  getDemoGroupSurveyRow,
-} from "../data/groupSurveyData";
-
-const SURVEY_ACTION_LABELS = {
-  view: "View",
-  edit: "Edit",
-  findUser: "Find User",
-  userSurveyData: "User Survey Data",
-  surveyClone: "Survey Clone",
-};
+import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
+import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { deleteSurvey, updateSurveyStatus } from "../services/surveyApi";
+import { getGroupProjectSurveys, getRecord } from "../services/groupSurveyApi";
 
 function GroupSurveyProjectsListPage({ isDarkMode }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { groupId } = useParams();
-  const group = useMemo(() => getDemoGroupSurveyRow(groupId), [groupId]);
+  useFlashMessage();
 
-  const initialRows = useMemo(() => getDemoGroupProjects(groupId), [groupId]);
+  const [groupRecord, setGroupRecord] = useState(null);
+  const [rows, setRows] = useState([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
-  const { rows, onStatusToggle } = useListingPageActions({
-    initialRows,
-    editPath: "/survey",
-  });
+  const fetchProjects = useCallback(async () => {
+    if (!groupId) return;
 
-  const navigateWithId = (pathBuilder) => (row) => {
-    const projectId = row?.id;
-    if (projectId == null) return;
-    pathBuilder(projectId, row);
+    setIsLoading(true);
+    try {
+      const [group, surveys] = await Promise.all([
+        getRecord(groupId),
+        getGroupProjectSurveys(groupId),
+      ]);
+      setGroupRecord(group);
+      setRows(surveys.items);
+      setTotalRecords(surveys.total ?? surveys.count ?? surveys.items.length);
+    } catch (error) {
+      toastApiError(error);
+      setGroupRecord(null);
+      setRows([]);
+      setTotalRecords(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [groupId]);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  useEffect(() => {
+    if (location.state?.refresh) {
+      fetchProjects();
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, location.pathname, navigate, fetchProjects]);
+
+  const handleDeleteRequest = (row) => {
+    setDeleteTarget(row);
+  };
+
+  const handleDeleteCancel = () => {
+    if (isDeleting) return;
+    setDeleteTarget(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    const recordId = deleteTarget?.recordId;
+    if (recordId == null) return;
+
+    setIsDeleting(true);
+    try {
+      const data = await deleteSurvey(recordId);
+      setDeleteTarget(null);
+      toastApiSuccess(data);
+      await fetchProjects();
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const projectsPath = `/survey/group/${encodeURIComponent(groupId)}/projects`;
+
+  const handleStatusToggle = async (row) => {
+    const recordId = row?.recordId;
+    if (recordId == null || statusUpdatingId != null) return;
+
+    const previousStatus = row.status;
+    const nextStatus =
+      String(previousStatus ?? "").toLowerCase() === "active" ? "Inactive" : "Active";
+    setStatusUpdatingId(recordId);
+    setRows((prev) =>
+      prev.map((item) =>
+        String(item.recordId) === String(recordId) ? { ...item, status: nextStatus } : item
+      )
+    );
+
+    try {
+      const data = await updateSurveyStatus(recordId, { status: nextStatus });
+      toastApiSuccess(data);
+    } catch (error) {
+      toastApiError(error);
+      setRows((prev) =>
+        prev.map((item) =>
+          String(item.recordId) === String(recordId)
+            ? { ...item, status: previousStatus }
+            : item
+        )
+      );
+    } finally {
+      setStatusUpdatingId(null);
+    }
   };
 
   return (
-    <ModuleListingPage
-      isDarkMode={isDarkMode}
-      title="View Projects"
-      subtitle={group.groupProject}
-      breadcrumbs={[
-        { label: "Group Survey", to: "/survey/group" },
-        { label: "View Projects" },
-      ]}
-      searchPlaceholder="Search projects..."
-      columns={[
-        "ID",
-        "Project Name",
-        "Client Code",
-        "LOI",
-        "IR",
-        "Start Date",
-        "End Date",
-        "Status",
-        "Action",
-      ]}
-      rows={rows}
-      rowIdKey="id"
-      actionVariant="view-edit"
-      showDeleteAction={false}
-      editPath="/survey"
-      onView={navigateWithId((projectId) =>
-        navigate(`/survey/view/${encodeURIComponent(projectId)}`)
-      )}
-      onEdit={navigateWithId((projectId) =>
-        navigate(`/survey/edit/${encodeURIComponent(projectId)}`)
-      )}
-      onFindUser={navigateWithId((projectId, row) =>
-        navigate(`/survey/${encodeURIComponent(projectId)}/find-user`, {
-          state: { surveyName: row.projectName },
-        })
-      )}
-      onUserSurveyData={navigateWithId((projectId, row) =>
-        navigate(`/survey/${encodeURIComponent(projectId)}/user-survey-data`, {
-          state: { surveyName: row.projectName },
-        })
-      )}
-      onSurveyClone={() => {
-        // Future implementation: clone survey project
-      }}
-      surveyActionLabels={SURVEY_ACTION_LABELS}
-      onStatusToggle={onStatusToggle}
-      permissionModule="group_survey"
-      searchFields={[
-        "id",
-        "projectName",
-        "clientCode",
-        "loi",
-        "ir",
-        "startDate",
-        "endDate",
-      ]}
-      nowrapAllCells
-    />
+    <div className="space-y-4">
+      <ModuleListingPage
+        isDarkMode={isDarkMode}
+        title="View Projects"
+        subtitle={groupRecord?.project_name ?? ""}
+        breadcrumbs={[
+          { label: "Group Survey", to: "/survey/group" },
+          { label: "View Projects" },
+        ]}
+        searchPlaceholder="Search projects..."
+        actionLabel="Add Group Survey"
+        onActionClick={() =>
+          navigate(`/survey/group/${encodeURIComponent(groupId)}/add-project`)
+        }
+        columns={[
+          "ID",
+          "Project Name",
+          "Client Code",
+          "Start Date",
+          "End Date",
+          "LOI",
+          "IR",
+          "Status",
+          "Action",
+        ]}
+        rows={rows}
+        rowIdKey="recordId"
+        actionVariant="group-survey-projects"
+        permissionModule="group_survey"
+        onAddProject={() =>
+          navigate(`/survey/group/${encodeURIComponent(groupId)}/add-project`)
+        }
+        onEdit={(row) => {
+          const recordId = row?.recordId;
+          if (recordId == null) return;
+          navigate(`/survey/edit/${encodeURIComponent(String(recordId))}`, {
+            state: { returnTo: projectsPath },
+          });
+        }}
+        onDelete={handleDeleteRequest}
+        onStatusToggle={handleStatusToggle}
+        searchFields={[
+          "id",
+          "projectName",
+          "clientCode",
+          "startDate",
+          "endDate",
+          "loi",
+          "ir",
+        ]}
+        isLoading={isLoading}
+        emptyMessage="No projects found"
+        totalRecords={totalRecords}
+        pageSize={DEFAULT_PAGE_SIZE}
+        showPagination
+        nowrapAllCells
+      />
+
+      <DeleteConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        onCancel={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+      />
+    </div>
   );
 }
 

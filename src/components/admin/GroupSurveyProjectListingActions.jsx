@@ -1,6 +1,6 @@
-import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 
-const iconBtnClass = (isDarkMode, { danger = false, disabled = false } = {}) =>
+const iconBtnClass = (isDarkMode, { disabled = false, danger = false } = {}) =>
   `inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
     disabled
       ? "cursor-not-allowed opacity-40"
@@ -26,7 +26,7 @@ function ActionIconButton({
       type="button"
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
-      className={iconBtnClass(isDarkMode, { danger, disabled })}
+      className={iconBtnClass(isDarkMode, { disabled, danger })}
       aria-label={label}
       title={label}
     >
@@ -35,42 +35,38 @@ function ActionIconButton({
   );
 }
 
-function RfqListingActions({
+function GroupSurveyProjectListingActions({
   isDarkMode,
   onEdit,
+  onAddProject,
   onDelete,
-  onAddLog,
-  onViewLogs,
 }) {
-  if (!onEdit && !onDelete && !onAddLog && !onViewLogs) {
-    return null;
-  }
+  if (!onEdit && !onAddProject && !onDelete) return null;
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-1.5">
-      {onViewLogs && (
+      {onEdit && (
         <ActionIconButton
           isDarkMode={isDarkMode}
-          label="View Sales Log List"
-          onClick={onViewLogs}
+          label="Edit Project"
+          onClick={onEdit}
         >
-          <Eye size={13} />
-        </ActionIconButton>
-      )}
-      {onAddLog && (
-        <ActionIconButton isDarkMode={isDarkMode} label="Add Log" onClick={onAddLog}>
-          <Plus size={13} />
-        </ActionIconButton>
-      )}
-      {onEdit && (
-        <ActionIconButton isDarkMode={isDarkMode} label="Edit RFQ" onClick={onEdit}>
           <Pencil size={13} />
+        </ActionIconButton>
+      )}
+      {onAddProject && (
+        <ActionIconButton
+          isDarkMode={isDarkMode}
+          label="Add Project"
+          onClick={onAddProject}
+        >
+          <Plus size={13} />
         </ActionIconButton>
       )}
       {onDelete && (
         <ActionIconButton
           isDarkMode={isDarkMode}
-          label="Delete RFQ"
+          label="Delete Project"
           onClick={onDelete}
           danger
         >
@@ -81,4 +77,4 @@ function RfqListingActions({
   );
 }
 
-export default RfqListingActions;
+export default GroupSurveyProjectListingActions;

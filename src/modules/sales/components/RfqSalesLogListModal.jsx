@@ -3,20 +3,25 @@ import { Loader2, X } from "lucide-react";
 import AdminPagination from "../../../components/admin/AdminPagination";
 import TableLoadingSkeleton from "../../../components/admin/TableLoadingSkeleton";
 import { toastApiError } from "../../../services/toast/apiToast";
-import { getSalesLogs } from "../../../services/sales/salesProjectsApi";
+import {
+  getSalesLogs,
+  resolveSalesProjectLogId,
+} from "../../../services/sales/salesProjectsApi";
 import { DEFAULT_PAGE_SIZE, paginateItems } from "../../shared/utils/pagination";
 
-function RfqSalesLogListModal({ isOpen, onClose, row, isDarkMode }) {
+function RfqSalesLogListModal({ isOpen, onClose, row, isDarkMode, refreshKey = 0 }) {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
+  const projectId = resolveSalesProjectLogId(row);
+
   const fetchLogs = useCallback(async () => {
-    if (!row?.recordId) return;
+    if (!projectId) return;
     setIsLoading(true);
     try {
-      const data = await getSalesLogs(row.recordId);
+      const data = await getSalesLogs(projectId);
       setLogs(data.items);
     } catch (error) {
       toastApiError(error);
@@ -24,7 +29,7 @@ function RfqSalesLogListModal({ isOpen, onClose, row, isDarkMode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [row?.recordId]);
+  }, [projectId]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -33,14 +38,14 @@ function RfqSalesLogListModal({ isOpen, onClose, row, isDarkMode }) {
       return;
     }
     fetchLogs();
-  }, [isOpen, fetchLogs]);
+  }, [isOpen, fetchLogs, refreshKey]);
 
   const pagination = useMemo(
     () => paginateItems(logs, currentPage, pageSize),
     [logs, currentPage, pageSize]
   );
 
-  if (!isOpen || !row?.recordId) return null;
+  if (!isOpen || !projectId) return null;
 
   return (
     <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">

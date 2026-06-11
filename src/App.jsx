@@ -40,6 +40,7 @@ import AddRfqPage from "./modules/sales/pages/AddRfqPage";
 import AddSalesManagerPage from "./modules/sales/pages/AddSalesManagerPage";
 import RfqPage from "./modules/sales/pages/RfqPage";
 import SalesManagerPage from "./modules/sales/pages/SalesManagerPage";
+import AddGroupSurveyPage from "./modules/survey/pages/AddGroupSurveyPage";
 import EditGroupSurveyPage from "./modules/survey/pages/EditGroupSurveyPage";
 import AddGroupSurveyProjectPage from "./modules/survey/pages/AddGroupSurveyProjectPage";
 import GroupSurveyProjectsListPage from "./modules/survey/pages/GroupSurveyProjectsListPage";
@@ -167,6 +168,7 @@ function App() {
         <Route path="/survey/view/:id" element={<SurveyDetailsPage isDarkMode={isDarkMode} />} />
         <Route path="/survey/edit/:id" element={<EditSurveyPage isDarkMode={isDarkMode} />} />
         <Route path="/survey/group" element={<GroupSurveyPage isDarkMode={isDarkMode} />} />
+        <Route path="/survey/group/add" element={<AddGroupSurveyPage isDarkMode={isDarkMode} />} />
         <Route
           path="/survey/group/:groupId/add-project"
           element={<AddGroupSurveyProjectPage isDarkMode={isDarkMode} />}

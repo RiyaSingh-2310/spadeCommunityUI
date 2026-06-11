@@ -11,6 +11,7 @@ import {
   formatStatusLabel,
 } from "../../modules/shared/utils/statusLabels";
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
+import { resolveMediaUrl } from "../../modules/shared/utils/userAvatar";
 
 function isApiSuccess(data) {
   if (!data || typeof data !== "object") return false;
@@ -117,7 +118,9 @@ export function formStatusToApiStatus(status) {
  */
 export function mapAdminToUserRow(admin) {
   const { firstName, lastName } = splitNameParts(admin?.name);
-  const imageUrl = admin?.image_url ?? admin?.imageUrl ?? null;
+  const imageUrl = resolveMediaUrl(
+    admin?.image_url ?? admin?.imageUrl ?? admin?.image ?? null
+  );
 
   return {
     id: resolveAdminId(admin),
@@ -149,9 +152,28 @@ export function mapAdminToForm(admin) {
   };
 }
 
-/** GET /api/admin/all — full admin list for listing page only */
-export async function getRecords() {
-  const data = await apiRequest(API_ROUTES.admin.all);
+function buildAdminListPath({ page, limit } = {}) {
+  const params = new URLSearchParams();
+  const safePage = Number(page);
+  const safeLimit = Number(limit);
+
+  if (Number.isFinite(safePage) && safePage > 0) {
+    params.set("page", String(safePage));
+  }
+  if (Number.isFinite(safeLimit) && safeLimit > 0) {
+    params.set("limit", String(safeLimit));
+  }
+
+  const query = params.toString();
+  return query ? `${API_ROUTES.admin.all}?${query}` : API_ROUTES.admin.all;
+}
+
+/**
+ * GET /api/admin/all — paginated admin list for listing page.
+ * @param {{ page?: number, limit?: number }} [options]
+ */
+export async function getRecords({ page = 1, limit = 10 } = {}) {
+  const data = await apiRequest(buildAdminListPath({ page, limit }));
   assertSuccess(data);
 
   const admins = extractAdminsList(data);
@@ -161,6 +183,8 @@ export async function getRecords() {
     ...data,
     total,
     count: total,
+    page: Number(data.page) || page,
+    limit: Number(data.limit) || limit,
     items: admins.map((admin) => mapAdminToUserRow(admin)),
   };
 }
@@ -190,6 +214,7 @@ export async function getRecord(id) {
  *   name: string,
  *   email: string,
  *   password: string,
+ *   confirmPassword?: string,
  *   contact_no?: string,
  *   imageFile?: File | null,
  *   permission_type?: string,
@@ -202,6 +227,10 @@ export async function createUser(payload) {
   body.append("name", payload.name.trim());
   body.append("email", payload.email.trim());
   body.append("password", payload.password);
+  body.append(
+    "confirm_password",
+    String(payload.confirmPassword ?? payload.password ?? "")
+  );
 
   const contactNo = payload.contact_no?.trim() ?? "";
   if (contactNo) {
@@ -217,8 +246,6 @@ export async function createUser(payload) {
 
   if (payload.imageFile instanceof File) {
     body.append("image", payload.imageFile);
-    // Some backends map this key; keep both for compatibility with current API variants.
-    // body.append("image_url", payload.imageFile);
   }
 
   const data = await apiRequest(API_ROUTES.admin.create, {

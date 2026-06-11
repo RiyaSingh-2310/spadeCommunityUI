@@ -4,7 +4,10 @@ import FormField from "../../../components/admin/FormField";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
-import { createSalesLog } from "../../../services/sales/salesProjectsApi";
+import {
+  createSalesLog,
+  resolveSalesProjectLogId,
+} from "../../../services/sales/salesProjectsApi";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { getRequiredError } from "../../shared/utils/validation";
@@ -69,7 +72,9 @@ function AddRfqLogModal({ isOpen, onClose, row, isDarkMode, onSubmitted }) {
     if (!isOpen) resetValidation();
   }, [isOpen, resetValidation]);
 
-  if (!isOpen || !row?.recordId) return null;
+  const projectId = resolveSalesProjectLogId(row);
+
+  if (!isOpen || !projectId) return null;
 
   const canSubmit =
     !isSubmitting &&
@@ -84,7 +89,7 @@ function AddRfqLogModal({ isOpen, onClose, row, isDarkMode, onSubmitted }) {
 
     setIsSubmitting(true);
     try {
-      const data = await createSalesLog(row.recordId, form);
+      const data = await createSalesLog(projectId, form);
       toastApiSuccess(data);
       onSubmitted?.();
       onClose();
