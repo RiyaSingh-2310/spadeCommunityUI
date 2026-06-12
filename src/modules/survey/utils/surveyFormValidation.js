@@ -1,5 +1,6 @@
 import {
   getDateRangeError,
+  getOptionalUrlError,
   getRequiredError,
   isFormValid,
 } from "../../shared/utils/validation";
@@ -41,8 +42,8 @@ export function getSurveyFormErrors(form) {
       form.userCompletionPoint,
       "User Completion Point"
     ),
-    liveLink: "",
-    testLink: "",
+    liveLink: getOptionalUrlError(form.liveLink, "Live Link"),
+    testLink: getOptionalUrlError(form.testLink, "Test Link"),
     surveyCsvFile: "",
     language: "",
     surveyGroup: "",

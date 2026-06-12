@@ -6,6 +6,9 @@ import toast from "./toast";
  * @param {unknown} error
  */
 export function toastApiError(error) {
+  if (error instanceof ApiError && error.sessionExpired) {
+    return;
+  }
   const message =
     error instanceof ApiError ? error.message : error?.message ?? "";
   if (message) {

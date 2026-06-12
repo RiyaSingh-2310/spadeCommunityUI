@@ -35,15 +35,25 @@ export function getAuthEmailError(value, { required = true, label = "Email" } = 
   return "";
 }
 
+export const URL_VALIDATION_MESSAGE =
+  "Please enter a valid URL. Example: https://example.com";
+
 export function getUrlError(value, { required = false, label = "Website URL" } = {}) {
   const trimmed = String(value ?? "").trim();
   if (!trimmed) {
     return required ? `${label} is required` : "";
   }
   if (!URL_REGEX.test(trimmed)) {
-    return "Please enter a valid URL (e.g. https://example.com)";
+    return URL_VALIDATION_MESSAGE;
   }
   return "";
+}
+
+/** Validates URL format when a value is present; empty values pass. */
+export function getOptionalUrlError(value, label = "URL") {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) return "";
+  return getUrlError(trimmed, { required: false, label });
 }
 
 export function getPasswordError(password, minLength = DEFAULT_PASSWORD_MIN_LENGTH) {

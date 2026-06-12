@@ -1,6 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Upload, X } from "lucide-react";
 import Avatar from "../shared/Avatar";
+import {
+  IMAGE_UPLOAD_ACCEPT,
+  validateImageFile,
+} from "../../modules/shared/utils/imageUploadValidation";
 import { getValidImageUrl } from "../../modules/shared/utils/userAvatar";
 
 function ProfileImageUpload({
@@ -17,6 +21,7 @@ function ProfileImageUpload({
 }) {
   const inputRef = useRef(null);
   const blobUrlRef = useRef("");
+  const [validationError, setValidationError] = useState("");
   const displayImage = preview || existingImage;
   const hasImage = Boolean(getValidImageUrl(displayImage));
 
@@ -31,19 +36,28 @@ function ProfileImageUpload({
 
   const handleFile = (event) => {
     const file = event.target.files?.[0];
+    event.target.value = "";
     if (!file) return;
+
+    const error = validateImageFile(file);
+    if (error) {
+      setValidationError(error);
+      return;
+    }
+
+    setValidationError("");
     revokeBlobUrl();
     const nextUrl = URL.createObjectURL(file);
     blobUrlRef.current = nextUrl;
     onPreviewChange(nextUrl);
     onFileChange(file);
-    event.target.value = "";
   };
 
   const handleRemove = () => {
     revokeBlobUrl();
     onPreviewChange("");
     onFileChange(null);
+    setValidationError("");
     if (inputRef.current) {
       inputRef.current.value = "";
     }
@@ -77,7 +91,7 @@ function ProfileImageUpload({
             <input
               ref={inputRef}
               type="file"
-              accept="image/*"
+              accept={IMAGE_UPLOAD_ACCEPT}
               className="hidden"
               onChange={handleFile}
             />
@@ -98,6 +112,11 @@ function ProfileImageUpload({
           )}
         </div>
       </div>
+      {validationError && (
+        <p className="mt-1 text-xs text-[var(--admin-danger-text)]" role="alert">
+          {validationError}
+        </p>
+      )}
     </div>
   );
 }

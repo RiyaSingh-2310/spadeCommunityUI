@@ -13,10 +13,11 @@ const TINYMCE_PLUGINS = [
   "charmap",
   "directionality",
   "advlist",
+  "code",
 ].join(" ");
 
 const TINYMCE_TOOLBAR =
-  "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist | outdent indent | link | removeformat | fullscreen";
+  "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist | outdent indent | link | removeformat | fullscreen | htmlEmbed";
 
 const CONTENT_STYLE =
   "body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; margin: 8px; }";
@@ -49,8 +50,21 @@ export function createTinyMceInit({
     font_size_formats: "8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt",
     placeholder,
     paste_as_text: false,
+    verify_html: false,
+    valid_elements: "*[*]",
+    extended_valid_elements:
+      "script[type|src|language|defer|async],iframe[src|frameborder|style|scrolling|class|width|height|name|align|id|title|allow|allowfullscreen|loading|referrerpolicy]",
+    valid_children: "+body[style|script|iframe|div|span|p]",
     content_style: CONTENT_STYLE,
     setup: (editor) => {
+      editor.ui.registry.addButton("htmlEmbed", {
+        icon: "sourcecode",
+        tooltip: "Embed/HTML Source",
+        onAction: () => {
+          editor.execCommand("mceCodeEditor");
+        },
+      });
+
       if (onBlur) {
         editor.on("blur", () => onBlur());
       }

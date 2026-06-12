@@ -4,6 +4,7 @@ import {
   getUserInitials,
   normalizeAdminUser,
 } from "../../modules/shared/utils/userAvatar";
+import { resetSessionExpiredState } from "./sessionExpiry";
 
 const TOKEN_KEY = "authToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
@@ -44,6 +45,7 @@ export function saveAuthSession({ token, refreshToken, admin }) {
   }
 
   sessionStorage.removeItem(TOKEN_KEY);
+  resetSessionExpiredState();
   notifyAuthSessionChanged();
 }
 

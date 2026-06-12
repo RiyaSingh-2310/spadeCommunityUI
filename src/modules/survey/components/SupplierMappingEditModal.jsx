@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import FormField from "../../../components/admin/FormField";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
+import { useFormValidation } from "../../shared/hooks/useFormValidation";
+import { getOptionalUrlError, isFormValid } from "../../shared/utils/validation";
 import { SUPPLIER_OPTIONS, getSupplierEditForm } from "../data/surveyDetailsData";
 import { updateSupplierMapping } from "../services/surveyApi";
 import { primaryBtnClass } from "./surveyDetailsShared";
@@ -16,6 +18,8 @@ const REDIRECT_FIELDS = [
   { key: "surveyClose", label: "Survey Close", placeholder: "https://example.com/survey-close" },
   { key: "postbackUrl", label: "Postback URL", placeholder: "https://example.com/postback" },
 ];
+
+const REDIRECT_FIELD_KEYS = REDIRECT_FIELDS.map((field) => field.key);
 
 function SupplierMappingEditModal({ isOpen, onClose, surveyId, supplierCode, onUpdated }) {
   const inputClass = getAdminInputClass();
@@ -39,9 +43,26 @@ function SupplierMappingEditModal({ isOpen, onClose, surveyId, supplierCode, onU
     );
   }, [isOpen, supplierCode]);
 
+  const errors = useMemo(() => {
+    if (!form) return {};
+    return REDIRECT_FIELDS.reduce((acc, field) => {
+      acc[field.key] = getOptionalUrlError(
+        form.redirects[field.key] ?? "",
+        field.label
+      );
+      return acc;
+    }, {});
+  }, [form]);
+
+  const { showError, touch, validateSubmit } = useFormValidation({
+    errors,
+    fields: REDIRECT_FIELD_KEYS,
+  });
+
   if (!isOpen || !form) return null;
 
   const quota = getSupplierEditForm(form.supplierCode)?.supplierQuota ?? "—";
+  const canSubmit = isFormValid(errors) && !isSubmitting;
 
   const setRedirect = (key, value) => {
     setForm((prev) => ({
@@ -52,6 +73,8 @@ function SupplierMappingEditModal({ isOpen, onClose, surveyId, supplierCode, onU
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (!validateSubmit() || !isFormValid(errors)) return;
+
     setIsSubmitting(true);
     try {
       const data = await updateSupplierMapping(surveyId, {
@@ -102,14 +125,14 @@ function SupplierMappingEditModal({ isOpen, onClose, surveyId, supplierCode, onU
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col" noValidate>
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 space-y-4">
             <FormField label="Supplier">
               <SearchableSelect
                 inputClass={inputClass}
                 value={form.supplierCode}
-                onChange={(supplierCode) =>
-                  setForm((prev) => ({ ...prev, supplierCode }))
+                onChange={(nextSupplierCode) =>
+                  setForm((prev) => ({ ...prev, supplierCode: nextSupplierCode }))
                 }
                 options={SUPPLIER_OPTIONS.map((opt) => ({
                   value: opt.code,
@@ -140,11 +163,12 @@ function SupplierMappingEditModal({ isOpen, onClose, surveyId, supplierCode, onU
               </h3>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {REDIRECT_FIELDS.map((field) => (
-                  <FormField key={field.key} label={field.label}>
+                  <FormField key={field.key} label={field.label} error={showError(field.key)}>
                     <input
                       className={inputClass}
                       value={form.redirects[field.key] ?? ""}
                       onChange={(e) => setRedirect(field.key, e.target.value)}
+                      onBlur={() => touch(field.key)}
                       placeholder={field.placeholder}
                       disabled={isSubmitting}
                     />
@@ -171,8 +195,8 @@ function SupplierMappingEditModal({ isOpen, onClose, surveyId, supplierCode, onU
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
-              className={`${primaryBtnClass} flex items-center gap-2`}
+              disabled={!canSubmit}
+              className={`${primaryBtnClass} flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50`}
             >
               {isSubmitting && <Loader2 size={16} className="animate-spin" />}
               {isSubmitting ? "Updating..." : "Update"}

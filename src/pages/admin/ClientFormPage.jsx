@@ -18,8 +18,10 @@ import { useFormValidation } from "../../modules/shared/hooks/useFormValidation"
 import {
   getEmailError,
   getPhoneError,
+  getOptionalUrlError,
   getRequiredError,
   getUrlError,
+  isFormValid,
   isFormValidForFields,
 } from "../../modules/shared/utils/validation";
 import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
@@ -41,6 +43,7 @@ const CLIENT_FORM_FIELDS = [
   "contactNumber",
   "website",
   "country",
+  "apiBaseUrl",
 ];
 
 const CLIENT_NAMES = ["Alpha Corp", "Beta Labs", "Gamma Tech", "Delta Works", "Epsilon Ltd"];
@@ -124,11 +127,14 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
       contactPerson: "",
     };
 
+    const apiBaseUrlError = getOptionalUrlError(form.apiBaseUrl, "API Base URL");
+
     if (!isEdit) {
       return {
         ...shared,
         email: getEmailError(form.email),
         website: getUrlError(form.website, { required: true }),
+        apiBaseUrl: apiBaseUrlError,
       };
     }
 
@@ -138,6 +144,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
       website: form.website.trim()
         ? getUrlError(form.website, { required: false })
         : "",
+      apiBaseUrl: apiBaseUrlError,
     };
   }, [form, isEdit]);
 
@@ -150,6 +157,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
 
   const canSubmit =
     canSubmitForm &&
+    isFormValid(errors) &&
     isFormValidForFields(errors, requiredFields) &&
     !isSubmitting;
 
@@ -159,6 +167,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
       readOnly ||
       !showSubmit ||
       !validateSubmit() ||
+      !isFormValid(errors) ||
       !isFormValidForFields(errors, requiredFields)
     ) {
       return;
@@ -314,7 +323,11 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                   placeholder={placeholder}
                   value={form[key]}
                   onChange={(e) => setField(key, e.target.value)}
+                  onBlur={() => touch(key)}
                 />
+                {showError(key) && (
+                  <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError(key)}</p>
+                )}
               </div>
             ))}
             <div>

@@ -19,10 +19,12 @@ import {
 } from "../../../services/partners/partnersApi";
 import {
   getEmailError,
+  getOptionalUrlError,
   getPhoneError,
   getRequiredError,
   getRichTextError,
   getUrlError,
+  isFormValid,
   isFormValidForFields,
 } from "../../shared/utils/validation";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
@@ -59,6 +61,7 @@ const PARTNER_FORM_FIELDS = [
   "qualityTerm",
   "surveyClose",
   "aboutPartner",
+  "apiBaseUrl",
 ];
 
 const EMPTY_FORM = {
@@ -105,6 +108,8 @@ function AddPartnerPage({ isDarkMode }) {
       }),
     };
 
+    const apiBaseUrlError = getOptionalUrlError(form.apiBaseUrl, "API Base URL");
+
     if (!isEdit) {
       return {
         ...shared,
@@ -121,6 +126,7 @@ function AddPartnerPage({ isDarkMode }) {
         qualityTerm: "",
         surveyClose: "",
         aboutPartner: "",
+        apiBaseUrl: apiBaseUrlError,
       };
     }
 
@@ -139,6 +145,7 @@ function AddPartnerPage({ isDarkMode }) {
       aboutPartner: isEdit
         ? getRichTextError(form.aboutPartner, "About Partner")
         : "",
+      apiBaseUrl: apiBaseUrlError,
     };
   }, [form, isEdit]);
 
@@ -180,6 +187,7 @@ function AddPartnerPage({ isDarkMode }) {
 
   const canSubmit =
     canSubmitForm &&
+    isFormValid(errors) &&
     isFormValidForFields(errors, requiredFields) &&
     !isSubmitting &&
     !isLoadingRecord &&
@@ -197,6 +205,7 @@ function AddPartnerPage({ isDarkMode }) {
       readOnly ||
       !showSubmit ||
       !validateSubmit() ||
+      !isFormValid(errors) ||
       !isFormValidForFields(errors, requiredFields)
     ) {
       return;
@@ -391,8 +400,14 @@ function AddPartnerPage({ isDarkMode }) {
                 placeholder="Enter API Base URL"
                 value={form.apiBaseUrl}
                 onChange={(e) => setField("apiBaseUrl", e.target.value)}
+                onBlur={() => touch("apiBaseUrl")}
                 disabled={controlDisabled}
               />
+              {showError("apiBaseUrl") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
+                  {showError("apiBaseUrl")}
+                </p>
+              )}
             </div>
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">API Secret Key</label>

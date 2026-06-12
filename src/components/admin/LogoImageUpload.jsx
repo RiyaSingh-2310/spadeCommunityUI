@@ -1,12 +1,22 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
+import {
+  IMAGE_UPLOAD_ACCEPT,
+  validateImageFile,
+} from "../../modules/shared/utils/imageUploadValidation";
 import { getValidImageUrl } from "../../modules/shared/utils/userAvatar";
 
-const ACCEPT = "image/png,image/jpeg,image/jpg,image/svg+xml";
-
-function LogoImageUpload({ isDarkMode, preview, onPreviewChange, existingImage = "", disabled = false }) {
+function LogoImageUpload({
+  isDarkMode,
+  preview,
+  onPreviewChange,
+  onFileChange = () => {},
+  existingImage = "",
+  disabled = false,
+}) {
   const inputRef = useRef(null);
   const blobUrlRef = useRef("");
+  const [validationError, setValidationError] = useState("");
   const displayImage = preview || existingImage;
   const hasImage = Boolean(getValidImageUrl(displayImage));
 
@@ -21,17 +31,28 @@ function LogoImageUpload({ isDarkMode, preview, onPreviewChange, existingImage =
 
   const handleFile = (event) => {
     const file = event.target.files?.[0];
+    event.target.value = "";
     if (!file) return;
+
+    const error = validateImageFile(file);
+    if (error) {
+      setValidationError(error);
+      return;
+    }
+
+    setValidationError("");
     revokeBlobUrl();
     const nextUrl = URL.createObjectURL(file);
     blobUrlRef.current = nextUrl;
     onPreviewChange(nextUrl);
-    event.target.value = "";
+    onFileChange(file);
   };
 
   const handleRemove = () => {
     revokeBlobUrl();
     onPreviewChange("");
+    onFileChange(null);
+    setValidationError("");
     if (inputRef.current) {
       inputRef.current.value = "";
     }
@@ -61,7 +82,7 @@ function LogoImageUpload({ isDarkMode, preview, onPreviewChange, existingImage =
             <input
               ref={inputRef}
               type="file"
-              accept={ACCEPT}
+              accept={IMAGE_UPLOAD_ACCEPT}
               className="hidden"
               onChange={handleFile}
             />
@@ -83,6 +104,11 @@ function LogoImageUpload({ isDarkMode, preview, onPreviewChange, existingImage =
           )}
         </div>
       </div>
+      {validationError && (
+        <p className="mt-1 text-xs text-[var(--admin-danger-text)]" role="alert">
+          {validationError}
+        </p>
+      )}
     </div>
   );
 }

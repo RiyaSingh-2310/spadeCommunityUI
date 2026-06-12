@@ -1,10 +1,17 @@
 import { API_DEBUG, API_LOGIN_BEARER_TOKEN, buildApiUrl } from "../../config/api";
 import { getAuthToken } from "../auth/authStorage";
+import {
+  forceLogoutAfterSessionExpired,
+  isSessionExpiredHandled,
+  SESSION_EXPIRED_MESSAGE,
+} from "../auth/sessionExpiry";
 import { ApiError } from "./ApiError";
+
+const MAX_UNAUTHORIZED_RETRIES = 3;
 
 const HTTP_STATUS_MESSAGES = {
   400: "Bad request. Please check your input.",
-  401: "Your session has expired. Please log in again.",
+  401: SESSION_EXPIRED_MESSAGE,
   403: "You do not have permission to perform this action.",
   404: "The requested resource was not found.",
   500: "Internal server error. Please try again later.",
@@ -61,6 +68,27 @@ export async function readResponseBody(response) {
   }
 }
 
+async function executeRequest(url, fetchInit) {
+  let response;
+  try {
+    response = await fetch(url, fetchInit);
+  } catch (networkError) {
+    if (API_DEBUG) {
+      console.error("[API] Network error:", networkError);
+    }
+    throw new ApiError("Unable to reach the server. Please try again.");
+  }
+
+  const { data, rawText } = await readResponseBody(response);
+
+  if (API_DEBUG) {
+    console.log("[API] Response status:", response.status);
+    console.log("[API] Response data:", data ?? rawText);
+  }
+
+  return { response, data, rawText };
+}
+
 export async function apiRequest(path, options = {}) {
   const {
     method = "GET",
@@ -70,6 +98,10 @@ export async function apiRequest(path, options = {}) {
     loginBearer = false,
     headers: extraHeaders = {},
   } = options;
+
+  if (auth && isSessionExpiredHandled()) {
+    throw new ApiError(SESSION_EXPIRED_MESSAGE, null, 401, { sessionExpired: true });
+  }
 
   const hasBody = body !== undefined;
   const isFormDataBody = typeof FormData !== "undefined" && body instanceof FormData;
@@ -92,6 +124,16 @@ export async function apiRequest(path, options = {}) {
   }
 
   const url = buildApiUrl(path);
+  const fetchInit = {
+    method,
+    headers,
+    body:
+      body === undefined
+        ? undefined
+        : isFormDataBody
+          ? body
+          : JSON.stringify(body),
+  };
 
   if (API_DEBUG) {
     console.log("[API] Request URL:", url);
@@ -102,41 +144,41 @@ export async function apiRequest(path, options = {}) {
     }
   }
 
-  let response;
-  try {
-    response = await fetch(url, {
-      method,
-      headers,
-      body:
-        body === undefined
-          ? undefined
-          : isFormDataBody
-            ? body
-            : JSON.stringify(body),
-    });
-  } catch (networkError) {
-    if (API_DEBUG) {
-      console.error("[API] Network error:", networkError);
+  const maxAttempts = auth ? 1 + MAX_UNAUTHORIZED_RETRIES : 1;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    if (auth && isSessionExpiredHandled()) {
+      throw new ApiError(SESSION_EXPIRED_MESSAGE, null, 401, { sessionExpired: true });
     }
-    throw new ApiError("Unable to reach the server. Please try again.");
-  }
 
-  const { data, rawText } = await readResponseBody(response);
+    const { response, data, rawText } = await executeRequest(url, fetchInit);
 
-  if (API_DEBUG) {
-    console.log("[API] Response status:", response.status);
-    console.log("[API] Response data:", data ?? rawText);
-  }
+    if (response.ok) {
+      return data;
+    }
 
-  if (!response.ok) {
+    const status = response.status;
+
+    if (status === 401 && auth) {
+      if (attempt < maxAttempts) {
+        if (API_DEBUG) {
+          console.warn(`[API] 401 Unauthorized — retry ${attempt}/${MAX_UNAUTHORIZED_RETRIES}:`, path);
+        }
+        continue;
+      }
+
+      forceLogoutAfterSessionExpired();
+      throw new ApiError(SESSION_EXPIRED_MESSAGE, data, 401, { sessionExpired: true });
+    }
+
     const message = extractErrorMessage(response, data, rawText);
     if (API_DEBUG) {
-      console.error("[API] Error status:", response.status);
+      console.error("[API] Error status:", status);
       console.error("[API] Error message:", message);
       console.error("[API] Error body:", data ?? rawText);
     }
-    throw new ApiError(message, data, response.status);
+    throw new ApiError(message, data, status);
   }
 
-  return data;
+  throw new ApiError(SESSION_EXPIRED_MESSAGE, null, 401, { sessionExpired: true });
 }
