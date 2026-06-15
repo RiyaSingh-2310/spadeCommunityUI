@@ -19,7 +19,8 @@ import {
   Users,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { SIDEBAR_NAV_ITEMS } from "../../config/sidebarNavConfig";
+import { getSidebarNavItemsForRole } from "../../config/roleSidebarNav";
+import { getLoginRole } from "../../services/auth/loginRole";
 import {
   findActiveSidebarGroupKey,
   isSidebarItemActive,
@@ -52,7 +53,9 @@ function AdminSidebar({
     const filterChildren = (children = []) =>
       children.filter((child) => canAccessNavItem(child.permissionKeys));
 
-    return SIDEBAR_NAV_ITEMS.map((item) => {
+    const navItems = getSidebarNavItemsForRole(getLoginRole());
+
+    return navItems.map((item) => {
       if (item.type === "group") {
         const children = filterChildren(item.children);
         if (!canAccessNavItem(item.permissionKeys) && children.length === 0) {
@@ -71,6 +74,8 @@ function AdminSidebar({
     Partners: <Handshake size={21} strokeWidth={2} />,
     "Project Managers": <BriefcaseBusiness size={21} strokeWidth={2} />,
     Sales: <FileSpreadsheet size={21} strokeWidth={2} />,
+    RFQ: <FileSpreadsheet size={21} strokeWidth={2} />,
+    Projects: <ScrollText size={21} strokeWidth={2} />,
     Prescreen: <ClipboardList size={21} strokeWidth={2} />,
     Survey: <ScrollText size={21} strokeWidth={2} />,
     Invoice: <ReceiptIndianRupee size={21} strokeWidth={2} />,

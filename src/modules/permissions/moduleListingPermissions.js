@@ -81,6 +81,10 @@ export function hasNativeReadOnlyListingActions({
     return false;
   }
 
+  if (actionVariant === "view-edit" && onView && !onFindUser && !onUserSurveyData && !onSurveyClone) {
+    return Boolean(onView);
+  }
+
   if (mode === "survey-read") {
     return Boolean(onView || onFindUser || onUserSurveyData);
   }

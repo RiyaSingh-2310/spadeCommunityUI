@@ -1,8 +1,10 @@
+import { getLoginRole, isAdminLoginRole } from "../../services/auth/loginRole";
 import {
   createFullPermissions,
   hasAnyPermissionGrant,
   resolvePermissionsFromRecord,
 } from "./permissionsUtils";
+import { getRolePermissions } from "./rolePermissions";
 
 function isSuperAdminUser(admin) {
   if (!admin) return false;
@@ -15,6 +17,14 @@ function isSuperAdminUser(admin) {
  * @param {object | null} admin
  */
 export function getEffectivePermissions(admin) {
+  const loginRole = getLoginRole();
+  if (!isAdminLoginRole()) {
+    const rolePermissions = getRolePermissions(loginRole);
+    if (rolePermissions) {
+      return rolePermissions;
+    }
+  }
+
   const superAdmin = isSuperAdminUser(admin);
   const permissions = resolvePermissionsFromRecord(admin);
 

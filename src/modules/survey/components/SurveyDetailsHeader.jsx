@@ -10,6 +10,11 @@ export const SURVEY_DETAIL_TABS = [
   { id: "project-report", label: "Project Report" },
 ];
 
+export const SALES_PROJECT_DETAIL_TABS = [
+  { id: "project-details", label: "Project Details" },
+  { id: "project-report", label: "Project Report" },
+];
+
 function SurveyDetailsHeader({
   activeTab,
   onTabChange,
@@ -20,8 +25,11 @@ function SurveyDetailsHeader({
   isUpdatingStatus,
   onEditSurvey,
   surveyId,
+  tabs = SURVEY_DETAIL_TABS,
+  readOnly = false,
 }) {
   const { canWrite } = useModulePermission("survey");
+  const allowWrite = canWrite && !readOnly;
   const statusChanged = draftStatus !== projectStatus;
   const canUpdateStatus = statusChanged && !isUpdatingStatus;
 
@@ -34,7 +42,7 @@ function SurveyDetailsHeader({
           role="tablist"
           aria-label="Survey detail sections"
         >
-          {SURVEY_DETAIL_TABS.map((tab) => {
+          {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
@@ -56,38 +64,47 @@ function SurveyDetailsHeader({
         </div>
 
         <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center xl:justify-center">
-          {canWrite && (
+          {allowWrite && (
             <button type="button" onClick={onEditSurvey} className={primaryBtnClass}>
               Edit Survey
             </button>
           )}
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          <label className="admin-text-muted text-xs font-semibold uppercase tracking-wide sm:sr-only">
-            Project Status
-          </label>
-          <SearchableSelect
-            inputClass="admin-text h-10 min-w-[140px] rounded-xl border border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] px-3 text-sm font-medium outline-none"
-            value={draftStatus}
-            onChange={onStatusChange}
-            options={PROJECT_STATUS_OPTIONS}
-            disabled={!canWrite || isUpdatingStatus}
-            searchable={false}
-            aria-label="Project status"
-          />
-          {canWrite && (
-            <button
-              type="button"
-              onClick={onStatusUpdate}
-              disabled={!canUpdateStatus}
-              className={`${primaryBtnClass} flex min-w-[100px] items-center justify-center gap-2`}
-            >
-              {isUpdatingStatus && <Loader2 size={16} className="animate-spin" />}
-              {isUpdatingStatus ? "Updating..." : "Update"}
-            </button>
-          )}
-        </div>
+        {!readOnly ? (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <label className="admin-text-muted text-xs font-semibold uppercase tracking-wide sm:sr-only">
+              Project Status
+            </label>
+            <SearchableSelect
+              inputClass="admin-text h-10 min-w-[140px] rounded-xl border border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] px-3 text-sm font-medium outline-none"
+              value={draftStatus}
+              onChange={onStatusChange}
+              options={PROJECT_STATUS_OPTIONS}
+              disabled={!allowWrite || isUpdatingStatus}
+              searchable={false}
+              aria-label="Project status"
+            />
+            {allowWrite && (
+              <button
+                type="button"
+                onClick={onStatusUpdate}
+                disabled={!canUpdateStatus}
+                className={`${primaryBtnClass} flex min-w-[100px] items-center justify-center gap-2`}
+              >
+                {isUpdatingStatus && <Loader2 size={16} className="animate-spin" />}
+                {isUpdatingStatus ? "Updating..." : "Update"}
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-end justify-end gap-1">
+            <span className="admin-text-muted text-xs font-semibold uppercase tracking-wide">
+              Project Status
+            </span>
+            <span className="admin-text text-sm font-semibold">{projectStatus}</span>
+          </div>
+        )}
       </div>
       <p className="admin-text-subtle mt-3 text-xs sm:hidden">Survey ID: {surveyId}</p>
     </div>

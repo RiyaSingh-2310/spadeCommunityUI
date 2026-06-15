@@ -755,6 +755,17 @@ function ModuleListingPage({
                       const useSurveyActions =
                         onFindUser || onUserSurveyData || onSurveyClone;
 
+                      if (!allowWrite && onView && !useSurveyActions) {
+                        return (
+                          <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
+                            <ViewActionButton
+                              isDarkMode={isDarkMode}
+                              onView={() => onView(row, globalIdx)}
+                            />
+                          </td>
+                        );
+                      }
+
                       if (!useSurveyActions && !allowWrite) {
                         return null;
                       }

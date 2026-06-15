@@ -4,11 +4,40 @@ import { useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
 import { AUTH_EMAIL_REGEX } from "../modules/shared/utils/validation";
 import { loginAdmin } from "../services/auth/authApi";
+import { LOGIN_ROLES } from "../services/auth/loginRole";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 import { saveAuthSession } from "../services/auth/authStorage";
 
+const LOGIN_ROLE_UI = {
+  [LOGIN_ROLES.ADMIN]: {
+    title: "Admin Login",
+    emailLabel: "Admin's Email",
+    switchOptions: [
+      { role: LOGIN_ROLES.SALES, label: "Login as Sales" },
+      { role: LOGIN_ROLES.MANAGER, label: "Login as Manager" },
+    ],
+  },
+  [LOGIN_ROLES.SALES]: {
+    title: "Sales Login",
+    emailLabel: "Sale's Email",
+    switchOptions: [
+      { role: LOGIN_ROLES.ADMIN, label: "Login as Admin" },
+      { role: LOGIN_ROLES.MANAGER, label: "Login as Manager" },
+    ],
+  },
+  [LOGIN_ROLES.MANAGER]: {
+    title: "Manager Login",
+    emailLabel: "Manager's Email",
+    switchOptions: [
+      { role: LOGIN_ROLES.ADMIN, label: "Login as Admin" },
+      { role: LOGIN_ROLES.SALES, label: "Login as Sales" },
+    ],
+  },
+};
+
 function Login({ isDarkMode, onToggleTheme }) {
   const navigate = useNavigate();
+  const [loginRole, setLoginRole] = useState(LOGIN_ROLES.ADMIN);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -17,6 +46,8 @@ function Login({ isDarkMode, onToggleTheme }) {
     email: false,
     password: false,
   });
+
+  const roleUi = LOGIN_ROLE_UI[loginRole];
 
   const hasEmailFormat = useMemo(
     () => AUTH_EMAIL_REGEX.test(email.trim()),
@@ -50,6 +81,7 @@ function Login({ isDarkMode, onToggleTheme }) {
         token: response.token,
         refreshToken: response.refreshToken,
         admin: response.admin,
+        loginRole,
       });
 
       toastApiSuccess(response);
@@ -62,6 +94,8 @@ function Login({ isDarkMode, onToggleTheme }) {
     }
   };
 
+  const roleSwitchButtonClass = `text-sm font-semibold text-[#18a354] transition-colors hover:text-[#138b46] disabled:cursor-not-allowed disabled:opacity-60`;
+
   return (
     <AuthLayout isDarkMode={isDarkMode} onToggleTheme={onToggleTheme}>
           <h1
@@ -71,6 +105,13 @@ function Login({ isDarkMode, onToggleTheme }) {
           >
             Welcome Back
           </h1>
+          <p
+            className={`mt-2 text-center text-[15px] font-semibold sm:text-[16px] ${
+              isDarkMode ? "text-[#d4deeb]" : "text-[#304157]"
+            }`}
+          >
+            {roleUi.title}
+          </p>
           <p
             className={`mt-1.5 text-center text-[14px] sm:text-[15px] ${
               isDarkMode ? "text-[#9fb0c8]" : "text-[#6f7f96]"
@@ -87,7 +128,7 @@ function Login({ isDarkMode, onToggleTheme }) {
                   isDarkMode ? "text-[#d4deeb]" : "text-[#304157]"
                 }`}
               >
-                Email
+                {roleUi.emailLabel}
               </label>
               <div
                 className={`kh-input-shell flex h-[52px] items-center rounded-2xl border px-4 transition-all duration-200 ${
@@ -213,6 +254,31 @@ function Login({ isDarkMode, onToggleTheme }) {
             >
               {isSubmitting ? "Signing in..." : "Login"}
             </button>
+
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pt-1">
+              {roleUi.switchOptions.map((option, index) => (
+                <span key={option.role} className="inline-flex items-center gap-4">
+                  {index > 0 && (
+                    <span
+                      className={`hidden sm:inline ${
+                        isDarkMode ? "text-[#4b5f7d]" : "text-[#c5d0de]"
+                      }`}
+                      aria-hidden
+                    >
+                      |
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => setLoginRole(option.role)}
+                    className={roleSwitchButtonClass}
+                  >
+                    {option.label}
+                  </button>
+                </span>
+              ))}
+            </div>
           </form>
     </AuthLayout>
   );

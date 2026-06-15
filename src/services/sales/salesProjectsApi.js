@@ -57,8 +57,15 @@ function normalizeSalesProjectId(id) {
   return encodeURIComponent(normalizedId);
 }
 
+function resolveNumericId(value) {
+  if (value == null || value === "") return undefined;
+  const num = Number(value);
+  if (Number.isFinite(num) && num > 0) return num;
+  return undefined;
+}
+
 function buildSalesProjectBody(payload) {
-  return {
+  const body = {
     client_name: payload.clientName.trim(),
     email: payload.email.trim(),
     country: payload.country.trim(),
@@ -66,6 +73,18 @@ function buildSalesProjectBody(payload) {
     status: formStatusToApiStatus(payload.status),
     comment: payload.comment.trim(),
   };
+
+  const clientId = resolveNumericId(payload.clientId);
+  if (clientId != null) {
+    body.client_id = clientId;
+  }
+
+  const salesManagerId = resolveNumericId(payload.salesManagerId);
+  if (salesManagerId != null) {
+    body.sales_manager_id = salesManagerId;
+  }
+
+  return body;
 }
 
 export function formStatusToApiStatus(status) {
@@ -86,13 +105,24 @@ export function apiStatusToFormStatus(status) {
  * @param {object} project
  */
 export function mapSalesProjectToForm(project) {
+  const clientId =
+    project?.client_id ?? project?.clientId ?? project?.client?.id ?? "";
+  const salesManagerId =
+    project?.sales_manager_id ??
+    project?.salesManagerId ??
+    project?.sales_manager?.id ??
+    "";
+
   return {
-    clientName: project?.client_name ?? "",
+    clientId: clientId != null && clientId !== "" ? String(clientId) : "",
+    clientName: project?.client_name ?? project?.client?.name ?? "",
     email: project?.email ?? "",
     country: project?.country ?? "",
     subject: project?.email_subject ?? "",
     status: apiStatusToFormStatus(project?.status),
     comment: project?.comment ?? "",
+    salesManagerId:
+      salesManagerId != null && salesManagerId !== "" ? String(salesManagerId) : "",
   };
 }
 

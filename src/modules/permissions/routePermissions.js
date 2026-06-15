@@ -19,6 +19,8 @@ const ROUTE_RULES = [
   { matcher: /^\/sales\/rfq\/add/, module: "rfq", requiresWrite: true },
   { matcher: /^\/sales\/rfq\/edit\//, module: "rfq" },
   { matcher: /^\/sales\/rfq(\/|$)/, module: "rfq" },
+  { matcher: /^\/sales\/projects\/view/, module: "survey" },
+  { matcher: /^\/sales\/projects(\/|$)/, module: "survey" },
   { matcher: /^\/sales\/sales-manager\/add/, module: "sales_manager", requiresWrite: true },
   { matcher: /^\/sales\/sales-manager(\/|$)/, module: "sales_manager" },
   { matcher: /^\/sales(\/|$)/, module: "sales" },

@@ -1,6 +1,12 @@
 const COLUMN_KEY_MAP = {
   "S.No": "sno",
   "S. No.": "sno",
+  Name: "name",
+  Country: "country",
+  "Email Subject": "emailSubject",
+  "Sales Manager": "salesManager",
+  LOI: "loi",
+  IR: "ir",
   ID: "id",
   "Project Name": "projectName",
   "Client Name": "clientName",
@@ -73,6 +79,11 @@ const NOWRAP_DATA_KEYS = new Set([
   "invoiceDate",
   "dueDate",
   "grossAmount",
+  "salesManager",
+  "emailSubject",
+  "loi",
+  "ir",
+  "name",
   "client",
 ]);
 

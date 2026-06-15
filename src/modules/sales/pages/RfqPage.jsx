@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
+import { isSalesLoginRole } from "../../../services/auth/loginRole";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
@@ -15,8 +16,7 @@ import AddRfqLogModal from "../components/AddRfqLogModal";
 import RfqExpandableDetails from "../components/RfqExpandableDetails";
 import RfqSalesLogListModal from "../components/RfqSalesLogListModal";
 
-const LIST_COLUMNS = [
-  "S.No",
+const ADMIN_RFQ_COLUMNS = [
   "ID",
   "Name",
   "Email Address",
@@ -25,8 +25,25 @@ const LIST_COLUMNS = [
   "Action",
 ];
 
+const SALES_RFQ_COLUMNS = [
+  "ID",
+  "Name",
+  "Email Address",
+  "Project ID (if won)",
+  "Country",
+  "Email Subject",
+  "Status",
+  "Sales Manager",
+  "Action",
+];
+
 function RfqPage({ isDarkMode }) {
   const navigate = useNavigate();
+  const isSalesRole = isSalesLoginRole();
+  const listColumns = useMemo(
+    () => (isSalesRole ? SALES_RFQ_COLUMNS : ADMIN_RFQ_COLUMNS),
+    [isSalesRole]
+  );
   useFlashMessage();
   const {
     rows: projects,
@@ -76,16 +93,16 @@ function RfqPage({ isDarkMode }) {
     <div className="space-y-4">
       <ModuleListingPage
         isDarkMode={isDarkMode}
-        title="RFQ"
+        title="List Sales Projects"
         searchPlaceholder="Search RFQ..."
         actionLabel="Add RFQ"
         onActionClick={() => navigate("/sales/rfq/add")}
-        columns={LIST_COLUMNS}
+        columns={listColumns}
         rows={projects}
         rowIdKey="recordId"
         editPath="/sales/rfq"
         actionVariant="rfq"
-        showStatus={false}
+        showStatus={isSalesRole}
         permissionModule="rfq"
         isLoading={isLoading}
         emptyMessage="No RFQ projects found"

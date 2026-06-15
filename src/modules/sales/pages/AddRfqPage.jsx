@@ -7,37 +7,57 @@ import RichTextEditor from "../../../components/admin/RichTextEditor";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { getRecords as getClients } from "../../../services/clients/clientsApi";
 import {
   createSalesProject,
   getRecord,
   mapSalesProjectToForm,
   updateSalesProject,
 } from "../../../services/sales/salesProjectsApi";
+import { getRecords as getSalesManagers } from "../../../services/sales/salesManagersApi";
+import {
+  mapClientsToSelectOptions,
+  mapSalesManagersToSelectOptions,
+  mergeSelectOption,
+} from "../../survey/hooks/useSurveyFormSelectOptions";
 import { useAdminFormAccess } from "../../permissions/FormAccessContext";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   getEmailError,
   getRequiredError,
+  getRichTextError,
   isFormValidForFields,
 } from "../../shared/utils/validation";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 
-const RFQ_REQUIRED_FIELDS = ["clientName", "email", "country", "subject", "status"];
+const RFQ_REQUIRED_FIELDS = [
+  "clientId",
+  "email",
+  "country",
+  "subject",
+  "salesManagerId",
+  "comment",
+  "status",
+];
 
 const RFQ_FORM_FIELDS = [
+  "clientId",
   "clientName",
   "email",
   "country",
   "subject",
+  "salesManagerId",
   "status",
   "comment",
 ];
 
 const EMPTY_FORM = {
+  clientId: "",
   clientName: "",
   email: "",
   country: "",
   subject: "",
+  salesManagerId: "",
   status: "",
   comment: "",
 };
@@ -57,16 +77,65 @@ function AddRfqPage({ isDarkMode }) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [initialSnapshot, setInitialSnapshot] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [clientOptions, setClientOptions] = useState([]);
+  const [clientRecords, setClientRecords] = useState([]);
+  const [salesManagerOptions, setSalesManagerOptions] = useState([]);
+  const [isOptionsLoading, setIsOptionsLoading] = useState(true);
   const { readOnly, showSubmit, controlDisabled, canSubmitForm } = useAdminFormAccess(isSubmitting);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadOptions = async () => {
+      setIsOptionsLoading(true);
+      try {
+        const [clientsData, salesManagersData] = await Promise.all([
+          getClients(),
+          getSalesManagers(),
+        ]);
+        if (cancelled) return;
+        setClientRecords(clientsData.items ?? []);
+        setClientOptions(mapClientsToSelectOptions(clientsData.items));
+        setSalesManagerOptions(mapSalesManagersToSelectOptions(salesManagersData.items));
+      } catch (error) {
+        if (!cancelled) toastApiError(error);
+      } finally {
+        if (!cancelled) setIsOptionsLoading(false);
+      }
+    };
+
+    loadOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const resolvedClientOptions = useMemo(
+    () =>
+      mergeSelectOption(clientOptions, form.clientId, form.clientName),
+    [clientOptions, form.clientId, form.clientName]
+  );
+
+  const resolvedSalesManagerOptions = useMemo(() => {
+    const selected = salesManagerOptions.find(
+      (option) => String(option.value) === String(form.salesManagerId)
+    );
+    return mergeSelectOption(
+      salesManagerOptions,
+      form.salesManagerId,
+      selected?.label ?? ""
+    );
+  }, [salesManagerOptions, form.salesManagerId]);
 
   const errors = useMemo(
     () => ({
-      clientName: getRequiredError(form.clientName, "Client Name"),
+      clientId: getRequiredError(form.clientId, "Client Name"),
       email: getEmailError(form.email),
       country: getRequiredError(form.country, "Country"),
       subject: getRequiredError(form.subject, "Email Subject"),
+      salesManagerId: getRequiredError(form.salesManagerId, "Sales Manager"),
       status: getRequiredError(form.status, "Status"),
-      comment: "",
+      comment: getRichTextError(form.comment, "Comment"),
     }),
     [form]
   );
@@ -121,7 +190,25 @@ function AddRfqPage({ isDarkMode }) {
     !isSubmitting &&
     !isLoadingRecord &&
     !loadFailed &&
+    !isOptionsLoading &&
     (!isEdit || isDirty);
+
+  const handleClientChange = (clientId) => {
+    const selected = resolvedClientOptions.find(
+      (option) => String(option.value) === String(clientId)
+    );
+    const matchedClient = clientRecords.find(
+      (client) => String(client.id) === String(clientId)
+    );
+
+    setForm((prev) => ({
+      ...prev,
+      clientId,
+      clientName: selected?.label ?? prev.clientName,
+      email: matchedClient?.emailAddress ?? prev.email,
+      country: matchedClient?.countryValue ?? matchedClient?.country ?? prev.country,
+    }));
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -227,7 +314,27 @@ function AddRfqPage({ isDarkMode }) {
       <TableCard title="RFQ Details" isDarkMode={isDarkMode}>
         <form className="space-y-4" onSubmit={handleSubmit} noValidate>
           <div className="grid gap-4 md:grid-cols-2">
-            {renderField("Client Name", "clientName", "Enter Name", "text", true)}
+            <div>
+              <label className="admin-text mb-2 block text-sm font-semibold">
+                Client Name
+                <span className="text-[var(--admin-danger-text)]"> *</span>
+              </label>
+              <SearchableSelect
+                inputClass={inputClass}
+                value={form.clientId}
+                onChange={handleClientChange}
+                onBlur={() => touch("clientId")}
+                options={resolvedClientOptions}
+                placeholder="Select Client"
+                disabled={controlDisabled || isOptionsLoading}
+                aria-label="Select client"
+              />
+              {showError("clientId") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
+                  {showError("clientId")}
+                </p>
+              )}
+            </div>
             {renderField("Email Address", "email", "Enter Email Address", "email", true)}
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">
@@ -245,7 +352,30 @@ function AddRfqPage({ isDarkMode }) {
                 <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("country")}</p>
               )}
             </div>
-            {renderField("Subject", "subject", "Enter Subject", "text", true)}
+            {renderField("Email Subject", "subject", "Enter Subject", "text", true)}
+            <div>
+              <label className="admin-text mb-2 block text-sm font-semibold">
+                Sales Manager
+                <span className="text-[var(--admin-danger-text)]"> *</span>
+              </label>
+              <SearchableSelect
+                inputClass={inputClass}
+                value={form.salesManagerId}
+                onChange={(salesManagerId) =>
+                  setForm((p) => ({ ...p, salesManagerId }))
+                }
+                onBlur={() => touch("salesManagerId")}
+                options={resolvedSalesManagerOptions}
+                placeholder="Select Sales Manager"
+                disabled={controlDisabled || isOptionsLoading}
+                aria-label="Select sales manager"
+              />
+              {showError("salesManagerId") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
+                  {showError("salesManagerId")}
+                </p>
+              )}
+            </div>
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">
                 Status
@@ -267,7 +397,10 @@ function AddRfqPage({ isDarkMode }) {
               )}
             </div>
             <div className="md:col-span-2">
-              <label className="admin-text mb-2 block text-sm font-semibold">Comment</label>
+              <label className="admin-text mb-2 block text-sm font-semibold">
+                Comment
+                <span className="text-[var(--admin-danger-text)]"> *</span>
+              </label>
               <RichTextEditor
                 isDarkMode={isDarkMode}
                 value={form.comment}
@@ -276,6 +409,9 @@ function AddRfqPage({ isDarkMode }) {
                 placeholder="Enter Comment"
                 disabled={controlDisabled}
               />
+              {showError("comment") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("comment")}</p>
+              )}
             </div>
           </div>
           {showSubmit && (

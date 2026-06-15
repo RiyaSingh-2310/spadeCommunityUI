@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { consumeSessionExpiredToast } from "./services/auth/sessionExpiry";
 import { preloadCountries } from "./services/countries/countriesApi";
 import { Route, Routes, useParams } from "react-router-dom";
 import ToastContainer from "./components/shared/ToastContainer";
@@ -39,6 +40,7 @@ import ProjectManagersPage from "./modules/project-managers/pages/ProjectManager
 import AddRfqPage from "./modules/sales/pages/AddRfqPage";
 import AddSalesManagerPage from "./modules/sales/pages/AddSalesManagerPage";
 import RfqPage from "./modules/sales/pages/RfqPage";
+import SalesProjectsPage from "./modules/sales/pages/SalesProjectsPage";
 import SalesManagerPage from "./modules/sales/pages/SalesManagerPage";
 import AddGroupSurveyPage from "./modules/survey/pages/AddGroupSurveyPage";
 import EditGroupSurveyPage from "./modules/survey/pages/EditGroupSurveyPage";
@@ -79,6 +81,7 @@ function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
+    consumeSessionExpiredToast();
     preloadCountries();
   }, []);
 
@@ -140,6 +143,11 @@ function App() {
         <Route path="/sales/rfq" element={<RfqPage isDarkMode={isDarkMode} />} />
         <Route path="/sales/rfq/add" element={<AddRfqPage isDarkMode={isDarkMode} />} />
         <Route path="/sales/rfq/edit/:id" element={<AddRfqPage isDarkMode={isDarkMode} />} />
+        <Route path="/sales/projects" element={<SalesProjectsPage isDarkMode={isDarkMode} />} />
+        <Route
+          path="/sales/projects/view/:id"
+          element={<SurveyDetailsPage isDarkMode={isDarkMode} salesViewMode />}
+        />
         <Route path="/sales/sales-manager" element={<SalesManagerPage isDarkMode={isDarkMode} />} />
         <Route path="/sales/sales-manager/add" element={<AddSalesManagerPage isDarkMode={isDarkMode} />} />
         <Route

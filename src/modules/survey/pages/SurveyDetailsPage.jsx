@@ -8,10 +8,13 @@ import { updateSurveyProjectStatus } from "../services/surveyApi";
 import ProjectDetailsTab from "../components/ProjectDetailsTab";
 import ProjectReportTab from "../components/ProjectReportTab";
 import SupplierMappingTab from "../components/SupplierMappingTab";
-import SurveyDetailsHeader from "../components/SurveyDetailsHeader";
+import SurveyDetailsHeader, {
+  SALES_PROJECT_DETAIL_TABS,
+  SURVEY_DETAIL_TABS,
+} from "../components/SurveyDetailsHeader";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 
-function SurveyDetailsPage({ isDarkMode }) {
+function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const { canRead } = useModulePermission("survey");
@@ -22,10 +25,19 @@ function SurveyDetailsPage({ isDarkMode }) {
   const [draftStatus, setDraftStatus] = useState(project.projectStatus);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
+  const visibleTabs = salesViewMode ? SALES_PROJECT_DETAIL_TABS : SURVEY_DETAIL_TABS;
+
   useEffect(() => {
     setProjectStatus(project.projectStatus);
     setDraftStatus(project.projectStatus);
+    setActiveTab("project-details");
   }, [project.projectStatus, id]);
+
+  useEffect(() => {
+    if (!visibleTabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab(visibleTabs[0]?.id ?? "project-details");
+    }
+  }, [activeTab, visibleTabs]);
 
   if (!canRead) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
@@ -45,11 +57,13 @@ function SurveyDetailsPage({ isDarkMode }) {
     }
   };
 
-  const tabLabels = {
-    "project-details": "Project Details",
-    "supplier-mapping": "Supplier Mapping",
-    "project-report": "Project Report",
-  };
+  const tabLabels = visibleTabs.reduce((acc, tab) => {
+    acc[tab.id] = tab.label;
+    return acc;
+  }, /** @type {Record<string, string>} */ ({}));
+
+  const listPath = salesViewMode ? "/sales/projects" : "/survey";
+  const listLabel = salesViewMode ? "Projects" : "Survey";
 
   return (
     <div className="space-y-6">
@@ -57,7 +71,7 @@ function SurveyDetailsPage({ isDarkMode }) {
         title={project.projectName}
         subtitle={`Survey ${project.id}`}
         breadcrumbs={[
-          { label: "Survey", to: "/survey" },
+          { label: listLabel, to: listPath },
           { label: tabLabels[activeTab] ?? "Project Details" },
         ]}
         isDarkMode={isDarkMode}
@@ -72,6 +86,8 @@ function SurveyDetailsPage({ isDarkMode }) {
         onStatusUpdate={handleStatusUpdate}
         isUpdatingStatus={isUpdatingStatus}
         surveyId={project.id}
+        tabs={visibleTabs}
+        readOnly={salesViewMode}
         onEditSurvey={() =>
           navigate(`/survey/edit/${encodeURIComponent(id)}`)
         }
@@ -81,7 +97,7 @@ function SurveyDetailsPage({ isDarkMode }) {
         {activeTab === "project-details" && (
           <ProjectDetailsTab project={project} isDarkMode={isDarkMode} />
         )}
-        {activeTab === "supplier-mapping" && (
+        {!salesViewMode && activeTab === "supplier-mapping" && (
           <SupplierMappingTab surveyId={id} isDarkMode={isDarkMode} />
         )}
         {activeTab === "project-report" && (

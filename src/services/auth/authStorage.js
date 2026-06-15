@@ -4,11 +4,18 @@ import {
   getUserInitials,
   normalizeAdminUser,
 } from "../../modules/shared/utils/userAvatar";
+import { clearLoginRole, saveLoginRole } from "./loginRole";
 import { resetSessionExpiredState } from "./sessionExpiry";
 
 const TOKEN_KEY = "authToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 const ADMIN_KEY = "adminUser";
+
+const AUTH_STORAGE_KEYS = [TOKEN_KEY, REFRESH_TOKEN_KEY, ADMIN_KEY];
+
+function clearAuthStorageKeys(storage) {
+  AUTH_STORAGE_KEYS.forEach((key) => storage.removeItem(key));
+}
 
 /** Dispatched after login/logout so listeners can refresh auth-dependent UI. */
 export const AUTH_SESSION_CHANGED_EVENT = "auth:session-changed";
@@ -20,9 +27,9 @@ function notifyAuthSessionChanged() {
 }
 
 /**
- * @param {{ token: string, refreshToken?: string, admin?: object | null }} session
+ * @param {{ token: string, refreshToken?: string, admin?: object | null, loginRole?: string }} session
  */
-export function saveAuthSession({ token, refreshToken, admin }) {
+export function saveAuthSession({ token, refreshToken, admin, loginRole }) {
   const normalizedToken = normalizeAuthToken(token);
   if (!normalizedToken) {
     throw new Error("Cannot save auth session without a token.");
@@ -45,15 +52,17 @@ export function saveAuthSession({ token, refreshToken, admin }) {
   }
 
   sessionStorage.removeItem(TOKEN_KEY);
+  if (loginRole) {
+    saveLoginRole(loginRole);
+  }
   resetSessionExpiredState();
   notifyAuthSessionChanged();
 }
 
 export function clearAuthSession() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-  localStorage.removeItem(ADMIN_KEY);
-  sessionStorage.removeItem(TOKEN_KEY);
+  clearAuthStorageKeys(localStorage);
+  clearAuthStorageKeys(sessionStorage);
+  clearLoginRole();
   notifyAuthSessionChanged();
 }
 
