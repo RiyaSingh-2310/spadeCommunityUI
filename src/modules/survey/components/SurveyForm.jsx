@@ -49,6 +49,7 @@ function SurveyForm({
   salesManagerOptions = [],
   salesProjectOptions = [],
   surveyGroupOptions = SURVEY_GROUP_OPTIONS,
+  descriptionContentKey,
 }) {
   const fileInputRef = useRef(null);
   const inputClass = getAdminInputClass();
@@ -184,6 +185,7 @@ function SurveyForm({
               isDarkMode={isDarkMode}
               placeholder="Enter Project Description"
               disabled={disabled}
+              contentKey={descriptionContentKey}
             />
           </FormField>
         </div>

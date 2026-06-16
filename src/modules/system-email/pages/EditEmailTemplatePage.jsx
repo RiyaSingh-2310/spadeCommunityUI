@@ -31,6 +31,9 @@ function EditEmailTemplatePage({ isDarkMode }) {
   const [description, setDescription] = useState(() =>
     buildInitialDescription(existing)
   );
+  const [initialDescription, setInitialDescription] = useState(() =>
+    buildInitialDescription(existing)
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputClass = getAdminInputClass();
@@ -47,12 +50,17 @@ function EditEmailTemplatePage({ isDarkMode }) {
     fields: EMAIL_TEMPLATE_FIELDS,
   });
 
+  const isDirty = useMemo(
+    () => description.trim() !== initialDescription.trim(),
+    [description, initialDescription]
+  );
+
   const canSubmit =
-    showSubmit && !readOnly && isFormValid(errors) && !isSubmitting;
+    showSubmit && !readOnly && isFormValid(errors) && !isSubmitting && isDirty;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!validateSubmit() || !isFormValid(errors) || !existing) return;
+    if (!validateSubmit() || !isFormValid(errors) || !existing || !isDirty) return;
 
     setIsSubmitting(true);
     try {
@@ -127,7 +135,7 @@ function EditEmailTemplatePage({ isDarkMode }) {
                 className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]"
               >
                 {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-                {isSubmitting ? "Submitting..." : "Submit"}
+                {isSubmitting ? "Updating..." : "Update"}
               </button>
             )}
             <button

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import NumericInput from "../../../components/admin/NumericInput";
@@ -39,28 +39,41 @@ const EMPTY_FORM = {
   status: "Active",
 };
 
-function buildInitialForm(isEdit, questionId) {
-  if (!isEdit || !questionId) return EMPTY_FORM;
-  const existing = getProfilingQuestionById(questionId);
-  if (!existing) return EMPTY_FORM;
-  return {
-    language: existing.language,
-    questionTitle: existing.questionTitle,
-    questionType: existing.questionType,
-    options: existing.options || "",
-    sortOrder: String(existing.sortOrder ?? 0),
-    status: existing.status,
-  };
-}
-
 function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = mode === "edit";
-  const [form, setForm] = useState(() => buildInitialForm(isEdit, id));
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
   const inputClass = getAdminInputClass();
   const needsOptions = OPTION_QUESTION_TYPES.includes(form.questionType);
   const existingRecord = isEdit && id ? getProfilingQuestionById(id) : null;
+
+  useEffect(() => {
+    if (!isEdit || !id) {
+      setForm(EMPTY_FORM);
+      setInitialSnapshot(null);
+      return;
+    }
+
+    const existing = getProfilingQuestionById(id);
+    if (!existing) {
+      setForm(EMPTY_FORM);
+      setInitialSnapshot(null);
+      return;
+    }
+
+    const mapped = {
+      language: existing.language,
+      questionTitle: existing.questionTitle,
+      questionType: existing.questionType,
+      options: existing.options || "",
+      sortOrder: String(existing.sortOrder ?? 0),
+      status: existing.status,
+    };
+    setForm(mapped);
+    setInitialSnapshot(mapped);
+  }, [isEdit, id]);
 
   const errors = useMemo(() => {
     const next = {
@@ -81,7 +94,20 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
     fields: PROFILING_QUESTION_FIELDS,
   });
 
-  const canSubmit = isFormValid(errors);
+  const isDirty = useMemo(() => {
+    if (!isEdit || !initialSnapshot) return false;
+
+    return (
+      form.language !== initialSnapshot.language ||
+      form.questionTitle !== initialSnapshot.questionTitle ||
+      form.questionType !== initialSnapshot.questionType ||
+      form.options !== initialSnapshot.options ||
+      form.sortOrder !== initialSnapshot.sortOrder ||
+      form.status !== initialSnapshot.status
+    );
+  }, [isEdit, initialSnapshot, form]);
+
+  const canSubmit = isFormValid(errors) && (!isEdit || isDirty);
 
   const setField = (key, value) => {
     setForm((prev) => {
@@ -94,7 +120,7 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
   };
 
   const handleSubmit = () => {
-    if (!validateSubmit() || !canSubmit) return;
+    if (!validateSubmit() || !canSubmit || (isEdit && !isDirty)) return;
     const payload = {
       language: form.language.trim(),
       questionTitle: form.questionTitle.trim(),
@@ -219,7 +245,7 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
               onClick={handleSubmit}
               className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Submit
+              {isEdit ? "Update" : "Submit"}
             </button>
             <button
               type="button"

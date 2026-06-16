@@ -43,6 +43,8 @@ const CLIENT_FORM_FIELDS = [
   "website",
   "country",
   "apiBaseUrl",
+  "apiHeaderKey",
+  "apiSecretKey",
 ];
 
 function ClientFormPage({ isDarkMode, mode = "add" }) {

@@ -1,10 +1,15 @@
-function DetailField({ label, value }) {
+function DetailField({ label, value, ellipsis = false }) {
   const display = value != null && String(value).trim() !== "" ? String(value) : "—";
 
   return (
     <div className="min-w-0">
       <p className="admin-text-subtle text-xs font-semibold uppercase tracking-wide">{label}</p>
-      <p className="admin-text mt-1 break-words text-sm">{display}</p>
+      <p
+        className={`admin-text mt-1 text-sm ${ellipsis ? "max-w-[280px] truncate" : "break-words"}`}
+        title={ellipsis && display !== "—" ? display : undefined}
+      >
+        {display}
+      </p>
     </div>
   );
 }
@@ -12,7 +17,7 @@ function DetailField({ label, value }) {
 function RfqExpandableDetails({ row }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <DetailField label="Email Subject" value={row.emailSubject} />
+      <DetailField label="Email Subject" value={row.emailSubject} ellipsis />
       <DetailField label="Status" value={row.status} />
       <DetailField label="Sales Manager" value={row.salesManager} />
     </div>

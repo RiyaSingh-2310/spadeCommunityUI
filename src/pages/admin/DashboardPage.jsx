@@ -369,24 +369,24 @@ function DashboardPage({ isDarkMode }) {
       { icon: Handshake, label: "Total Partners", value: dashboard.partners.length },
       { icon: ClipboardList, label: "Total Project Managers", value: dashboard.projectManagers.length },
     ],
-    [
-      { icon: ClipboardList, label: "Total Surveys", value: dashboard.surveys.length },
-      { icon: Activity, label: "Active Surveys", value: surveyStatus.active },
-      { icon: Activity, label: "Closed Surveys", value: surveyStatus.closed },
-      { icon: ClipboardList, label: "Total Group Surveys", value: dashboard.groupSurveys.length },
-    ],
-    [
-      { icon: FileText, label: "Total RFQs", value: dashboard.rfqs.length },
-      { icon: FileText, label: "Won RFQs", value: rfqStatus.won },
-      { icon: FileText, label: "Lost RFQs", value: rfqStatus.lost },
-      { icon: FileText, label: "Pending RFQs", value: rfqStatus.pending },
-    ],
-    [
-      { icon: Gift, label: "Pending Rewards", value: rewardStats.pending },
-      { icon: Gift, label: "Completed Rewards", value: rewardStats.completed },
-      { icon: Wallet, label: "Total Invoices", value: invoiceStats.total },
-      { icon: Users, label: "Active Sales Managers", value: dashboard.salesManagers.filter((s) => isStatus(s.status, STATUS_ACTIVE)).length },
-    ],
+    // [
+    //   { icon: ClipboardList, label: "Total Surveys", value: dashboard.surveys.length },
+    //   { icon: Activity, label: "Active Surveys", value: surveyStatus.active },
+    //   { icon: Activity, label: "Closed Surveys", value: surveyStatus.closed },
+    //   { icon: ClipboardList, label: "Total Group Surveys", value: dashboard.groupSurveys.length },
+    // ],
+    // [
+    //   { icon: FileText, label: "Total RFQs", value: dashboard.rfqs.length },
+    //   { icon: FileText, label: "Won RFQs", value: rfqStatus.won },
+    //   { icon: FileText, label: "Lost RFQs", value: rfqStatus.lost },
+    //   { icon: FileText, label: "Pending RFQs", value: rfqStatus.pending },
+    // ],
+    // [
+    //   { icon: Gift, label: "Pending Rewards", value: rewardStats.pending },
+    //   { icon: Gift, label: "Completed Rewards", value: rewardStats.completed },
+    //   { icon: Wallet, label: "Total Invoices", value: invoiceStats.total },
+    //   { icon: Users, label: "Active Sales Managers", value: dashboard.salesManagers.filter((s) => isStatus(s.status, STATUS_ACTIVE)).length },
+    // ],
   ];
 
   if (!canRead) {

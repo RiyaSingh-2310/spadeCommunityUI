@@ -14,6 +14,7 @@ function RichTextEditor({
   disabled = false,
   height = 240,
   id,
+  contentKey,
 }) {
   const onBlurRef = useRef(onBlur);
 
@@ -47,7 +48,7 @@ function RichTextEditor({
         }
       >
         <TinyMceEditor
-          key={isDarkMode ? "dark" : "light"}
+          key={`${isDarkMode ? "dark" : "light"}-${contentKey ?? "default"}`}
           id={id}
           apiKey={TINYMCE_API_KEY}
           value={value}

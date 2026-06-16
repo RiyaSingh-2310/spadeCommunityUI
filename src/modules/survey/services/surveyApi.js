@@ -188,6 +188,18 @@ function resolveSurveyFormId(survey, idKeys, fallback = "") {
   return fallback;
 }
 
+function resolveNestedSurveyFormId(survey, idKeys, nestedKey, fallback = "") {
+  const direct = resolveSurveyFormId(survey, idKeys, "");
+  if (direct) return direct;
+
+  const nested = survey?.[nestedKey];
+  if (nested && typeof nested === "object" && nested.id != null && nested.id !== "") {
+    return String(nested.id);
+  }
+
+  return fallback;
+}
+
 export function mapSurveyToForm(survey, fallback = null) {
   const base = fallback ?? createEmptySurveyForm();
   const linkType = apiLinkTypeToForm(survey?.link_type);
@@ -202,25 +214,29 @@ export function mapSurveyToForm(survey, fallback = null) {
 
   return {
     ...base,
-    client: resolveSurveyFormId(
+    client: resolveNestedSurveyFormId(
       survey,
       ["client_id"],
+      "client",
       survey?.client_code != null ? String(survey.client_code) : base.client
     ),
     projectName: pickSurveyFormValue(survey?.project_name, base.projectName),
-    projectManager: resolveSurveyFormId(
+    projectManager: resolveNestedSurveyFormId(
       survey,
       ["project_manager_id"],
+      "project_manager",
       base.projectManager
     ),
-    salesManager: resolveSurveyFormId(
+    salesManager: resolveNestedSurveyFormId(
       survey,
       ["sales_manager_id"],
+      "sales_manager",
       base.salesManager
     ),
-    salesProject: resolveSurveyFormId(
+    salesProject: resolveNestedSurveyFormId(
       survey,
       ["sales_project_id"],
+      "sales_project",
       base.salesProject
     ),
     projectCountry: pickSurveyFormValue(survey?.project_country, base.projectCountry),

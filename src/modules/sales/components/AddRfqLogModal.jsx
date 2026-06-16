@@ -160,7 +160,7 @@ function AddRfqLogModal({ isOpen, onClose, row, isDarkMode, onSubmitted }) {
             </FormField>
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t px-5 py-4">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[var(--admin-header-surface-border)] px-5 py-4">
             <button
               type="button"
               onClick={onClose}

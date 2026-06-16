@@ -7,6 +7,7 @@ import RichTextEditor from "../../../components/admin/RichTextEditor";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
+import { applyResolvedSelectIds, resolveSelectIdByLabel } from "../../shared/utils/formPopulation";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getRequiredError, isFormValidForFields } from "../../shared/utils/validation";
@@ -110,6 +111,26 @@ function EditGroupSurveyPage({ isDarkMode }) {
       cancelled = true;
     };
   }, [id, isLoadingClients]);
+
+  useEffect(() => {
+    if (isLoadingRecord || isLoadingClients || !initialSnapshot || !loadedRecord) return;
+
+    const savedClient = loadedRecord?.clients?.find(
+      (client) => String(client?.id) === String(form.clientId)
+    );
+    const clientLabel = savedClient?.name ?? loadedRecord?.client_names ?? "";
+
+    applyResolvedSelectIds(setForm, setInitialSnapshot, {
+      clientId: !form.clientId ? resolveSelectIdByLabel(clientOptions, clientLabel) : "",
+    });
+  }, [
+    isLoadingRecord,
+    isLoadingClients,
+    initialSnapshot,
+    loadedRecord,
+    clientOptions,
+    form.clientId,
+  ]);
 
   const mergedClientOptions = useMemo(() => {
     const savedClient = loadedRecord?.clients?.find(
@@ -276,6 +297,7 @@ function EditGroupSurveyPage({ isDarkMode }) {
                 placeholder="Enter project description"
                 disabled={fieldDisabled(readOnly, isSubmitting)}
                 height={200}
+                contentKey={`group-survey-${id}`}
               />
             </FormField>
             <FormField label="Notes">

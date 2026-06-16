@@ -52,14 +52,19 @@ function extractGroupProjectRecord(data) {
 }
 
 function resolveClientIds(project) {
-  if (Array.isArray(project?.clients)) {
+  if (Array.isArray(project?.clients) && project.clients.length > 0) {
     return project.clients
       .map((client) => String(client?.id ?? ""))
       .filter(Boolean);
   }
 
-  if (Array.isArray(project?.client_ids)) {
+  if (Array.isArray(project?.client_ids) && project.client_ids.length > 0) {
     return project.client_ids.map((id) => String(id)).filter(Boolean);
+  }
+
+  const singleId = project?.client_id ?? project?.clientId;
+  if (singleId != null && String(singleId).trim() !== "") {
+    return [String(singleId)];
   }
 
   return [];

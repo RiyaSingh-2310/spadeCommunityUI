@@ -29,6 +29,11 @@ import {
   isFormValidForFields,
 } from "../../shared/utils/validation";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
+import {
+  applyResolvedSelectIds,
+  resolveClientIdByName,
+  resolveSelectIdByLabel,
+} from "../../shared/utils/formPopulation";
 
 const RFQ_REQUIRED_FIELDS = [
   "clientId",
@@ -58,6 +63,7 @@ const EMPTY_FORM = {
   country: "",
   subject: "",
   salesManagerId: "",
+  salesManagerName: "",
   status: "",
   comment: "",
 };
@@ -151,15 +157,18 @@ function AddRfqPage({ isDarkMode }) {
 
   const errors = useMemo(
     () => ({
-      clientId: getRequiredError(form.clientId, "Client Name"),
+      clientId: getRequiredError(resolvedClientId || form.clientId, "Client Name"),
       email: getEmailError(form.email),
       country: getRequiredError(form.country, "Country"),
       subject: getRequiredError(form.subject, "Email Subject"),
-      salesManagerId: getRequiredError(form.salesManagerId, "Sales Manager"),
+      salesManagerId: getRequiredError(
+        resolvedSalesManagerId || form.salesManagerId,
+        "Sales Manager"
+      ),
       status: getRequiredError(form.status, "Status"),
       comment: getRichTextError(form.comment, "Comment"),
     }),
-    [form]
+    [form, resolvedClientId, resolvedSalesManagerId]
   );
 
   const { showError, touch, validateSubmit, resetValidation } = useFormValidation({
@@ -200,6 +209,36 @@ function AddRfqPage({ isDarkMode }) {
     };
   }, [id, isEdit, resetValidation]);
 
+  useEffect(() => {
+    if (!isEdit || isOptionsLoading || isLoadingRecord || !initialSnapshot) return;
+
+    const resolvedClient = resolveClientIdByName(
+      clientRecords,
+      form.clientName,
+      form.clientId
+    );
+    const resolvedSalesManager = resolveSelectIdByLabel(
+      salesManagerOptions,
+      form.salesManagerName
+    );
+
+    applyResolvedSelectIds(setForm, setInitialSnapshot, {
+      clientId: !form.clientId ? resolvedClient : "",
+      salesManagerId: !form.salesManagerId ? resolvedSalesManager : "",
+    });
+  }, [
+    isEdit,
+    isOptionsLoading,
+    isLoadingRecord,
+    initialSnapshot,
+    clientRecords,
+    salesManagerOptions,
+    form.clientId,
+    form.clientName,
+    form.salesManagerId,
+    form.salesManagerName,
+  ]);
+
   const isDirty = useMemo(() => {
     if (!isEdit || !initialSnapshot) return false;
 
@@ -227,7 +266,7 @@ function AddRfqPage({ isDarkMode }) {
       ...prev,
       clientId,
       clientName: selected?.label ?? matchedClient?.name ?? prev.clientName,
-      email: matchedClient?.emailAddress ?? prev.email,
+      email: isEdit ? prev.email : matchedClient?.emailAddress ?? prev.email,
       country: matchedClient?.countryValue ?? matchedClient?.country ?? prev.country,
     }));
   };
@@ -247,10 +286,19 @@ function AddRfqPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
+      const selectedClient = resolvedClientOptions.find(
+        (option) => String(option.value) === String(resolvedClientId || form.clientId)
+      );
+      const selectedSalesManager = resolvedSalesManagerOptions.find(
+        (option) =>
+          String(option.value) === String(resolvedSalesManagerId || form.salesManagerId)
+      );
       const payload = {
         ...form,
         clientId: resolvedClientId || form.clientId,
+        clientName: selectedClient?.label ?? form.clientName,
         salesManagerId: resolvedSalesManagerId || form.salesManagerId,
+        salesManagerName: selectedSalesManager?.label ?? form.salesManagerName,
       };
       const data = isEdit
         ? await updateSalesProject(id, payload)
@@ -272,7 +320,14 @@ function AddRfqPage({ isDarkMode }) {
 
   const inputClass = getAdminInputClass();
 
-  const renderField = (label, key, placeholder, type = "text", required = false) => (
+  const renderField = (
+    label,
+    key,
+    placeholder,
+    type = "text",
+    required = false,
+    readOnly = false
+  ) => (
     <div>
       <label className="admin-text mb-2 block text-sm font-semibold">
         {label}
@@ -280,12 +335,13 @@ function AddRfqPage({ isDarkMode }) {
       </label>
       <input
         type={type}
-        className={inputClass}
+        className={`${inputClass}${readOnly ? " cursor-not-allowed opacity-70" : ""}`}
         placeholder={placeholder}
         value={form[key]}
         onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
         onBlur={() => touch(key)}
-        disabled={controlDisabled}
+        disabled={controlDisabled || readOnly}
+        readOnly={readOnly}
       />
       {showError(key) && (
         <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError(key)}</p>
@@ -362,7 +418,7 @@ function AddRfqPage({ isDarkMode }) {
                 </p>
               )}
             </div>
-            {renderField("Email Address", "email", "Enter Email Address", "email", true)}
+            {renderField("Email Address", "email", "Enter Email Address", "email", true, isEdit)}
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">
                 Country
@@ -388,9 +444,16 @@ function AddRfqPage({ isDarkMode }) {
               <SearchableSelect
                 inputClass={inputClass}
                 value={resolvedSalesManagerId}
-                onChange={(salesManagerId) =>
-                  setForm((p) => ({ ...p, salesManagerId }))
-                }
+                onChange={(salesManagerId) => {
+                  const selected = resolvedSalesManagerOptions.find(
+                    (option) => String(option.value) === String(salesManagerId)
+                  );
+                  setForm((p) => ({
+                    ...p,
+                    salesManagerId,
+                    salesManagerName: selected?.label ?? "",
+                  }));
+                }}
                 onBlur={() => touch("salesManagerId")}
                 options={resolvedSalesManagerOptions}
                 placeholder="Select Sales Manager"
@@ -435,6 +498,7 @@ function AddRfqPage({ isDarkMode }) {
                 onBlur={() => touch("comment")}
                 placeholder="Enter Comment"
                 disabled={controlDisabled}
+                contentKey={isEdit ? `rfq-${id}` : "rfq-add"}
               />
               {showError("comment") && (
                 <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("comment")}</p>

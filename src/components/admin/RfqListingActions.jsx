@@ -51,7 +51,7 @@ function RfqListingActions({
       {onViewLogs && (
         <ActionIconButton
           isDarkMode={isDarkMode}
-          label="View Sales Log List"
+          label="View Log"
           onClick={onViewLogs}
         >
           <Eye size={13} />

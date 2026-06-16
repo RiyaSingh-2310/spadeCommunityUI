@@ -40,6 +40,7 @@ import ProjectManagersPage from "./modules/project-managers/pages/ProjectManager
 import AddRfqPage from "./modules/sales/pages/AddRfqPage";
 import AddSalesManagerPage from "./modules/sales/pages/AddSalesManagerPage";
 import RfqPage from "./modules/sales/pages/RfqPage";
+import RfqViewLogListPage from "./modules/sales/pages/RfqViewLogListPage";
 import SalesProjectsPage from "./modules/sales/pages/SalesProjectsPage";
 import SalesManagerPage from "./modules/sales/pages/SalesManagerPage";
 import AddGroupSurveyPage from "./modules/survey/pages/AddGroupSurveyPage";
@@ -142,6 +143,10 @@ function App() {
         />
         <Route path="/sales/rfq" element={<RfqPage isDarkMode={isDarkMode} />} />
         <Route path="/sales/rfq/add" element={<AddRfqPage isDarkMode={isDarkMode} />} />
+        <Route
+          path="/sales/rfq/logs/:projectId"
+          element={<RfqViewLogListPage isDarkMode={isDarkMode} />}
+        />
         <Route path="/sales/rfq/edit/:id" element={<AddRfqPage isDarkMode={isDarkMode} />} />
         <Route path="/sales/projects" element={<SalesProjectsPage isDarkMode={isDarkMode} />} />
         <Route

@@ -14,7 +14,7 @@ import {
 } from "../../../services/sales/salesProjectsApi";
 import AddRfqLogModal from "../components/AddRfqLogModal";
 import RfqExpandableDetails from "../components/RfqExpandableDetails";
-import RfqSalesLogListModal from "../components/RfqSalesLogListModal";
+import { resolveSalesProjectLogId } from "../../../services/sales/salesProjectsApi";
 
 const ADMIN_RFQ_COLUMNS = [
   "ID",
@@ -61,8 +61,6 @@ function RfqPage({ isDarkMode }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [addLogTarget, setAddLogTarget] = useState(null);
-  const [viewLogsTarget, setViewLogsTarget] = useState(null);
-  const [logsRefreshKey, setLogsRefreshKey] = useState(0);
 
   const handleDeleteRequest = (row) => {
     setDeleteTarget(row);
@@ -119,7 +117,12 @@ function RfqPage({ isDarkMode }) {
         nameAsText
         onDelete={handleDeleteRequest}
         onAddLog={(row) => setAddLogTarget(row)}
-        onViewLogs={(row) => setViewLogsTarget(row)}
+        onViewLogs={(row) => {
+          const projectId = resolveSalesProjectLogId(row);
+          if (projectId) {
+            navigate(`/sales/rfq/logs/${encodeURIComponent(projectId)}`);
+          }
+        }}
         renderExpandedContent={(row) => <RfqExpandableDetails row={row} />}
       />
 
@@ -138,16 +141,7 @@ function RfqPage({ isDarkMode }) {
         onClose={() => setAddLogTarget(null)}
         onSubmitted={() => {
           fetchProjects();
-          setLogsRefreshKey((key) => key + 1);
         }}
-      />
-
-      <RfqSalesLogListModal
-        isOpen={Boolean(viewLogsTarget)}
-        row={viewLogsTarget}
-        isDarkMode={isDarkMode}
-        refreshKey={logsRefreshKey}
-        onClose={() => setViewLogsTarget(null)}
       />
     </div>
   );

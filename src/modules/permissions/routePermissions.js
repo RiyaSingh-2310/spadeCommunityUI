@@ -16,6 +16,7 @@ const ROUTE_RULES = [
   { matcher: /^\/partners(\/|$)/, module: "partners" },
   { matcher: /^\/project-managers\/add/, module: "project_managers", requiresWrite: true },
   { matcher: /^\/project-managers(\/|$)/, module: "project_managers" },
+  { matcher: /^\/sales\/rfq\/logs\//, module: "rfq" },
   { matcher: /^\/sales\/rfq\/add/, module: "rfq", requiresWrite: true },
   { matcher: /^\/sales\/rfq\/edit\//, module: "rfq" },
   { matcher: /^\/sales\/rfq(\/|$)/, module: "rfq" },

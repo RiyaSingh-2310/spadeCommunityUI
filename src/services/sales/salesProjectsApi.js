@@ -66,12 +66,12 @@ function resolveNumericId(value) {
 
 function buildSalesProjectBody(payload) {
   const body = {
-    client_name: payload.clientName.trim(),
-    email: payload.email.trim(),
-    country: payload.country.trim(),
-    email_subject: payload.subject.trim(),
+    client_name: String(payload.clientName ?? "").trim(),
+    email: String(payload.email ?? "").trim(),
+    country: String(payload.country ?? "").trim(),
+    email_subject: String(payload.subject ?? "").trim(),
     status: formStatusToApiStatus(payload.status),
-    comment: payload.comment.trim(),
+    comment: String(payload.comment ?? "").trim(),
   };
 
   const clientId = resolveNumericId(payload.clientId);
@@ -82,6 +82,11 @@ function buildSalesProjectBody(payload) {
   const salesManagerId = resolveNumericId(payload.salesManagerId);
   if (salesManagerId != null) {
     body.sales_manager_id = salesManagerId;
+  }
+
+  const salesManagerName = String(payload.salesManagerName ?? "").trim();
+  if (salesManagerName) {
+    body.sales_manager_name = salesManagerName;
   }
 
   return body;
@@ -106,21 +111,26 @@ export function apiStatusToFormStatus(status) {
  */
 export function mapSalesProjectToForm(project) {
   const clientId =
-    project?.client_id ?? project?.clientId ?? project?.client?.id ?? "";
+    project?.client_id ??
+    project?.clientId ??
+    project?.client?.id ??
+    "";
   const salesManagerId =
     project?.sales_manager_id ??
     project?.salesManagerId ??
     project?.sales_manager?.id ??
-    "";
+    (typeof project?.sales_manager === "object" ? "" : "");
+
+  const salesManagerName =
+    project?.sales_manager_name ??
+    (typeof project?.sales_manager === "object"
+      ? project?.sales_manager?.name ?? ""
+      : project?.sales_manager ?? "");
 
   return {
     clientId: clientId != null && clientId !== "" ? String(clientId) : "",
     clientName: project?.client_name ?? project?.client?.name ?? "",
-    salesManagerName:
-      project?.sales_manager_name ??
-      project?.sales_manager?.name ??
-      project?.sales_manager ??
-      "",
+    salesManagerName,
     email: project?.email ?? "",
     country: project?.country ?? "",
     subject: project?.email_subject ?? "",
@@ -142,6 +152,68 @@ function formatSalesLogDate(value) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatSalesLogDateLabel(value) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  return parsed.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatSalesLogTimeLabel(value) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function extractSalesLogRecord(data) {
+  if (!data || typeof data !== "object") return null;
+  if (data.data && typeof data.data === "object" && !Array.isArray(data.data)) {
+    return data.data;
+  }
+  if (data.log && typeof data.log === "object") {
+    return data.log;
+  }
+  if (data.id != null) return data;
+  return null;
+}
+
+function resolveLogCreatedBy(log) {
+  if (log?.created_by_name) {
+    return String(log.created_by_name).trim();
+  }
+
+  const createdBy = log?.created_by ?? log?.createdBy;
+  if (typeof createdBy === "string" && createdBy.trim()) {
+    return createdBy.trim();
+  }
+
+  return "";
+}
+
+export function mapSalesLogToCard(log) {
+  const createdAt = log?.created_at ?? log?.createdAt ?? "";
+  return {
+    id: log?.id,
+    projectId: log?.project_id ?? log?.projectId ?? "",
+    emailSubject: log?.email_subject ?? log?.emailSubject ?? "",
+    commentHtml: log?.comment ?? "",
+    commentBy: apiCommentByToForm(log?.comment_by ?? log?.commentBy),
+    createdBy: resolveLogCreatedBy(log),
+    createdAt,
+    createdDateLabel: formatSalesLogDateLabel(createdAt),
+    createdTimeLabel: formatSalesLogTimeLabel(createdAt),
+    createdDateTime: formatSalesLogDate(createdAt),
+  };
 }
 
 function stripHtmlContent(value) {
@@ -226,7 +298,7 @@ export function mapSalesLogToRow(log) {
     emailSubject: log?.email_subject ?? log?.emailSubject ?? "",
     comment: stripHtmlContent(log?.comment),
     commentBy: apiCommentByToForm(log?.comment_by ?? log?.commentBy),
-    createdBy: log?.created_by ?? log?.created_by_name ?? log?.createdBy ?? "",
+    createdBy: resolveLogCreatedBy(log),
     createdDate: formatSalesLogDate(log?.created_at ?? log?.createdAt),
     createdAt: log?.created_at ?? log?.createdAt ?? "",
   };
@@ -286,6 +358,9 @@ export async function getRecord(id) {
  *   subject: string,
  *   status: string,
  *   comment: string,
+ *   clientId?: string|number,
+ *   salesManagerId?: string|number,
+ *   salesManagerName?: string,
  * }} payload
  */
 export async function createSalesProject(payload) {
@@ -307,6 +382,9 @@ export async function createSalesProject(payload) {
  *   subject: string,
  *   status: string,
  *   comment: string,
+ *   clientId?: string|number,
+ *   salesManagerId?: string|number,
+ *   salesManagerName?: string,
  * }} payload
  */
 export async function updateSalesProject(id, payload) {
@@ -337,7 +415,7 @@ function normalizeSalesLogProjectId(projectId) {
   return normalized;
 }
 
-/** GET /api/sales/project/log/list/:id */
+/** GET /api/sales/log/:id/list */
 export async function getSalesLogs(projectId) {
   const normalizedId = normalizeSalesLogProjectId(projectId);
   const data = await apiRequest(API_ROUTES.salesProjects.logs(normalizedId));
@@ -351,6 +429,67 @@ export async function getSalesLogs(projectId) {
     total,
     count: total,
     items: logs.map((log) => mapSalesLogToRow(log)),
+    cards: logs.map((log) => mapSalesLogToCard(log)),
+  };
+}
+
+/** GET /api/sales/log/:projectId/view/:logId */
+export async function getSalesLogDetail(projectId, logId) {
+  const normalizedProjectId = normalizeSalesLogProjectId(projectId);
+  const normalizedLogId = String(logId ?? "").trim();
+  if (!normalizedLogId || normalizedLogId === "undefined" || normalizedLogId === "null") {
+    throw new ApiError("Invalid sales log id.", null);
+  }
+
+  const data = await apiRequest(
+    API_ROUTES.salesProjects.viewLog(normalizedProjectId, encodeURIComponent(normalizedLogId))
+  );
+  assertSuccess(data);
+
+  const log = extractSalesLogRecord(data);
+  if (!log) {
+    throw new ApiError(data?.message ?? "Sales log not found.", data);
+  }
+
+  return {
+    ...data,
+    item: mapSalesLogToCard(log),
+  };
+}
+
+/**
+ * Loads RFQ log list, then fetches each log's full detail via the view API.
+ * GET /api/sales/log/:projectId/list
+ * GET /api/sales/log/:projectId/view/:logId
+ */
+export async function getSalesLogListWithDetails(projectId) {
+  const listData = await getSalesLogs(projectId);
+  const summaries = listData.cards ?? [];
+
+  if (summaries.length === 0) {
+    return { ...listData, items: [] };
+  }
+
+  const items = await Promise.all(
+    summaries.map(async (summary) => {
+      if (summary.id == null) return summary;
+
+      try {
+        const detail = await getSalesLogDetail(projectId, summary.id);
+        const item = detail.item ?? summary;
+        return {
+          ...item,
+          createdBy: summary.createdBy || item.createdBy,
+        };
+      } catch {
+        return summary;
+      }
+    })
+  );
+
+  return {
+    ...listData,
+    items,
   };
 }
 

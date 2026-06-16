@@ -895,6 +895,22 @@ function ModuleListingPage({
                   const value = getRowValue(row, col);
                   const displayValue =
                     value === "" || value === "-" ? (key === "projectid" ? "—" : value) : value;
+                  if (key === "emailSubject") {
+                    const subjectText = displayValue === "-" ? "—" : String(displayValue);
+                    return (
+                      <td
+                        key={col}
+                        className="max-w-[220px] px-4 py-3 align-middle"
+                      >
+                        <span
+                          className="admin-text block truncate"
+                          title={subjectText !== "—" ? subjectText : undefined}
+                        >
+                          {subjectText}
+                        </span>
+                      </td>
+                    );
+                  }
                   return (
                     <td
                       key={col}

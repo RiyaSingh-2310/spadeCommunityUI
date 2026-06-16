@@ -25,6 +25,10 @@ import {
   SURVEY_FORM_FIELDS,
 } from "../utils/surveyFormValidation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import {
+  applyResolvedSelectIds,
+  resolveSelectIdByLabel,
+} from "../../shared/utils/formPopulation";
 
 function SurveyFormPage({ isDarkMode, mode = "create" }) {
   const navigate = useNavigate();
@@ -142,6 +146,54 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     };
   }, [id, isEdit, isLoadingOptions, resetValidation]);
 
+  useEffect(() => {
+    if (!isEdit || isLoadingOptions || isLoadingRecord || !initialSnapshot || !loadedRecord) {
+      return;
+    }
+
+    applyResolvedSelectIds(setForm, setInitialSnapshot, {
+      client: !form.client
+        ? resolveSelectIdByLabel(clientOptions, loadedRecord?.client_name)
+        : "",
+      projectManager: !form.projectManager
+        ? resolveSelectIdByLabel(projectManagerOptions, loadedRecord?.project_manager_name)
+        : "",
+      salesManager: !form.salesManager
+        ? resolveSelectIdByLabel(salesManagerOptions, loadedRecord?.sales_manager_name)
+        : "",
+      salesProject: !form.salesProject
+        ? resolveSelectIdByLabel(
+            salesProjectOptions,
+            loadedRecord?.sales_project_name ?? loadedRecord?.sales_project_id
+          )
+        : "",
+      surveyGroup: !form.surveyGroup
+        ? resolveSelectIdByLabel(
+            mergedSurveyGroupOptions,
+            loadedRecord?.prescreen_survey_title ??
+              loadedRecord?.survey_group_name ??
+              loadedRecord?.survey_group_title
+          )
+        : "",
+    });
+  }, [
+    isEdit,
+    isLoadingOptions,
+    isLoadingRecord,
+    initialSnapshot,
+    loadedRecord,
+    clientOptions,
+    projectManagerOptions,
+    salesManagerOptions,
+    salesProjectOptions,
+    mergedSurveyGroupOptions,
+    form.client,
+    form.projectManager,
+    form.salesManager,
+    form.salesProject,
+    form.surveyGroup,
+  ]);
+
   const isDirty = useMemo(() => {
     if (!isEdit || !initialSnapshot) return false;
     return !areSurveyFormsEqual(form, initialSnapshot);
@@ -210,6 +262,29 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     );
   }
 
+  if (isEdit && loadFailed) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          title={title}
+          subtitle={`Survey ${id}`}
+          breadcrumbs={breadcrumbs}
+          isDarkMode={isDarkMode}
+        />
+        <div className="admin-text rounded-xl border border-[var(--admin-border)] p-6 text-sm">
+          Unable to load survey details.
+          <button
+            type="button"
+            onClick={() => navigate(returnTo ?? "/survey")}
+            className="ml-2 font-semibold text-[#10a950] hover:underline"
+          >
+            Back to Survey
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -233,6 +308,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
           salesManagerOptions={mergedSalesManagerOptions}
           salesProjectOptions={mergedSalesProjectOptions}
           surveyGroupOptions={mergedSurveyGroupOptions}
+          descriptionContentKey={isEdit ? `survey-${id}` : "survey-create"}
         />
 
         <div className="admin-form-actions flex flex-wrap items-center gap-3">
