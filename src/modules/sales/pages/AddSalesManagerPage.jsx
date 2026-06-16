@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
-import FormStatusSelect from "../../../components/admin/FormStatusSelect";
 import ProfileImageUpload from "../../../components/admin/ProfileImageUpload";
 import TableCard from "../../../components/admin/TableCard";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
@@ -19,6 +18,8 @@ import { resolveMediaUrl } from "../../shared/utils/userAvatar";
 import {
   getAuthEmailError,
   getConfirmPasswordError,
+  getOptionalConfirmPasswordError,
+  getOptionalPasswordError,
   getPasswordError,
   getRequiredError,
   isFormValidForFields,
@@ -65,10 +66,10 @@ function AddSalesManagerPage({ isDarkMode }) {
       name: getRequiredError(form.name, "Name"),
       email: isEdit ? "" : getAuthEmailError(form.email, { label: "Email Address" }),
       password: isEdit
-        ? ""
+        ? getOptionalPasswordError(form.password, SALES_MANAGER_PASSWORD_MIN_LENGTH)
         : getPasswordError(form.password, SALES_MANAGER_PASSWORD_MIN_LENGTH),
       confirmPassword: isEdit
-        ? ""
+        ? getOptionalConfirmPasswordError(form.password, form.confirmPassword)
         : getConfirmPasswordError(form.password, form.confirmPassword),
     }),
     [form, isEdit]
@@ -132,7 +133,8 @@ function AddSalesManagerPage({ isDarkMode }) {
 
     if (profileImage) return true;
     if (form.name.trim() !== initialSnapshot.name) return true;
-    if (form.status !== initialSnapshot.status) return true;
+    if (form.password.trim()) return true;
+    if (form.confirmPassword.trim()) return true;
 
     return false;
   }, [isEdit, initialSnapshot, form, profileImage]);
@@ -167,6 +169,8 @@ function AddSalesManagerPage({ isDarkMode }) {
             email: form.email,
             status: form.status,
             profileImage,
+            password: form.password,
+            confirmPassword: form.confirmPassword,
           })
         : await createSalesManager({
             name: form.name,
@@ -284,80 +288,68 @@ function AddSalesManagerPage({ isDarkMode }) {
                 <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("email")}</p>
               )}
             </div>
-            {!isEdit && (
-              <>
-                <div>
-                  <label className="admin-text mb-2 block text-sm font-semibold">
-                    New Password
-                    <span className="text-[var(--admin-danger-text)]"> *</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      className={`${inputClass} pr-10`}
-                      placeholder="Enter New Password"
-                      value={form.password}
-                      onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-                      onBlur={() => touch("password")}
-                      disabled={fieldDisabled()}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
-                      disabled={fieldDisabled()}
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                  {showError("password") && (
-                    <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
-                      {showError("password")}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="admin-text mb-2 block text-sm font-semibold">
-                    Confirm Password
-                    <span className="text-[var(--admin-danger-text)]"> *</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showConfirm ? "text" : "password"}
-                      className={`${inputClass} pr-10`}
-                      placeholder="Confirm New Password"
-                      value={form.confirmPassword}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
-                      }
-                      onBlur={() => touch("confirmPassword")}
-                      disabled={fieldDisabled()}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirm((prev) => !prev)}
-                      className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
-                      disabled={fieldDisabled()}
-                    >
-                      {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                  {showError("confirmPassword") && (
-                    <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
-                      {showError("confirmPassword")}
-                    </p>
-                  )}
-                </div>
-              </>
-            )}
-            {isEdit && (
-              <FormStatusSelect
-                value={form.status}
-                onChange={(status) => setForm((prev) => ({ ...prev, status }))}
-                inputClass={inputClass}
-                disabled={controlDisabled}
-              />
-            )}
+            <div>
+              <label className="admin-text mb-2 block text-sm font-semibold">
+                New Password
+                {!isEdit && <span className="text-[var(--admin-danger-text)]"> *</span>}
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className={`${inputClass} pr-10`}
+                  placeholder="Enter New Password"
+                  value={form.password}
+                  onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+                  onBlur={() => touch("password")}
+                  disabled={fieldDisabled()}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
+                  disabled={fieldDisabled()}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {showError("password") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
+                  {showError("password")}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="admin-text mb-2 block text-sm font-semibold">
+                Retype New Password
+                {!isEdit && <span className="text-[var(--admin-danger-text)]"> *</span>}
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirm ? "text" : "password"}
+                  className={`${inputClass} pr-10`}
+                  placeholder="Retype New Password"
+                  value={form.confirmPassword}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                  }
+                  onBlur={() => touch("confirmPassword")}
+                  disabled={fieldDisabled()}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((prev) => !prev)}
+                  className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
+                  disabled={fieldDisabled()}
+                >
+                  {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {showError("confirmPassword") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
+                  {showError("confirmPassword")}
+                </p>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-3 pt-2">
             {showSubmit && !readOnly && (

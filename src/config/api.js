@@ -45,6 +45,7 @@ export const API_ROUTES = {
     delete: (id) => `/api/sales/project/${id}`,
     logs: (id) => `/api/sales/project/log/list/${id}`,
     createLog: "/api/sales/project/log/add",
+    createLogByProjectId: (id) => `/api/sales/log/${id}/add`,
   },
   salesManagers: {
     list: "/api/salesmanager/list",

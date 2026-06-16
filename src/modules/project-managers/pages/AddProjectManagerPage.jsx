@@ -18,6 +18,8 @@ import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { resolveMediaUrl } from "../../shared/utils/userAvatar";
 import {
   getConfirmPasswordError,
+  getOptionalConfirmPasswordError,
+  getOptionalPasswordError,
   getEmailError,
   getPasswordError,
   getRequiredError,
@@ -65,9 +67,11 @@ function AddProjectManagerPage({ isDarkMode }) {
       name: getRequiredError(form.name, "Name"),
       email: isEdit ? "" : getEmailError(form.email),
       password: isEdit
-        ? ""
+        ? getOptionalPasswordError(form.password, PROJECT_MANAGER_PASSWORD_MIN_LENGTH)
         : getPasswordError(form.password, PROJECT_MANAGER_PASSWORD_MIN_LENGTH),
-      confirmPassword: isEdit ? "" : getConfirmPasswordError(form.password, form.confirmPassword),
+      confirmPassword: isEdit
+        ? getOptionalConfirmPasswordError(form.password, form.confirmPassword)
+        : getConfirmPasswordError(form.password, form.confirmPassword),
     }),
     [form, isEdit]
   );
@@ -130,7 +134,8 @@ function AddProjectManagerPage({ isDarkMode }) {
 
     if (profileImage) return true;
     if (form.name.trim() !== initialSnapshot.name) return true;
-    if (form.status !== initialSnapshot.status) return true;
+    if (form.password.trim()) return true;
+    if (form.confirmPassword.trim()) return true;
 
     return false;
   }, [isEdit, initialSnapshot, form, profileImage]);
@@ -165,6 +170,8 @@ function AddProjectManagerPage({ isDarkMode }) {
             email: form.email,
             status: form.status,
             profileImage,
+            password: form.password,
+            confirmPassword: form.confirmPassword,
           })
         : await createProjectManager({
             name: form.name,
@@ -280,78 +287,76 @@ function AddProjectManagerPage({ isDarkMode }) {
                 <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("email")}</p>
               )}
             </div>
+            <div>
+              <label className="admin-text mb-2 block text-sm font-semibold">
+                New Password
+                {!isEdit && <span className="text-[var(--admin-danger-text)]"> *</span>}
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className={`${inputClass} pr-10`}
+                  placeholder="Enter New Password"
+                  value={form.password}
+                  onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+                  onBlur={() => touch("password")}
+                  disabled={fieldDisabled()}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
+                  disabled={fieldDisabled()}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {showError("password") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
+                  {showError("password")}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="admin-text mb-2 block text-sm font-semibold">
+                Confirm New Password
+                {!isEdit && <span className="text-[var(--admin-danger-text)]"> *</span>}
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirm ? "text" : "password"}
+                  className={`${inputClass} pr-10`}
+                  placeholder="Confirm New Password"
+                  value={form.confirmPassword}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                  }
+                  onBlur={() => touch("confirmPassword")}
+                  disabled={fieldDisabled()}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((prev) => !prev)}
+                  className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
+                  disabled={fieldDisabled()}
+                >
+                  {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {showError("confirmPassword") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
+                  {showError("confirmPassword")}
+                </p>
+              )}
+            </div>
             {!isEdit && (
-              <>
-                <div>
-                  <label className="admin-text mb-2 block text-sm font-semibold">
-                    New Password
-                    <span className="text-[var(--admin-danger-text)]"> *</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      className={`${inputClass} pr-10`}
-                      placeholder="Enter New Password"
-                      value={form.password}
-                      onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-                      onBlur={() => touch("password")}
-                      disabled={fieldDisabled()}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
-                      disabled={fieldDisabled()}
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                  {showError("password") && (
-                    <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
-                      {showError("password")}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="admin-text mb-2 block text-sm font-semibold">
-                    Confirm Password
-                    <span className="text-[var(--admin-danger-text)]"> *</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showConfirm ? "text" : "password"}
-                      className={`${inputClass} pr-10`}
-                      placeholder="Confirm New Password"
-                      value={form.confirmPassword}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
-                      }
-                      onBlur={() => touch("confirmPassword")}
-                      disabled={fieldDisabled()}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirm((prev) => !prev)}
-                      className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
-                      disabled={fieldDisabled()}
-                    >
-                      {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                  {showError("confirmPassword") && (
-                    <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
-                      {showError("confirmPassword")}
-                    </p>
-                  )}
-                </div>
-              </>
+              <FormStatusSelect
+                value={form.status}
+                onChange={(status) => setForm((prev) => ({ ...prev, status }))}
+                inputClass={inputClass}
+                disabled={controlDisabled}
+              />
             )}
-            <FormStatusSelect
-              value={form.status}
-              onChange={(status) => setForm((prev) => ({ ...prev, status }))}
-              inputClass={inputClass}
-              disabled={controlDisabled}
-            />
           </div>
           <div className="flex items-center gap-3 pt-2">
             {showSubmit && !readOnly && (

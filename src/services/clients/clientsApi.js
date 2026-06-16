@@ -159,6 +159,30 @@ export async function getRecords({ page, limit, search } = {}) {
   };
 }
 
+/** GET client by id (resolved from list endpoint response). */
+export async function getRecord(id) {
+  const normalizedId = String(id ?? "").trim();
+  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
+    throw new ApiError("Invalid client id.", null);
+  }
+
+  const data = await apiRequest(API_ROUTES.clients.list);
+  assertSuccess(data, "Failed to load clients");
+
+  const clients = extractClientsList(data);
+  const client = clients.find(
+    (item) =>
+      String(item?.client_id ?? item?.id ?? "") === normalizedId ||
+      String(item?.id ?? "") === normalizedId
+  );
+
+  if (!client) {
+    throw new ApiError("Client not found.", data);
+  }
+
+  return client;
+}
+
 /**
  * Maps API client to form fields (supports snake_case).
  * @param {object} client

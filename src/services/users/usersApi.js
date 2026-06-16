@@ -258,6 +258,10 @@ export async function updateRecord(id, payload) {
     permission_type: payload.permission_type ?? "user",
     status: payload.status,
     ...buildPermissionsPayload(payload.permissions),
+    ...(payload.password ? { password: payload.password } : {}),
+    ...(payload.confirmPassword
+      ? { confirm_password: payload.confirmPassword }
+      : {}),
   };
 
   const data = await apiRequest(API_ROUTES.admin.update(id), {

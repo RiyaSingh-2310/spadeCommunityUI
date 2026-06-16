@@ -131,6 +131,7 @@ function RfqPage({ isDarkMode }) {
       />
 
       <AddRfqLogModal
+        key={addLogTarget?.recordId ?? addLogTarget?.id ?? "rfq-log-modal"}
         isOpen={Boolean(addLogTarget)}
         row={addLogTarget}
         isDarkMode={isDarkMode}

@@ -139,9 +139,10 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
 
     if (imageFile) return true;
     if (form.name.trim() !== initialSnapshot.name) return true;
-    if (form.status !== initialSnapshot.status) return true;
     if (form.permission_type !== initialSnapshot.permission_type) return true;
     if (!permissionsEqual(form.permissions, initialSnapshot.permissions)) return true;
+    if (form.password.trim()) return true;
+    if (form.confirmPassword.trim()) return true;
 
     return false;
   }, [isEdit, initialSnapshot, form, imageFile]);
@@ -167,6 +168,8 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
           permission_type: form.permission_type,
           status: formStatusToApiStatus(form.status),
           permissions: form.permissions,
+          password: form.password.trim(),
+          confirmPassword: form.confirmPassword.trim(),
         });
 
         navigate("/users", {
@@ -287,63 +290,65 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                   readOnly={isEdit}
                 />
               </FormField>
-              {!isEdit && (
-                <>
-                  <FormField label="Password" required error={showError("password")}>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Enter Password"
-                        className={`${inputClass} pr-10`}
-                        value={form.password}
-                        onChange={(e) => setForm({ ...form, password: e.target.value })}
-                        onBlur={() => touch("password")}
-                        disabled={fieldDisabled(readOnly, isSubmitting)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((prev) => !prev)}
-                        className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
-                        disabled={fieldDisabled(readOnly, isSubmitting)}
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                  </FormField>
-                  <FormField
-                    label="Confirm Password"
-                    required
-                    error={showError("confirmPassword")}
+              <FormField
+                label={isEdit ? "New Password" : "Password"}
+                required={!isEdit}
+                error={showError("password")}
+              >
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder={isEdit ? "Enter New Password" : "Enter Password"}
+                    className={`${inputClass} pr-10`}
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    onBlur={() => touch("password")}
+                    disabled={fieldDisabled(readOnly, isSubmitting)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
+                    disabled={fieldDisabled(readOnly, isSubmitting)}
                   >
-                    <div className="relative">
-                      <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Confirm Password"
-                        className={`${inputClass} pr-10`}
-                        value={form.confirmPassword}
-                        onChange={(e) =>
-                          setForm({ ...form, confirmPassword: e.target.value })
-                        }
-                        onBlur={() => touch("confirmPassword")}
-                        disabled={fieldDisabled(readOnly, isSubmitting)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword((prev) => !prev)}
-                        className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
-                        disabled={fieldDisabled(readOnly, isSubmitting)}
-                      >
-                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                  </FormField>
-                </>
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </FormField>
+              <FormField
+                label={isEdit ? "Confirm New Password" : "Confirm Password"}
+                required={!isEdit}
+                error={showError("confirmPassword")}
+              >
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder={isEdit ? "Confirm New Password" : "Confirm Password"}
+                    className={`${inputClass} pr-10`}
+                    value={form.confirmPassword}
+                    onChange={(e) =>
+                      setForm({ ...form, confirmPassword: e.target.value })
+                    }
+                    onBlur={() => touch("confirmPassword")}
+                    disabled={fieldDisabled(readOnly, isSubmitting)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
+                    disabled={fieldDisabled(readOnly, isSubmitting)}
+                  >
+                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </FormField>
+              {!isEdit && (
+                <FormStatusSelect
+                  value={form.status}
+                  onChange={(status) => setForm((prev) => ({ ...prev, status }))}
+                  inputClass={inputClass}
+                />
               )}
-              <FormStatusSelect
-                value={form.status}
-                onChange={(status) => setForm((prev) => ({ ...prev, status }))}
-                inputClass={inputClass}
-              />
             </div>
           </div>
         </TableCard>

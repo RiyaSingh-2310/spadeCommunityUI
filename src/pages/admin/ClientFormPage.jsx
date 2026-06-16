@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../components/admin/AdminPageHeader";
-import FormStatusSelect from "../../components/admin/FormStatusSelect";
 import CountrySelect from "../../components/admin/CountrySelect";
 import PhoneInput from "../../components/admin/PhoneInput";
 import TableCard from "../../components/admin/TableCard";
 import { toastApiError } from "../../services/toast/apiToast";
 import {
   createClient,
+  getRecord,
   mapClientToForm,
   updateClient,
 } from "../../services/clients/clientsApi";
@@ -31,10 +31,9 @@ const CLIENT_ADD_REQUIRED_FIELDS = [
   "email",
   "country",
   "contactNumber",
-  "website",
 ];
 
-const CLIENT_EDIT_REQUIRED_FIELDS = ["name", "country", "contactNumber"];
+const CLIENT_EDIT_REQUIRED_FIELDS = ["name", "email", "country", "contactNumber"];
 
 const CLIENT_FORM_FIELDS = [
   "name",
@@ -46,61 +45,26 @@ const CLIENT_FORM_FIELDS = [
   "apiBaseUrl",
 ];
 
-const CLIENT_NAMES = ["Alpha Corp", "Beta Labs", "Gamma Tech", "Delta Works", "Epsilon Ltd"];
-
-function getDemoClientById(clientId) {
-  const numId = Number(clientId);
-  if (!Number.isFinite(numId) || numId < 1) {
-    return {
-      name: "Alpha Corp",
-      email: "ops@alpha.com",
-      country: "India",
-      contactPerson: "Riya Sharma",
-      contactNumber: "+91 9876543210",
-      website: "https://alpha.com",
-      apiBaseUrl: "https://api.alpha.com",
-      apiSecretKey: "alpha-secret-key",
-      passwordType: "Bearer",
-      apiHeaderKey: "Authorization",
-      status: "Active",
-    };
-  }
-  return {
-    name: CLIENT_NAMES[(numId - 1) % CLIENT_NAMES.length],
-    email: `contact${numId}@client.com`,
-    country: "India",
-    contactPerson: `Contact ${numId}`,
-    contactNumber: `+1 555${String(1000 + numId - 1).slice(-4)}`,
-    website: `https://client${numId}.com`,
-    apiBaseUrl: `https://api.client${numId}.com`,
-    apiSecretKey: `client-${numId}-secret`,
-    passwordType: "Bearer",
-    apiHeaderKey: "Authorization",
-    status: numId % 5 === 0 ? "Inactive" : "Active",
-  };
-}
-
 function ClientFormPage({ isDarkMode, mode = "add" }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = mode === "edit";
-  const [form, setForm] = useState(() =>
-    isEdit
-      ? getDemoClientById(id)
-      : {
-          name: "",
-          email: "",
-          country: "",
-          contactPerson: "",
-          contactNumber: "",
-          website: "",
-          apiBaseUrl: "",
-          apiSecretKey: "",
-          passwordType: "",
-          apiHeaderKey: "",
-          status: "Active",
-        }
-  );
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    country: "",
+    contactPerson: "",
+    contactNumber: "",
+    website: "",
+    apiBaseUrl: "",
+    apiSecretKey: "",
+    passwordType: "",
+    apiHeaderKey: "",
+    status: "Active",
+  });
+  const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
   const [showSecret, setShowSecret] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { readOnly, showSubmit, controlDisabled, canSubmitForm, fieldDisabled } =
@@ -109,9 +73,30 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
 
   useEffect(() => {
     if (!isEdit || !id) return undefined;
-    const demo = getDemoClientById(id);
-    setForm(mapClientToForm(demo));
-    return undefined;
+
+    let cancelled = false;
+    const loadClient = async () => {
+      setIsLoadingRecord(true);
+      setLoadFailed(false);
+      setInitialSnapshot(null);
+      try {
+        const client = await getRecord(id);
+        if (cancelled) return;
+        const mapped = mapClientToForm(client);
+        setForm(mapped);
+        setInitialSnapshot(mapped);
+      } catch (error) {
+        if (cancelled) return;
+        toastApiError(error);
+        setLoadFailed(true);
+      } finally {
+        if (!cancelled) setIsLoadingRecord(false);
+      }
+    };
+    loadClient();
+    return () => {
+      cancelled = true;
+    };
   }, [isEdit, id]);
 
   const errors = useMemo(() => {
@@ -133,7 +118,9 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
       return {
         ...shared,
         email: getEmailError(form.email),
-        website: getUrlError(form.website, { required: true }),
+        website: form.website.trim()
+          ? getUrlError(form.website, { required: false })
+          : "",
         apiBaseUrl: apiBaseUrlError,
       };
     }
@@ -154,12 +141,19 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
   });
 
   const requiredFields = isEdit ? CLIENT_EDIT_REQUIRED_FIELDS : CLIENT_ADD_REQUIRED_FIELDS;
+  const isDirty = useMemo(() => {
+    if (!isEdit || !initialSnapshot) return false;
+    return CLIENT_FORM_FIELDS.some((key) => form[key] !== initialSnapshot[key]);
+  }, [isEdit, initialSnapshot, form]);
 
   const canSubmit =
     canSubmitForm &&
     isFormValid(errors) &&
     isFormValidForFields(errors, requiredFields) &&
-    !isSubmitting;
+    !isSubmitting &&
+    !isLoadingRecord &&
+    !loadFailed &&
+    (!isEdit || isDirty);
 
   const onSubmit = async (event) => {
     event.preventDefault();
@@ -168,7 +162,8 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
       !showSubmit ||
       !validateSubmit() ||
       !isFormValid(errors) ||
-      !isFormValidForFields(errors, requiredFields)
+      !isFormValidForFields(errors, requiredFields) ||
+      (isEdit && !isDirty)
     ) {
       return;
     }
@@ -215,6 +210,29 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
+  if (isEdit && isLoadingRecord) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-[#10a950]" />
+      </div>
+    );
+  }
+
+  if (isEdit && loadFailed) {
+    return (
+      <div className="space-y-5">
+        <AdminPageHeader
+          title="Edit Client User"
+          breadcrumbs={[
+            { label: "Clients", to: "/clients" },
+            { label: "Edit Client" },
+          ]}
+          isDarkMode={isDarkMode}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -232,9 +250,9 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
           <div className="grid gap-4 md:grid-cols-2">
             {[
               ["Name", "name", true],
-              ["Email", "email", !isEdit],
+              ["Email Address", "email", true],
               ["Contact Person", "contactPerson", false],
-              ["Website URL", "website", !isEdit],
+              ["Website URL", "website", false],
             ].map(([label, key, required]) => (
               <div key={key}>
                 <label className="admin-text mb-2 block text-sm font-semibold">
@@ -302,11 +320,6 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                 </p>
               )}
             </div>
-            <FormStatusSelect
-              value={form.status}
-              onChange={(status) => setField("status", status)}
-              inputClass={inputClass}
-            />
           </div>
         </TableCard>
 

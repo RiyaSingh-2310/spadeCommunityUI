@@ -17,7 +17,7 @@ const COMMENT_BY_OPTIONS = [
   { value: "Client", label: "Client" },
 ];
 
-const LOG_FORM_FIELDS = ["subject", "comment"];
+const LOG_FORM_FIELDS = ["subject", "comment", "commentBy"];
 
 function getRichTextRequiredError(value, label) {
   const plain = String(value ?? "")
@@ -31,34 +31,20 @@ function getRichTextRequiredError(value, label) {
   return "";
 }
 
-const EMPTY_FORM = {
-  subject: "",
-  comment: "",
-  commentBy: "Sales",
-};
-
 function AddRfqLogModal({ isOpen, onClose, row, isDarkMode, onSubmitted }) {
   const inputClass = getAdminInputClass();
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(() => ({
+    subject: row?.emailSubject ?? "",
+    comment: "",
+    commentBy: "Sales",
+  }));
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setForm(EMPTY_FORM);
-      return;
-    }
-
-    setForm({
-      subject: row?.emailSubject ?? "",
-      comment: "",
-      commentBy: "Sales",
-    });
-  }, [isOpen, row]);
 
   const errors = useMemo(
     () => ({
       subject: getRequiredError(form.subject, "Email Subject"),
       comment: getRichTextRequiredError(form.comment, "Comment"),
+      commentBy: getRequiredError(form.commentBy, "Comment By"),
     }),
     [form]
   );
@@ -80,8 +66,10 @@ function AddRfqLogModal({ isOpen, onClose, row, isDarkMode, onSubmitted }) {
     !isSubmitting &&
     !errors.subject &&
     !errors.comment &&
+    !errors.commentBy &&
     String(form.subject ?? "").trim() &&
-    String(form.comment ?? "").trim();
+    String(form.comment ?? "").trim() &&
+    String(form.commentBy ?? "").trim();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -157,11 +145,12 @@ function AddRfqLogModal({ isOpen, onClose, row, isDarkMode, onSubmitted }) {
               />
             </FormField>
 
-            <FormField label="Comment By">
+            <FormField label="Comment By" required error={showError("commentBy")}>
               <SearchableSelect
                 inputClass={inputClass}
                 value={form.commentBy}
                 onChange={(commentBy) => setForm((prev) => ({ ...prev, commentBy }))}
+                onBlur={() => touch("commentBy")}
                 options={COMMENT_BY_OPTIONS}
                 placeholder="Select Comment By"
                 disabled={isSubmitting}

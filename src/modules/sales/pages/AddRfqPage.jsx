@@ -123,9 +123,31 @@ function AddRfqPage({ isDarkMode }) {
     return mergeSelectOption(
       salesManagerOptions,
       form.salesManagerId,
-      selected?.label ?? ""
+      selected?.label ?? form.salesManagerName ?? ""
     );
-  }, [salesManagerOptions, form.salesManagerId]);
+  }, [salesManagerOptions, form.salesManagerId, form.salesManagerName]);
+
+  const resolvedClientId = useMemo(() => {
+    if (form.clientId) return String(form.clientId);
+    if (!form.clientName) return "";
+    const matched = clientRecords.find(
+      (client) =>
+        String(client.name ?? "").trim().toLowerCase() ===
+        String(form.clientName).trim().toLowerCase()
+    );
+    return matched?.id != null ? String(matched.id) : "";
+  }, [form.clientId, form.clientName, clientRecords]);
+
+  const resolvedSalesManagerId = useMemo(() => {
+    if (form.salesManagerId) return String(form.salesManagerId);
+    if (!form.salesManagerName) return "";
+    const matched = salesManagerOptions.find(
+      (option) =>
+        String(option.label).trim().toLowerCase() ===
+        String(form.salesManagerName).trim().toLowerCase()
+    );
+    return matched ? String(matched.value) : "";
+  }, [form.salesManagerId, form.salesManagerName, salesManagerOptions]);
 
   const errors = useMemo(
     () => ({
@@ -204,7 +226,7 @@ function AddRfqPage({ isDarkMode }) {
     setForm((prev) => ({
       ...prev,
       clientId,
-      clientName: selected?.label ?? prev.clientName,
+      clientName: selected?.label ?? matchedClient?.name ?? prev.clientName,
       email: matchedClient?.emailAddress ?? prev.email,
       country: matchedClient?.countryValue ?? matchedClient?.country ?? prev.country,
     }));
@@ -225,9 +247,14 @@ function AddRfqPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
+      const payload = {
+        ...form,
+        clientId: resolvedClientId || form.clientId,
+        salesManagerId: resolvedSalesManagerId || form.salesManagerId,
+      };
       const data = isEdit
-        ? await updateSalesProject(id, form)
-        : await createSalesProject(form);
+        ? await updateSalesProject(id, payload)
+        : await createSalesProject(payload);
       toastApiSuccess(data);
       navigate("/sales/rfq", {
         replace: true,
@@ -321,7 +348,7 @@ function AddRfqPage({ isDarkMode }) {
               </label>
               <SearchableSelect
                 inputClass={inputClass}
-                value={form.clientId}
+                value={resolvedClientId}
                 onChange={handleClientChange}
                 onBlur={() => touch("clientId")}
                 options={resolvedClientOptions}
@@ -360,7 +387,7 @@ function AddRfqPage({ isDarkMode }) {
               </label>
               <SearchableSelect
                 inputClass={inputClass}
-                value={form.salesManagerId}
+                value={resolvedSalesManagerId}
                 onChange={(salesManagerId) =>
                   setForm((p) => ({ ...p, salesManagerId }))
                 }

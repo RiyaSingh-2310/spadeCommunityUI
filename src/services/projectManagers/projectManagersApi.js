@@ -188,6 +188,8 @@ export async function updateProjectManagerStatus(id, { status }) {
 export async function updateProjectManager(id, payload) {
   const normalizedId = normalizeProjectManagerId(id);
   const hasFile = payload.profileImage instanceof File;
+  const password = String(payload.password ?? "").trim();
+  const confirmPassword = String(payload.confirmPassword ?? "").trim();
 
   if (hasFile) {
     const body = new FormData();
@@ -195,6 +197,8 @@ export async function updateProjectManager(id, payload) {
     body.append("email", payload.email.trim());
     body.append("status", formValueToApiStatus(payload.status));
     body.append("profile_image", payload.profileImage);
+    if (password) body.append("password", password);
+    if (confirmPassword) body.append("confirm_password", confirmPassword);
 
     const data = await apiRequest(API_ROUTES.projectManagers.update(normalizedId), {
       method: "PUT",
@@ -210,6 +214,8 @@ export async function updateProjectManager(id, payload) {
       name: payload.name.trim(),
       email: payload.email.trim(),
       status: formValueToApiStatus(payload.status),
+      ...(password ? { password } : {}),
+      ...(confirmPassword ? { confirm_password: confirmPassword } : {}),
     },
   });
 

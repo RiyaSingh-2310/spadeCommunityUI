@@ -116,6 +116,11 @@ export function mapSalesProjectToForm(project) {
   return {
     clientId: clientId != null && clientId !== "" ? String(clientId) : "",
     clientName: project?.client_name ?? project?.client?.name ?? "",
+    salesManagerName:
+      project?.sales_manager_name ??
+      project?.sales_manager?.name ??
+      project?.sales_manager ??
+      "",
     email: project?.email ?? "",
     country: project?.country ?? "",
     subject: project?.email_subject ?? "",
@@ -176,7 +181,7 @@ function resolveSalesProjectLogId(project) {
 }
 
 function formCommentByToApi(commentBy) {
-  return String(commentBy ?? "Sales").trim().toLowerCase() === "client" ? "client" : "sales";
+  return String(commentBy ?? "Sales").trim().toLowerCase() === "client" ? "Client" : "Sales";
 }
 
 function apiCommentByToForm(commentBy) {
@@ -356,11 +361,9 @@ export async function getSalesLogs(projectId) {
  */
 export async function createSalesLog(projectId, payload) {
   const normalizedId = normalizeSalesLogProjectId(projectId);
-  const numericId = Number(normalizedId);
-  const data = await apiRequest(API_ROUTES.salesProjects.createLog, {
+  const data = await apiRequest(API_ROUTES.salesProjects.createLogByProjectId(normalizedId), {
     method: "POST",
     body: {
-      project_id: Number.isFinite(numericId) ? numericId : normalizedId,
       email_subject: payload.subject.trim(),
       comment: payload.comment ?? "",
       comment_by: formCommentByToApi(payload.commentBy),

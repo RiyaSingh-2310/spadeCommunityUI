@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
-import FormStatusSelect from "../../../components/admin/FormStatusSelect";
 import NumericInput from "../../../components/admin/NumericInput";
 import CountrySelect from "../../../components/admin/CountrySelect";
 import PhoneInput from "../../../components/admin/PhoneInput";
@@ -31,20 +30,7 @@ import { getAdminInputClass } from "../../shared/utils/formStyles";
 
 const PARTNER_ADD_REQUIRED_FIELDS = ["name", "email", "country", "contactNumber"];
 
-const PARTNER_EDIT_REQUIRED_FIELDS = [
-  "name",
-  "country",
-  "contactNumber",
-  "contactPerson",
-  "website",
-  "panelSize",
-  "complete",
-  "terminate",
-  "overQuota",
-  "qualityTerm",
-  "surveyClose",
-  "aboutPartner",
-];
+const PARTNER_EDIT_REQUIRED_FIELDS = ["name", "email", "country", "contactNumber"];
 
 const PARTNER_FORM_FIELDS = [
   "code",
@@ -62,6 +48,8 @@ const PARTNER_FORM_FIELDS = [
   "surveyClose",
   "aboutPartner",
   "apiBaseUrl",
+  "apiSecretKey",
+  "apiBody",
 ];
 
 const EMPTY_FORM = {
@@ -93,6 +81,7 @@ function AddPartnerPage({ isDarkMode }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const { readOnly, showSubmit, controlDisabled, canSubmitForm, fieldDisabled } =
     useAdminFormAccess(isSubmitting);
@@ -134,15 +123,17 @@ function AddPartnerPage({ isDarkMode }) {
       ...shared,
       code: "",
       email: "",
-      contactPerson: getRequiredError(form.contactPerson, "Contact Person"),
-      website: getUrlError(form.website, { required: true }),
-      panelSize: getRequiredError(form.panelSize, "Panel Size"),
-      complete: getRequiredError(form.complete, "Complete"),
-      terminate: getRequiredError(form.terminate, "Terminate"),
-      overQuota: getRequiredError(form.overQuota, "Over Quota"),
-      qualityTerm: getRequiredError(form.qualityTerm, "Quality Term"),
-      surveyClose: getRequiredError(form.surveyClose, "Survey Close"),
-      aboutPartner: isEdit
+      contactPerson: "",
+      website: form.website.trim()
+        ? getUrlError(form.website, { required: false })
+        : "",
+      panelSize: "",
+      complete: "",
+      terminate: "",
+      overQuota: "",
+      qualityTerm: "",
+      surveyClose: "",
+      aboutPartner: form.aboutPartner.trim()
         ? getRichTextError(form.aboutPartner, "About Partner")
         : "",
       apiBaseUrl: apiBaseUrlError,
@@ -164,10 +155,13 @@ function AddPartnerPage({ isDarkMode }) {
       setForm(EMPTY_FORM);
       setIsLoadingRecord(true);
       setLoadFailed(false);
+      setInitialSnapshot(null);
       try {
         const partner = await getRecord(id);
         if (cancelled) return;
-        setForm(mapPartnerToForm(partner));
+        const mapped = mapPartnerToForm(partner);
+        setForm(mapped);
+        setInitialSnapshot(mapped);
       } catch (error) {
         if (cancelled) return;
         toastApiError(error);
@@ -184,6 +178,10 @@ function AddPartnerPage({ isDarkMode }) {
   }, [id, isEdit, resetValidation]);
 
   const requiredFields = isEdit ? PARTNER_EDIT_REQUIRED_FIELDS : PARTNER_ADD_REQUIRED_FIELDS;
+  const isDirty = useMemo(() => {
+    if (!isEdit || !initialSnapshot) return false;
+    return PARTNER_FORM_FIELDS.some((key) => form[key] !== initialSnapshot[key]);
+  }, [isEdit, initialSnapshot, form]);
 
   const canSubmit =
     canSubmitForm &&
@@ -191,7 +189,8 @@ function AddPartnerPage({ isDarkMode }) {
     isFormValidForFields(errors, requiredFields) &&
     !isSubmitting &&
     !isLoadingRecord &&
-    !loadFailed;
+    !loadFailed &&
+    (!isEdit || isDirty);
 
   const inputClass = getAdminInputClass();
 
@@ -206,7 +205,8 @@ function AddPartnerPage({ isDarkMode }) {
       !showSubmit ||
       !validateSubmit() ||
       !isFormValid(errors) ||
-      !isFormValidForFields(errors, requiredFields)
+      !isFormValidForFields(errors, requiredFields) ||
+      (isEdit && !isDirty)
     ) {
       return;
     }
@@ -281,15 +281,15 @@ function AddPartnerPage({ isDarkMode }) {
             {[
               ...(isEdit ? [["Partner Code", "code", "Enter Partner Code", "text", false]] : []),
               ["Name", "name", "Enter Name", "text", true],
-              ["Email Address", "email", "Enter Email Address", "email", !isEdit],
-              ["Contact Person", "contactPerson", "Enter Contact Person", "text", isEdit],
-              ["Website URL", "website", "Enter Website URL", "url", isEdit],
-              ...(isEdit ? [["Panel Size", "panelSize", "Enter Panel Size", "numeric", true]] : []),
-              ["Complete", "complete", "Enter Complete", "numeric", isEdit],
-              ["Terminate", "terminate", "Enter Terminate", "numeric", isEdit],
-              ["Over Quota", "overQuota", "Enter Over Quota", "numeric", isEdit],
-              ["Quality Term", "qualityTerm", "Enter Quality Term", "numeric", isEdit],
-              ["Survey Close", "surveyClose", "Enter Survey Close", "numeric", isEdit],
+              ["Email Address", "email", "Enter Email Address", "email", true],
+              ["Contact Person", "contactPerson", "Enter Contact Person", "text", false],
+              ["Website URL", "website", "Enter Website URL", "url", false],
+              ...(isEdit ? [["Panel Size", "panelSize", "Enter Panel Size", "numeric", false]] : []),
+              ["Complete URL", "complete", "Enter Complete URL", "numeric", false],
+              ["Terminate URL", "terminate", "Enter Terminate URL", "numeric", false],
+              ["Over Quota URL", "overQuota", "Enter Over Quota URL", "numeric", false],
+              ["Quality Term URL", "qualityTerm", "Enter Quality Term URL", "numeric", false],
+              ["Survey Close URL", "surveyClose", "Enter Survey Close URL", "numeric", false],
             ].map(([label, key, placeholder, fieldType, required]) => {
               const readOnlyField = readOnly || (isEdit && (key === "code" || key === "email"));
               return (
@@ -364,15 +364,9 @@ function AddPartnerPage({ isDarkMode }) {
                 </p>
               )}
             </div>
-            <FormStatusSelect
-              value={form.status}
-              onChange={(status) => setField("status", status)}
-              inputClass={inputClass}
-            />
             <div className="md:col-span-2">
               <label className="admin-text mb-2 block text-sm font-semibold">
                 About Partner
-                {isEdit && <span className="text-[var(--admin-danger-text)]"> *</span>}
               </label>
               <textarea
                 className={`${inputClass} min-h-[200px] resize-y py-3`}
