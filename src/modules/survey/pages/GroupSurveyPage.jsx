@@ -45,6 +45,7 @@ function GroupSurveyPage({ isDarkMode }) {
     try {
       const data = await updateGroupProjectStatus(row.id, { status: nextStatus });
       toastApiSuccess(data);
+      await fetchGroupProjects();
     } catch (error) {
       toastApiError(error);
       setRows((prev) =>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
@@ -11,9 +11,16 @@ import {
   useSurveyFormSelectOptions,
 } from "../hooks/useSurveyFormSelectOptions";
 import {
+  assignPartners,
   createSurvey,
+  getAssignedPartners,
+  getEligiblePartners,
   getRecord,
+  mapAssignedPartnersToForm,
+  mapPartnersToSelectOptions,
   mapSurveyToForm,
+  resolveSurveyNumericId,
+  updatePartnerAllocation,
   updateSurvey,
 } from "../services/surveyApi";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
@@ -30,6 +37,41 @@ import {
   resolveSelectIdByLabel,
 } from "../../shared/utils/formPopulation";
 
+function mergePartnerSelectOptions(eligiblePartners = [], assignedPartners = []) {
+  const eligibleOptions = mapPartnersToSelectOptions(eligiblePartners);
+  const assignedOptions = mapPartnersToSelectOptions(assignedPartners);
+  const merged = [...assignedOptions];
+
+  for (const option of eligibleOptions) {
+    if (!merged.some((entry) => String(entry.value) === String(option.value))) {
+      merged.push(option);
+    }
+  }
+
+  return merged;
+}
+
+function arePartnerSelectionsEqual(current = [], original = []) {
+  const left = (Array.isArray(current) ? current : []).map(String).sort();
+  const right = (Array.isArray(original) ? original : []).map(String).sort();
+  if (left.length !== right.length) return false;
+  return left.every((value, index) => value === right[index]);
+}
+
+function getChangedPartnerAllocations(currentAllocations = {}, originalAllocations = {}, partnerIds = []) {
+  const updates = [];
+
+  for (const partnerId of partnerIds) {
+    const key = String(partnerId);
+    const currentValue = String(currentAllocations?.[key] ?? "").trim();
+    const originalValue = String(originalAllocations?.[key] ?? "").trim();
+    if (!currentValue || currentValue === originalValue) continue;
+    updates.push({ partnerId: key, allocatedSize: currentValue });
+  }
+
+  return updates;
+}
+
 function SurveyFormPage({ isDarkMode, mode = "create" }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,6 +86,9 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [partnerOptions, setPartnerOptions] = useState([]);
+  const [partnerAllocationSource, setPartnerAllocationSource] = useState({});
+  const [isLoadingPartners, setIsLoadingPartners] = useState(false);
   const {
     clientOptions,
     projectManagerOptions,
@@ -104,6 +149,60 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     [loadedRecord]
   );
 
+  const surveyRecordId = useMemo(
+    () => resolveSurveyNumericId(loadedRecord) ?? resolveSurveyNumericId(id),
+    [loadedRecord, id]
+  );
+
+  const partnerSelectionEnabled = Boolean(isEdit && surveyRecordId);
+
+  const loadSurveyPartners = useCallback(
+    async (recordId) => {
+      if (!recordId) {
+        setPartnerOptions([]);
+        setPartnerAllocationSource({});
+        return;
+      }
+
+      setIsLoadingPartners(true);
+      try {
+        const [eligibleResponse, assignedPartners] = await Promise.all([
+          getEligiblePartners(recordId),
+          getAssignedPartners(recordId),
+        ]);
+
+        const eligiblePartners = Array.isArray(eligibleResponse?.data)
+          ? eligibleResponse.data
+          : [];
+        setPartnerOptions(mergePartnerSelectOptions(eligiblePartners, assignedPartners));
+
+        const assignedForm = mapAssignedPartnersToForm(assignedPartners);
+        setPartnerAllocationSource({ ...assignedForm.partnerAllocations });
+        setForm((prev) => ({
+          ...prev,
+          partners: assignedForm.partners,
+          partnerAllocations: assignedForm.partnerAllocations,
+        }));
+        setInitialSnapshot((prev) =>
+          prev
+            ? {
+                ...prev,
+                partners: [...assignedForm.partners],
+                partnerAllocations: { ...assignedForm.partnerAllocations },
+              }
+            : prev
+        );
+      } catch (error) {
+        toastApiError(error);
+        setPartnerOptions([]);
+        setPartnerAllocationSource({});
+      } finally {
+        setIsLoadingPartners(false);
+      }
+    },
+    []
+  );
+
   const errors = useMemo(() => getSurveyFormErrors(form), [form]);
   const { showError, touch, validateSubmit, resetValidation } = useFormValidation({
     errors,
@@ -145,6 +244,22 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
       cancelled = true;
     };
   }, [id, isEdit, isLoadingOptions, resetValidation]);
+
+  useEffect(() => {
+    if (!isEdit || !surveyRecordId || isLoadingRecord || loadFailed) return undefined;
+
+    let cancelled = false;
+
+    const loadPartners = async () => {
+      if (cancelled) return;
+      await loadSurveyPartners(surveyRecordId);
+    };
+
+    loadPartners();
+    return () => {
+      cancelled = true;
+    };
+  }, [isEdit, surveyRecordId, isLoadingRecord, loadFailed, loadSurveyPartners]);
 
   useEffect(() => {
     if (!isEdit || isLoadingOptions || isLoadingRecord || !initialSnapshot || !loadedRecord) {
@@ -206,6 +321,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     !isSubmitting &&
     !isLoadingRecord &&
     !isLoadingOptions &&
+    !isLoadingPartners &&
     !loadFailed &&
     (!isEdit || isDirty);
 
@@ -221,10 +337,43 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
 
     setIsSubmitting(true);
     try {
-      const data = isEdit
-        ? await updateSurvey(id, form)
-        : await createSurvey(form);
-      toastApiSuccess(data);
+      if (isEdit) {
+        const data = await updateSurvey(id, form);
+        toastApiSuccess(data);
+
+        if (surveyRecordId) {
+          const partnersChanged = !arePartnerSelectionsEqual(
+            form.partners,
+            initialSnapshot?.partners
+          );
+
+          if (partnersChanged) {
+            const assignData = await assignPartners(surveyRecordId, form.partners);
+            toastApiSuccess(assignData);
+          }
+
+          const allocationUpdates = getChangedPartnerAllocations(
+            form.partnerAllocations,
+            initialSnapshot?.partnerAllocations,
+            form.partners
+          );
+
+          for (const update of allocationUpdates) {
+            const allocationData = await updatePartnerAllocation(
+              surveyRecordId,
+              update.partnerId,
+              update.allocatedSize
+            );
+            toastApiSuccess(allocationData);
+          }
+
+          await loadSurveyPartners(surveyRecordId);
+        }
+      } else {
+        const data = await createSurvey(form);
+        toastApiSuccess(data);
+      }
+
       navigate(returnTo ?? "/survey", {
         replace: true,
         state: { refresh: true },
@@ -308,6 +457,10 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
           salesManagerOptions={mergedSalesManagerOptions}
           salesProjectOptions={mergedSalesProjectOptions}
           surveyGroupOptions={mergedSurveyGroupOptions}
+          partnerOptions={partnerOptions}
+          isLoadingPartners={isLoadingPartners}
+          partnerSelectionEnabled={partnerSelectionEnabled}
+          partnerAllocationSource={partnerAllocationSource}
           descriptionContentKey={isEdit ? `survey-${id}` : "survey-create"}
         />
 

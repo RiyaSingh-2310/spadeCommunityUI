@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
@@ -8,7 +9,12 @@ import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { deleteSurvey, updateSurveyStatus } from "../services/surveyApi";
-import { getGroupProjectSurveys, getRecord } from "../services/groupSurveyApi";
+import GroupSurveyProjectDetailsCard from "../components/GroupSurveyProjectDetailsCard";
+import {
+  getGroupProjectSurveys,
+  getRecord,
+  mapGroupProjectToDetailsView,
+} from "../services/groupSurveyApi";
 
 function GroupSurveyProjectsListPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -16,6 +22,7 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
   useFlashMessage();
 
   const [groupRecord, setGroupRecord] = useState(null);
+  const [isLoadingGroup, setIsLoadingGroup] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
@@ -51,25 +58,38 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
   useEffect(() => {
     if (!groupId) {
       setGroupRecord(null);
+      setIsLoadingGroup(false);
       return;
     }
 
     let cancelled = false;
-    getRecord(groupId)
-      .then((group) => {
+
+    const loadGroupProject = async () => {
+      setIsLoadingGroup(true);
+
+      try {
+        const group = await getRecord(groupId);
         if (!cancelled) setGroupRecord(group);
-      })
-      .catch((error) => {
+      } catch (error) {
         if (!cancelled) {
           toastApiError(error);
           setGroupRecord(null);
         }
-      });
+      } finally {
+        if (!cancelled) setIsLoadingGroup(false);
+      }
+    };
 
+    loadGroupProject();
     return () => {
       cancelled = true;
     };
   }, [groupId]);
+
+  const groupDetails = useMemo(
+    () => mapGroupProjectToDetailsView(groupRecord),
+    [groupRecord]
+  );
 
   const handleDeleteRequest = (row) => {
     setDeleteTarget(row);
@@ -132,10 +152,19 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
 
   return (
     <div className="space-y-4">
+      {isLoadingGroup ? (
+        <div className="admin-text flex items-center gap-2 px-1 text-sm">
+          <Loader2 size={16} className="animate-spin" />
+          Loading project details...
+        </div>
+      ) : (
+        <GroupSurveyProjectDetailsCard details={groupDetails} isDarkMode={isDarkMode} />
+      )}
+
       <ModuleListingPage
         isDarkMode={isDarkMode}
         title="View Projects"
-        subtitle={groupRecord?.project_name ?? ""}
+        subtitle={groupDetails?.projectName ?? groupRecord?.project_name ?? ""}
         breadcrumbs={[
           { label: "Group Survey", to: "/survey/group" },
           { label: "View Projects" },

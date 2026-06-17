@@ -4,7 +4,8 @@ import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
-import { getRecords } from "../services/surveyApi";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { getRecords, updateSurveyStatus } from "../services/surveyApi";
 
 function SurveyPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -23,19 +24,33 @@ function SurveyPage({ isDarkMode }) {
   } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(fetchSurveys);
 
-  const handleStatusToggle = (row) => {
-    if (!row?.recordId) return;
+  const handleStatusToggle = async (row) => {
+    const recordId = row?.recordId;
+    if (recordId == null) return;
+
+    const previousStatus = row.status;
+    const nextStatus =
+      String(previousStatus ?? "").toLowerCase() === "active" ? "Inactive" : "Active";
+
     setRows((prev) =>
       prev.map((item) =>
-        String(item.recordId) === String(row.recordId)
-          ? {
-              ...item,
-              status:
-                String(item.status).toLowerCase() === "active" ? "Inactive" : "Active",
-            }
-          : item
+        String(item.recordId) === String(recordId) ? { ...item, status: nextStatus } : item
       )
     );
+
+    try {
+      const data = await updateSurveyStatus(recordId, { status: nextStatus });
+      toastApiSuccess(data);
+    } catch (error) {
+      toastApiError(error);
+      setRows((prev) =>
+        prev.map((item) =>
+          String(item.recordId) === String(recordId)
+            ? { ...item, status: previousStatus }
+            : item
+        )
+      );
+    }
   };
 
   return (

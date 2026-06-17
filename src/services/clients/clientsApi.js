@@ -1,5 +1,5 @@
 import { API_ROUTES } from "../../config/api";
-import { formatCountryLabel, getCountries } from "../countries/countriesApi";
+import { formatCountryLabel } from "../countries/countriesApi";
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
 import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import { apiRequest } from "../api/client";
@@ -142,10 +142,7 @@ export async function deleteRecord(id) {
 
 /** GET /api/clients/all */
 export async function getRecords({ page, limit, search } = {}) {
-  const [, data] = await Promise.all([
-    getCountries(),
-    apiRequest(appendListQuery(API_ROUTES.clients.list, { page, limit, search })),
-  ]);
+  const data = await apiRequest(appendListQuery(API_ROUTES.clients.list, { page, limit, search }));
   assertSuccess(data, "Failed to load clients");
 
   const clients = extractClientsList(data);

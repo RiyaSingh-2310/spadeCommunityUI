@@ -76,6 +76,16 @@ export const API_ROUTES = {
     byId: (id) => `/api/survey/${id}`,
     update: (id) => `/api/survey/${id}`,
     delete: (id) => `/api/survey/${id}`,
+    eligiblePartners: (id) => `/api/survey/${id}/eligible-partners`,
+    partners: (id) => `/api/survey/${id}/partners`,
+    assignPartners: (id) => `/api/survey/${id}/assign-partners`,
+    partnerAllocation: (surveyId, partnerId) =>
+      `/api/survey/${surveyId}/partners/${partnerId}/allocation`,
+    removePartner: (surveyId, partnerId) =>
+      `/api/survey/${surveyId}/partners/${partnerId}`,
+    recontactCreate: "/api/survey/recontact/add",
+    recontactSupplierDetails: (surveyId) =>
+      `/api/survey/recontact/${encodeURIComponent(surveyId)}/supplier-details`,
   },
   groupSurvey: {
     list: "/api/survey/groupproject/list",

@@ -1,7 +1,6 @@
 import { API_ROUTES } from "../../config/api";
 import { COUNTRY_NAME_TO_ISO } from "../../modules/shared/data/countryIsoByName";
 import { PHONE_COUNTRIES_FALLBACK } from "../../modules/shared/data/phoneCountries";
-import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
 
@@ -153,6 +152,11 @@ function setCountriesCache(countries) {
   return cachedCountries;
 }
 
+/** Whether the countries list has been loaded and cached. */
+export function isCountriesCacheReady() {
+  return Boolean(cachedCountries?.length);
+}
+
 /** Synchronous countries list for dropdowns (cached API data or local fallback). */
 export function getCountriesOrFallback() {
   if (cachedCountries?.length) return cachedCountries;
@@ -181,11 +185,6 @@ export async function getCountries() {
     });
 
   return inflightRequest;
-}
-
-/** Warm the countries cache without blocking UI. */
-export function preloadCountries() {
-  getCountries().catch(() => {});
 }
 
 /**
@@ -322,11 +321,9 @@ export function getCountrySelectOptions(countries = cachedCountries) {
 }
 
 export async function getCountriesMeta() {
-  const data = await apiRequest(API_ROUTES.countries.list);
-  assertSuccess(data);
-  const countries = extractCountriesList(data);
+  const countries = await getCountries();
   return {
-    total: extractListTotalFromResponse(data, countries.length),
-    count: extractListTotalFromResponse(data, countries.length),
+    total: countries.length,
+    count: countries.length,
   };
 }

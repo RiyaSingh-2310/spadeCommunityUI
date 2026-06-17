@@ -1,18 +1,39 @@
 import { useEffect, useState } from "react";
-import { getCountries } from "../../../services/countries/countriesApi";
+import {
+  getCachedCountries,
+  getCountries,
+  isCountriesCacheReady,
+} from "../../../services/countries/countriesApi";
 
 /**
- * Loads and caches the countries list for dropdowns and display formatting.
+ * Lazily loads the countries list when a country dropdown is mounted.
+ * Reuses the shared in-memory cache to avoid duplicate API calls.
+ *
+ * @param {{ enabled?: boolean }} [options]
  */
-export function useCountries() {
-  const [countries, setCountries] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+export function useCountries({ enabled = true } = {}) {
+  const [countries, setCountries] = useState(() =>
+    enabled && isCountriesCacheReady() ? getCachedCountries() : []
+  );
+  const [isLoading, setIsLoading] = useState(() => enabled && !isCountriesCacheReady());
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!enabled) {
+      setIsLoading(false);
+      return undefined;
+    }
 
+    if (isCountriesCacheReady()) {
+      setCountries(getCachedCountries());
+      setIsLoading(false);
+      setError(null);
+      return undefined;
+    }
+
+    let cancelled = false;
     setIsLoading(true);
+
     getCountries()
       .then((items) => {
         if (!cancelled) {
@@ -22,7 +43,7 @@ export function useCountries() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setCountries([]);
+          setCountries(getCachedCountries());
           setError(err);
         }
       })
@@ -33,7 +54,7 @@ export function useCountries() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [enabled]);
 
   return { countries, isLoading, error };
 }

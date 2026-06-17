@@ -1,4 +1,5 @@
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
+import SearchableMultiSelect from "../../../components/admin/SearchableMultiSelect";
 import CountrySelect from "../../../components/admin/CountrySelect";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import { Download } from "lucide-react";
@@ -49,6 +50,10 @@ function SurveyForm({
   salesManagerOptions = [],
   salesProjectOptions = [],
   surveyGroupOptions = SURVEY_GROUP_OPTIONS,
+  partnerOptions = [],
+  isLoadingPartners = false,
+  partnerSelectionEnabled = false,
+  partnerAllocationSource = {},
   descriptionContentKey,
 }) {
   const fileInputRef = useRef(null);
@@ -77,6 +82,16 @@ function SurveyForm({
   };
 
   const isSingleLink = form.projectLinkType === "Single Link";
+
+  const activePartnerId = useMemo(() => {
+    const partners = Array.isArray(form.partners) ? form.partners : [];
+    if (!partners.length) return "";
+    return String(partners[partners.length - 1]);
+  }, [form.partners]);
+
+  const activePartnerAllocation = activePartnerId
+    ? String(form.partnerAllocations?.[activePartnerId] ?? "")
+    : "";
 
   return (
     <div className="space-y-5">
@@ -175,6 +190,73 @@ function SurveyForm({
               aria-label="Select sales project"
             />
           </FormField>
+
+          <FormField label="Partner">
+            <SearchableMultiSelect
+              inputClass={selectClass}
+              value={form.partners}
+              onChange={(nextPartners) => {
+                setForm((prev) => {
+                  const nextAllocations = { ...(prev.partnerAllocations ?? {}) };
+                  const nextSet = new Set(nextPartners.map(String));
+
+                  for (const partnerId of Object.keys(nextAllocations)) {
+                    if (!nextSet.has(String(partnerId))) {
+                      delete nextAllocations[partnerId];
+                    }
+                  }
+
+                  for (const partnerId of nextPartners) {
+                    const key = String(partnerId);
+                    if (nextAllocations[key] != null && nextAllocations[key] !== "") {
+                      continue;
+                    }
+                    const apiValue = partnerAllocationSource?.[key];
+                    if (apiValue != null && apiValue !== "") {
+                      nextAllocations[key] = String(apiValue);
+                    }
+                  }
+
+                  return {
+                    ...prev,
+                    partners: nextPartners,
+                    partnerAllocations: nextAllocations,
+                  };
+                });
+              }}
+              options={partnerOptions}
+              placeholder={
+                partnerSelectionEnabled
+                  ? "Select Partner"
+                  : "Save survey to assign partners"
+              }
+              disabled={disabled || !partnerSelectionEnabled}
+              loading={isLoadingPartners}
+              loadingLabel="Loading partners..."
+              searchPlaceholder="Search partner..."
+              aria-label="Select partner"
+            />
+          </FormField>
+
+          {activePartnerId ? (
+            <FormField label="Updated Partner Allocation">
+              <NumericInput
+                className={inputClass}
+                placeholder="Enter updated partner allocation"
+                value={activePartnerAllocation}
+                onChange={(value) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    partnerAllocations: {
+                      ...(prev.partnerAllocations ?? {}),
+                      [activePartnerId]: value,
+                    },
+                  }))
+                }
+                disabled={disabled}
+              />
+            </FormField>
+          ) : null}
         </div>
 
         <div className="mt-4">

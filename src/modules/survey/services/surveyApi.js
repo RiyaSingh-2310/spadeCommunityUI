@@ -54,11 +54,12 @@ function resolveNumericId(value) {
 
 function formLinkTypeToApi(projectLinkType) {
   if (projectLinkType === "Multi Link") return "multi";
-  return "unique";
+  return "single";
 }
 
 function apiLinkTypeToForm(linkType) {
-  if (String(linkType ?? "").toLowerCase() === "multi") return "Multi Link";
+  const normalized = String(linkType ?? "").toLowerCase();
+  if (normalized === "multi") return "Multi Link";
   return "Single Link";
 }
 
@@ -107,18 +108,71 @@ function pickSurveyFormValue(apiValue, fallbackValue) {
  */
 export function mapSurveyToRow(survey) {
   const clientCode = survey?.client_code;
+
   return {
     id: survey?.survey_id ?? "",
+    surveyId: survey?.survey_id ?? "",
     recordId: survey?.id,
     projectName: survey?.project_name ?? "",
     clientCode: clientCode != null && clientCode !== "" ? String(clientCode) : "—",
+    clientName: survey?.client_name ?? "",
+    projectManagerName: survey?.project_manager_name ?? "",
+    partnerNames: survey?.partner_names ?? "",
     startDate: formatSurveyListDate(survey?.start_date),
     endDate: formatSurveyListDate(survey?.end_date),
     loi: survey?.loi != null ? String(survey.loi) : "—",
     ir: survey?.ir != null ? String(survey.ir) : "—",
+    sampleSize: survey?.sample_size != null ? String(survey.sample_size) : "—",
+    cpi: survey?.cpi != null ? String(survey.cpi) : "—",
+    currency: survey?.currency ?? "",
     status: apiStatusToFormValue(survey?.status),
-    clientName: survey?.client_name ?? "",
-    projectManagerName: survey?.project_manager_name ?? "",
+  };
+}
+
+/**
+ * Maps GET /api/survey/:id response for the project details view.
+ * @param {object} survey
+ */
+export function mapSurveyToProjectDetails(survey) {
+  if (!survey || typeof survey !== "object") return null;
+
+  return {
+    id: survey.survey_id ?? String(survey.id ?? ""),
+    recordId: survey.id,
+    projectStatus: apiStatusToFormValue(survey.status),
+    clientName: survey.client_name ?? "",
+    projectName: survey.project_name ?? "",
+    projectManager: survey.project_manager_name ?? "",
+    projectCountry: survey.project_country ?? "",
+    description: survey.description ?? "",
+    surveyId: survey.survey_id ?? "",
+    salesManager: survey.sales_manager_name ?? "",
+    salesProject: survey.sales_project_name ?? "",
+    loiMinutes: survey.loi != null ? String(survey.loi) : "—",
+    irPercent: survey.ir != null ? String(survey.ir) : "—",
+    sampleSize: survey.sample_size != null ? String(survey.sample_size) : "—",
+    cpiUsd: survey.cpi != null ? String(survey.cpi) : "—",
+    currency: survey.currency ?? "",
+    startDate: formatSurveyListDate(survey.start_date),
+    endDate: formatSurveyListDate(survey.end_date),
+    liveLink: survey.live_url ?? "",
+    testLink: survey.test_url ?? "",
+    filters: {
+      geolocation: resolveBooleanFlag(survey, ["geo_location", "geoLocation"]),
+      urlProtection: resolveBooleanFlag(survey, ["url_protection", "urlProtection"]),
+      uniqueIp: resolveBooleanFlag(survey, ["unique_ip", "uniqueIp"]),
+      prescreen: resolveBooleanFlag(survey, ["prescreen", "pre_screen", "preScreen"]),
+    },
+    redirectLinks: {
+      complete: survey.complete_url ?? survey.redirect_complete ?? "",
+      terminate: survey.terminate_url ?? survey.redirect_terminate ?? "",
+      overQuota: survey.over_quota_url ?? survey.redirect_over_quota ?? "",
+      qualityTerm: survey.quality_term_url ?? survey.redirect_quality_term ?? "",
+      surveyClose: survey.survey_close_url ?? survey.redirect_survey_close ?? "",
+    },
+    userCompletionPoint: survey.comp_point != null ? String(survey.comp_point) : "",
+    userTerminationPoint: survey.term_point != null ? String(survey.term_point) : "",
+    note: survey.notes ?? "",
   };
 }
 
@@ -168,6 +222,8 @@ export function buildCreateSurveyPayload(form) {
 
   const groupProjectId = resolveNumericId(form.groupProjectId);
   if (groupProjectId != null) payload.group_project_id = groupProjectId;
+
+  payload.status = "active";
 
   return payload;
 }
@@ -288,6 +344,18 @@ export function mapSurveyToForm(survey, fallback = null) {
     userCompletionPoint:
       survey?.comp_point != null ? String(survey.comp_point) : base.userCompletionPoint,
     notes: pickSurveyFormValue(survey?.notes, base.notes),
+    partners: Array.isArray(survey?.partner_ids)
+      ? survey.partner_ids.map((partnerId) => String(partnerId))
+      : base.partners,
+    partnerAllocations:
+      survey?.partner_allocations && typeof survey.partner_allocations === "object"
+        ? Object.fromEntries(
+            Object.entries(survey.partner_allocations).map(([key, value]) => [
+              String(key),
+              value != null ? String(value) : "",
+            ])
+          )
+        : base.partnerAllocations,
   };
 }
 
@@ -352,6 +420,9 @@ export async function getRecords({ page, limit, search, groupProjectId } = {}) {
     ...data,
     total,
     count: total,
+    page: data.page,
+    limit: data.limit,
+    totalPages: data.totalPages,
     items: surveys.map((survey) => mapSurveyToRow(survey)),
   };
 }
@@ -476,4 +547,146 @@ export async function updateSupplierMapping(surveyId, payload) {
       message: "Supplier mapping updated successfully.",
     };
   }
+}
+
+function extractPartnersList(data) {
+  if (!data || typeof data !== "object") return [];
+  if (Array.isArray(data.data)) return data.data;
+  if (Array.isArray(data.partners)) return data.partners;
+  return [];
+}
+
+function resolvePartnerRecordId(partner) {
+  const value =
+    partner?.partner_id ??
+    partner?.partnerId ??
+    partner?.id ??
+    partner?.pid;
+  if (value == null || value === "") return "";
+  return String(value);
+}
+
+/**
+ * @param {object[]} partners
+ */
+export function mapPartnersToSelectOptions(partners = []) {
+  return partners
+    .map((partner) => {
+      const value = resolvePartnerRecordId(partner);
+      const name = partner?.name ?? "";
+      const code = partner?.code ?? "";
+      const label = [code, name].filter(Boolean).join(" — ") || name || code || value;
+      return {
+        value,
+        label,
+        searchText: [code, name, partner?.email].filter(Boolean).join(" "),
+      };
+    })
+    .filter((option) => option.value);
+}
+
+/**
+ * @param {object[]} partners
+ */
+export function mapAssignedPartnersToForm(partners = []) {
+  const partnerIds = [];
+  const partnerAllocations = {};
+
+  for (const partner of partners) {
+    const partnerId = resolvePartnerRecordId(partner);
+    if (!partnerId) continue;
+    partnerIds.push(partnerId);
+    const allocated =
+      partner?.allocated_size ?? partner?.allocatedSize ?? partner?.allocation;
+    if (allocated != null && allocated !== "") {
+      partnerAllocations[partnerId] = String(allocated);
+    }
+  }
+
+  return { partners: partnerIds, partnerAllocations };
+}
+
+/**
+ * Resolves numeric survey id for partner APIs.
+ * @param {string|number|object} idOrRecord
+ */
+export function resolveSurveyNumericId(idOrRecord) {
+  if (idOrRecord && typeof idOrRecord === "object") {
+    const recordId = idOrRecord?.id ?? idOrRecord?.recordId;
+    if (recordId != null && recordId !== "") {
+      const numeric = Number(recordId);
+      if (Number.isFinite(numeric) && numeric > 0) return numeric;
+    }
+  }
+
+  const normalized = String(idOrRecord ?? "").trim();
+  if (!normalized) return null;
+
+  const numeric = Number(normalized);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
+
+  return null;
+}
+
+/** GET /api/survey/:id/eligible-partners */
+export async function getEligiblePartners(surveyId) {
+  const normalizedId = normalizeSurveyId(surveyId);
+  const data = await apiRequest(API_ROUTES.survey.eligiblePartners(normalizedId));
+  return assertSuccess(data);
+}
+
+/** GET /api/survey/:id/partners */
+export async function getAssignedPartners(surveyId) {
+  const normalizedId = normalizeSurveyId(surveyId);
+  const data = await apiRequest(API_ROUTES.survey.partners(normalizedId));
+  assertSuccess(data);
+  return extractPartnersList(data);
+}
+
+/**
+ * POST /api/survey/:id/assign-partners
+ * @param {string|number} surveyId
+ * @param {Array<string|number>} partnerIds
+ */
+export async function assignPartners(surveyId, partnerIds = []) {
+  const normalizedId = normalizeSurveyId(surveyId);
+  const ids = partnerIds
+    .map((partnerId) => resolveNumericId(partnerId))
+    .filter((partnerId) => partnerId != null);
+
+  const data = await apiRequest(API_ROUTES.survey.assignPartners(normalizedId), {
+    method: "POST",
+    body: { partner_ids: ids },
+  });
+  return assertSuccess(data);
+}
+
+/**
+ * PATCH /api/survey/:id/partners/:pid/allocation
+ * @param {string|number} surveyId
+ * @param {string|number} partnerId
+ * @param {string|number} allocatedSize
+ */
+export async function updatePartnerAllocation(surveyId, partnerId, allocatedSize) {
+  const normalizedSurveyId = normalizeSurveyId(surveyId);
+  const normalizedPartnerId = normalizeSurveyId(partnerId);
+  const data = await apiRequest(
+    API_ROUTES.survey.partnerAllocation(normalizedSurveyId, normalizedPartnerId),
+    {
+      method: "PATCH",
+      body: { allocated_size: Number(allocatedSize) },
+    }
+  );
+  return assertSuccess(data);
+}
+
+/** DELETE /api/survey/:id/partners/:pid */
+export async function removeSurveyPartner(surveyId, partnerId) {
+  const normalizedSurveyId = normalizeSurveyId(surveyId);
+  const normalizedPartnerId = normalizeSurveyId(partnerId);
+  const data = await apiRequest(
+    API_ROUTES.survey.removePartner(normalizedSurveyId, normalizedPartnerId),
+    { method: "DELETE" }
+  );
+  return assertSuccess(data);
 }

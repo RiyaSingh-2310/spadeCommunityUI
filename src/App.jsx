@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { consumeSessionExpiredToast } from "./services/auth/sessionExpiry";
-import { preloadCountries } from "./services/countries/countriesApi";
 import { Route, Routes, useParams } from "react-router-dom";
 import ToastContainer from "./components/shared/ToastContainer";
 import GuestOnly from "./components/auth/GuestOnly";
@@ -83,7 +82,6 @@ function App() {
 
   useEffect(() => {
     consumeSessionExpiredToast();
-    preloadCountries();
   }, []);
 
   const toggleTheme = () => {

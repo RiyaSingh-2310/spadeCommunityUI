@@ -154,6 +154,29 @@ export function areSurveyFormsEqual(current, original) {
     }
   }
 
+  const currentPartners = Array.isArray(current.partners)
+    ? current.partners.map(String).sort()
+    : [];
+  const originalPartners = Array.isArray(original.partners)
+    ? original.partners.map(String).sort()
+    : [];
+  if (currentPartners.join("|") !== originalPartners.join("|")) {
+    return false;
+  }
+
+  const allocationKeys = new Set([
+    ...Object.keys(current.partnerAllocations ?? {}),
+    ...Object.keys(original.partnerAllocations ?? {}),
+  ]);
+  for (const key of allocationKeys) {
+    if (
+      String(current.partnerAllocations?.[key] ?? "") !==
+      String(original.partnerAllocations?.[key] ?? "")
+    ) {
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -165,6 +188,8 @@ export function cloneSurveyForm(form) {
   return {
     ...form,
     filters: { ...form.filters },
+    partners: Array.isArray(form.partners) ? [...form.partners] : [],
+    partnerAllocations: { ...(form.partnerAllocations ?? {}) },
     surveyCsvFile: null,
   };
 }

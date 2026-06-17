@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import PermissionDenied from "../../../components/admin/PermissionDenied";
 import { useModulePermission } from "../../permissions/useModulePermission";
-import { getSurveyProjectDetails } from "../data/surveyDetailsData";
-import { updateSurveyProjectStatus } from "../services/surveyApi";
+import {
+  getRecord,
+  mapSurveyToProjectDetails,
+  updateSurveyStatus,
+} from "../services/surveyApi";
 import ProjectDetailsTab from "../components/ProjectDetailsTab";
 import ProjectReportTab from "../components/ProjectReportTab";
 import SupplierMappingTab from "../components/SupplierMappingTab";
@@ -19,19 +23,58 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
   const { id } = useParams();
   const { canRead } = useModulePermission("survey");
 
-  const project = useMemo(() => getSurveyProjectDetails(id), [id]);
+  const [project, setProject] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [activeTab, setActiveTab] = useState("project-details");
-  const [projectStatus, setProjectStatus] = useState(project.projectStatus);
-  const [draftStatus, setDraftStatus] = useState(project.projectStatus);
+  const [projectStatus, setProjectStatus] = useState("");
+  const [draftStatus, setDraftStatus] = useState("");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const visibleTabs = salesViewMode ? SALES_PROJECT_DETAIL_TABS : SURVEY_DETAIL_TABS;
 
   useEffect(() => {
-    setProjectStatus(project.projectStatus);
-    setDraftStatus(project.projectStatus);
-    setActiveTab("project-details");
-  }, [project.projectStatus, id]);
+    if (!id) {
+      setProject(null);
+      setIsLoading(false);
+      setLoadFailed(true);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadSurvey = async () => {
+      setIsLoading(true);
+      setLoadFailed(false);
+
+      try {
+        const record = await getRecord(id);
+        if (cancelled) return;
+
+        const mapped = mapSurveyToProjectDetails(record);
+        if (!mapped) {
+          throw new Error("");
+        }
+
+        setProject(mapped);
+        setProjectStatus(mapped.projectStatus);
+        setDraftStatus(mapped.projectStatus);
+        setActiveTab("project-details");
+      } catch (error) {
+        if (cancelled) return;
+        toastApiError(error);
+        setProject(null);
+        setLoadFailed(true);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadSurvey();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   useEffect(() => {
     if (!visibleTabs.some((tab) => tab.id === activeTab)) {
@@ -43,10 +86,67 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
   }
 
+  const listPath = salesViewMode ? "/sales/projects" : "/survey";
+  const listLabel = salesViewMode ? "Projects" : "Survey";
+
+  const tabLabels = visibleTabs.reduce((acc, tab) => {
+    acc[tab.id] = tab.label;
+    return acc;
+  }, /** @type {Record<string, string>} */ ({}));
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          title="Survey Details"
+          subtitle={`Survey ${id}`}
+          breadcrumbs={[
+            { label: listLabel, to: listPath },
+            { label: "Project Details" },
+          ]}
+          isDarkMode={isDarkMode}
+        />
+        <div className="admin-text flex items-center gap-2 text-sm">
+          <Loader2 size={16} className="animate-spin" />
+          Loading...
+        </div>
+      </div>
+    );
+  }
+
+  if (loadFailed || !project) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          title="Survey Details"
+          subtitle={`Survey ${id}`}
+          breadcrumbs={[
+            { label: listLabel, to: listPath },
+            { label: "Project Details" },
+          ]}
+          isDarkMode={isDarkMode}
+        />
+        <div className="admin-text rounded-xl border border-[var(--admin-border)] p-6 text-sm">
+          Unable to load survey details.
+          <button
+            type="button"
+            onClick={() => navigate(listPath)}
+            className="ml-2 font-semibold text-[#10a950] hover:underline"
+          >
+            Back to {listLabel}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const handleStatusUpdate = async () => {
+    const recordId = project.recordId ?? id;
+    if (recordId == null) return;
+
     setIsUpdatingStatus(true);
     try {
-      const data = await updateSurveyProjectStatus(id, draftStatus);
+      const data = await updateSurveyStatus(recordId, { status: draftStatus });
       toastApiSuccess(data);
       setProjectStatus(draftStatus);
     } catch (err) {
@@ -57,19 +157,11 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
     }
   };
 
-  const tabLabels = visibleTabs.reduce((acc, tab) => {
-    acc[tab.id] = tab.label;
-    return acc;
-  }, /** @type {Record<string, string>} */ ({}));
-
-  const listPath = salesViewMode ? "/sales/projects" : "/survey";
-  const listLabel = salesViewMode ? "Projects" : "Survey";
-
   return (
     <div className="space-y-6">
       <AdminPageHeader
         title={project.projectName}
-        subtitle={`Survey ${project.id}`}
+        subtitle={`Survey ${project.surveyId || project.id}`}
         breadcrumbs={[
           { label: listLabel, to: listPath },
           { label: tabLabels[activeTab] ?? "Project Details" },
@@ -85,7 +177,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         onStatusChange={setDraftStatus}
         onStatusUpdate={handleStatusUpdate}
         isUpdatingStatus={isUpdatingStatus}
-        surveyId={project.id}
+        surveyId={project.surveyId || project.id}
         tabs={visibleTabs}
         readOnly={salesViewMode}
         onEditSurvey={() =>

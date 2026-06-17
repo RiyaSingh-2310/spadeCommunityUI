@@ -9,15 +9,8 @@ import { ApiError } from "../../../services/api/ApiError";
 import { appendListQuery } from "../../shared/utils/listQueryParams";
 import { createSurvey, getRecords as getSurveyRecords } from "./surveyApi";
 
-function isApiSuccess(data) {
-  if (!data || typeof data !== "object") return false;
-  const explicit = data.success;
-  if (explicit === false || explicit === "false") return false;
-  return explicit === true || explicit === "true" || explicit == null;
-}
-
 function assertSuccess(data) {
-  if (!isApiSuccess(data)) {
+  if (data?.success !== true) {
     throw new ApiError(data?.message ?? "", data);
   }
   return data;
@@ -37,6 +30,16 @@ function extractGroupProjectsList(data) {
   if (Array.isArray(data.data)) return data.data;
   if (Array.isArray(data.groupProjects)) return data.groupProjects;
   return [];
+}
+
+function formatGroupProjectListDate(value) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  const day = String(parsed.getDate()).padStart(2, "0");
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const year = parsed.getFullYear();
+  return `${day}/${month}/${year}`;
 }
 
 function extractGroupProjectRecord(data) {
@@ -81,7 +84,16 @@ function resolveClientIdsFromForm(form) {
     .filter((id) => Number.isFinite(id));
 }
 
-function buildGroupProjectPayload(form) {
+function buildCreateGroupProjectPayload(form) {
+  return {
+    project_name: String(form.projectName ?? "").trim(),
+    description: String(form.description ?? ""),
+    status: "active",
+    client_ids: resolveClientIdsFromForm(form),
+  };
+}
+
+function buildUpdateGroupProjectPayload(form) {
   return {
     project_name: String(form.projectName ?? "").trim(),
     description: String(form.description ?? ""),
@@ -120,11 +132,13 @@ export function resolveGroupPrimaryClientId(project) {
 export function mapGroupProjectToRow(project) {
   return {
     id: project?.id,
+    recordId: project?.id,
     clientName: project?.client_names ?? "",
     projectName: project?.project_name ?? "",
     groupProject: project?.project_name ?? "",
     status: apiStatusToFormValue(project?.status),
     createdAt: project?.created_at ?? "",
+    createdDate: formatGroupProjectListDate(project?.created_at),
   };
 }
 
@@ -140,6 +154,23 @@ export function mapGroupProjectToForm(project) {
     notes: project?.notes ?? "",
     clientId: clientIds[0] ?? "",
     clientIds,
+  };
+}
+
+/**
+ * @param {object | null | undefined} project
+ */
+export function mapGroupProjectToDetailsView(project) {
+  if (!project || typeof project !== "object") return null;
+
+  return {
+    id: project.id,
+    projectName: project.project_name ?? "",
+    clientName: resolveGroupClientNames(project),
+    description: project.description ?? "",
+    notes: project.notes ?? "",
+    status: apiStatusToFormValue(project.status),
+    createdAt: formatGroupProjectListDate(project.created_at),
   };
 }
 
@@ -167,6 +198,9 @@ export async function getRecords({ page, limit, search } = {}) {
     ...data,
     total,
     count: total,
+    page: data.page,
+    limit: data.limit,
+    totalPages: data.totalPages,
     items: projects.map((project) => mapGroupProjectToRow(project)),
   };
 }
@@ -189,7 +223,7 @@ export async function getRecord(id) {
 export async function createGroupProject(form) {
   const data = await apiRequest(API_ROUTES.groupSurvey.create, {
     method: "POST",
-    body: buildGroupProjectPayload(form),
+    body: buildCreateGroupProjectPayload(form),
   });
 
   return assertSuccess(data);
@@ -200,7 +234,7 @@ export async function updateGroupProject(id, form) {
   const normalizedId = normalizeGroupProjectId(id);
   const data = await apiRequest(API_ROUTES.groupSurvey.update(normalizedId), {
     method: "PUT",
-    body: buildGroupProjectPayload(form),
+    body: buildUpdateGroupProjectPayload(form),
   });
 
   return assertSuccess(data);

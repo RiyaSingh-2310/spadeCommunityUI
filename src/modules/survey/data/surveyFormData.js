@@ -93,6 +93,8 @@ export function createEmptySurveyForm() {
     userTerminationPoint: "",
     userCompletionPoint: "",
     notes: "",
+    partners: [],
+    partnerAllocations: {},
   };
 }
 
