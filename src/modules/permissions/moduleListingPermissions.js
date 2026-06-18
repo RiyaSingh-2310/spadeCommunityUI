@@ -90,7 +90,7 @@ export function hasNativeReadOnlyListingActions({
   }
 
   if (mode === "group-survey-view") {
-    return Boolean(onListProjects);
+    return Boolean(onListProjects || onView || onFindUser || onUserSurveyData);
   }
 
   if (mode === "pdf-only") {

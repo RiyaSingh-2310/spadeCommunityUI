@@ -1,20 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
-import { deleteSurvey, updateSurveyStatus } from "../services/surveyApi";
-import GroupSurveyProjectDetailsCard from "../components/GroupSurveyProjectDetailsCard";
+import { updateSurveyStatus } from "../services/surveyApi";
 import {
   getGroupProjectSurveys,
   getRecord,
-  mapGroupProjectToDetailsView,
 } from "../services/groupSurveyApi";
+import {
+  getGroupProjectEditPath,
+  getGroupProjectFindUserPath,
+  getGroupProjectUserSurveyDataPath,
+  getGroupProjectViewPath,
+  getGroupProjectsPath,
+  getGroupSurveyBreadcrumbs,
+} from "../utils/groupSurveyNavigation";
 
 function GroupSurveyProjectsListPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -23,8 +28,6 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
 
   const [groupRecord, setGroupRecord] = useState(null);
   const [isLoadingGroup, setIsLoadingGroup] = useState(true);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
   const fetchProjects = useCallback(
@@ -86,38 +89,13 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
     };
   }, [groupId]);
 
-  const groupDetails = useMemo(
-    () => mapGroupProjectToDetailsView(groupRecord),
-    [groupRecord]
+  const groupProjectName = groupRecord?.project_name ?? "";
+  const projectsPath = getGroupProjectsPath(groupId);
+
+  const breadcrumbs = useMemo(
+    () => getGroupSurveyBreadcrumbs(groupId),
+    [groupId]
   );
-
-  const handleDeleteRequest = (row) => {
-    setDeleteTarget(row);
-  };
-
-  const handleDeleteCancel = () => {
-    if (isDeleting) return;
-    setDeleteTarget(null);
-  };
-
-  const handleDeleteConfirm = async () => {
-    const recordId = deleteTarget?.recordId;
-    if (recordId == null) return;
-
-    setIsDeleting(true);
-    try {
-      const data = await deleteSurvey(recordId);
-      setDeleteTarget(null);
-      toastApiSuccess(data);
-      await refreshProjects();
-    } catch (error) {
-      toastApiError(error);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const projectsPath = `/survey/group/${encodeURIComponent(groupId)}/projects`;
 
   const handleStatusToggle = async (row) => {
     const recordId = row?.recordId;
@@ -150,78 +128,95 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
     }
   };
 
+  if (isLoadingGroup) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-[#10a950]" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      {isLoadingGroup ? (
-        <div className="admin-text flex items-center gap-2 px-1 text-sm">
-          <Loader2 size={16} className="animate-spin" />
-          Loading project details...
-        </div>
-      ) : (
-        <GroupSurveyProjectDetailsCard details={groupDetails} isDarkMode={isDarkMode} />
-      )}
-
-      <ModuleListingPage
-        isDarkMode={isDarkMode}
-        title="View Projects"
-        subtitle={groupDetails?.projectName ?? groupRecord?.project_name ?? ""}
-        breadcrumbs={[
-          { label: "Group Survey", to: "/survey/group" },
-          { label: "View Projects" },
-        ]}
-        searchPlaceholder="Search projects..."
-        actionLabel="Add Group Survey"
-        onActionClick={() =>
-          navigate(`/survey/group/${encodeURIComponent(groupId)}/add-project`)
-        }
-        columns={[
-          "ID",
-          "Project Name",
-          "Client Code",
-          "Start Date",
-          "End Date",
-          "LOI",
-          "IR",
-          "Status",
-          "Action",
-        ]}
-        rows={rows}
-        rowIdKey="recordId"
-        actionVariant="group-survey-projects"
-        permissionModule="group_survey"
-        onAddProject={() =>
-          navigate(`/survey/group/${encodeURIComponent(groupId)}/add-project`)
-        }
-        onEdit={(row) => {
-          const recordId = row?.recordId;
-          if (recordId == null) return;
-          navigate(`/survey/edit/${encodeURIComponent(String(recordId))}`, {
-            state: { returnTo: projectsPath },
-          });
-        }}
-        onDelete={handleDeleteRequest}
-        onStatusToggle={handleStatusToggle}
-        isLoading={isLoading}
-        emptyMessage="No projects found"
-        onSearch={handleSearch}
-        totalRecords={totalRecords}
-        serverPaginated
-        serverSearch
-        paginationPage={currentPage}
-        onPaginationPageChange={handlePageChange}
-        paginationPageSize={pageSize}
-        onPaginationPageSizeChange={handlePageSizeChange}
-        showPagination
-        nowrapAllCells
-      />
-
-      <DeleteConfirmModal
-        isOpen={Boolean(deleteTarget)}
-        onCancel={handleDeleteCancel}
-        onConfirm={handleDeleteConfirm}
-        isDeleting={isDeleting}
-      />
-    </div>
+    <ModuleListingPage
+      isDarkMode={isDarkMode}
+      title="Group Survey"
+      subtitle={groupProjectName}
+      breadcrumbs={breadcrumbs}
+      searchPlaceholder="Search Project"
+      actionLabel="Add Group Survey"
+      onActionClick={() => navigate("/survey/group/add")}
+      columns={[
+        "ID",
+        "Project Name",
+        "Client Code",
+        "LOI",
+        "IR",
+        "Start Date",
+        "End Date",
+        "Status",
+        "Action",
+      ]}
+      rows={rows}
+      rowIdKey="recordId"
+      actionVariant="view-edit"
+      showDeleteAction={false}
+      permissionModule="group_survey"
+      onView={(row) => {
+        const recordId = row?.recordId;
+        if (recordId == null) return;
+        navigate(getGroupProjectViewPath(groupId, recordId));
+      }}
+      onEdit={(row) => {
+        const recordId = row?.recordId;
+        if (recordId == null) return;
+        const editTarget = getGroupProjectEditPath(recordId, groupId);
+        navigate(editTarget.pathname, { state: editTarget.state });
+      }}
+      onFindUser={(row) => {
+        const recordId = row?.recordId;
+        if (recordId == null) return;
+        navigate(getGroupProjectFindUserPath(groupId, recordId), {
+          state: {
+            surveyName: row.projectName || "",
+            returnTo: projectsPath,
+          },
+        });
+      }}
+      onUserSurveyData={(row) => {
+        const recordId = row?.recordId;
+        if (recordId == null) return;
+        navigate(getGroupProjectUserSurveyDataPath(groupId, recordId), {
+          state: {
+            surveyName: row.projectName || "",
+            returnTo: projectsPath,
+          },
+        });
+      }}
+      onSurveyClone={() => {
+        // Future implementation: clone survey project
+      }}
+      surveyActionLabels={{
+        view: "Details",
+        edit: "Edit",
+        findUser: "Find User",
+        userSurveyData: "User Survey Data",
+        surveyClone: "Survey Clone",
+      }}
+      onStatusToggle={handleStatusToggle}
+      isLoading={isLoading}
+      emptyMessage="No projects found"
+      onSearch={handleSearch}
+      totalRecords={totalRecords}
+      serverPaginated
+      serverSearch
+      paginationPage={currentPage}
+      onPaginationPageChange={handlePageChange}
+      paginationPageSize={pageSize}
+      onPaginationPageSizeChange={handlePageSizeChange}
+      showPagination
+      nowrapAllCells
+      compactStatusColumn
+    />
   );
 }
 

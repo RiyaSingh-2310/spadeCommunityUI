@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
@@ -17,11 +17,19 @@ import SurveyDetailsHeader, {
   SURVEY_DETAIL_TABS,
 } from "../components/SurveyDetailsHeader";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import {
+  getGroupProjectEditPath,
+  getGroupProjectsPath,
+  getGroupSurveyBreadcrumbs,
+} from "../utils/groupSurveyNavigation";
 
 function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
   const navigate = useNavigate();
-  const { id } = useParams();
-  const { canRead } = useModulePermission("survey");
+  const { id, groupId } = useParams();
+  const isGroupView = Boolean(groupId);
+  const { canRead: canReadSurvey } = useModulePermission("survey");
+  const { canRead: canReadGroupSurvey } = useModulePermission("group_survey");
+  const canRead = canReadSurvey || (isGroupView && canReadGroupSurvey);
 
   const [project, setProject] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,24 +41,20 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
 
   const visibleTabs = salesViewMode ? SALES_PROJECT_DETAIL_TABS : SURVEY_DETAIL_TABS;
 
-  useEffect(() => {
-    if (!id) {
-      setProject(null);
-      setIsLoading(false);
-      setLoadFailed(true);
-      return undefined;
-    }
+  const loadSurvey = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!id) {
+        setProject(null);
+        setIsLoading(false);
+        setLoadFailed(true);
+        return;
+      }
 
-    let cancelled = false;
-
-    const loadSurvey = async () => {
-      setIsLoading(true);
+      if (!silent) setIsLoading(true);
       setLoadFailed(false);
 
       try {
         const record = await getRecord(id);
-        if (cancelled) return;
-
         const mapped = mapSurveyToProjectDetails(record);
         if (!mapped) {
           throw new Error("");
@@ -59,22 +63,25 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         setProject(mapped);
         setProjectStatus(mapped.projectStatus);
         setDraftStatus(mapped.projectStatus);
-        setActiveTab("project-details");
+        if (!silent) setActiveTab("project-details");
       } catch (error) {
-        if (cancelled) return;
         toastApiError(error);
         setProject(null);
         setLoadFailed(true);
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!silent) setIsLoading(false);
       }
+    },
+    [id]
+  );
+
+  useEffect(() => {
+    const load = async () => {
+      await loadSurvey();
     };
 
-    loadSurvey();
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
+    load();
+  }, [loadSurvey]);
 
   useEffect(() => {
     if (!visibleTabs.some((tab) => tab.id === activeTab)) {
@@ -86,13 +93,33 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
   }
 
-  const listPath = salesViewMode ? "/sales/projects" : "/survey";
-  const listLabel = salesViewMode ? "Projects" : "Survey";
-
   const tabLabels = visibleTabs.reduce((acc, tab) => {
     acc[tab.id] = tab.label;
     return acc;
   }, /** @type {Record<string, string>} */ ({}));
+
+  const listPath = salesViewMode
+    ? "/sales/projects"
+    : isGroupView
+      ? getGroupProjectsPath(groupId)
+      : "/survey";
+  const listLabel = salesViewMode ? "Projects" : isGroupView ? "Group Survey" : "Survey";
+
+  const breadcrumbs = isGroupView
+    ? getGroupSurveyBreadcrumbs(groupId, {
+        currentLabel: tabLabels[activeTab] ?? "Project Details",
+      })
+    : [
+        { label: listLabel, to: listPath },
+        { label: tabLabels[activeTab] ?? "Project Details" },
+      ];
+
+  const loadingBreadcrumbs = isGroupView
+    ? getGroupSurveyBreadcrumbs(groupId, { currentLabel: "Project Details" })
+    : [
+        { label: listLabel, to: listPath },
+        { label: "Project Details" },
+      ];
 
   if (isLoading) {
     return (
@@ -100,10 +127,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         <AdminPageHeader
           title="Survey Details"
           subtitle={`Survey ${id}`}
-          breadcrumbs={[
-            { label: listLabel, to: listPath },
-            { label: "Project Details" },
-          ]}
+          breadcrumbs={loadingBreadcrumbs}
           isDarkMode={isDarkMode}
         />
         <div className="admin-text flex items-center gap-2 text-sm">
@@ -120,10 +144,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         <AdminPageHeader
           title="Survey Details"
           subtitle={`Survey ${id}`}
-          breadcrumbs={[
-            { label: listLabel, to: listPath },
-            { label: "Project Details" },
-          ]}
+          breadcrumbs={loadingBreadcrumbs}
           isDarkMode={isDarkMode}
         />
         <div className="admin-text rounded-xl border border-[var(--admin-border)] p-6 text-sm">
@@ -148,7 +169,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
     try {
       const data = await updateSurveyStatus(recordId, { status: draftStatus });
       toastApiSuccess(data);
-      setProjectStatus(draftStatus);
+      await loadSurvey({ silent: true });
     } catch (err) {
       toastApiError(err);
       setDraftStatus(projectStatus);
@@ -162,10 +183,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
       <AdminPageHeader
         title={project.projectName}
         subtitle={`Survey ${project.surveyId || project.id}`}
-        breadcrumbs={[
-          { label: listLabel, to: listPath },
-          { label: tabLabels[activeTab] ?? "Project Details" },
-        ]}
+        breadcrumbs={breadcrumbs}
         isDarkMode={isDarkMode}
       />
 
@@ -180,9 +198,14 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         surveyId={project.surveyId || project.id}
         tabs={visibleTabs}
         readOnly={salesViewMode}
-        onEditSurvey={() =>
-          navigate(`/survey/edit/${encodeURIComponent(id)}`)
-        }
+        onEditSurvey={() => {
+          if (isGroupView) {
+            const editTarget = getGroupProjectEditPath(id, groupId);
+            navigate(editTarget.pathname, { state: editTarget.state });
+            return;
+          }
+          navigate(`/survey/edit/${encodeURIComponent(id)}`);
+        }}
       />
 
       <div role="tabpanel" aria-label={tabLabels[activeTab]}>

@@ -73,6 +73,7 @@ export const API_ROUTES = {
   survey: {
     list: "/api/survey/list",
     create: "/api/survey/add",
+    createUnderGroup: (groupProjectId) => `/api/survey/add/${groupProjectId}`,
     byId: (id) => `/api/survey/${id}`,
     update: (id) => `/api/survey/${id}`,
     delete: (id) => `/api/survey/${id}`,
@@ -94,6 +95,14 @@ export const API_ROUTES = {
     update: (id) => `/api/survey/groupproject/${id}`,
     updateStatus: (id) => `/api/survey/groupproject/${id}/status`,
     delete: (id) => `/api/survey/groupproject/${id}`,
+  },
+  surveyPages: {
+    byId: (id) => `/api/survey-pages/${id}`,
+    update: (id) => `/api/survey-pages/${id}`,
+  },
+  activity: {
+    list: "/api/activity/list",
+    delete: (id) => `/api/activity/${id}`,
   },
 };
 

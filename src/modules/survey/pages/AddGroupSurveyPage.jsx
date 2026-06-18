@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
-import SearchableMultiSelect from "../../../components/admin/SearchableMultiSelect";
+import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
@@ -18,16 +18,9 @@ import {
   createEmptyGroupProjectForm,
 } from "../services/groupSurveyApi";
 
-const GROUP_SURVEY_FORM_FIELDS = ["projectName", "clientIds"];
+const GROUP_SURVEY_FORM_FIELDS = ["projectName", "clientId"];
 
-const GROUP_SURVEY_REQUIRED_FIELDS = ["projectName", "clientIds"];
-
-function getClientIdsError(clientIds) {
-  if (!Array.isArray(clientIds) || clientIds.length === 0) {
-    return "At least one client is required";
-  }
-  return "";
-}
+const GROUP_SURVEY_REQUIRED_FIELDS = ["projectName", "clientId"];
 
 function AddGroupSurveyPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -65,7 +58,7 @@ function AddGroupSurveyPage({ isDarkMode }) {
   const errors = useMemo(
     () => ({
       projectName: getRequiredError(form.projectName, "Project Name"),
-      clientIds: getClientIdsError(form.clientIds),
+      clientId: getRequiredError(form.clientId, "Client"),
     }),
     [form]
   );
@@ -133,19 +126,19 @@ function AddGroupSurveyPage({ isDarkMode }) {
               />
             </FormField>
 
-            <FormField label="Clients" required error={showError("clientIds")}>
-              <SearchableMultiSelect
+            <FormField label="Clients" required error={showError("clientId")}>
+              <SearchableSelect
                 inputClass={selectClass}
-                value={form.clientIds}
-                onChange={(clientIds) => setField("clientIds", clientIds)}
-                onBlur={() => touch("clientIds")}
+                value={form.clientId}
+                onChange={(clientId) => setField("clientId", clientId)}
+                onBlur={() => touch("clientId")}
                 options={clientOptions}
-                placeholder="Select Clients"
+                placeholder="Select Client"
                 disabled={fieldDisabled(readOnly, isSubmitting)}
                 loading={isLoadingClients}
                 loadingLabel="Loading clients..."
-                searchPlaceholder="Search clients..."
-                aria-label="Select clients"
+                searchPlaceholder="Search client..."
+                aria-label="Select client"
               />
             </FormField>
           </div>

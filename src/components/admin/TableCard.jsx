@@ -8,7 +8,7 @@ function TableCard({ title, children, footer, isDarkMode }) {
       }`}
     >
       {title && (
-        <h2 className="admin-card-title mb-4 text-lg font-semibold">
+        <h2 className="admin-card-title mb-1 text-lg font-semibold">
           {title}
         </h2>
       )}

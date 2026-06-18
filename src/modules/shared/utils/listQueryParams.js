@@ -1,3 +1,5 @@
+import { normalizeSearchQuery } from "./searchQuery";
+
 /**
  * Builds URLSearchParams for paginated list APIs with optional search.
  * @param {{ page?: number, limit?: number, search?: string, extra?: Record<string, string|number> }} [options]
@@ -14,9 +16,9 @@ export function buildListQueryParams({ page, limit, search, extra = {} } = {}) {
     params.set("limit", String(safeLimit));
   }
 
-  const trimmedSearch = String(search ?? "").trim();
-  if (trimmedSearch) {
-    params.set("search", trimmedSearch);
+  const normalizedSearch = normalizeSearchQuery(search);
+  if (normalizedSearch) {
+    params.set("search", normalizedSearch);
   }
 
   Object.entries(extra).forEach(([key, value]) => {

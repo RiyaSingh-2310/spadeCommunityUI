@@ -1,3 +1,7 @@
+import {
+  normalizeSearchQuery as collapseSearchWhitespace,
+} from "./searchQuery";
+
 const MATCH = {
   EXACT: 3,
   STARTS_WITH: 2,
@@ -7,12 +11,12 @@ const MATCH = {
 
 /** @param {string} query */
 export function normalizeSearchQuery(query) {
-  return String(query ?? "").trim().toLowerCase();
+  return collapseSearchWhitespace(query).toLowerCase();
 }
 
 /** @param {string} text */
 function normalizeText(text) {
-  return String(text ?? "").trim().toLowerCase();
+  return collapseSearchWhitespace(text).toLowerCase();
 }
 
 /**

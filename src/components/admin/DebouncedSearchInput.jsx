@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useDebouncedValue } from "../../modules/shared/hooks/useDebouncedValue";
 import { SEARCH_DEBOUNCE_MS } from "../../modules/shared/utils/debounce";
+import { normalizeSearchQuery } from "../../modules/shared/utils/searchQuery";
 
 /**
  * Controlled search field with 500ms debounce.
@@ -28,7 +29,7 @@ function DebouncedSearchInput({
   });
 
   useEffect(() => {
-    onDebouncedChangeRef.current?.(debouncedValue);
+    onDebouncedChangeRef.current?.(normalizeSearchQuery(debouncedValue));
   }, [debouncedValue]);
 
   const borderClass = isDarkMode

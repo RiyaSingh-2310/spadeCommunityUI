@@ -103,18 +103,28 @@ function pickSurveyFormValue(apiValue, fallbackValue) {
   return apiValue;
 }
 
+function formatClientCodeDisplay(clientCode, clientName) {
+  const code =
+    clientCode != null && String(clientCode).trim() !== "" ? String(clientCode).trim() : "";
+  const name =
+    clientName != null && String(clientName).trim() !== "" ? String(clientName).trim() : "";
+
+  if (code && name) return `${code} - ${name}`;
+  if (code) return code;
+  if (name) return name;
+  return "—";
+}
+
 /**
  * @param {object} survey
  */
 export function mapSurveyToRow(survey) {
-  const clientCode = survey?.client_code;
-
   return {
     id: survey?.survey_id ?? "",
     surveyId: survey?.survey_id ?? "",
     recordId: survey?.id,
     projectName: survey?.project_name ?? "",
-    clientCode: clientCode != null && clientCode !== "" ? String(clientCode) : "—",
+    clientCode: formatClientCodeDisplay(survey?.client_code, survey?.client_name),
     clientName: survey?.client_name ?? "",
     projectManagerName: survey?.project_manager_name ?? "",
     partnerNames: survey?.partner_names ?? "",
@@ -193,10 +203,11 @@ export function buildCreateSurveyPayload(form) {
     start_date: form.startDate,
     end_date: form.endDate,
     link_type: formLinkTypeToApi(form.projectLinkType),
-    term_point: Number(form.userTerminationPoint),
-    comp_point: Number(form.userCompletionPoint),
+    term_point: String(form.userTerminationPoint ?? "").trim(),
+    comp_point: String(form.userCompletionPoint ?? "").trim(),
     cpi: Number(form.cpi),
-    notes: form.notes?.trim() || undefined,
+    notes: form.notes?.trim() ?? "",
+    status: "active",
   };
 
   const salesManagerId = resolveNumericId(form.salesManager);
@@ -221,9 +232,40 @@ export function buildCreateSurveyPayload(form) {
   }
 
   const groupProjectId = resolveNumericId(form.groupProjectId);
-  if (groupProjectId != null) payload.group_project_id = groupProjectId;
+  if (groupProjectId != null) payload.survey_group_project_id = groupProjectId;
 
-  payload.status = "active";
+  return payload;
+}
+
+/**
+ * Payload for POST /api/survey/add/:groupProjectId (group survey add project).
+ * @param {object} form
+ */
+export function buildGroupSurveyProjectPayload(form) {
+  const payload = {
+    project_name: form.projectName?.trim(),
+    client_id: resolveNumericId(form.client),
+    project_manager_id: resolveNumericId(form.projectManager),
+    project_country: form.projectCountry?.trim(),
+    description: form.description ?? "",
+    loi: Number(form.loi),
+    ir: Number(form.ir),
+    sample_size: Number(form.sampleSize),
+    currency: form.currency,
+    start_date: form.startDate,
+    end_date: form.endDate,
+    link_type: formLinkTypeToApi(form.projectLinkType),
+    term_point: String(form.userTerminationPoint ?? "").trim(),
+    comp_point: String(form.userCompletionPoint ?? "").trim(),
+    notes: form.notes?.trim() ?? "",
+    cpi: Number(form.cpi),
+    status: "active",
+  };
+
+  if (form.projectLinkType === "Single Link") {
+    payload.live_url = form.liveLink?.trim();
+    payload.test_url = form.testLink?.trim();
+  }
 
   return payload;
 }
@@ -344,6 +386,11 @@ export function mapSurveyToForm(survey, fallback = null) {
     userCompletionPoint:
       survey?.comp_point != null ? String(survey.comp_point) : base.userCompletionPoint,
     notes: pickSurveyFormValue(survey?.notes, base.notes),
+    groupProjectId: resolveSurveyFormId(
+      survey,
+      ["survey_group_project_id", "group_project_id"],
+      base.groupProjectId ?? ""
+    ),
     partners: Array.isArray(survey?.partner_ids)
       ? survey.partner_ids.map((partnerId) => String(partnerId))
       : base.partners,
@@ -435,6 +482,20 @@ export async function createSurvey(form) {
   const data = await apiRequest(API_ROUTES.survey.create, {
     method: "POST",
     body: buildCreateSurveyPayload(form),
+  });
+  return assertSuccess(data);
+}
+
+/**
+ * POST /api/survey/add/:groupProjectId
+ * @param {string|number} groupProjectId
+ * @param {object} form
+ */
+export async function createSurveyUnderGroup(groupProjectId, form) {
+  const normalizedId = normalizeSurveyId(groupProjectId);
+  const data = await apiRequest(API_ROUTES.survey.createUnderGroup(normalizedId), {
+    method: "POST",
+    body: buildGroupSurveyProjectPayload(form),
   });
   return assertSuccess(data);
 }

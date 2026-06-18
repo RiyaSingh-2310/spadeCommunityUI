@@ -3,6 +3,7 @@ import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import { formatCountryLabel } from "../../../services/countries/countriesApi";
 import { getAssignedPartners, getRecord, getRecords } from "./surveyApi";
+import { matchesSearchQuery, normalizeSearchQuery } from "../../shared/utils/searchQuery";
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -115,20 +116,15 @@ export function mapPartnersToSupplierDetailRows(partners = []) {
 
 /** GET /api/survey/list — search Survey Projects by project name. */
 export async function searchRecontactProjects(search = "") {
-  const trimmed = String(search ?? "").trim();
-  if (!trimmed) {
+  const normalized = normalizeSearchQuery(search);
+  if (!normalized) {
     return [];
   }
 
-  const data = await getRecords({ page: 1, limit: 50, search: trimmed });
+  const data = await getRecords({ page: 1, limit: 50, search: normalized });
   const items = Array.isArray(data.items) ? data.items : [];
-  const query = trimmed.toLowerCase();
 
-  return items.filter((item) =>
-    String(item.projectName ?? "")
-      .toLowerCase()
-      .includes(query)
-  );
+  return items.filter((item) => matchesSearchQuery(item.projectName, normalized));
 }
 
 /** GET /api/survey/:id/partners — supplier details for selected parent survey. */

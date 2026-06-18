@@ -1,53 +1,61 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { Trash2 } from "lucide-react";
 import DebouncedSearchInput from "../../../components/admin/DebouncedSearchInput";
+import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import AdminPagination from "../../../components/admin/AdminPagination";
 import TableCard from "../../../components/admin/TableCard";
-import { useDebouncedValue } from "../../shared/hooks/useDebouncedValue";
 import { useModulePermission } from "../../permissions/useModulePermission";
-import { DEFAULT_PAGE_SIZE, paginateItems } from "../../shared/utils/pagination";
-
-const initialRows = Array.from({ length: 14 }).map((_, idx) => ({
-  id: `log-${idx + 1}`,
-  name: ["John Doe", "Ava Brown", "Liam Jones", "Priya Desai", "Marcus Johnson"][idx % 5],
-  logDate: `${String(2 + (idx % 3)).padStart(2, "0")}/06/2026 ${9 + (idx % 4)}:${15 + idx} AM`,
-}));
+import { useApiListing } from "../../shared/hooks/useApiListing";
+import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { deleteRecord, getRecords } from "../../../services/activity/activityApi";
 
 function LogActivityPage({ isDarkMode }) {
   const { canWrite } = useModulePermission("log_activity");
-  const [rows, setRows] = useState(initialRows);
   const [query, setQuery] = useState("");
-  const debouncedQuery = useDebouncedValue(query);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleQueryChange = (value) => {
-    setQuery(value);
-    setCurrentPage(1);
-  };
+  const {
+    rows,
+    totalRecords,
+    isLoading,
+    currentPage,
+    pageSize,
+    handleSearch,
+    handlePageChange,
+    handlePageSizeChange,
+    refresh,
+  } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
 
-  const handlePageSizeChange = (nextSize) => {
-    setPageSize(nextSize);
-    setCurrentPage(1);
-  };
+  const handleDeleteRequest = useCallback((row) => {
+    setDeleteTarget(row);
+  }, []);
 
-  const filtered = useMemo(
-    () =>
-      rows.filter((row) =>
-        Object.values(row).join(" ").toLowerCase().includes(debouncedQuery.toLowerCase())
-      ),
-    [rows, debouncedQuery]
-  );
+  const handleDeleteCancel = useCallback(() => {
+    if (isDeleting) return;
+    setDeleteTarget(null);
+  }, [isDeleting]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteTarget?.id) return;
+
+    setIsDeleting(true);
+    try {
+      const data = await deleteRecord(deleteTarget.id);
+      setDeleteTarget(null);
+      toastApiSuccess(data);
+      await refresh();
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [deleteTarget, refresh]);
+
+  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize) || 1);
   const safePage = Math.min(currentPage, totalPages);
-  const pagination = paginateItems(filtered, safePage, pageSize);
-
-  useEffect(() => {
-    const pages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
-    setCurrentPage((prev) => Math.min(prev, pages));
-  }, [filtered.length, pageSize, debouncedQuery]);
 
   return (
     <div className="space-y-6">
@@ -58,21 +66,22 @@ function LogActivityPage({ isDarkMode }) {
       />
       <DebouncedSearchInput
         value={query}
-        onChange={handleQueryChange}
+        onChange={setQuery}
+        onDebouncedChange={handleSearch}
         placeholder="Search log activity..."
         isDarkMode={isDarkMode}
       />
       <TableCard
         isDarkMode={isDarkMode}
         footer={
-          filtered.length > 0 ? (
+          totalRecords > 0 ? (
             <AdminPagination
               isDarkMode={isDarkMode}
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
-              totalItems={pagination.totalItems}
+              currentPage={safePage}
+              totalPages={totalPages}
+              totalItems={totalRecords}
               pageSize={pageSize}
-              onPageChange={setCurrentPage}
+              onPageChange={handlePageChange}
               onPageSizeChange={handlePageSizeChange}
             />
           ) : null
@@ -93,35 +102,64 @@ function LogActivityPage({ isDarkMode }) {
               </tr>
             </thead>
             <tbody>
-              {pagination.items.map((row, idx) => {
-                const globalIdx = (pagination.currentPage - 1) * pageSize + idx;
-                return (
-                  <tr
-                    key={row.id}
-                    className={`border-t ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}
+              {isLoading ? (
+                <tr className={`border-t ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}>
+                  <td
+                    colSpan={canWrite ? 4 : 3}
+                    className="admin-text-muted px-4 py-8 text-center text-sm"
                   >
-                    <td className="admin-text whitespace-nowrap px-4 py-3">{globalIdx + 1}</td>
-                    <td className="admin-text whitespace-nowrap px-4 py-3">{row.name}</td>
-                    <td className="admin-text whitespace-nowrap px-4 py-3">{row.logDate}</td>
-                    {canWrite && (
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <button
-                        type="button"
-                        onClick={() => setRows((prev) => prev.filter((item) => item.id !== row.id))}
-                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-[var(--admin-danger-text)] transition-colors hover:bg-[var(--admin-danger-text)]/10"
-                      >
-                        <Trash2 size={12} />
-                        Delete
-                      </button>
-                    </td>
-                    )}
-                  </tr>
-                );
-              })}
+                    Loading...
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr className={`border-t ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}>
+                  <td
+                    colSpan={canWrite ? 4 : 3}
+                    className="admin-text-muted px-4 py-8 text-center text-sm"
+                  >
+                    No activity logs found
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row, idx) => {
+                  const globalIdx = (safePage - 1) * pageSize + idx;
+
+                  return (
+                    <tr
+                      key={row.id}
+                      className={`border-t ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}
+                    >
+                      <td className="admin-text whitespace-nowrap px-4 py-3">{globalIdx + 1}</td>
+                      <td className="admin-text whitespace-nowrap px-4 py-3">{row.name}</td>
+                      <td className="admin-text whitespace-nowrap px-4 py-3">{row.logDate}</td>
+                      {canWrite && (
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRequest(row)}
+                            disabled={isDeleting}
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-[var(--admin-danger-text)] transition-colors hover:bg-[var(--admin-danger-text)]/10 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Trash2 size={12} />
+                            Delete
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       </TableCard>
+
+      <DeleteConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        onCancel={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

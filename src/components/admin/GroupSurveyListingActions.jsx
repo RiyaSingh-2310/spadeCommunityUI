@@ -66,7 +66,7 @@ function GroupSurveyListingActions({
       {onListProjects && (
         <ActionIconButton
           isDarkMode={isDarkMode}
-          label="View Projects"
+          label="View Details"
           onClick={onListProjects}
         >
           <Eye size={13} />

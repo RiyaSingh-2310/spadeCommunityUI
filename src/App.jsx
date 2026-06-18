@@ -56,6 +56,7 @@ import UserSurveyDataPage from "./modules/survey/user-survey-data/pages/UserSurv
 import SurveyDetailsPage from "./modules/survey/pages/SurveyDetailsPage";
 import SurveyPage from "./modules/survey/pages/SurveyPage";
 import SurveySettingsPage from "./modules/survey/pages/SurveySettingsPage";
+import SettingsPage from "./modules/settings/pages/SettingsPage";
 
 function UserFormEditRoute({ isDarkMode }) {
   const { id } = useParams();
@@ -173,10 +174,22 @@ function App() {
           element={<FindUserPage isDarkMode={isDarkMode} />}
         />
         <Route
+          path="/survey/group/:groupId/projects/:id/find-user"
+          element={<FindUserPage isDarkMode={isDarkMode} />}
+        />
+        <Route
           path="/survey/:id/user-survey-data"
           element={<UserSurveyDataPage isDarkMode={isDarkMode} />}
         />
+        <Route
+          path="/survey/group/:groupId/projects/:id/user-survey-data"
+          element={<UserSurveyDataPage isDarkMode={isDarkMode} />}
+        />
         <Route path="/survey/view/:id" element={<SurveyDetailsPage isDarkMode={isDarkMode} />} />
+        <Route
+          path="/survey/group/:groupId/projects/view/:id"
+          element={<SurveyDetailsPage isDarkMode={isDarkMode} />}
+        />
         <Route path="/survey/edit/:id" element={<EditSurveyPage isDarkMode={isDarkMode} />} />
         <Route path="/survey/group" element={<GroupSurveyPage isDarkMode={isDarkMode} />} />
         <Route path="/survey/group/add" element={<AddGroupSurveyPage isDarkMode={isDarkMode} />} />
@@ -200,6 +213,7 @@ function App() {
         <Route path="/survey/settings" element={<SurveySettingsPage isDarkMode={isDarkMode} />} />
         <Route path="/invoice/list" element={<InvoiceListPage isDarkMode={isDarkMode} />} />
         <Route path="/invoice/settings" element={<InvoiceSettingsPage isDarkMode={isDarkMode} />} />
+        <Route path="/settings" element={<SettingsPage isDarkMode={isDarkMode} />} />
         <Route path="/log-activity" element={<LogActivityPage isDarkMode={isDarkMode} />} />
         <Route path="/notifications/messages" element={<MessagesPage isDarkMode={isDarkMode} />} />
         <Route path="/reward-points/pending" element={<PendingRewardsPage isDarkMode={isDarkMode} />} />

@@ -5,11 +5,13 @@ import DebouncedSearchInput from "../../../../components/admin/DebouncedSearchIn
 import UserSurveyDataTable from "../components/UserSurveyDataTable";
 import { useUserSurveyDataList } from "../hooks/useUserSurveyDataList";
 import { DEFAULT_SURVEY_DISPLAY_NAME } from "../utils/constants";
+import { getGroupSurveyBreadcrumbs } from "../../utils/groupSurveyNavigation";
 
 function UserSurveyDataPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const { id: surveyId } = useParams();
+  const { id: surveyId, groupId } = useParams();
   const location = useLocation();
+  const isGroupView = Boolean(groupId);
   const surveyName = location.state?.surveyName || DEFAULT_SURVEY_DISPLAY_NAME;
 
   const {
@@ -44,10 +46,14 @@ function UserSurveyDataPage({ isDarkMode }) {
       <AdminPageHeader
         title="User Survey Data"
         subtitle={`Survey - ${surveyName}`}
-        breadcrumbs={[
-          { label: "Survey", to: "/survey" },
-          { label: "User Survey Data" },
-        ]}
+        breadcrumbs={
+          isGroupView
+            ? getGroupSurveyBreadcrumbs(groupId, { currentLabel: "User Survey Data" })
+            : [
+                { label: "Survey", to: "/survey" },
+                { label: "User Survey Data" },
+              ]
+        }
         isDarkMode={isDarkMode}
         // rightContent={
         //   <button

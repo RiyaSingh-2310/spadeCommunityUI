@@ -1,7 +1,7 @@
 import { Copy, Eye, LayoutDashboard, Pencil, UserRound } from "lucide-react";
 
 const iconBtnClass = (isDarkMode, { disabled = false } = {}) =>
-  `inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+  `inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors ${
     disabled
       ? "cursor-not-allowed opacity-40"
       : isDarkMode
@@ -51,7 +51,7 @@ function SurveyListingActions({
   const surveyCloneLabel = labels.surveyClone ?? "Survey Clone";
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-1.5">
+    <div className="flex flex-nowrap items-center justify-end gap-2 whitespace-nowrap">
       {onView && (
         <ActionIconButton
           isDarkMode={isDarkMode}

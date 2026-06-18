@@ -1,18 +1,26 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
-import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
+import { useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   getRequiredError,
   getRichTextError,
-  isFormValid,
+  isFormValidForFields,
 } from "../../shared/utils/validation";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import {
+  DEFAULT_SURVEY_PAGE_ID,
+  getSurveyPage,
+  mapSurveyPageToForm,
+  updateSurveyPage,
+} from "../services/surveyPagesApi";
 
 const SURVEY_SETTINGS_FIELDS = [
   "language",
@@ -23,24 +31,67 @@ const SURVEY_SETTINGS_FIELDS = [
   "surveyCloseRedirect",
 ];
 
+const SURVEY_CONTENT_FIELDS = [
+  "completeRedirect",
+  "terminateRedirect",
+  "overQuotaRedirect",
+  "qualityTermRedirect",
+  "surveyCloseRedirect",
+];
+
 const LANGUAGE_OPTIONS = ["English", "Spanish", "French", "German", "Hindi"];
 
-const DEFAULT_CONTENT = {
-  completeRedirect: "Speed Community Survey Completion Content",
-  terminateRedirect: "Speed Community Termination Content",
-  overQuotaRedirect: "Speed Community Over Quota Content",
-  qualityTermRedirect: "Speed Community Quality Termination Content",
-  surveyCloseRedirect: "Speed Community Survey Closed Content",
+const EMPTY_CONTENT_FORM = {
+  completeRedirect: "",
+  terminateRedirect: "",
+  overQuotaRedirect: "",
+  qualityTermRedirect: "",
+  surveyCloseRedirect: "",
 };
 
 function SurveySettingsPage({ isDarkMode }) {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     language: "English",
-    ...DEFAULT_CONTENT,
+    ...EMPTY_CONTENT_FORM,
   });
+  const [surveyPageId, setSurveyPageId] = useState(DEFAULT_SURVEY_PAGE_ID);
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { readOnly, showSubmit } = useFormAccess();
   const inputClass = getAdminInputClass();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSurveyPage = async () => {
+      setIsLoading(true);
+      setLoadFailed(false);
+
+      try {
+        const record = await getSurveyPage(DEFAULT_SURVEY_PAGE_ID);
+        if (cancelled) return;
+
+        const mapped = mapSurveyPageToForm(record);
+        setSurveyPageId(record?.id ?? DEFAULT_SURVEY_PAGE_ID);
+        setForm((prev) => ({ ...prev, ...mapped }));
+        setInitialSnapshot(mapped);
+      } catch (error) {
+        if (cancelled) return;
+        toastApiError(error);
+        setLoadFailed(true);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadSurveyPage();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const errors = useMemo(
     () => ({
@@ -74,14 +125,49 @@ function SurveySettingsPage({ isDarkMode }) {
     fields: SURVEY_SETTINGS_FIELDS,
   });
 
-  const canSubmit = showSubmit && !readOnly && isFormValid(errors);
+  const isDirty = useMemo(() => {
+    if (!initialSnapshot) return false;
+
+    return SURVEY_CONTENT_FIELDS.some(
+      (key) => String(form[key] ?? "") !== String(initialSnapshot[key] ?? "")
+    );
+  }, [form, initialSnapshot]);
+
+  const canSubmit =
+    showSubmit &&
+    !readOnly &&
+    isFormValidForFields(errors, SURVEY_SETTINGS_FIELDS) &&
+    !isSubmitting &&
+    !isLoading &&
+    !loadFailed &&
+    isDirty;
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const onSubmit = (event) => {
+  const onSubmit = async (event) => {
     event.preventDefault();
-    if (readOnly || !showSubmit || !validateSubmit() || !canSubmit) return;
-    navigate("/survey/settings", { replace: true });
+    if (
+      readOnly ||
+      !showSubmit ||
+      !validateSubmit() ||
+      !isFormValidForFields(errors, SURVEY_SETTINGS_FIELDS) ||
+      !isDirty
+    ) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const data = await updateSurveyPage(surveyPageId, form);
+      const updated = mapSurveyPageToForm(data?.data ?? {});
+      setForm((prev) => ({ ...prev, ...updated }));
+      setInitialSnapshot(updated);
+      toastApiSuccess(data);
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const richFields = [
@@ -91,6 +177,36 @@ function SurveySettingsPage({ isDarkMode }) {
     ["Quality Term Redirect Content", "qualityTermRedirect"],
     ["Survey Close Redirect Content", "surveyCloseRedirect"],
   ];
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-[#10a950]" />
+      </div>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          title="Survey Settings"
+          subtitle="Configure survey language and redirect content."
+          isDarkMode={isDarkMode}
+        />
+        <div className="admin-text rounded-xl border border-[var(--admin-border)] p-6 text-sm">
+          Unable to load survey settings.
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="ml-2 font-semibold text-[#10a950] hover:underline"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -151,7 +267,7 @@ function SurveySettingsPage({ isDarkMode }) {
             disabled={!canSubmit}
             className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Submit
+            {isSubmitting ? "Saving..." : "Submit"}
           </button>
           )}
           <button

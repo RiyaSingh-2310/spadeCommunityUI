@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toastApiError } from "../../../services/toast/apiToast";
 import { DEFAULT_PAGE_SIZE } from "../utils/pagination";
+import { normalizeSearchQuery } from "../utils/searchQuery";
 
 /**
  * Server-driven listing state: search, pagination, loading, and race-safe fetch.
@@ -36,11 +37,11 @@ export function useApiListing({
     setRows([]);
 
     try {
-      const trimmedSearch = search.trim();
+      const normalizedSearch = normalizeSearchQuery(search);
       const data = await fetchFn({
         page: currentPage,
         limit: pageSize,
-        search: trimmedSearch || undefined,
+        search: normalizedSearch || undefined,
       });
 
       if (requestId !== fetchRequestIdRef.current) {
@@ -81,7 +82,7 @@ export function useApiListing({
   }, [fetchList]);
 
   const handleSearch = useCallback((debouncedQuery) => {
-    setSearch(debouncedQuery);
+    setSearch(normalizeSearchQuery(debouncedQuery));
     setCurrentPage(1);
   }, []);
 

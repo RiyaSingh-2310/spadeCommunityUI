@@ -106,6 +106,10 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
           <div className="flex flex-col gap-1 p-2">
             <button
               type="button"
+              onClick={() => {
+                setIsDropdownOpen(false);
+                navigate("/settings?tab=profile");
+              }}
               className="admin-icon-btn admin-text-muted flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition"
             >
               <User size={16} />
@@ -113,6 +117,10 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
             </button>
             <button
               type="button"
+              onClick={() => {
+                setIsDropdownOpen(false);
+                navigate("/settings?tab=system");
+              }}
               className="admin-icon-btn admin-text-muted flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition"
             >
               <Settings size={16} />

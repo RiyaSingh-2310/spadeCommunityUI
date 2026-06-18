@@ -7,7 +7,7 @@ import {
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import { appendListQuery } from "../../shared/utils/listQueryParams";
-import { createSurvey, getRecords as getSurveyRecords } from "./surveyApi";
+import { createSurveyUnderGroup, getRecords as getSurveyRecords } from "./surveyApi";
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -73,33 +73,39 @@ function resolveClientIds(project) {
   return [];
 }
 
-function resolveClientIdsFromForm(form) {
+function resolveClientIdFromForm(form) {
   if (form.clientId != null && String(form.clientId).trim() !== "") {
     const singleId = Number(String(form.clientId).trim());
-    return Number.isFinite(singleId) ? [singleId] : [];
+    return Number.isFinite(singleId) ? singleId : undefined;
   }
 
-  return (form.clientIds ?? [])
-    .map((id) => Number(String(id).trim()))
-    .filter((id) => Number.isFinite(id));
+  return undefined;
 }
 
 function buildCreateGroupProjectPayload(form) {
-  return {
+  const payload = {
     project_name: String(form.projectName ?? "").trim(),
     description: String(form.description ?? ""),
     status: "active",
-    client_ids: resolveClientIdsFromForm(form),
   };
+
+  const clientId = resolveClientIdFromForm(form);
+  if (clientId != null) payload.client_id = clientId;
+
+  return payload;
 }
 
 function buildUpdateGroupProjectPayload(form) {
-  return {
+  const payload = {
     project_name: String(form.projectName ?? "").trim(),
     description: String(form.description ?? ""),
     notes: String(form.notes ?? ""),
-    client_ids: resolveClientIdsFromForm(form),
   };
+
+  const clientId = resolveClientIdFromForm(form);
+  if (clientId != null) payload.client_id = clientId;
+
+  return payload;
 }
 
 export function resolveGroupClientNames(project) {
@@ -153,7 +159,6 @@ export function mapGroupProjectToForm(project) {
     description: project?.description ?? "",
     notes: project?.notes ?? "",
     clientId: clientIds[0] ?? "",
-    clientIds,
   };
 }
 
@@ -180,7 +185,6 @@ export function createEmptyGroupProjectForm() {
     description: "",
     notes: "",
     clientId: "",
-    clientIds: [],
   };
 }
 
@@ -271,10 +275,7 @@ export async function getGroupProjectSurveys(groupProjectId, options = {}) {
   });
 }
 
-/** POST /api/survey/add — creates a survey under a group project */
+/** POST /api/survey/add/:groupProjectId */
 export async function createGroupSurveyProject(groupId, form) {
-  return createSurvey({
-    ...form,
-    groupProjectId: groupId,
-  });
+  return createSurveyUnderGroup(groupId, form);
 }

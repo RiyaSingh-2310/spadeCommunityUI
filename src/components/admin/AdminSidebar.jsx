@@ -14,6 +14,7 @@ import {
   Mail,
   ReceiptIndianRupee,
   ScrollText,
+  Settings,
   ShieldCheck,
   UserCog,
   Users,
@@ -84,6 +85,7 @@ function AdminSidebar({
     "Screening Management": <ShieldCheck size={21} strokeWidth={2} />,
     "Home Page Management": <Home size={21} strokeWidth={2} />,
     "System Email Template": <Mail size={21} strokeWidth={2} />,
+    Settings: <Settings size={21} strokeWidth={2} />,
     "Log Activity": <ScrollText size={21} strokeWidth={2} />,
   };
 

@@ -41,6 +41,11 @@ const COLUMN_KEY_MAP = {
   "Created Date": "createdDate",
   "Question Type": "questionType",
   "Sort Order": "sortOrder",
+  "Admin Name": "adminName",
+  "Admin Email": "adminEmail",
+  "Action Type": "actionType",
+  "IP Address": "ipAddress",
+  "Log Date": "logDate",
 };
 
 const NOWRAP_DATA_KEYS = new Set([
@@ -85,6 +90,13 @@ const NOWRAP_DATA_KEYS = new Set([
   "ir",
   "name",
   "client",
+  "adminName",
+  "adminEmail",
+  "actionType",
+  "module",
+  "description",
+  "ipAddress",
+  "logDate",
 ]);
 
 import { formatStatusLabel } from "./statusLabels";
@@ -153,3 +165,5 @@ export const TABLE_HEAD_BASE =
   "px-4 py-3 text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
 
 export const TABLE_STATUS_COL = "min-w-[140px] w-[140px]";
+
+export const TABLE_STATUS_COL_COMPACT = "admin-table-status-col-compact";

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { useDebouncedValue } from "../../modules/shared/hooks/useDebouncedValue";
+import { normalizeSearchQuery } from "../../modules/shared/utils/searchQuery";
 
 function HeaderSearch({ onDebouncedSearch }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,7 +17,7 @@ function HeaderSearch({ onDebouncedSearch }) {
 
   useEffect(() => {
     if (!isOpen && !debouncedQuery) return;
-    onDebouncedSearch?.(debouncedQuery);
+    onDebouncedSearch?.(normalizeSearchQuery(debouncedQuery));
   }, [debouncedQuery, isOpen, onDebouncedSearch]);
 
   const openSearch = () => setIsOpen(true);

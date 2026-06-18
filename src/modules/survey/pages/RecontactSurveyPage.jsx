@@ -4,6 +4,7 @@ import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import { useDebouncedValue } from "../../shared/hooks/useDebouncedValue";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { SEARCH_DEBOUNCE_MS } from "../../shared/utils/debounce";
+import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
 import AddRecontactSurveyForm from "../components/AddRecontactSurveyForm";
 import RecontactSupplierDetailsModal from "../components/RecontactSupplierDetailsModal";
 import {
@@ -49,7 +50,7 @@ function RecontactSurveyPage({ isDarkMode }) {
   }, [selectedProject]);
 
   useEffect(() => {
-    const query = debouncedSearch.trim();
+    const query = normalizeSearchQuery(debouncedSearch);
     if (!query) {
       setSearchResults([]);
       setIsSearching(false);

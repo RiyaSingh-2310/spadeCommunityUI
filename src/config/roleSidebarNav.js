@@ -24,6 +24,13 @@ const SALES_SIDEBAR_NAV_ITEMS = [
     matcher: /^\/sales\/projects(\/|$)/,
     permissionKeys: ["survey"],
   },
+  {
+    type: "link",
+    label: "Settings",
+    root: "/settings",
+    matcher: /^\/settings(\/|$)/,
+    permissionKeys: [],
+  },
 ];
 
 const MANAGER_SIDEBAR_NAV_ITEMS = [
@@ -55,6 +62,13 @@ const MANAGER_SIDEBAR_NAV_ITEMS = [
         permissionKeys: ["group_survey"],
       },
     ],
+  },
+  {
+    type: "link",
+    label: "Settings",
+    root: "/settings",
+    matcher: /^\/settings(\/|$)/,
+    permissionKeys: [],
   },
 ];
 

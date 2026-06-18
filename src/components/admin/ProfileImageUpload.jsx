@@ -18,6 +18,7 @@ function ProfileImageUpload({
   name = "",
   firstName = "",
   lastName = "",
+  stacked = false,
 }) {
   const inputRef = useRef(null);
   const blobUrlRef = useRef("");
@@ -68,10 +69,16 @@ function ProfileImageUpload({
   return (
     <div>
       <label className="admin-text mb-2 block text-sm font-semibold">{label}</label>
-      {showCurrentLabel && hasImage && (
+      {showCurrentLabel && (stacked || hasImage) && (
         <p className="admin-text-muted mb-2 text-xs">Current Profile Image</p>
       )}
-      <div className="flex flex-wrap items-center gap-4">
+      <div
+        className={
+          stacked
+            ? "flex flex-col items-start gap-3"
+            : "flex flex-wrap items-center gap-4"
+        }
+      >
         <div
           className={`shrink-0 overflow-hidden rounded-full border ${borderClass}`}
         >

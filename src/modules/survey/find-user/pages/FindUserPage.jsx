@@ -9,6 +9,7 @@ import InvitedUsersModal from "../components/InvitedUsersModal";
 import { useInfiniteUsers } from "../hooks/useInfiniteUsers";
 import { inviteFindUsers } from "../services/findUserApi";
 import { toastApiError, toastApiSuccess } from "../../../../services/toast/apiToast";
+import { getGroupSurveyBreadcrumbs } from "../../utils/groupSurveyNavigation";
 
 function createFilterRow() {
   return {
@@ -19,8 +20,9 @@ function createFilterRow() {
 }
 
 function FindUserPage({ isDarkMode }) {
-  const { id: surveyId } = useParams();
+  const { id: surveyId, groupId } = useParams();
   const location = useLocation();
+  const isGroupView = Boolean(groupId);
   const surveyName =
     location.state?.surveyName || "Lifestyle Evolution India";
 
@@ -110,10 +112,14 @@ function FindUserPage({ isDarkMode }) {
       <AdminPageHeader
         title="Find User"
         subtitle={`Survey Name - ${surveyName}`}
-        breadcrumbs={[
-          { label: "Survey", to: "/survey" },
-          { label: "Find User" },
-        ]}
+        breadcrumbs={
+          isGroupView
+            ? getGroupSurveyBreadcrumbs(groupId, { currentLabel: "Find User" })
+            : [
+                { label: "Survey", to: "/survey" },
+                { label: "Find User" },
+              ]
+        }
         isDarkMode={isDarkMode}
       />
 

@@ -113,6 +113,7 @@ const SURVEY_FORM_SCALAR_KEYS = [
   "userTerminationPoint",
   "userCompletionPoint",
   "notes",
+  "groupProjectId",
   "existingSurveyCsvFileName",
 ];
 

@@ -225,4 +225,11 @@ export const SIDEBAR_NAV_ITEMS = [
     matcher: /^\/log-activity(\/|$)/,
     permissionKeys: ["log_activity"],
   },
+  {
+    type: "link",
+    label: "Settings",
+    root: "/settings",
+    matcher: /^\/settings(\/|$)/,
+    permissionKeys: [],
+  },
 ];

@@ -39,10 +39,12 @@ import {
   isStatusColumn,
   TABLE_HEAD_BASE,
   TABLE_STATUS_COL,
+  TABLE_STATUS_COL_COMPACT,
 } from "../utils/tableHelpers";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { DEFAULT_PAGE_SIZE, paginateItems } from "../utils/pagination";
 import { formatStatusLabel } from "../utils/statusLabels";
+import { normalizeSearchQuery, rowMatchesSearchQuery } from "../utils/searchQuery";
 
 function ModuleListingPage({
   isDarkMode,
@@ -102,6 +104,8 @@ function ModuleListingPage({
   nameAsText = false,
   /** When set, prepends an expand column and renders content below expanded rows. */
   renderExpandedContent = null,
+  /** Use a narrower fixed-width status column (e.g. group survey inner listing). */
+  compactStatusColumn = false,
 }) {
   const navigate = useNavigate();
   const {
@@ -201,6 +205,9 @@ function ModuleListingPage({
   }, [pendingDelete, getRowId]);
 
   const listingReadMode = getModuleListingReadMode(permissionModule);
+  const statusColumnClass = compactStatusColumn
+    ? TABLE_STATUS_COL_COMPACT
+    : TABLE_STATUS_COL;
 
   const readOnlyListingActions = hasNativeReadOnlyListingActions({
     permissionModule,
@@ -283,24 +290,11 @@ function ModuleListingPage({
     }
   };
 
-  const normalizedQuery = debouncedQuery.trim().toLowerCase();
+  const normalizedQuery = normalizeSearchQuery(debouncedQuery).toLowerCase();
 
   const filtered = usesServerListing
     ? data
-    : data.filter((row) => {
-        if (!normalizedQuery) return true;
-        if (searchFields?.length) {
-          return searchFields.some((field) =>
-            String(row[field] ?? "")
-              .toLowerCase()
-              .includes(normalizedQuery)
-          );
-        }
-        return Object.values(row)
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedQuery);
-      });
+    : data.filter((row) => rowMatchesSearchQuery(row, debouncedQuery, searchFields));
 
   const paginationTotalItems = usesServerListing
     ? totalRecords ?? filtered.length
@@ -483,7 +477,7 @@ function ModuleListingPage({
                 <th
                   key={h}
                   className={`${TABLE_HEAD_BASE} ${
-                    isStatusColumn(h) ? `admin-table-status-col ${TABLE_STATUS_COL}` : ""
+                    isStatusColumn(h) ? `admin-table-status-col ${statusColumnClass}` : ""
                   } ${isActionColumn(h) ? "text-right" : "text-left"}`}
                 >
                   {h}
@@ -572,10 +566,14 @@ function ModuleListingPage({
                   }
                   if (key === "status" && showStatus && !effectiveStatusAsText) {
                     return (
-                      <td key={col} className={`admin-table-status-col px-4 py-3 align-middle ${TABLE_STATUS_COL}`}>
+                      <td
+                        key={col}
+                        className={`admin-table-status-col px-3 py-3 align-middle ${statusColumnClass}`}
+                      >
                         <StatusToggle
                           checked={String(row.status || "").toLowerCase() === "active"}
                           readOnly={!allowWrite}
+                          compact={compactStatusColumn}
                           onChange={
                             allowWrite
                               ? () => {
