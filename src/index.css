@@ -107,6 +107,16 @@ body {
   color: var(--admin-subtle-foreground);
 }
 
+.admin-table-description-line-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
 .admin-card-title {
   color: var(--admin-card-title);
 }

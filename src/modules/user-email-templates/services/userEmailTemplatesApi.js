@@ -40,9 +40,11 @@ function extractTemplateRecord(data) {
 function matchesSearch(template, search) {
   if (!search) return true;
   const query = search.toLowerCase();
+  const description = template?.content ?? template?.description ?? "";
   return (
     String(template.title ?? "").toLowerCase().includes(query) ||
     String(template.slug ?? "").toLowerCase().includes(query) ||
+    String(description).toLowerCase().includes(query) ||
     String(template.id ?? "").includes(query)
   );
 }
@@ -53,6 +55,8 @@ export function mapTemplateToListingRow(template) {
     emailTitle: template?.title ?? "",
     title: template?.title ?? "",
     slug: template?.slug ?? "",
+    description: template?.content ?? template?.description ?? "",
+    status: template?.status ?? "Active",
   };
 }
 
@@ -69,6 +73,22 @@ export function mapTemplateToDetail(template) {
   };
 }
 
+async function enrichTemplateForListing(template) {
+  if (template?.content ?? template?.description) {
+    return mapTemplateToListingRow(template);
+  }
+
+  try {
+    const normalizedId = normalizeTemplateId(template?.id);
+    const data = await apiRequest(API_ROUTES.emailTemplates.byId(normalizedId));
+    assertSuccess(data);
+    const record = extractTemplateRecord(data);
+    return mapTemplateToListingRow({ ...template, ...record });
+  } catch {
+    return mapTemplateToListingRow(template);
+  }
+}
+
 /** GET /api/email-templates/list */
 export async function getRecords({ page = 1, limit = 10, search } = {}) {
   const data = await apiRequest(API_ROUTES.emailTemplates.list);
@@ -81,9 +101,8 @@ export async function getRecords({ page = 1, limit = 10, search } = {}) {
 
   const total = allTemplates.length;
   const start = (page - 1) * limit;
-  const items = allTemplates
-    .slice(start, start + limit)
-    .map((template) => mapTemplateToListingRow(template));
+  const pageItems = allTemplates.slice(start, start + limit);
+  const items = await Promise.all(pageItems.map((template) => enrichTemplateForListing(template)));
 
   return { items, total, count: total };
 }
@@ -100,4 +119,33 @@ export async function getRecord(id) {
   }
 
   return mapTemplateToDetail(template);
+}
+
+/** PUT /api/email-templates/:id */
+export async function updateRecord(id, payload) {
+  const normalizedId = normalizeTemplateId(id);
+  const data = await apiRequest(API_ROUTES.emailTemplates.byId(normalizedId), {
+    method: "PUT",
+    body: {
+      title: String(payload.emailTitle ?? payload.title ?? "").trim(),
+      subject: String(payload.subject ?? "").trim(),
+      content: String(payload.content ?? payload.description ?? "").trim(),
+    },
+  });
+  assertSuccess(data);
+
+  const template = extractTemplateRecord(data);
+  return {
+    ...data,
+    template: template ? mapTemplateToDetail(template) : null,
+  };
+}
+
+/** DELETE /api/email-templates/:id */
+export async function deleteRecord(id) {
+  const normalizedId = normalizeTemplateId(id);
+  const data = await apiRequest(API_ROUTES.emailTemplates.byId(normalizedId), {
+    method: "DELETE",
+  });
+  return assertSuccess(data);
 }

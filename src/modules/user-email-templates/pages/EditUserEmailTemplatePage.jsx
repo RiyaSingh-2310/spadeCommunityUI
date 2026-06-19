@@ -1,21 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
 import TableCard from "../../../components/admin/TableCard";
 import EmailTemplateTagsHelper from "../components/EmailTemplateTagsHelper";
+import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
-import { toastApiError } from "../../../services/toast/apiToast";
-import { getRecord } from "../services/userEmailTemplatesApi";
+import { useFormValidation } from "../../shared/hooks/useFormValidation";
+import { getRequiredError, isFormValid } from "../../shared/utils/validation";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { getRecord, updateRecord } from "../services/userEmailTemplatesApi";
+
+const FORM_FIELDS = ["emailTitle", "subject", "description"];
 
 function EditUserEmailTemplatePage({ isDarkMode }) {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { readOnly, showSubmit } = useFormAccess();
 
-  const [template, setTemplate] = useState(null);
+  const [form, setForm] = useState({
+    emailTitle: "",
+    subject: "",
+    description: "",
+  });
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputClass = getAdminInputClass();
 
@@ -35,7 +47,15 @@ function EditUserEmailTemplatePage({ isDarkMode }) {
       try {
         const record = await getRecord(id);
         if (cancelled) return;
-        setTemplate(record);
+
+        const snapshot = {
+          emailTitle: record.emailTitle ?? "",
+          subject: record.subject ?? "",
+          description: record.content ?? "",
+        };
+
+        setForm(snapshot);
+        setInitialSnapshot(snapshot);
       } catch (error) {
         if (cancelled) return;
         toastApiError(error);
@@ -51,6 +71,68 @@ function EditUserEmailTemplatePage({ isDarkMode }) {
     };
   }, [id]);
 
+  const errors = useMemo(
+    () => ({
+      emailTitle: getRequiredError(form.emailTitle, "Email Title"),
+      subject: getRequiredError(form.subject, "Email Subject"),
+      description: getRequiredError(form.description, "Description"),
+    }),
+    [form]
+  );
+
+  const { showError, touch, validateSubmit } = useFormValidation({
+    errors,
+    fields: FORM_FIELDS,
+  });
+
+  const isDirty = useMemo(() => {
+    if (!initialSnapshot) return false;
+
+    return FORM_FIELDS.some(
+      (key) => String(form[key] ?? "").trim() !== String(initialSnapshot[key] ?? "").trim()
+    );
+  }, [form, initialSnapshot]);
+
+  const canSubmit =
+    showSubmit && !readOnly && isFormValid(errors) && !isSubmitting && isDirty;
+
+  const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!validateSubmit() || !isFormValid(errors) || !isDirty || !id) return;
+
+    setIsSubmitting(true);
+    try {
+      const data = await updateRecord(id, {
+        emailTitle: form.emailTitle.trim(),
+        subject: form.subject.trim(),
+        description: form.description.trim(),
+      });
+
+      const updated = data.template ?? {
+        emailTitle: form.emailTitle.trim(),
+        subject: form.subject.trim(),
+        content: form.description.trim(),
+      };
+
+      const snapshot = {
+        emailTitle: updated.emailTitle ?? form.emailTitle.trim(),
+        subject: updated.subject ?? form.subject.trim(),
+        description: updated.content ?? form.description.trim(),
+      };
+
+      setForm(snapshot);
+      setInitialSnapshot(snapshot);
+      toastApiSuccess(data);
+      navigate("/user-email-templates", { replace: true });
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex min-h-[240px] items-center justify-center">
@@ -59,7 +141,7 @@ function EditUserEmailTemplatePage({ isDarkMode }) {
     );
   }
 
-  if (loadFailed || !template) {
+  if (loadFailed || !initialSnapshot) {
     return (
       <div className="space-y-6">
         <AdminPageHeader title="Edit User Email Template" isDarkMode={isDarkMode} />
@@ -87,46 +169,61 @@ function EditUserEmailTemplatePage({ isDarkMode }) {
         isDarkMode={isDarkMode}
       />
       <TableCard title="Email Template Details" isDarkMode={isDarkMode}>
-        <div className="space-y-5">
-          <FormField label="Email Title">
+        <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+          <FormField label="Email Title" required error={showError("emailTitle")}>
             <input
-              className={`${inputClass} opacity-70`}
-              value={template.emailTitle}
-              disabled
-              readOnly
+              className={inputClass}
+              value={form.emailTitle}
+              onChange={(event) => setField("emailTitle", event.target.value)}
+              onBlur={() => touch("emailTitle")}
+              disabled={fieldDisabled(readOnly, isSubmitting)}
             />
           </FormField>
 
-          <FormField label="Email Subject">
+          <FormField label="Email Subject" required error={showError("subject")}>
             <input
-              className={`${inputClass} opacity-70`}
-              value={template.subject}
-              disabled
-              readOnly
+              className={inputClass}
+              value={form.subject}
+              onChange={(event) => setField("subject", event.target.value)}
+              onBlur={() => touch("subject")}
+              disabled={fieldDisabled(readOnly, isSubmitting)}
             />
           </FormField>
 
-          <FormField label="Email Content">
+          <FormField label="Description" required error={showError("description")}>
             <textarea
-              className={`${inputClass} min-h-[240px] resize-y py-3 opacity-70`}
-              value={template.content}
-              disabled
-              readOnly
+              className={`${inputClass} min-h-[240px] resize-y py-3`}
+              value={form.description}
+              onChange={(event) => setField("description", event.target.value)}
+              onBlur={() => touch("description")}
+              placeholder="Enter an email template description"
+              disabled={fieldDisabled(readOnly, isSubmitting)}
             />
           </FormField>
 
           <EmailTemplateTagsHelper />
 
           <div className="admin-form-actions flex flex-wrap items-center gap-3 pt-2">
+            {showSubmit && !readOnly && (
+              <button
+                type="submit"
+                disabled={!canSubmit}
+                className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                {isSubmitting ? "Updating..." : "Update"}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => navigate("/user-email-templates")}
+              disabled={isSubmitting}
               className={getAdminCancelButtonClass()}
             >
-              Back to List
+              Cancel
             </button>
           </div>
-        </div>
+        </form>
       </TableCard>
     </div>
   );

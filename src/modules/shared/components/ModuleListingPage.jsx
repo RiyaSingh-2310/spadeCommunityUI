@@ -49,6 +49,13 @@ import { DEFAULT_PAGE_SIZE, paginateItems } from "../utils/pagination";
 import { formatStatusLabel } from "../utils/statusLabels";
 import { normalizeSearchQuery, rowMatchesSearchQuery } from "../utils/searchQuery";
 
+function formatDescriptionForLineClamp(value, maxLines) {
+  if (value === "-" || value === "—") return "—";
+  const text = String(value);
+  if (maxLines == null) return text;
+  return text.replace(/\r\n/g, "\n").replace(/\n{2,}/g, "\n");
+}
+
 function ModuleListingPage({
   isDarkMode,
   title,
@@ -114,6 +121,8 @@ function ModuleListingPage({
   renderExpandedContent = null,
   /** Use a narrower fixed-width status column (e.g. group survey inner listing). */
   compactStatusColumn = false,
+  /** When set, description cells clamp to this many lines (user email templates). */
+  descriptionMaxLines = null,
 }) {
   const navigate = useNavigate();
   const {
@@ -1049,12 +1058,21 @@ function ModuleListingPage({
                     );
                   }
                   if (isDescriptionColumn(col)) {
-                    const descriptionText = displayValue === "-" ? "—" : String(displayValue);
+                    const rawDescription =
+                      displayValue === "-" ? "—" : String(displayValue);
+                    const descriptionText = formatDescriptionForLineClamp(
+                      rawDescription,
+                      descriptionMaxLines
+                    );
+                    const descriptionClampClass =
+                      descriptionMaxLines === 2
+                        ? "admin-text admin-table-description-line-clamp-2 break-words"
+                        : "admin-text line-clamp-2 whitespace-pre-wrap break-words";
                     return (
                       <td key={col} className="max-w-xl px-4 py-3 align-middle">
                         <span
-                          className="admin-text line-clamp-2 whitespace-pre-wrap break-words"
-                          title={descriptionText !== "—" ? descriptionText : undefined}
+                          className={descriptionClampClass}
+                          title={descriptionText !== "—" ? rawDescription : undefined}
                         >
                           {descriptionText}
                         </span>

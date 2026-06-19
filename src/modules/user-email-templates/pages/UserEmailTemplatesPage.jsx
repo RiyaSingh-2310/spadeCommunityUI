@@ -1,16 +1,22 @@
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
-import { getRecords } from "../services/userEmailTemplatesApi";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { deleteRecord, getRecords } from "../services/userEmailTemplatesApi";
 
-const LIST_COLUMNS = ["S.No", "Email Title", "Slug", "Action"];
+const LIST_COLUMNS = ["ID", "Email Template", "Slug", "Description", "Status", "Action"];
 
 function UserEmailTemplatesPage({ isDarkMode }) {
   const navigate = useNavigate();
   useFlashMessage();
+
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const {
     rows,
@@ -25,34 +31,68 @@ function UserEmailTemplatesPage({ isDarkMode }) {
   } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(refresh);
 
+  const handleDeleteRequest = useCallback((row) => {
+    setDeleteTarget(row);
+  }, []);
+
+  const handleDeleteCancel = useCallback(() => {
+    if (isDeleting) return;
+    setDeleteTarget(null);
+  }, [isDeleting]);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteTarget?.id) return;
+
+    setIsDeleting(true);
+    try {
+      const data = await deleteRecord(deleteTarget.id);
+      setDeleteTarget(null);
+      toastApiSuccess(data);
+      await refresh();
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [deleteTarget, refresh]);
+
   return (
-    <ModuleListingPage
-      isDarkMode={isDarkMode}
-      title="List User Email Templates"
-      searchPlaceholder="Search email templates..."
-      columns={LIST_COLUMNS}
-      rows={rows}
-      rowIdKey="id"
-      permissionModule="user_email_templates"
-      isLoading={isLoading}
-      emptyMessage="No email templates found"
-      showStatus={false}
-      actionVariant="edit-only"
-      showDeleteAction={false}
-      onEdit={(row) =>
-        navigate(`/user-email-templates/edit/${encodeURIComponent(String(row.id))}`)
-      }
-      onSearch={handleSearch}
-      totalRecords={totalRecords}
-      serverPaginated
-      serverSearch
-      paginationPage={currentPage}
-      onPaginationPageChange={handlePageChange}
-      paginationPageSize={pageSize}
-      onPaginationPageSizeChange={handlePageSizeChange}
-      showPagination
-      nowrapAllCells
-    />
+    <div className="space-y-4">
+      <ModuleListingPage
+        isDarkMode={isDarkMode}
+        title="List User Email Templates"
+        searchPlaceholder="Search email templates..."
+        columns={LIST_COLUMNS}
+        rows={rows}
+        rowIdKey="id"
+        permissionModule="user_email_templates"
+        isLoading={isLoading}
+        emptyMessage="No email templates found"
+        onEdit={(row) =>
+          navigate(`/user-email-templates/edit/${encodeURIComponent(String(row.id))}`)
+        }
+        onDelete={handleDeleteRequest}
+        onSearch={handleSearch}
+        totalRecords={totalRecords}
+        serverPaginated
+        serverSearch
+        paginationPage={currentPage}
+        onPaginationPageChange={handlePageChange}
+        paginationPageSize={pageSize}
+        onPaginationPageSizeChange={handlePageSizeChange}
+        showPagination
+        descriptionMaxLines={2}
+      />
+
+      <DeleteConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        onCancel={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+        title="Delete Email Template"
+        message="Are you sure you want to delete this email template?"
+      />
+    </div>
   );
 }
 
