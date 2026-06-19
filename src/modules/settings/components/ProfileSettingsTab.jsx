@@ -257,11 +257,8 @@ function ProfileSettingsTab({ isDarkMode }) {
 
     setIsSavingPassword(true);
     try {
-      const data = await changePassword(userId, {
-        name: form.name,
-        status: profileMeta.status,
-        permission_type: profileMeta.permission_type,
-        permissions: profileMeta.permissions,
+      const data = await changePassword({
+        currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
         confirmPassword: passwordForm.confirmPassword,
       });

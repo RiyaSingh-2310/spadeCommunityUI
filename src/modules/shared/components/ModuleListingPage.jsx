@@ -14,6 +14,7 @@ import GroupSurveyProjectListingActions from "../../../components/admin/GroupSur
 import IconActions from "../../../components/admin/IconActions";
 import InvoicePdfAction from "../../../components/admin/InvoicePdfAction";
 import RewardPendingActions from "../../../components/admin/RewardPendingActions";
+import CommunityUserListingActions from "../../../components/admin/CommunityUserListingActions";
 import UserManagementActions from "../../../components/admin/UserManagementActions";
 import SurveyListingActions from "../../../components/admin/SurveyListingActions";
 import RfqListingActions from "../../../components/admin/RfqListingActions";
@@ -34,6 +35,8 @@ import {
   isDetailsColumn,
   isNowrapDataColumn,
   isIdColumn,
+  isCheckboxColumn,
+  isDescriptionColumn,
   isProfileImageColumn,
   isSnoColumn,
   isStatusColumn,
@@ -80,6 +83,7 @@ function ModuleListingPage({
   onListProjects,
   onAddLog,
   onViewLogs,
+  onRewardLog,
   surveyActionLabels,
   onApprove,
   onReject,
@@ -90,6 +94,10 @@ function ModuleListingPage({
   isLoading = false,
   emptyMessage = "No records found",
   searchFields = null,
+  toolbarEnd = null,
+  selectable = false,
+  selectedRowIds = null,
+  onSelectedRowIdsChange = null,
   /** API total record count (used for pagination summary when not searching). */
   totalRecords = null,
   /** When true, rows are already paginated by the API; parent controls page + page size. */
@@ -142,6 +150,8 @@ function ModuleListingPage({
   const groupSurvey = actionVariant === "group-survey";
   const groupSurveyProjects = actionVariant === "group-survey-projects";
   const rfq = actionVariant === "rfq";
+  const communityUser = actionVariant === "community-user";
+  const usesControlledSelection = selectable && selectedRowIds instanceof Set && onSelectedRowIdsChange;
 
   const toggleRowExpanded = useCallback((rowId) => {
     if (rowId == null) return;
@@ -221,6 +231,7 @@ function ModuleListingPage({
     onReject,
     onListProjects,
     onViewLogs,
+    onRewardLog,
   });
 
   const userMgmtActions = userManagement
@@ -423,6 +434,92 @@ function ModuleListingPage({
   const formatStatusDisplay = (row) =>
     formatStatusLabel(row.statusLabel ?? row.status);
 
+  const visibleRowIds = useMemo(
+    () =>
+      pagination.items
+        .map((row) => getRowId(row))
+        .filter((rowId) => rowId != null)
+        .map((rowId) => String(rowId)),
+    [pagination.items, getRowId]
+  );
+
+  const allVisibleSelected =
+    visibleRowIds.length > 0 && visibleRowIds.every((rowId) => selectedRowIds?.has(rowId));
+  const someVisibleSelected =
+    visibleRowIds.some((rowId) => selectedRowIds?.has(rowId)) && !allVisibleSelected;
+
+  const handleToggleAllVisible = useCallback(
+    (checked) => {
+      if (!usesControlledSelection) return;
+      onSelectedRowIdsChange((prev) => {
+        const next = new Set(prev);
+        if (checked) {
+          visibleRowIds.forEach((rowId) => next.add(rowId));
+        } else {
+          visibleRowIds.forEach((rowId) => next.delete(rowId));
+        }
+        return next;
+      });
+    },
+    [usesControlledSelection, onSelectedRowIdsChange, visibleRowIds]
+  );
+
+  const handleToggleRowSelection = useCallback(
+    (rowId) => {
+      if (!usesControlledSelection || rowId == null) return;
+      const key = String(rowId);
+      onSelectedRowIdsChange((prev) => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+    },
+    [usesControlledSelection, onSelectedRowIdsChange]
+  );
+
+  const renderCheckboxHeader = () => (
+    <th className={`${TABLE_HEAD_BASE} w-12 text-left`}>
+      <input
+        type="checkbox"
+        className="admin-checkbox"
+        checked={allVisibleSelected}
+        ref={(el) => {
+          if (el) el.indeterminate = someVisibleSelected;
+        }}
+        onChange={(event) => handleToggleAllVisible(event.target.checked)}
+        disabled={visibleRowIds.length === 0 || isLoading}
+        aria-label="Select all rows"
+      />
+    </th>
+  );
+
+  const renderCheckboxCell = (rowId) => (
+    <td className="px-4 py-3 align-middle whitespace-nowrap">
+      <input
+        type="checkbox"
+        className="admin-checkbox"
+        checked={selectedRowIds?.has(String(rowId)) ?? false}
+        onChange={() => handleToggleRowSelection(rowId)}
+        aria-label="Select row"
+      />
+    </td>
+  );
+
+  const insertCheckboxBeforeName = (headers) => {
+    if (!selectable) return headers;
+    const nameIndex = headers.findIndex((header) => getColumnKey(header) === "name");
+    if (nameIndex === -1) return headers;
+    const next = [...headers];
+    next.splice(nameIndex, 0, "");
+    return next;
+  };
+
+  const tableColumns = useMemo(
+    () => insertCheckboxBeforeName(displayColumns),
+    [displayColumns, selectable]
+  );
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -439,8 +536,9 @@ function ModuleListingPage({
           placeholder={searchPlaceholder}
           isDarkMode={isDarkMode}
         />
-        {(showSecondaryAction || showAddButton) && (
+        {(toolbarEnd || showSecondaryAction || showAddButton) && (
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2.5">
+            {toolbarEnd}
             {showSecondaryAction && (
               <button
                 type="button"
@@ -473,7 +571,11 @@ function ModuleListingPage({
                   <span className="sr-only">Expand</span>
                 </th>
               )}
-              {displayColumns.map((h) => (
+              {tableColumns.map((h) => {
+                if (isCheckboxColumn(h)) {
+                  return <Fragment key="select-all">{renderCheckboxHeader()}</Fragment>;
+                }
+                return (
                 <th
                   key={h}
                   className={`${TABLE_HEAD_BASE} ${
@@ -482,18 +584,19 @@ function ModuleListingPage({
                 >
                   {h}
                 </th>
-              ))}
+                );
+              })}
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <TableLoadingSkeleton
-                columns={hasExpandColumn ? ["", ...displayColumns] : displayColumns}
+                columns={hasExpandColumn ? ["", ...tableColumns] : tableColumns}
               />
             ) : filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={displayColumns.length}
+                  colSpan={tableColumns.length + (hasExpandColumn ? 1 : 0)}
                   className="admin-text-muted px-4 py-16 text-center text-sm"
                 >
                   {emptyMessage}
@@ -527,7 +630,10 @@ function ModuleListingPage({
                     </button>
                   </td>
                 )}
-                {displayColumns.map((col) => {
+                {tableColumns.map((col) => {
+                  if (isCheckboxColumn(col)) {
+                    return <Fragment key="row-select">{renderCheckboxCell(rowId)}</Fragment>;
+                  }
                   const key = getColumnKey(col);
                   if (isSnoColumn(col)) {
                     return (
@@ -621,6 +727,39 @@ function ModuleListingPage({
 
                     if (!allowWrite && !readOnlyListingActions) {
                       return null;
+                    }
+                    if (communityUser) {
+                      const showEdit = allowWrite && Boolean(onEdit || editPath);
+                      const showDelete = allowWrite && showDeleteAction && Boolean(onDelete);
+                      const hasCommunityActions =
+                        (allowRead && onView) ||
+                        showEdit ||
+                        showDelete ||
+                        (allowRead && onRewardLog);
+
+                      if (!hasCommunityActions) {
+                        return null;
+                      }
+
+                      return (
+                        <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
+                          <CommunityUserListingActions
+                            isDarkMode={isDarkMode}
+                            onView={allowRead && onView ? () => onView(row, globalIdx) : undefined}
+                            onEdit={showEdit ? () => handleEdit(row, globalIdx) : undefined}
+                            onDelete={
+                              showDelete ? () => handleDeleteRequest(row, globalIdx) : undefined
+                            }
+                            onRewardLog={
+                              allowRead && onRewardLog
+                                ? () => onRewardLog(row, globalIdx)
+                                : undefined
+                            }
+                            showEdit={showEdit}
+                            showDelete={showDelete}
+                          />
+                        </td>
+                      );
                     }
                     if (actionVariant === "user-management") {
                       const { showEdit, showDelete } =
@@ -909,6 +1048,19 @@ function ModuleListingPage({
                       </td>
                     );
                   }
+                  if (isDescriptionColumn(col)) {
+                    const descriptionText = displayValue === "-" ? "—" : String(displayValue);
+                    return (
+                      <td key={col} className="max-w-xl px-4 py-3 align-middle">
+                        <span
+                          className="admin-text line-clamp-2 whitespace-pre-wrap break-words"
+                          title={descriptionText !== "—" ? descriptionText : undefined}
+                        >
+                          {descriptionText}
+                        </span>
+                      </td>
+                    );
+                  }
                   return (
                     <td
                       key={col}
@@ -926,7 +1078,7 @@ function ModuleListingPage({
                   className={`border-t align-middle ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}
                 >
                   <td
-                    colSpan={displayColumns.length + 1}
+                    colSpan={tableColumns.length + (hasExpandColumn ? 1 : 0)}
                     className="bg-[var(--admin-permissions-table-head-bg)] px-4 py-4"
                   >
                     {renderExpandedContent(row)}

@@ -8,6 +8,7 @@ export const MOCK_PERMISSIONS = {
   ...createDefaultPermissions(),
   dashboard: { canRead: true, canWrite: true },
   users: { canRead: true, canWrite: true },
+  community_users: { canRead: true, canWrite: true },
   clients: { canRead: true, canWrite: true },
   partners: { canRead: true, canWrite: false },
   project_managers: { canRead: true, canWrite: false },
@@ -32,6 +33,7 @@ export const MOCK_PERMISSIONS = {
   user_screening_management: { canRead: true, canWrite: false },
   homepage_management: { canRead: true, canWrite: false },
   system_email_templates: { canRead: true, canWrite: false },
+  user_email_templates: { canRead: true, canWrite: true },
   log_activity: { canRead: true, canWrite: false },
 };
 

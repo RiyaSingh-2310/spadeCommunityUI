@@ -407,7 +407,7 @@ export async function createPartner(payload) {
 }
 
 /**
- * PUT /api/admin/partner/:id — status toggle from partners listing table.
+ * PUT /api/partner/:id — status toggle from partners listing table.
  * @param {string|number} id
  * @param {{ name: string, status: string }} payload
  */
@@ -425,7 +425,7 @@ export async function updatePartnerStatus(id, { name, status }) {
 }
 
 /**
- * PUT /api/admin/partner/:id
+ * PUT /api/partner/:id
  * @param {string|number} id
  * @param {Parameters<typeof buildUpdatePartnerPayload>[0] | Record<string, unknown>} payload
  */

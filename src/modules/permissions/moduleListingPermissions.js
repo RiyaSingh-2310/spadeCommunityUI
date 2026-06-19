@@ -17,7 +17,8 @@ export const MODULE_LISTING_READ_MODES = {
   recontact_survey: "hide-action-column",
   messages: "hide-action-column",
   user_screening_management: "hide-action-column",
-  system_email_templates: "hide-action-column",
+  community_users: "community-user-read",
+  user_email_templates: "hide-action-column",
   log_activity: "hide-action-column",
   invoices: "pdf-only",
   pending_rewards: "reward-pending-read",
@@ -74,6 +75,7 @@ export function hasNativeReadOnlyListingActions({
   onReject,
   onListProjects,
   onViewLogs,
+  onRewardLog,
 }) {
   const mode = getModuleListingReadMode(permissionModule);
 
@@ -99,6 +101,10 @@ export function hasNativeReadOnlyListingActions({
 
   if (mode === "reward-pending-read") {
     return Boolean(onView);
+  }
+
+  if (mode === "community-user-read") {
+    return Boolean(onView || onRewardLog);
   }
 
   if (actionVariant === "view-edit" && (onFindUser || onUserSurveyData || onSurveyClone)) {
@@ -147,9 +153,16 @@ export function shouldShowListingActionColumn({
   onListProjects,
   onAddLog,
   onViewLogs,
+  onRewardLog,
   hasActionColumn = true,
 }) {
   if (!hasActionColumn || !allowRead) return false;
+
+  if (actionVariant === "community-user") {
+    const showEdit = allowWrite && Boolean(onEdit || editPath);
+    const showDelete = allowWrite && showDeleteAction && Boolean(onDelete);
+    return Boolean(onView || onRewardLog || showEdit || showDelete);
+  }
 
   if (actionVariant === "user-management") {
     const { showEdit, showDelete } = getUserManagementActionFlags({
@@ -176,6 +189,8 @@ export function shouldShowListingActionColumn({
         onApprove ||
         onReject ||
         onListProjects ||
+        onRewardLog ||
+        actionVariant === "community-user" ||
         actionVariant === "pdf-download" ||
         actionVariant === "reward-pending" ||
         actionVariant === "group-survey" ||
@@ -197,5 +212,6 @@ export function shouldShowListingActionColumn({
     onReject,
     onListProjects,
     onViewLogs,
+    onRewardLog,
   });
 }

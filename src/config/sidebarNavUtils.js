@@ -20,6 +20,10 @@ export function matchesPrescreenMain(pathname) {
   return true;
 }
 
+export function matchesCommunityUsersMain(pathname) {
+  return matchesPathPrefix(pathname, "/community-users");
+}
+
 /**
  * @param {{ matcher?: RegExp, isActive?: (pathname: string) => boolean }} item
  * @param {string} pathname

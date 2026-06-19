@@ -1,6 +1,7 @@
 import {
   matchesPrescreenMain,
   matchesSurveyMain,
+  matchesCommunityUsersMain,
 } from "./sidebarNavUtils";
 
 export const SIDEBAR_NAV_ITEMS = [
@@ -13,7 +14,7 @@ export const SIDEBAR_NAV_ITEMS = [
   },
   {
     type: "link",
-    label: "Users",
+    label: "Admin Users",
     root: "/users",
     matcher: /^\/users(\/|$)/,
     permissionKeys: ["users"],
@@ -191,6 +192,35 @@ export const SIDEBAR_NAV_ITEMS = [
   },
   {
     type: "group",
+    label: "Users",
+    key: "community-users",
+    matcher: /^\/(community-users|user-email-templates)(\/|$)/,
+    permissionKeys: ["community_users", "user_email_templates"],
+    children: [
+      {
+        label: "User List",
+        root: "/community-users",
+        isActive: matchesCommunityUsersMain,
+        matcher: /^\/community-users(\/|$)/,
+        permissionKeys: ["community_users"],
+      },
+      {
+        label: "User Email Templates",
+        root: "/user-email-templates",
+        matcher: /^\/user-email-templates(\/|$)/,
+        permissionKeys: ["user_email_templates"],
+      },
+    ],
+  },
+  {
+    type: "link",
+    label: "Log Activity",
+    root: "/log-activity",
+    matcher: /^\/log-activity(\/|$)/,
+    permissionKeys: ["log_activity"],
+  },
+  {
+    type: "group",
     label: "Screening Management",
     key: "user-screening",
     matcher: /^\/user-screening(\/|$)/,
@@ -217,13 +247,6 @@ export const SIDEBAR_NAV_ITEMS = [
     root: "/system-email",
     matcher: /^\/system-email(\/|$)/,
     permissionKeys: ["system_email_templates"],
-  },
-  {
-    type: "link",
-    label: "Log Activity",
-    root: "/log-activity",
-    matcher: /^\/log-activity(\/|$)/,
-    permissionKeys: ["log_activity"],
   },
   {
     type: "link",

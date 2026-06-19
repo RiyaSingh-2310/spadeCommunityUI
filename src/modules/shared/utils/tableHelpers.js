@@ -19,6 +19,15 @@ const COLUMN_KEY_MAP = {
   "Gross Amount": "grossAmount",
   "Partner Code": "partnerCode",
   "Email Address": "emailAddress",
+  "Email Title": "emailTitle",
+  Slug: "slug",
+  "Mobile Number": "mobileNumber",
+  Question: "question",
+  "Answer Opted": "answerOpted",
+  Description: "description",
+  "Reward Points": "rewardPoints",
+  Reason: "reason",
+  Date: "date",
   "Contact Number": "contactNumber",
   "Website URL": "websiteUrl",
   "Project ID": "projectId",
@@ -86,6 +95,7 @@ const NOWRAP_DATA_KEYS = new Set([
   "grossAmount",
   "salesManager",
   "emailSubject",
+  "slug",
   "loi",
   "ir",
   "name",
@@ -94,7 +104,6 @@ const NOWRAP_DATA_KEYS = new Set([
   "adminEmail",
   "actionType",
   "module",
-  "description",
   "ipAddress",
   "logDate",
 ]);
@@ -110,6 +119,8 @@ export function getColumnKey(columnLabel) {
 
 const VALUE_FALLBACKS = {
   emailAddress: ["email"],
+  mobileNumber: ["mobile"],
+  emailTitle: ["title"],
   contactNumber: ["contact"],
   websiteUrl: ["website"],
   clientCode: ["code"],
@@ -155,6 +166,14 @@ export function isSnoColumn(columnLabel) {
 
 export function isIdColumn(columnLabel) {
   return getColumnKey(columnLabel) === "id";
+}
+
+export function isCheckboxColumn(columnLabel) {
+  return columnLabel === "";
+}
+
+export function isDescriptionColumn(columnLabel) {
+  return getColumnKey(columnLabel) === "description";
 }
 
 export function isProfileImageColumn(columnLabel) {

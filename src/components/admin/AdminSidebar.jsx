@@ -17,6 +17,7 @@ import {
   Settings,
   ShieldCheck,
   UserCog,
+  UserRound,
   Users,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -70,7 +71,9 @@ function AdminSidebar({
 
   const iconMap = {
     Dashboard: <LayoutDashboard size={21} strokeWidth={2} />,
-    Users: <Users size={21} strokeWidth={2} />,
+    "Admin Users": <Users size={21} strokeWidth={2} />,
+    Users: <UserRound size={21} strokeWidth={2} />,
+    "User List": <UserRound size={21} strokeWidth={2} />,
     Clients: <UserCog size={21} strokeWidth={2} />,
     Partners: <Handshake size={21} strokeWidth={2} />,
     "Project Managers": <BriefcaseBusiness size={21} strokeWidth={2} />,
@@ -85,6 +88,7 @@ function AdminSidebar({
     "Screening Management": <ShieldCheck size={21} strokeWidth={2} />,
     "Home Page Management": <Home size={21} strokeWidth={2} />,
     "System Email Template": <Mail size={21} strokeWidth={2} />,
+    "User Email Templates": <Mail size={21} strokeWidth={2} />,
     Settings: <Settings size={21} strokeWidth={2} />,
     "Log Activity": <ScrollText size={21} strokeWidth={2} />,
   };

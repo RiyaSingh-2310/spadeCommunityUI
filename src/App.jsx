@@ -57,6 +57,12 @@ import SurveyDetailsPage from "./modules/survey/pages/SurveyDetailsPage";
 import SurveyPage from "./modules/survey/pages/SurveyPage";
 import SurveySettingsPage from "./modules/survey/pages/SurveySettingsPage";
 import SettingsPage from "./modules/settings/pages/SettingsPage";
+import CommunityUsersPage from "./modules/community-users/pages/CommunityUsersPage";
+import CommunityUserDetailsPage from "./modules/community-users/pages/CommunityUserDetailsPage";
+import CommunityUserRewardLogPage from "./modules/community-users/pages/CommunityUserRewardLogPage";
+import EditCommunityUserPage from "./modules/community-users/pages/EditCommunityUserPage";
+import UserEmailTemplatesPage from "./modules/user-email-templates/pages/UserEmailTemplatesPage";
+import EditUserEmailTemplatePage from "./modules/user-email-templates/pages/EditUserEmailTemplatePage";
 
 function UserFormEditRoute({ isDarkMode }) {
   const { id } = useParams();
@@ -76,6 +82,16 @@ function ProfilingQuestionEditRoute({ isDarkMode }) {
 function EditEmailTemplateRoute({ isDarkMode }) {
   const { id } = useParams();
   return <EditEmailTemplatePage key={id} isDarkMode={isDarkMode} />;
+}
+
+function EditUserEmailTemplateRoute({ isDarkMode }) {
+  const { id } = useParams();
+  return <EditUserEmailTemplatePage key={id} isDarkMode={isDarkMode} />;
+}
+
+function EditCommunityUserRoute({ isDarkMode }) {
+  const { id } = useParams();
+  return <EditCommunityUserPage key={id} isDarkMode={isDarkMode} />;
 }
 
 function App() {
@@ -215,6 +231,27 @@ function App() {
         <Route path="/invoice/settings" element={<InvoiceSettingsPage isDarkMode={isDarkMode} />} />
         <Route path="/settings" element={<SettingsPage isDarkMode={isDarkMode} />} />
         <Route path="/log-activity" element={<LogActivityPage isDarkMode={isDarkMode} />} />
+        <Route path="/community-users" element={<CommunityUsersPage isDarkMode={isDarkMode} />} />
+        <Route
+          path="/community-users/edit/:id"
+          element={<EditCommunityUserRoute isDarkMode={isDarkMode} />}
+        />
+        <Route
+          path="/community-users/:id/reward-log"
+          element={<CommunityUserRewardLogPage isDarkMode={isDarkMode} />}
+        />
+        <Route
+          path="/community-users/:id"
+          element={<CommunityUserDetailsPage isDarkMode={isDarkMode} />}
+        />
+        <Route
+          path="/user-email-templates/edit/:id"
+          element={<EditUserEmailTemplateRoute isDarkMode={isDarkMode} />}
+        />
+        <Route
+          path="/user-email-templates"
+          element={<UserEmailTemplatesPage isDarkMode={isDarkMode} />}
+        />
         <Route path="/notifications/messages" element={<MessagesPage isDarkMode={isDarkMode} />} />
         <Route path="/reward-points/pending" element={<PendingRewardsPage isDarkMode={isDarkMode} />} />
         <Route path="/reward-points/completed" element={<CompletedRewardsPage isDarkMode={isDarkMode} />} />

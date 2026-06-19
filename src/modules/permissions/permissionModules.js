@@ -1,7 +1,8 @@
 /** Module keys must match API `permissions` object keys (snake_case). */
 export const PERMISSION_MODULES = [
   { key: "dashboard", label: "Dashboard" },
-  { key: "users", label: "Users" },
+  { key: "users", label: "Admin Users" },
+  { key: "community_users", label: "Users" },
   { key: "clients", label: "Clients" },
   { key: "partners", label: "Partners" },
   { key: "project_managers", label: "Project Managers" },
@@ -26,6 +27,7 @@ export const PERMISSION_MODULES = [
   { key: "user_screening_management", label: "User Screening Management" },
   { key: "homepage_management", label: "Homepage Management" },
   { key: "system_email_templates", label: "System Email Templates" },
+  { key: "user_email_templates", label: "User Email Templates" },
   { key: "log_activity", label: "Log Activity" },
 ];
 

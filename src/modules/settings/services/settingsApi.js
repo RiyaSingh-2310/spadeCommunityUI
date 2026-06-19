@@ -92,15 +92,15 @@ export async function updateProfile(userId, payload) {
   return data;
 }
 
-export async function changePassword(userId, payload) {
-  const data = await updateRecord(userId, {
-    name: payload.name,
-    status: payload.status,
-    permission_type: payload.permission_type,
-    permissions: payload.permissions,
-    password: payload.newPassword,
-    confirmPassword: payload.confirmPassword,
+export async function changePassword(payload) {
+  const data = await apiRequest(API_ROUTES.admin.changePassword, {
+    method: "PUT",
+    body: {
+      currentPassword: String(payload.currentPassword ?? ""),
+      newPassword: String(payload.newPassword ?? ""),
+      confirmPassword: String(payload.confirmPassword ?? ""),
+    },
   });
 
-  return data;
+  return assertSuccess(data);
 }

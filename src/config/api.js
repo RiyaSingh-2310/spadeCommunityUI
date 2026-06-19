@@ -7,6 +7,7 @@ export const API_ROUTES = {
     forgotPassword: "/api/admin/forgot-password",
     verifyOtp: "/api/admin/verify-otp",
     resetPassword: "/api/admin/reset-password",
+    changePassword: "/api/admin/change-password",
     all: "/api/admin/all",
     byId: (id) => `/api/admin/${id}`,
     create: "/api/admin/add-user",
@@ -27,7 +28,7 @@ export const API_ROUTES = {
     list: "/api/partner/list",
     byId: (id) => `/api/partner/${id}`,
     create: "/api/partner/add",
-    update: (id) => `/api/admin/partner/${id}`,
+    update: (id) => `/api/partner/${id}`,
     delete: (id) => `/api/admin/partner/${id}`,
   },
   projectManagers: {
@@ -103,6 +104,13 @@ export const API_ROUTES = {
   activity: {
     list: "/api/activity/list",
     delete: (id) => `/api/activity/${id}`,
+  },
+  emailTemplates: {
+    list: "/api/email-templates/list",
+    byId: (id) => `/api/email-templates/${id}`,
+  },
+  invoice: {
+    settings: "/api/invoice/settings",
   },
 };
 

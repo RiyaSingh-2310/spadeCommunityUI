@@ -21,7 +21,17 @@
 /** @type {(PermissionLeafNode | PermissionGroupNode)[]} */
 export const PERMISSION_TREE = [
   { type: "leaf", key: "dashboard", label: "Dashboard" },
-  { type: "leaf", key: "users", label: "Users" },
+  { type: "leaf", key: "users", label: "Admin Users" },
+  {
+    type: "group",
+    id: "community_users_module",
+    label: "Users",
+    parentKey: "community_users_parent",
+    children: [
+      { key: "community_users", label: "User List" },
+      { key: "user_email_templates", label: "User Email Templates" },
+    ],
+  },
   { type: "leaf", key: "clients", label: "Clients" },
   { type: "leaf", key: "partners", label: "Partners" },
   { type: "leaf", key: "project_managers", label: "Project Managers" },

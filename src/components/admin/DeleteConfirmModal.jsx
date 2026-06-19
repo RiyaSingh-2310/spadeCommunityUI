@@ -6,6 +6,8 @@ function DeleteConfirmModal({
   onCancel,
   onConfirm,
   isDeleting = false,
+  title = "Delete Record",
+  message = "Are you sure you want to delete this record?",
 }) {
   if (!isOpen) return null;
 
@@ -25,10 +27,10 @@ function DeleteConfirmModal({
         aria-labelledby="delete-modal-title"
       >
         <h2 id="delete-modal-title" className="admin-text mb-2 text-lg font-bold">
-          Delete Record
+          {title}
         </h2>
         <p className="admin-text-muted mb-4 text-sm">
-          Are you sure you want to delete this record?
+          {message}
         </p>
 
         <div className="flex flex-wrap items-center justify-end gap-2">
