@@ -12,7 +12,7 @@ import { getRequiredError, isFormValid } from "../../shared/utils/validation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { getRecord, updateRecord } from "../services/userEmailTemplatesApi";
 
-const FORM_FIELDS = ["emailTitle", "subject", "description"];
+const FORM_FIELDS = ["emailTitle", "description"];
 
 function EditUserEmailTemplatePage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -21,7 +21,6 @@ function EditUserEmailTemplatePage({ isDarkMode }) {
 
   const [form, setForm] = useState({
     emailTitle: "",
-    subject: "",
     description: "",
   });
   const [initialSnapshot, setInitialSnapshot] = useState(null);
@@ -50,7 +49,6 @@ function EditUserEmailTemplatePage({ isDarkMode }) {
 
         const snapshot = {
           emailTitle: record.emailTitle ?? "",
-          subject: record.subject ?? "",
           description: record.content ?? "",
         };
 
@@ -74,7 +72,6 @@ function EditUserEmailTemplatePage({ isDarkMode }) {
   const errors = useMemo(
     () => ({
       emailTitle: getRequiredError(form.emailTitle, "Email Title"),
-      subject: getRequiredError(form.subject, "Email Subject"),
       description: getRequiredError(form.description, "Description"),
     }),
     [form]
@@ -106,19 +103,16 @@ function EditUserEmailTemplatePage({ isDarkMode }) {
     try {
       const data = await updateRecord(id, {
         emailTitle: form.emailTitle.trim(),
-        subject: form.subject.trim(),
         description: form.description.trim(),
       });
 
       const updated = data.template ?? {
         emailTitle: form.emailTitle.trim(),
-        subject: form.subject.trim(),
         content: form.description.trim(),
       };
 
       const snapshot = {
         emailTitle: updated.emailTitle ?? form.emailTitle.trim(),
-        subject: updated.subject ?? form.subject.trim(),
         description: updated.content ?? form.description.trim(),
       };
 
@@ -170,7 +164,7 @@ function EditUserEmailTemplatePage({ isDarkMode }) {
       />
       <TableCard title="Email Template Details" isDarkMode={isDarkMode}>
         <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-          <FormField label="Email Title" required error={showError("emailTitle")}>
+          <FormField label="Email Title" error={showError("emailTitle")}>
             <input
               className={inputClass}
               value={form.emailTitle}
@@ -180,17 +174,7 @@ function EditUserEmailTemplatePage({ isDarkMode }) {
             />
           </FormField>
 
-          <FormField label="Email Subject" required error={showError("subject")}>
-            <input
-              className={inputClass}
-              value={form.subject}
-              onChange={(event) => setField("subject", event.target.value)}
-              onBlur={() => touch("subject")}
-              disabled={fieldDisabled(readOnly, isSubmitting)}
-            />
-          </FormField>
-
-          <FormField label="Description" required error={showError("description")}>
+          <FormField label="Description" error={showError("description")}>
             <textarea
               className={`${inputClass} min-h-[240px] resize-y py-3`}
               value={form.description}

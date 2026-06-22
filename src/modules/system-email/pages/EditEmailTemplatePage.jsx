@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
@@ -8,35 +8,60 @@ import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContex
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getRequiredError, isFormValid } from "../../shared/utils/validation";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { getRecord, updateRecord } from "../services/systemEmailsApi";
 
 const EMAIL_TEMPLATE_FIELDS = ["description"];
-import { toastApiSuccess } from "../../../services/toast/apiToast";
-import {
-  DEFAULT_EMAIL_DESCRIPTION,
-  getEmailTemplateById,
-  saveEmailTemplate,
-} from "../data/emailTemplatesStore";
-
-function buildInitialDescription(template) {
-  const body = template?.body?.trim();
-  return body || DEFAULT_EMAIL_DESCRIPTION;
-}
 
 function EditEmailTemplatePage({ isDarkMode }) {
   const navigate = useNavigate();
   const { id } = useParams();
-  const existing = id ? getEmailTemplateById(id) : null;
   const { readOnly, showSubmit } = useFormAccess();
 
-  const [description, setDescription] = useState(() =>
-    buildInitialDescription(existing)
-  );
-  const [initialDescription, setInitialDescription] = useState(() =>
-    buildInitialDescription(existing)
-  );
+  const [template, setTemplate] = useState(null);
+  const [description, setDescription] = useState("");
+  const [initialDescription, setInitialDescription] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputClass = getAdminInputClass();
+
+  useEffect(() => {
+    if (!id) {
+      setIsLoading(false);
+      setLoadFailed(true);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadTemplate = async () => {
+      setIsLoading(true);
+      setLoadFailed(false);
+
+      try {
+        const record = await getRecord(id);
+        if (cancelled) return;
+
+        const content = record.content ?? "";
+        setTemplate(record);
+        setDescription(content);
+        setInitialDescription(content);
+      } catch (error) {
+        if (cancelled) return;
+        toastApiError(error);
+        setLoadFailed(true);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadTemplate();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const errors = useMemo(
     () => ({
@@ -60,24 +85,41 @@ function EditEmailTemplatePage({ isDarkMode }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!validateSubmit() || !isFormValid(errors) || !existing || !isDirty) return;
+    if (!validateSubmit() || !isFormValid(errors) || !template || !isDirty || !id) return;
 
     setIsSubmitting(true);
     try {
-      saveEmailTemplate({
-        id: existing.id,
-        title: existing.title,
-        subject: existing.subject,
-        body: description,
+      const data = await updateRecord(id, {
+        name: template.name ?? template.title ?? "",
+        systemEmail: template.systemEmail ?? "",
+        content: description.trim(),
       });
-      toastApiSuccess({ message: "Email template updated successfully." });
+
+      const updatedContent = data.template?.content ?? description.trim();
+      setDescription(updatedContent);
+      setInitialDescription(updatedContent);
+      if (data.template) {
+        setTemplate(data.template);
+      }
+
+      toastApiSuccess(data);
       navigate("/system-email", { replace: true });
+    } catch (error) {
+      toastApiError(error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!existing) {
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-[var(--admin-primary-color)]" />
+      </div>
+    );
+  }
+
+  if (loadFailed || !template) {
     return (
       <div className="space-y-6">
         <AdminPageHeader title="Edit Email Template" isDarkMode={isDarkMode} />
@@ -108,7 +150,7 @@ function EditEmailTemplatePage({ isDarkMode }) {
           <FormField label="Email Title">
             <input
               className={`${inputClass} opacity-70`}
-              value={existing.title}
+              value={template.title ?? template.name ?? ""}
               disabled
               readOnly
             />

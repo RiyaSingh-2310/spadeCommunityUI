@@ -107,10 +107,16 @@ export const API_ROUTES = {
   },
   emailTemplates: {
     list: "/api/email-templates/list",
+    create: "/api/email-templates/add",
     byId: (id) => `/api/email-templates/${id}`,
+    updateStatus: (id) => `/api/email-templates/${id}/status`,
   },
   invoice: {
     settings: "/api/invoice/settings",
+  },
+  systemEmails: {
+    list: "/api/system-emails/list",
+    byId: (id) => `/api/system-emails/${id}`,
   },
 };
 

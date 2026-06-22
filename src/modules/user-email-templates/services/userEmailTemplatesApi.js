@@ -1,6 +1,10 @@
 import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
+import {
+  apiStatusToFormValue,
+  formValueToApiStatus,
+} from "../../shared/utils/statusLabels";
 import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
 
 function assertSuccess(data) {
@@ -56,7 +60,7 @@ export function mapTemplateToListingRow(template) {
     title: template?.title ?? "",
     slug: template?.slug ?? "",
     description: template?.content ?? template?.description ?? "",
-    status: template?.status ?? "Active",
+    status: apiStatusToFormValue(template?.status),
   };
 }
 
@@ -66,7 +70,7 @@ export function mapTemplateToDetail(template) {
     emailTitle: template?.title ?? "",
     title: template?.title ?? "",
     subject: template?.subject ?? "",
-    content: template?.content ?? "",
+    content: template?.content ?? template?.description ?? "",
     slug: template?.slug ?? "",
     createdAt: template?.created_at ?? template?.createdAt ?? "",
     updatedAt: template?.updated_at ?? template?.updatedAt ?? "",
@@ -121,16 +125,34 @@ export async function getRecord(id) {
   return mapTemplateToDetail(template);
 }
 
+function buildTemplatePayload(payload) {
+  return {
+    email_title: String(payload.emailTitle ?? payload.title ?? "").trim(),
+    description: String(payload.content ?? payload.description ?? "").trim(),
+  };
+}
+
+/** POST /api/email-templates/add */
+export async function createRecord(payload) {
+  const data = await apiRequest(API_ROUTES.emailTemplates.create, {
+    method: "POST",
+    body: buildTemplatePayload(payload),
+  });
+  assertSuccess(data);
+
+  const template = extractTemplateRecord(data);
+  return {
+    ...data,
+    template: template ? mapTemplateToDetail(template) : null,
+  };
+}
+
 /** PUT /api/email-templates/:id */
 export async function updateRecord(id, payload) {
   const normalizedId = normalizeTemplateId(id);
   const data = await apiRequest(API_ROUTES.emailTemplates.byId(normalizedId), {
     method: "PUT",
-    body: {
-      title: String(payload.emailTitle ?? payload.title ?? "").trim(),
-      subject: String(payload.subject ?? "").trim(),
-      content: String(payload.content ?? payload.description ?? "").trim(),
-    },
+    body: buildTemplatePayload(payload),
   });
   assertSuccess(data);
 
@@ -146,6 +168,18 @@ export async function deleteRecord(id) {
   const normalizedId = normalizeTemplateId(id);
   const data = await apiRequest(API_ROUTES.emailTemplates.byId(normalizedId), {
     method: "DELETE",
+  });
+  return assertSuccess(data);
+}
+
+/** PATCH /api/email-templates/:id/status — status toggle from listing table. */
+export async function updateStatus(id, { status }) {
+  const normalizedId = normalizeTemplateId(id);
+  const data = await apiRequest(API_ROUTES.emailTemplates.updateStatus(normalizedId), {
+    method: "PATCH",
+    body: {
+      status: formValueToApiStatus(status),
+    },
   });
   return assertSuccess(data);
 }

@@ -9,7 +9,7 @@ import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContex
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getRequiredError, isFormValid } from "../../shared/utils/validation";
-import { toastApiSuccess } from "../../../services/toast/apiToast";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { createRecord } from "../services/userEmailTemplatesApi";
 
 const FORM_FIELDS = ["emailTitle", "description"];
@@ -52,6 +52,8 @@ function AddUserEmailTemplatePage({ isDarkMode }) {
       });
       toastApiSuccess(data);
       navigate("/user-email-templates", { replace: true });
+    } catch (error) {
+      toastApiError(error);
     } finally {
       setIsSubmitting(false);
     }
@@ -63,14 +65,14 @@ function AddUserEmailTemplatePage({ isDarkMode }) {
         title="Add User Email Template"
         breadcrumbs={[
           { label: "Users", to: "/community-users" },
-          { label: "User List", to: "/community-users" },
+          { label: "User Email Templates", to: "/user-email-templates" },
           { label: "Add User Email Template" },
         ]}
         isDarkMode={isDarkMode}
       />
       <TableCard title="Email Template Details" isDarkMode={isDarkMode}>
         <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-          <FormField label="Email Title" required error={showError("emailTitle")}>
+          <FormField label="Email Title" error={showError("emailTitle")}>
             <input
               className={inputClass}
               value={emailTitle}
@@ -81,17 +83,13 @@ function AddUserEmailTemplatePage({ isDarkMode }) {
             />
           </FormField>
 
-          <FormField
-            label="Email Description"
-            required
-            error={showError("description")}
-          >
+          <FormField label="Email Description" error={showError("description")}>
             <textarea
               className={`${inputClass} min-h-[240px] resize-y py-3`}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               onBlur={() => touch("description")}
-              placeholder="Enter an email template description"
+              placeholder="Enter Email Template Description"
               disabled={fieldDisabled(readOnly, isSubmitting)}
             />
           </FormField>

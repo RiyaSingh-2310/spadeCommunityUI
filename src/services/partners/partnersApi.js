@@ -303,16 +303,16 @@ export async function getRecord(id) {
 const PARTNER_EXPANDABLE_FIELD_CONFIG = [
   { label: "Contact Person", rowKey: "contactPerson", apiKeys: ["contact_person"] },
   { label: "Panel Size", rowKey: "panelSize", apiKeys: ["panel_size"] },
-  { label: "Complete URL", rowKey: "completeUrl", apiKeys: ["complete_val", "complete"] },
-  { label: "Terminate URL", rowKey: "terminateUrl", apiKeys: ["terminate_val", "terminate"] },
-  { label: "Over Quota URL", rowKey: "overQuotaUrl", apiKeys: ["over_quota_val", "over_quota"] },
+  { label: "Complete", rowKey: "completeUrl", apiKeys: ["complete_val", "complete"] },
+  { label: "Terminate", rowKey: "terminateUrl", apiKeys: ["terminate_val", "terminate"] },
+  { label: "Over Quota", rowKey: "overQuotaUrl", apiKeys: ["over_quota_val", "over_quota"] },
   {
-    label: "Quality Terms URL",
+    label: "Quality Term",
     rowKey: "qualityTermsUrl",
     apiKeys: ["quality_term_val", "quality_term"],
   },
   {
-    label: "Survey Close URL",
+    label: "Survey Closed",
     rowKey: "surveyCloseUrl",
     apiKeys: ["survey_close_val", "survey_close"],
   },

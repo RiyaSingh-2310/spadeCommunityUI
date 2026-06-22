@@ -130,7 +130,18 @@ function LogActivityPage({ isDarkMode }) {
                       className={`border-t ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}
                     >
                       <td className="admin-text whitespace-nowrap px-4 py-3">{globalIdx + 1}</td>
-                      <td className="admin-text whitespace-nowrap px-4 py-3">{row.name}</td>
+                      <td className="max-w-[280px] px-4 py-3 align-middle">
+                        <span
+                          className="admin-text block truncate"
+                          title={
+                            row.nameDisplay && row.nameDisplay !== "—"
+                              ? row.nameDisplay
+                              : undefined
+                          }
+                        >
+                          {row.nameDisplay ?? row.name}
+                        </span>
+                      </td>
                       <td className="admin-text whitespace-nowrap px-4 py-3">{row.logDate}</td>
                       {canWrite && (
                         <td className="whitespace-nowrap px-4 py-3">

@@ -284,12 +284,12 @@ function AddPartnerPage({ isDarkMode }) {
               ["Email Address", "email", "Enter Email Address", "email", true],
               ["Contact Person", "contactPerson", "Enter Contact Person", "text", false],
               ["Website URL", "website", "Enter Website URL", "url", false],
-              ...(isEdit ? [["Panel Size", "panelSize", "Enter Panel Size", "numeric", false]] : []),
-              ["Complete URL", "complete", "Enter Complete URL", "numeric", false],
-              ["Terminate URL", "terminate", "Enter Terminate URL", "numeric", false],
-              ["Over Quota URL", "overQuota", "Enter Over Quota URL", "numeric", false],
-              ["Quality Term URL", "qualityTerm", "Enter Quality Term URL", "numeric", false],
-              ["Survey Close URL", "surveyClose", "Enter Survey Close URL", "numeric", false],
+              ...(isEdit ? [["Panel Size", "panelSize", "Enter Panel Size", "text", false]] : []),
+              ["Complete", "complete", "Enter Complete", "text", false],
+              ["Terminate", "terminate", "Enter Terminate", "text", false],
+              ["Over Quota", "overQuota", "Enter Over Quota", "text", false],
+              ["Quality Term", "qualityTerm", "Enter Quality Term", "text", false],
+              ["Survey Closed", "surveyClose", "Enter Survey Closed", "text", false],
             ].map(([label, key, placeholder, fieldType, required]) => {
               const readOnlyField = readOnly || (isEdit && (key === "code" || key === "email"));
               return (

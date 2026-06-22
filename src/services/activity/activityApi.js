@@ -94,6 +94,16 @@ function formatActionLabel(activity) {
   return action || module || "—";
 }
 
+export function formatActivityNameDisplay(activity) {
+  const name = String(activity?.name ?? activity?.admin_name ?? activity?.adminName ?? "").trim();
+  const description = String(activity?.description ?? "").trim();
+
+  if (!name && !description) return "—";
+  if (!description || description === "—") return name || "—";
+  if (!name || name === "—") return description;
+  return `${name} - ${description}`;
+}
+
 export function resolveActivityStatus(activity) {
   const explicit = String(
     activity?.status ?? activity?.result ?? activity?.state ?? ""
@@ -140,6 +150,10 @@ export function mapActivityToRow(activity) {
     name: activity?.admin_name ?? activity?.adminName ?? "—",
     email: activity?.admin_email ?? activity?.adminEmail ?? "—",
     description: description || formatActionLabel(activity) || "—",
+    nameDisplay: formatActivityNameDisplay({
+      name: activity?.admin_name ?? activity?.adminName ?? "—",
+      description: description || formatActionLabel(activity) || "—",
+    }),
     logDate: formatActivityLogDate(createdAt),
     action: formatActionLabel(activity),
     admin: activity?.admin_name ?? activity?.adminName ?? "—",

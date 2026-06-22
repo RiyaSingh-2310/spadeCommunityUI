@@ -7,7 +7,11 @@ import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
-import { deleteRecord, getRecords } from "../services/userEmailTemplatesApi";
+import {
+  deleteRecord,
+  getRecords,
+  updateStatus,
+} from "../services/userEmailTemplatesApi";
 
 const LIST_COLUMNS = ["ID", "Email Template", "Slug", "Description", "Status", "Action"];
 
@@ -17,6 +21,7 @@ function UserEmailTemplatesPage({ isDarkMode }) {
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
   const {
     rows,
@@ -56,12 +61,34 @@ function UserEmailTemplatesPage({ isDarkMode }) {
     }
   }, [deleteTarget, refresh]);
 
+  const handleStatusToggle = useCallback(
+    async (row) => {
+      if (!row?.id || statusUpdatingId != null) return;
+
+      const nextStatus = row.status === "Active" ? "Inactive" : "Active";
+      setStatusUpdatingId(row.id);
+
+      try {
+        const data = await updateStatus(row.id, { status: nextStatus });
+        toastApiSuccess(data);
+        await refresh();
+      } catch (error) {
+        toastApiError(error);
+      } finally {
+        setStatusUpdatingId(null);
+      }
+    },
+    [statusUpdatingId, refresh]
+  );
+
   return (
     <div className="space-y-4">
       <ModuleListingPage
         isDarkMode={isDarkMode}
         title="List User Email Templates"
         searchPlaceholder="Search email templates..."
+        actionLabel="+ Add User Email Template"
+        onActionClick={() => navigate("/user-email-templates/add")}
         columns={LIST_COLUMNS}
         rows={rows}
         rowIdKey="id"
@@ -72,6 +99,7 @@ function UserEmailTemplatesPage({ isDarkMode }) {
           navigate(`/user-email-templates/edit/${encodeURIComponent(String(row.id))}`)
         }
         onDelete={handleDeleteRequest}
+        onStatusToggle={handleStatusToggle}
         onSearch={handleSearch}
         totalRecords={totalRecords}
         serverPaginated

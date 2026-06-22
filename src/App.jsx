@@ -62,6 +62,7 @@ import CommunityUserDetailsPage from "./modules/community-users/pages/CommunityU
 import CommunityUserRewardLogPage from "./modules/community-users/pages/CommunityUserRewardLogPage";
 import EditCommunityUserPage from "./modules/community-users/pages/EditCommunityUserPage";
 import UserEmailTemplatesPage from "./modules/user-email-templates/pages/UserEmailTemplatesPage";
+import AddUserEmailTemplatePage from "./modules/user-email-templates/pages/AddUserEmailTemplatePage";
 import EditUserEmailTemplatePage from "./modules/user-email-templates/pages/EditUserEmailTemplatePage";
 
 function UserFormEditRoute({ isDarkMode }) {
@@ -243,6 +244,10 @@ function App() {
         <Route
           path="/community-users/:id"
           element={<CommunityUserDetailsPage isDarkMode={isDarkMode} />}
+        />
+        <Route
+          path="/user-email-templates/add"
+          element={<AddUserEmailTemplatePage isDarkMode={isDarkMode} />}
         />
         <Route
           path="/user-email-templates/edit/:id"
