@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { consumeSessionExpiredToast } from "./services/auth/sessionExpiry";
 import ToastContainer from "./components/shared/ToastContainer";
-import AppRoutes from "./routes/AppRoutes";
+import AppRoutes from "./Routes/AppRoutes";
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
