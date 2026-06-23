@@ -36,6 +36,7 @@ function CommunityUsersPage({ isDarkMode }) {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRowIds, setSelectedRowIds] = useState(() => new Set());
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
@@ -98,6 +99,34 @@ function CommunityUsersPage({ isDarkMode }) {
       setIsDeleting(false);
     }
   };
+
+  const handleBulkDeleteRequest = useCallback(() => {
+    if (selectedRowIds.size === 0) return;
+    setBulkDeleteOpen(true);
+  }, [selectedRowIds]);
+
+  const handleBulkDeleteCancel = useCallback(() => {
+    if (isDeleting) return;
+    setBulkDeleteOpen(false);
+  }, [isDeleting]);
+
+  const handleBulkDeleteConfirm = useCallback(async () => {
+    const ids = Array.from(selectedRowIds);
+    if (ids.length === 0) return;
+
+    setIsDeleting(true);
+    try {
+      await Promise.all(ids.map((userId) => deleteRecord(userId)));
+      setBulkDeleteOpen(false);
+      setSelectedRowIds(new Set());
+      toastApiSuccess({ message: "Selected users deleted successfully." });
+      await refresh();
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [selectedRowIds, refresh]);
 
   const handleStatusToggle = async (row) => {
     if (!row?.id || statusUpdatingId != null) return;
@@ -166,6 +195,7 @@ function CommunityUsersPage({ isDarkMode }) {
         selectable
         selectedRowIds={selectedRowIds}
         onSelectedRowIdsChange={setSelectedRowIds}
+        onBulkDeleteRequest={handleBulkDeleteRequest}
         toolbarEnd={filterToolbar}
         renderExpandedContent={(row) => <CommunityUserExpandableDetails row={row} />}
       />
@@ -199,6 +229,15 @@ function CommunityUsersPage({ isDarkMode }) {
         onCancel={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
         isDeleting={isDeleting}
+      />
+
+      <DeleteConfirmModal
+        isOpen={bulkDeleteOpen}
+        onCancel={handleBulkDeleteCancel}
+        onConfirm={handleBulkDeleteConfirm}
+        isDeleting={isDeleting}
+        title="Delete Selected Users"
+        message="Are you sure you want to delete the selected users?"
       />
     </div>
   );

@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import TableCard from "../../../components/admin/TableCard";
 import { toastApiError } from "../../../services/toast/apiToast";
 import { getSalesLogListWithDetails } from "../../../services/sales/salesProjectsApi";
-import { getAdminCancelButtonClass } from "../../shared/utils/formStyles";
 
 function RichTextContent({ html }) {
   const content = String(html ?? "").trim();
@@ -59,7 +58,6 @@ function LogCard({ log, isDarkMode }) {
 }
 
 function RfqViewLogListPage({ isDarkMode }) {
-  const navigate = useNavigate();
   const { projectId } = useParams();
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -131,14 +129,6 @@ function RfqViewLogListPage({ isDarkMode }) {
           ))}
         </div>
       )}
-
-      {/* <button
-        type="button"
-        onClick={() => navigate("/sales/rfq")}
-        className={getAdminCancelButtonClass()}
-      >
-        Back to RFQ
-      </button> */}
     </div>
   );
 }

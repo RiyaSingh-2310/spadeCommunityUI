@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toastApiError } from "../../../services/toast/apiToast";
+import { sortListingRowsByIdAsc } from "../utils/listingSort";
 import { DEFAULT_PAGE_SIZE } from "../utils/pagination";
 import { normalizeSearchQuery } from "../utils/searchQuery";
 
@@ -48,7 +49,7 @@ export function useApiListing({
         return;
       }
 
-      const items = Array.isArray(data.items) ? data.items : [];
+      const items = sortListingRowsByIdAsc(Array.isArray(data.items) ? data.items : []);
       const total = data.total ?? data.count ?? items.length;
       const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
 

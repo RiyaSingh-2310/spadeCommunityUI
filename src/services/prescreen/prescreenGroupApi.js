@@ -8,6 +8,7 @@ import {
 import { getPrescreensByLanguage } from "./prescreenQuestionnairesApi";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
+import { formatLocaleDateTime } from "../../modules/shared/utils/dateTime";
 
 function isApiSuccess(data) {
   if (!data || typeof data !== "object") return false;
@@ -130,7 +131,7 @@ export function mapPrescreenGroupToRow(prescreen) {
     status: apiStatusToFormValue(prescreen?.status),
     prescreenIds,
     createdAt: createdRaw,
-    createdDate: createdRaw,
+    createdDate: formatLocaleDateTime(createdRaw),
   };
 }
 

@@ -6,6 +6,7 @@ import {
   toListingRow,
   updateCommunityUserStatus,
 } from "../data/communityUsersStore";
+import { sortListingRowsByIdAsc } from "../../shared/utils/listingSort";
 import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
 import { normalizeRewardLogEntry } from "../utils/rewardLogUtils";
 
@@ -37,9 +38,11 @@ function matchesFilters(user, filters = {}) {
  */
 export async function getRecords({ page = 1, limit = 10, search, filters } = {}) {
   const normalizedSearch = normalizeSearchQuery(search);
-  const allUsers = loadCommunityUsers()
-    .filter((user) => matchesSearch(user, normalizedSearch))
-    .filter((user) => matchesFilters(user, filters));
+  const allUsers = sortListingRowsByIdAsc(
+    loadCommunityUsers()
+      .filter((user) => matchesSearch(user, normalizedSearch))
+      .filter((user) => matchesFilters(user, filters))
+  );
 
   const total = allUsers.length;
   const start = (page - 1) * limit;

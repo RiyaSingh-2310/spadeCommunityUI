@@ -27,6 +27,10 @@ function manualChunks(id) {
     return 'vendor-icons'
   }
 
+  if (id.includes('@tinymce') || id.includes('tinymce')) {
+    return 'vendor-tinymce'
+  }
+
   return 'vendor'
 }
 

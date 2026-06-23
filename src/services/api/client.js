@@ -162,7 +162,10 @@ export async function apiRequest(path, options = {}) {
     if (status === 401 && auth) {
       if (attempt < maxAttempts) {
         if (API_DEBUG) {
-          console.warn(`[API] 401 Unauthorized — retry ${attempt}/${MAX_UNAUTHORIZED_RETRIES}:`, path);
+          console.warn(
+            `[API] 401 Unauthorized — retry ${attempt}/${MAX_UNAUTHORIZED_RETRIES}:`,
+            path
+          );
         }
         continue;
       }

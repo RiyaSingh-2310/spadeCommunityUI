@@ -259,22 +259,6 @@ function RecontactSurveyPage({ isDarkMode }) {
             </div>
           ) : null}
         </div>
-
-        {/* {selectedProject ? (
-          <p className="admin-text-muted mt-3 text-sm">
-            Selected:{" "}
-            <span className="admin-text font-medium">
-              {selectedProject.projectName || "—"}
-            </span>
-            {selectedProject.clientName ? (
-              <>
-                {" "}
-                <span className="admin-text-muted">·</span>{" "}
-                <span className="admin-text">{selectedProject.clientName}</span>
-              </>
-            ) : null}
-          </p>
-        ) : null} */}
       </RecontactSearchCard>
 
       {showAddForm && formSeed ? (

@@ -1,7 +1,6 @@
 import {
   API_BASE_URL,
   API_DEBUG,
-  API_LOGIN_BEARER_TOKEN,
   API_ROUTES,
   buildApiUrl,
 } from "../../config/api";
@@ -63,14 +62,12 @@ export async function loginAdmin(credentials) {
   logAuthDebug("Login", "API base URL", API_BASE_URL);
   logAuthDebug("Login", "Request URL", url);
   logAuthDebug("Login", "Request payload", { email: payload.email, password: "***" });
-  logAuthDebug("Login", "Login bearer configured", Boolean(API_LOGIN_BEARER_TOKEN));
 
   let data;
   try {
     data = await apiRequest(API_ROUTES.admin.login, {
       method: "POST",
       auth: false,
-      loginBearer: true,
       body: payload,
     });
     logAuthDebug("Login", "Response data", data);

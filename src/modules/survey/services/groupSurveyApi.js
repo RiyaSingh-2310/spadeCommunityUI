@@ -8,6 +8,7 @@ import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import { appendListQuery } from "../../shared/utils/listQueryParams";
 import { createSurveyUnderGroup, getRecords as getSurveyRecords } from "./surveyApi";
+import { formatSurveyListDate } from "../../shared/utils/dateTime";
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -30,16 +31,6 @@ function extractGroupProjectsList(data) {
   if (Array.isArray(data.data)) return data.data;
   if (Array.isArray(data.groupProjects)) return data.groupProjects;
   return [];
-}
-
-function formatGroupProjectListDate(value) {
-  if (!value) return "—";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return String(value);
-  const day = String(parsed.getDate()).padStart(2, "0");
-  const month = String(parsed.getMonth() + 1).padStart(2, "0");
-  const year = parsed.getFullYear();
-  return `${day}/${month}/${year}`;
 }
 
 function extractGroupProjectRecord(data) {
@@ -144,7 +135,7 @@ export function mapGroupProjectToRow(project) {
     groupProject: project?.project_name ?? "",
     status: apiStatusToFormValue(project?.status),
     createdAt: project?.created_at ?? "",
-    createdDate: formatGroupProjectListDate(project?.created_at),
+    createdDate: formatSurveyListDate(project?.created_at),
   };
 }
 
@@ -175,7 +166,7 @@ export function mapGroupProjectToDetailsView(project) {
     description: project.description ?? "",
     notes: project.notes ?? "",
     status: apiStatusToFormValue(project.status),
-    createdAt: formatGroupProjectListDate(project.created_at),
+    createdAt: formatSurveyListDate(project.created_at),
   };
 }
 

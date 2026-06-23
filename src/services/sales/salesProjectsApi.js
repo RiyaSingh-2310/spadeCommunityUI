@@ -3,6 +3,11 @@ import { extractListTotalFromResponse } from "../../modules/shared/utils/listRes
 import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
+import {
+  formatLocaleDateLabel,
+  formatLocaleDateTime,
+  formatLocaleTimeLabel,
+} from "../../modules/shared/utils/dateTime";
 
 const FORM_STATUS_TO_API = {
   WIP: "wip",
@@ -141,40 +146,6 @@ export function mapSalesProjectToForm(project) {
   };
 }
 
-function formatSalesLogDate(value) {
-  if (!value) return "—";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return String(value);
-  return parsed.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatSalesLogDateLabel(value) {
-  if (!value) return "—";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return String(value);
-  return parsed.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatSalesLogTimeLabel(value) {
-  if (!value) return "—";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "";
-  return parsed.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function extractSalesLogRecord(data) {
   if (!data || typeof data !== "object") return null;
   if (data.data && typeof data.data === "object" && !Array.isArray(data.data)) {
@@ -210,9 +181,9 @@ export function mapSalesLogToCard(log) {
     commentBy: apiCommentByToForm(log?.comment_by ?? log?.commentBy),
     createdBy: resolveLogCreatedBy(log),
     createdAt,
-    createdDateLabel: formatSalesLogDateLabel(createdAt),
-    createdTimeLabel: formatSalesLogTimeLabel(createdAt),
-    createdDateTime: formatSalesLogDate(createdAt),
+    createdDateLabel: formatLocaleDateLabel(createdAt),
+    createdTimeLabel: formatLocaleTimeLabel(createdAt),
+    createdDateTime: formatLocaleDateTime(createdAt),
   };
 }
 
@@ -299,7 +270,7 @@ export function mapSalesLogToRow(log) {
     comment: stripHtmlContent(log?.comment),
     commentBy: apiCommentByToForm(log?.comment_by ?? log?.commentBy),
     createdBy: resolveLogCreatedBy(log),
-    createdDate: formatSalesLogDate(log?.created_at ?? log?.createdAt),
+    createdDate: formatLocaleDateTime(log?.created_at ?? log?.createdAt),
     createdAt: log?.created_at ?? log?.createdAt ?? "",
   };
 }

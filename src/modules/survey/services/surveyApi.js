@@ -12,6 +12,7 @@ import {
   getSupplierMappingDetail,
   getSurveyProjectDetails,
 } from "../data/surveyDetailsData";
+import { formatSurveyListDate, parseUtcToIst } from "../../shared/utils/dateTime";
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -33,16 +34,6 @@ function extractSurveysList(data) {
   if (Array.isArray(data.data)) return data.data;
   if (Array.isArray(data.surveys)) return data.surveys;
   return [];
-}
-
-function formatSurveyListDate(value) {
-  if (!value) return "—";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return String(value);
-  const day = String(parsed.getDate()).padStart(2, "0");
-  const month = String(parsed.getMonth() + 1).padStart(2, "0");
-  const year = parsed.getFullYear();
-  return `${day}/${month}/${year}`;
 }
 
 function resolveNumericId(value) {
@@ -85,15 +76,12 @@ function extractSurveyRecord(data) {
 
 function toDateInputValue(value) {
   if (!value) return "";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
+  const ist = parseUtcToIst(value);
+  if (!ist) {
     const iso = String(value).slice(0, 10);
     return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : "";
   }
-  const year = parsed.getFullYear();
-  const month = String(parsed.getMonth() + 1).padStart(2, "0");
-  const day = String(parsed.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return ist.format("YYYY-MM-DD");
 }
 
 function pickSurveyFormValue(apiValue, fallbackValue) {

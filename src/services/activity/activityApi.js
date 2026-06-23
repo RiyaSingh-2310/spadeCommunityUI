@@ -1,8 +1,15 @@
 import { API_ROUTES } from "../../config/api";
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
 import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
+import {
+  formatActivityLogDate,
+  formatAuditLogDate,
+} from "../../modules/shared/utils/dateTime";
+import { sortListingRowsByIdAsc } from "../../modules/shared/utils/listingSort";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
+
+export { formatActivityLogDate, formatAuditLogDate };
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -24,53 +31,6 @@ function extractActivityList(data) {
   if (Array.isArray(data.data)) return data.data;
   if (Array.isArray(data.activities)) return data.activities;
   return [];
-}
-
-const MONTH_LABELS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
-function formatActivityLogDate(value) {
-  if (!value) return "—";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return String(value);
-
-  const day = String(parsed.getDate()).padStart(2, "0");
-  const month = String(parsed.getMonth() + 1).padStart(2, "0");
-  const year = parsed.getFullYear();
-  let hours = parsed.getHours();
-  const minutes = String(parsed.getMinutes()).padStart(2, "0");
-  const ampm = hours >= 12 ? "PM" : "AM";
-  hours = hours % 12 || 12;
-
-  return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
-}
-
-export function formatAuditLogDate(value) {
-  if (!value) return "—";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return String(value);
-
-  const day = parsed.getDate();
-  const month = MONTH_LABELS[parsed.getMonth()] ?? "";
-  const year = parsed.getFullYear();
-  const hours = parsed.getHours();
-  const minutes = String(parsed.getMinutes()).padStart(2, "0");
-  const displayHours = hours % 12 || 12;
-  const ampm = hours >= 12 ? "PM" : "AM";
-
-  return `${day} ${month} ${year}, ${displayHours}:${minutes} ${ampm}`;
 }
 
 function formatActionLabel(activity) {
@@ -173,12 +133,15 @@ export async function getRecords({ page, limit, search } = {}) {
 
   const activities = extractActivityList(data);
   const total = extractListTotalFromResponse(data, activities.length);
+  const items = sortListingRowsByIdAsc(
+    activities.map((activity) => mapActivityToRow(activity))
+  );
 
   return {
     ...data,
     total,
     count: total,
-    items: activities.map((activity) => mapActivityToRow(activity)),
+    items,
   };
 }
 

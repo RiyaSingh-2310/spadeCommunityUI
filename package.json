@@ -13,6 +13,7 @@
     "@tailwindcss/vite": "^4.3.0",
     "@tinymce/tinymce-react": "^6.3.0",
     "lucide-react": "^1.17.0",
+    "moment-timezone": "^0.6.2",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.16.0",

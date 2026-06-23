@@ -7,6 +7,7 @@ import {
 } from "../../modules/shared/utils/statusLabels";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
+import { formatLocaleDateTime } from "../../modules/shared/utils/dateTime";
 
 function isApiSuccess(data) {
   if (!data || typeof data !== "object") return false;
@@ -119,7 +120,7 @@ export function mapPrescreenQuestionnaireToRow(record) {
     status: apiStatusToFormValue(record?.status),
     options: Array.isArray(record?.options) ? record.options : [],
     createdAt: createdRaw,
-    createdDate: createdRaw,
+    createdDate: formatLocaleDateTime(createdRaw),
   };
 }
 

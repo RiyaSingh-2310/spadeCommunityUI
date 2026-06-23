@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DebouncedSearchInput from "../../../components/admin/DebouncedSearchInput";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
@@ -9,15 +9,6 @@ import AvatarNameCell from "../../../components/admin/AvatarNameCell";
 import Avatar from "../../../components/shared/Avatar";
 import { resolveAvatarFromRecord } from "../utils/userAvatar";
 import TableLoadingSkeleton from "../../../components/admin/TableLoadingSkeleton";
-import GroupSurveyListingActions from "../../../components/admin/GroupSurveyListingActions";
-import GroupSurveyProjectListingActions from "../../../components/admin/GroupSurveyProjectListingActions";
-import IconActions from "../../../components/admin/IconActions";
-import InvoicePdfAction from "../../../components/admin/InvoicePdfAction";
-import RewardPendingActions from "../../../components/admin/RewardPendingActions";
-import CommunityUserListingActions from "../../../components/admin/CommunityUserListingActions";
-import UserManagementActions from "../../../components/admin/UserManagementActions";
-import SurveyListingActions from "../../../components/admin/SurveyListingActions";
-import RfqListingActions from "../../../components/admin/RfqListingActions";
 import StatusToggle from "../../../components/admin/StatusToggle";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import {
@@ -48,13 +39,11 @@ import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { DEFAULT_PAGE_SIZE, paginateItems } from "../utils/pagination";
 import { formatStatusLabel } from "../utils/statusLabels";
 import { normalizeSearchQuery, rowMatchesSearchQuery } from "../utils/searchQuery";
-
-function formatDescriptionForLineClamp(value, maxLines) {
-  if (value === "-" || value === "—") return "—";
-  const text = String(value);
-  if (maxLines == null) return text;
-  return text.replace(/\r\n/g, "\n").replace(/\n{2,}/g, "\n");
-}
+import ModuleListingActionCell from "./moduleListing/ModuleListingActionCell";
+import {
+  formatDescriptionForLineClamp,
+  insertCheckboxBeforeName,
+} from "./moduleListing/moduleListingUtils";
 
 function ModuleListingPage({
   isDarkMode,
@@ -105,6 +94,7 @@ function ModuleListingPage({
   selectable = false,
   selectedRowIds = null,
   onSelectedRowIdsChange = null,
+  onBulkDeleteRequest = null,
   /** API total record count (used for pagination summary when not searching). */
   totalRecords = null,
   /** When true, rows are already paginated by the API; parent controls page + page size. */
@@ -488,18 +478,32 @@ function ModuleListingPage({
   );
 
   const renderCheckboxHeader = () => (
-    <th className={`${TABLE_HEAD_BASE} w-12 text-left`}>
-      <input
-        type="checkbox"
-        className="admin-checkbox"
-        checked={allVisibleSelected}
-        ref={(el) => {
-          if (el) el.indeterminate = someVisibleSelected;
-        }}
-        onChange={(event) => handleToggleAllVisible(event.target.checked)}
-        disabled={visibleRowIds.length === 0 || isLoading}
-        aria-label="Select all rows"
-      />
+    <th className={`${TABLE_HEAD_BASE} text-left`}>
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          className="admin-checkbox"
+          checked={allVisibleSelected}
+          ref={(el) => {
+            if (el) el.indeterminate = someVisibleSelected;
+          }}
+          onChange={(event) => handleToggleAllVisible(event.target.checked)}
+          disabled={visibleRowIds.length === 0 || isLoading}
+          aria-label="Select all rows"
+        />
+        {onBulkDeleteRequest && (selectedRowIds?.size ?? 0) > 0 && (
+          <button
+            type="button"
+            onClick={onBulkDeleteRequest}
+            disabled={isLoading || isDeleting}
+            className="inline-flex items-center justify-center rounded-md p-1 text-[var(--admin-danger-text)] transition-colors hover:bg-[var(--admin-danger-text)]/10 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Delete selected rows"
+            title="Delete"
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
     </th>
   );
 
@@ -515,17 +519,8 @@ function ModuleListingPage({
     </td>
   );
 
-  const insertCheckboxBeforeName = (headers) => {
-    if (!selectable) return headers;
-    const nameIndex = headers.findIndex((header) => getColumnKey(header) === "name");
-    if (nameIndex === -1) return headers;
-    const next = [...headers];
-    next.splice(nameIndex, 0, "");
-    return next;
-  };
-
   const tableColumns = useMemo(
-    () => insertCheckboxBeforeName(displayColumns),
+    () => insertCheckboxBeforeName(displayColumns, selectable),
     [displayColumns, selectable]
   );
 
@@ -732,296 +727,46 @@ function ModuleListingPage({
                     );
                   }
                   if (isActionColumn(col)) {
-                    if (!allowRead) return null;
-
-                    if (!allowWrite && !readOnlyListingActions) {
-                      return null;
-                    }
-                    if (communityUser) {
-                      const showEdit = allowWrite && Boolean(onEdit || editPath);
-                      const showDelete = allowWrite && showDeleteAction && Boolean(onDelete);
-                      const hasCommunityActions =
-                        (allowRead && onView) ||
-                        showEdit ||
-                        showDelete ||
-                        (allowRead && onRewardLog);
-
-                      if (!hasCommunityActions) {
-                        return null;
-                      }
-
-                      return (
-                        <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
-                          <CommunityUserListingActions
-                            isDarkMode={isDarkMode}
-                            onView={allowRead && onView ? () => onView(row, globalIdx) : undefined}
-                            onEdit={showEdit ? () => handleEdit(row, globalIdx) : undefined}
-                            onDelete={
-                              showDelete ? () => handleDeleteRequest(row, globalIdx) : undefined
-                            }
-                            onRewardLog={
-                              allowRead && onRewardLog
-                                ? () => onRewardLog(row, globalIdx)
-                                : undefined
-                            }
-                            showEdit={showEdit}
-                            showDelete={showDelete}
-                          />
-                        </td>
-                      );
-                    }
-                    if (actionVariant === "user-management") {
-                      const { showEdit, showDelete } =
-                        userMgmtActions ?? getUserManagementActionFlags({
-                          allowWrite,
-                          onEdit,
-                          editPath,
-                          onDelete,
-                          showDeleteAction,
-                        });
-
-                      if (!showEdit && !showDelete) {
-                        return null;
-                      }
-
-                      return (
-                        <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
-                          <UserManagementActions
-                            isDarkMode={isDarkMode}
-                            showManagePermissions={canShowManagePermissions}
-                            showEdit={showEdit}
-                            showDelete={showDelete}
-                            onManagePermissions={
-                              onManagePermissions
-                                ? () => onManagePermissions(row, globalIdx)
-                                : undefined
-                            }
-                            onEdit={
-                              showEdit
-                                ? () => handleEdit(row, globalIdx)
-                                : undefined
-                            }
-                            onDelete={
-                              showDelete
-                                ? () => handleDeleteRequest(row, globalIdx)
-                                : undefined
-                            }
-                          />
-                        </td>
-                      );
-                    }
-                    if (rfq) {
-                      const hasRfqActions =
-                        (allowWrite && (editPath || onDelete || onAddLog)) ||
-                        (allowRead && onViewLogs);
-
-                      if (!hasRfqActions) {
-                        return null;
-                      }
-
-                      return (
-                        <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
-                          <RfqListingActions
-                            isDarkMode={isDarkMode}
-                            onEdit={
-                              canShowEdit
-                                ? () => handleEdit(row, globalIdx)
-                                : undefined
-                            }
-                            onDelete={
-                              canShowDelete
-                                ? () => handleDeleteRequest(row, globalIdx)
-                                : undefined
-                            }
-                            onAddLog={
-                              allowWrite && onAddLog
-                                ? () => onAddLog(row, globalIdx)
-                                : undefined
-                            }
-                            onViewLogs={
-                              allowRead && onViewLogs
-                                ? () => onViewLogs(row, globalIdx)
-                                : undefined
-                            }
-                          />
-                        </td>
-                      );
-                    }
-                    if (groupSurveyProjects) {
-                      return (
-                        <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
-                          <GroupSurveyProjectListingActions
-                            isDarkMode={isDarkMode}
-                            onEdit={
-                              allowWrite && canShowEdit
-                                ? () => handleEdit(row, globalIdx)
-                                : undefined
-                            }
-                            onAddProject={
-                              allowWrite && onAddProject
-                                ? () => onAddProject(row, globalIdx)
-                                : undefined
-                            }
-                            onDelete={
-                              canShowDelete
-                                ? () => handleDeleteRequest(row, globalIdx)
-                                : undefined
-                            }
-                          />
-                        </td>
-                      );
-                    }
-                    if (actionVariant === "group-survey") {
-                      const readOnlyGroupSurvey =
-                        !allowWrite && listingReadMode === "group-survey-view";
-                      return (
-                        <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
-                          <GroupSurveyListingActions
-                            isDarkMode={isDarkMode}
-                            onEdit={
-                              !readOnlyGroupSurvey && canShowEdit
-                                ? () => handleEdit(row, globalIdx)
-                                : undefined
-                            }
-                            onAddProject={
-                              !readOnlyGroupSurvey && canShowEdit && onAddProject
-                                ? () => onAddProject(row, globalIdx)
-                                : undefined
-                            }
-                            onListProjects={
-                              allowRead && onListProjects
-                                ? () => onListProjects(row, globalIdx)
-                                : undefined
-                            }
-                          />
-                        </td>
-                      );
-                    }
-                    if (actionVariant === "view-edit") {
-                      const useSurveyActions =
-                        onFindUser || onUserSurveyData || onSurveyClone;
-
-                      if (!allowWrite && onView && !useSurveyActions) {
-                        return (
-                          <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
-                            <ViewActionButton
-                              isDarkMode={isDarkMode}
-                              onView={() => onView(row, globalIdx)}
-                            />
-                          </td>
-                        );
-                      }
-
-                      if (!useSurveyActions && !allowWrite) {
-                        return null;
-                      }
-
-                      return (
-                        <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
-                          {useSurveyActions ? (
-                            <SurveyListingActions
-                              isDarkMode={isDarkMode}
-                              onView={
-                                allowRead && onView ? () => onView(row, globalIdx) : undefined
-                              }
-                              onEdit={
-                                canShowEdit
-                                  ? () => handleEdit(row, globalIdx)
-                                  : undefined
-                              }
-                              onFindUser={
-                                allowRead && onFindUser
-                                  ? () => onFindUser(row, globalIdx)
-                                  : undefined
-                              }
-                              onUserSurveyData={
-                                allowRead && onUserSurveyData
-                                  ? () => onUserSurveyData(row, globalIdx)
-                                  : undefined
-                              }
-                              onSurveyClone={
-                                allowWrite && onSurveyClone
-                                  ? () => onSurveyClone(row, globalIdx)
-                                  : undefined
-                              }
-                              labels={surveyActionLabels}
-                            />
-                          ) : (
-                            <IconActions
-                              isDarkMode={isDarkMode}
-                              showDelete={canShowDelete}
-                              onEdit={
-                                canShowEdit
-                                  ? () => handleEdit(row, globalIdx)
-                                  : undefined
-                              }
-                              onDelete={
-                                canShowDelete
-                                  ? () => handleDeleteRequest(row, globalIdx)
-                                  : undefined
-                              }
-                            />
-                          )}
-                        </td>
-                      );
-                    }
-                    if (actionVariant === "pdf-download") {
-                      return (
-                        <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
-                          <InvoicePdfAction
-                            isDarkMode={isDarkMode}
-                            onDownload={
-                              allowRead && onPdfDownload
-                                ? () => onPdfDownload(row, globalIdx)
-                                : undefined
-                            }
-                          />
-                        </td>
-                      );
-                    }
-                    if (actionVariant === "reward-pending") {
-                      return (
-                        <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
-                          <RewardPendingActions
-                            isDarkMode={isDarkMode}
-                            onView={
-                              allowRead && onView ? () => onView(row, globalIdx) : undefined
-                            }
-                            onApprove={
-                              allowWrite && onApprove
-                                ? () => onApprove(row, globalIdx)
-                                : undefined
-                            }
-                            onReject={
-                              allowWrite && onReject
-                                ? () => onReject(row, globalIdx)
-                                : undefined
-                            }
-                          />
-                        </td>
-                      );
-                    }
-                    if (!allowWrite) {
-                      return null;
-                    }
-
                     return (
-                      <td key={col} className="px-4 py-3 align-middle text-right whitespace-nowrap">
-                        <IconActions
-                          isDarkMode={isDarkMode}
-                          showDelete={canShowDelete}
-                          onEdit={
-                            canShowEdit
-                              ? () => handleEdit(row, globalIdx)
-                              : undefined
-                          }
-                          onDelete={
-                            canShowDelete
-                              ? () => handleDeleteRequest(row, globalIdx)
-                              : undefined
-                          }
-                        />
-                      </td>
+                      <ModuleListingActionCell
+                        key={col}
+                        col={col}
+                        isDarkMode={isDarkMode}
+                        row={row}
+                        globalIdx={globalIdx}
+                        actionVariant={actionVariant}
+                        allowRead={allowRead}
+                        allowWrite={allowWrite}
+                        readOnlyListingActions={readOnlyListingActions}
+                        listingReadMode={listingReadMode}
+                        communityUser={communityUser}
+                        rfq={rfq}
+                        groupSurveyProjects={groupSurveyProjects}
+                        userMgmtActions={userMgmtActions}
+                        canShowEdit={canShowEdit}
+                        canShowDelete={canShowDelete}
+                        canShowManagePermissions={canShowManagePermissions}
+                        editPath={editPath}
+                        showDeleteAction={showDeleteAction}
+                        onView={onView}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                        onManagePermissions={onManagePermissions}
+                        onFindUser={onFindUser}
+                        onUserSurveyData={onUserSurveyData}
+                        onSurveyClone={onSurveyClone}
+                        onPdfDownload={onPdfDownload}
+                        onApprove={onApprove}
+                        onReject={onReject}
+                        onAddProject={onAddProject}
+                        onListProjects={onListProjects}
+                        onAddLog={onAddLog}
+                        onViewLogs={onViewLogs}
+                        onRewardLog={onRewardLog}
+                        surveyActionLabels={surveyActionLabels}
+                        handleEdit={handleEdit}
+                        handleDeleteRequest={handleDeleteRequest}
+                      />
                     );
                   }
                   if (key === "name") {

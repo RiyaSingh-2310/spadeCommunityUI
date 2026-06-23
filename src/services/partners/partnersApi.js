@@ -14,6 +14,7 @@ import {
 } from "../../modules/shared/utils/phoneValidation";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
+import { formatLocaleDateTime } from "../../modules/shared/utils/dateTime";
 
 function isApiSuccess(data) {
   if (!data || typeof data !== "object") return false;
@@ -54,19 +55,6 @@ function extractPartnerRecord(data) {
   }
   if (data.id != null) return data;
   return null;
-}
-
-function formatPartnerListDate(value) {
-  if (!value) return "—";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return String(value);
-  return parsed.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function isPartnerFormPayload(payload) {
@@ -111,7 +99,7 @@ export function mapPartnerToRow(partner) {
     contactNumber: partner?.contact_no ?? "—",
     websiteUrl: partner?.website_url ?? "—",
     status: apiStatusToFormValue(partner?.status),
-    createdDate: formatPartnerListDate(createdRaw),
+    createdDate: formatLocaleDateTime(createdRaw),
     createdAt: createdRaw,
     contactPerson: partner?.contact_person ?? "",
     panelSize: partner?.panel_size ?? "",
@@ -344,7 +332,7 @@ function hasPartnerApiValue(partner, apiKeys) {
 
 function formatPartnerDetailExtraValue(key, value) {
   if (key.endsWith("_at") && value) {
-    return formatPartnerListDate(value);
+    return formatLocaleDateTime(value);
   }
   return String(value);
 }
