@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import NumericInput from "../../../components/admin/NumericInput";
@@ -13,6 +14,18 @@ import {
   getRequiredError,
   isFormValid,
 } from "../../shared/utils/validation";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import {
+  createPrescreen,
+  getRecord,
+  mapPrescreenToForm,
+  updatePrescreen,
+} from "../../../services/prescreen/prescreenQuestionnairesApi";
+import {
+  LANGUAGES,
+  OPTION_QUESTION_TYPES,
+  QUESTION_TYPES,
+} from "../data/profilingQuestionsStore";
 
 const PROFILING_QUESTION_FIELDS = [
   "language",
@@ -21,14 +34,6 @@ const PROFILING_QUESTION_FIELDS = [
   "options",
   "status",
 ];
-import {
-  createProfilingQuestion,
-  getProfilingQuestionById,
-  LANGUAGES,
-  OPTION_QUESTION_TYPES,
-  QUESTION_TYPES,
-  saveProfilingQuestion,
-} from "../data/profilingQuestionsStore";
 
 const EMPTY_FORM = {
   language: "",
@@ -45,34 +50,56 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
   const isEdit = mode === "edit";
   const [form, setForm] = useState(EMPTY_FORM);
   const [initialSnapshot, setInitialSnapshot] = useState(null);
+  const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const inputClass = getAdminInputClass();
   const needsOptions = OPTION_QUESTION_TYPES.includes(form.questionType);
-  const existingRecord = isEdit && id ? getProfilingQuestionById(id) : null;
 
   useEffect(() => {
     if (!isEdit || !id) {
       setForm(EMPTY_FORM);
       setInitialSnapshot(null);
-      return;
+      setIsLoadingRecord(false);
+      setLoadFailed(false);
+      return undefined;
     }
 
-    const existing = getProfilingQuestionById(id);
-    if (!existing) {
-      setForm(EMPTY_FORM);
-      setInitialSnapshot(null);
-      return;
-    }
+    let cancelled = false;
 
-    const mapped = {
-      language: existing.language,
-      questionTitle: existing.questionTitle,
-      questionType: existing.questionType,
-      options: existing.options || "",
-      sortOrder: String(existing.sortOrder ?? 0),
-      status: existing.status,
+    const loadQuestion = async () => {
+      setIsLoadingRecord(true);
+      setLoadFailed(false);
+
+      try {
+        const record = await getRecord(id);
+        if (cancelled) return;
+
+        const mapped = mapPrescreenToForm(record);
+        const snapshot = {
+          language: mapped.language,
+          questionTitle: mapped.questionTitle,
+          questionType: mapped.questionType,
+          options: mapped.options,
+          sortOrder: mapped.sortOrder,
+          status: mapped.status,
+        };
+
+        setForm(snapshot);
+        setInitialSnapshot(snapshot);
+      } catch (error) {
+        if (cancelled) return;
+        toastApiError(error);
+        setLoadFailed(true);
+      } finally {
+        if (!cancelled) setIsLoadingRecord(false);
+      }
     };
-    setForm(mapped);
-    setInitialSnapshot(mapped);
+
+    loadQuestion();
+    return () => {
+      cancelled = true;
+    };
   }, [isEdit, id]);
 
   const errors = useMemo(() => {
@@ -107,7 +134,12 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
     );
   }, [isEdit, initialSnapshot, form]);
 
-  const canSubmit = isFormValid(errors) && (!isEdit || isDirty);
+  const canSubmit =
+    isFormValid(errors) &&
+    (!isEdit || isDirty) &&
+    !isSubmitting &&
+    !isLoadingRecord &&
+    !loadFailed;
 
   const setField = (key, value) => {
     setForm((prev) => {
@@ -119,8 +151,9 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
     });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateSubmit() || !canSubmit || (isEdit && !isDirty)) return;
+
     const payload = {
       language: form.language.trim(),
       questionTitle: form.questionTitle.trim(),
@@ -128,17 +161,39 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
       options: needsOptions ? form.options.trim() : "",
       sortOrder: Number(form.sortOrder) || 0,
       status: form.status,
+      rightAnswer: null,
     };
 
-    if (isEdit && id) {
-      saveProfilingQuestion({ id, ...payload });
-    } else {
-      createProfilingQuestion(payload);
+    setIsSubmitting(true);
+    try {
+      const data = isEdit
+        ? await updatePrescreen(id, payload)
+        : await createPrescreen(payload);
+
+      toastApiSuccess(data);
+      navigate("/user-screening/questions", {
+        replace: true,
+        state: {
+          flash: data.message ? { type: "success", message: data.message } : null,
+          refresh: true,
+        },
+      });
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsSubmitting(false);
     }
-    navigate("/user-screening/questions");
   };
 
-  if (isEdit && id && !existingRecord) {
+  if (isEdit && isLoadingRecord) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-[#10a950]" />
+      </div>
+    );
+  }
+
+  if (isEdit && loadFailed) {
     return (
       <div className="space-y-6">
         <AdminPageHeader title="Edit Profiling Questions" isDarkMode={isDarkMode} />
@@ -243,8 +298,9 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
               type="button"
               disabled={!canSubmit}
               onClick={handleSubmit}
-              className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50"
             >
+              {isSubmitting && <Loader2 size={16} className="animate-spin" />}
               {isEdit ? "Update" : "Submit"}
             </button>
             <button

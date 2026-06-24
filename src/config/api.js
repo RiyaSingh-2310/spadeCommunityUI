@@ -63,6 +63,8 @@ export const API_ROUTES = {
     byId: (id) => `/api/prescreen/${id}`,
     byLanguage: (language) => `/api/prescreen/language/${encodeURIComponent(language)}`,
     update: (id) => `/api/prescreen/${id}`,
+    updateStatus: (id) => `/api/prescreen/${id}/status`,
+    sortOrder: "/api/prescreen/sort-order",
     delete: (id) => `/api/prescreen/${id}`,
   },
   prescreenSurvey: {

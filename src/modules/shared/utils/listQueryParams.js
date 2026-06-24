@@ -2,9 +2,9 @@ import { normalizeSearchQuery } from "./searchQuery";
 
 /**
  * Builds URLSearchParams for paginated list APIs with optional search.
- * @param {{ page?: number, limit?: number, search?: string, extra?: Record<string, string|number> }} [options]
+ * @param {{ page?: number, limit?: number, search?: string, extra?: Record<string, string|number>, alwaysIncludeEmpty?: string[] }} [options]
  */
-export function buildListQueryParams({ page, limit, search, extra = {} } = {}) {
+export function buildListQueryParams({ page, limit, search, extra = {}, alwaysIncludeEmpty = [] } = {}) {
   const params = new URLSearchParams();
   const safePage = Number(page);
   const safeLimit = Number(limit);
@@ -19,10 +19,17 @@ export function buildListQueryParams({ page, limit, search, extra = {} } = {}) {
   const normalizedSearch = normalizeSearchQuery(search);
   if (normalizedSearch) {
     params.set("search", normalizedSearch);
+  } else if (alwaysIncludeEmpty?.includes("search")) {
+    params.set("search", "");
   }
 
   Object.entries(extra).forEach(([key, value]) => {
-    if (value == null || value === "") return;
+    if (value == null || value === "") {
+      if (alwaysIncludeEmpty?.includes(key)) {
+        params.set(key, "");
+      }
+      return;
+    }
     params.set(key, String(value));
   });
 

@@ -1,47 +1,74 @@
-import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useApiListing } from "../../shared/hooks/useApiListing";
+import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
+import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
+import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import {
-  deleteProfilingQuestion,
-  loadProfilingQuestions,
-  toListingRows,
-  updateProfilingQuestionStatus,
-} from "../data/profilingQuestionsStore";
+  deleteRecord,
+  listPrescreenRecords,
+  updatePrescreenStatus,
+} from "../../../services/prescreen/prescreenQuestionnairesApi";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 
 function QuestionsListPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [listVersion, setListVersion] = useState(0);
-  const rows = toListingRows(loadProfilingQuestions());
-  void listVersion;
+  useFlashMessage();
 
-  const bumpList = () => setListVersion((v) => v + 1);
+  const {
+    rows,
+    totalRecords,
+    isLoading,
+    currentPage,
+    pageSize,
+    handleSearch,
+    handlePageChange,
+    handlePageSizeChange,
+    refresh,
+  } = useApiListing({
+    fetchFn: listPrescreenRecords,
+    initialPageSize: DEFAULT_PAGE_SIZE,
+    preserveRowOrder: true,
+  });
+  useListingRefresh(refresh);
 
-  useEffect(() => {
-    if (location.state?.refresh) {
-      bumpList();
-      navigate(location.pathname, { replace: true, state: null });
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+
+  const handleStatusToggle = async (row) => {
+    if (!row?.id || statusUpdatingId != null) return;
+
+    const nextStatus = row.status === "Active" ? "Inactive" : "Active";
+    setStatusUpdatingId(row.id);
+
+    try {
+      const data = await updatePrescreenStatus(row.id, nextStatus);
+      toastApiSuccess(data);
+      await refresh();
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setStatusUpdatingId(null);
     }
-  }, [location.state, location.pathname, navigate]);
-
-  const handleStatusToggle = (row) => {
-    const nextStatus =
-      String(row.status).toLowerCase() === "active" ? "Inactive" : "Active";
-    updateProfilingQuestionStatus(row.id, nextStatus);
-    bumpList();
   };
 
   const handleEdit = (row) => {
     navigate(`/user-screening/questions/edit/${row.id}`);
   };
 
-  const handleDelete = (row) => {
+  const handleDelete = async (row) => {
     const confirmed = window.confirm(
       `Delete "${row.questionTitle}"? This action cannot be undone.`
     );
     if (!confirmed) return;
-    deleteProfilingQuestion(row.id);
-    bumpList();
+
+    try {
+      const data = await deleteRecord(row.id);
+      toastApiSuccess(data);
+      await refresh();
+    } catch (error) {
+      toastApiError(error);
+    }
   };
 
   return (
@@ -69,6 +96,17 @@ function QuestionsListPage({ isDarkMode }) {
       onEdit={handleEdit}
       onDelete={handleDelete}
       onStatusToggle={handleStatusToggle}
+      isLoading={isLoading}
+      emptyMessage="No questions found"
+      onSearch={handleSearch}
+      totalRecords={totalRecords}
+      serverPaginated
+      serverSearch
+      paginationPage={currentPage}
+      onPaginationPageChange={handlePageChange}
+      paginationPageSize={pageSize}
+      onPaginationPageSizeChange={handlePageSizeChange}
+      showPagination
     />
   );
 }

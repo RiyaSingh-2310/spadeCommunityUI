@@ -179,7 +179,9 @@ function AddPrescreenPage({ isDarkMode }) {
         id: isEdit ? id : undefined,
         language: form.language.trim(),
         questionnaireTitle: form.questionTitle.trim(),
+        questionType: "textbox",
         rightAnswer: form.rightAnswer.trim(),
+        sortOrder: 0,
         status: isEdit ? initialSnapshot?.status ?? form.status : "Active",
         options: mappedLines,
       });

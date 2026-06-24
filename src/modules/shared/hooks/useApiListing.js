@@ -10,12 +10,14 @@ import { normalizeSearchQuery } from "../utils/searchQuery";
  *   fetchFn: (params: { page: number, limit: number, search?: string }) => Promise<{ items: unknown[], total?: number, count?: number }>,
  *   initialPageSize?: number,
  *   enabled?: boolean,
+ *   preserveRowOrder?: boolean,
  * }} options
  */
 export function useApiListing({
   fetchFn,
   initialPageSize = DEFAULT_PAGE_SIZE,
   enabled = true,
+  preserveRowOrder = false,
 }) {
   const [rows, setRows] = useState([]);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -42,14 +44,15 @@ export function useApiListing({
       const data = await fetchFn({
         page: currentPage,
         limit: pageSize,
-        search: normalizedSearch || undefined,
+        search: normalizedSearch,
       });
 
       if (requestId !== fetchRequestIdRef.current) {
         return;
       }
 
-      const items = sortListingRowsByIdAsc(Array.isArray(data.items) ? data.items : []);
+      const rawItems = Array.isArray(data.items) ? data.items : [];
+      const items = preserveRowOrder ? rawItems : sortListingRowsByIdAsc(rawItems);
       const total = data.total ?? data.count ?? items.length;
       const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
 
@@ -76,7 +79,7 @@ export function useApiListing({
         setIsLoading(false);
       }
     }
-  }, [enabled, fetchFn, currentPage, pageSize, search]);
+  }, [enabled, fetchFn, currentPage, pageSize, search, preserveRowOrder]);
 
   useEffect(() => {
     fetchList();

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
@@ -7,18 +7,54 @@ import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContex
 import { getAdminCancelButtonClass } from "../../shared/utils/formStyles";
 import SortableProfilingQuestionList from "../components/SortableProfilingQuestionList";
 import {
-  loadProfilingQuestions,
-  saveProfilingQuestionOrder,
-} from "../data/profilingQuestionsStore";
+  getRecords,
+  updatePrescreenSortOrder,
+} from "../../../services/prescreen/prescreenQuestionnairesApi";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 
 function SortProfilingQuestionsPage({ isDarkMode }) {
   const navigate = useNavigate();
   const { readOnly, showSubmit } = useFormAccess();
 
-  const initialItems = useMemo(() => loadProfilingQuestions(), []);
-  const [items, setItems] = useState(initialItems);
+  const [items, setItems] = useState([]);
+  const [initialItems, setInitialItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadQuestions = async () => {
+      setIsLoading(true);
+      setLoadFailed(false);
+
+      try {
+        const data = await getRecords({ page: 1, limit: 500 });
+        if (cancelled) return;
+
+        const mapped = (data.items ?? []).map((row) => ({
+          id: row.id,
+          questionTitle: row.questionTitle ?? row.title ?? "",
+          sortOrder: Number(row.sortOrder ?? 0),
+        }));
+
+        setItems(mapped);
+        setInitialItems(mapped);
+      } catch (error) {
+        if (cancelled) return;
+        toastApiError(error);
+        setLoadFailed(true);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadQuestions();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const hasChanges = useMemo(() => {
     return items.some((item, index) => item.id !== initialItems[index]?.id);
@@ -36,8 +72,13 @@ function SortProfilingQuestionsPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
-      saveProfilingQuestionOrder(items);
-      toastApiSuccess({ message: "Profiling question order updated successfully." });
+      const data = await updatePrescreenSortOrder(
+        items.map((item, index) => ({
+          id: item.id,
+          sort_order: index,
+        }))
+      );
+      toastApiSuccess(data);
       navigate("/user-screening/questions", {
         replace: true,
         state: { refresh: true },
@@ -52,6 +93,38 @@ function SortProfilingQuestionsPage({ isDarkMode }) {
   const handleCancel = () => {
     navigate("/user-screening/questions");
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-[#10a950]" />
+      </div>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          title="Sort User Prescreen Questionnaire"
+          breadcrumbs={[
+            { label: "Screening Management", to: "/user-screening/questions" },
+            { label: "List of All Questions", to: "/user-screening/questions" },
+            { label: "Sort Questions" },
+          ]}
+          isDarkMode={isDarkMode}
+        />
+        <p className="admin-text-muted text-sm">Unable to load questions.</p>
+        <button
+          type="button"
+          onClick={() => navigate("/user-screening/questions")}
+          className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white"
+        >
+          Back to List
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
