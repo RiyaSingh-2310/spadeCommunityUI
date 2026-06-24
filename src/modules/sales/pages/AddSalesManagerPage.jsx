@@ -14,7 +14,7 @@ import {
 import { useAdminFormAccess } from "../../permissions/FormAccessContext";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
-import { resolveMediaUrl } from "../../shared/utils/userAvatar";
+import { resolveProfileImageUrl } from "../../shared/utils/userAvatar";
 import {
   getAuthEmailError,
   getConfirmPasswordError,
@@ -101,14 +101,7 @@ function AddSalesManagerPage({ isDarkMode }) {
 
         const mapped = mapSalesManagerToForm(salesManager);
         setForm(mapped);
-        setExistingImage(
-          resolveMediaUrl(
-            salesManager?.image_url ??
-              salesManager?.profile_image ??
-              salesManager?.imageUrl ??
-              ""
-          ) ?? ""
-        );
+        setExistingImage(resolveProfileImageUrl(salesManager) ?? "");
         setInitialSnapshot({
           name: mapped.name.trim(),
           status: mapped.status,

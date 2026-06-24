@@ -51,6 +51,7 @@ function buildProfilingAnswers(seed) {
   });
 }
 
+import { resolveProfileImageUrl } from "../../shared/utils/userAvatar";
 import { buildRewardLogs } from "../utils/rewardLogUtils";
 
 function generateInitialUsers() {
@@ -167,6 +168,7 @@ export function updateCommunityUserStatus(id, status) {
 }
 
 export function toListingRow(user) {
+  const imageUrl = resolveProfileImageUrl(user);
   return {
     id: user.id,
     name: user.name,
@@ -177,5 +179,8 @@ export function toListingRow(user) {
     rewardPoints: user.rewardPoints,
     joiningDate: user.joiningDate,
     ipAddress: user.ipAddress,
+    imageUrl,
+    profile_image: user.profile_image ?? user.profileImage ?? imageUrl ?? undefined,
+    profileImage: user.profileImage ?? user.profile_image ?? imageUrl ?? undefined,
   };
 }

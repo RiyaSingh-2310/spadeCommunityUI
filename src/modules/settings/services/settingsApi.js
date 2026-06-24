@@ -10,7 +10,7 @@ import {
   mapAdminToForm,
   updateRecord,
 } from "../../../services/users/usersApi";
-import { normalizeAdminUser, resolveMediaUrl } from "../../shared/utils/userAvatar";
+import { normalizeAdminUser, resolveProfileImageUrl } from "../../shared/utils/userAvatar";
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -28,10 +28,7 @@ export function mapAdminToProfileForm(admin) {
     status: mapped.status,
     permission_type: mapped.permission_type,
     permissions: mapped.permissions,
-    imageUrl:
-      resolveMediaUrl(
-        admin?.image_url ?? admin?.imageUrl ?? admin?.image ?? ""
-      ) ?? "",
+    imageUrl: resolveProfileImageUrl(admin) ?? "",
   };
 }
 

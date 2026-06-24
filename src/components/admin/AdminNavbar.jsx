@@ -4,19 +4,29 @@ import { useNavigate } from "react-router-dom";
 import heroLogo from "../../assets/SpadeCommunitylogoWhite.png";
 import compressedLogo from "../../assets/SpadeCommunitylogocompressed.png";
 import Avatar from "../shared/Avatar";
-import { clearAuthSession, getAdminUser } from "../../services/auth/authStorage";
+import {
+  AUTH_SESSION_CHANGED_EVENT,
+  clearAuthSession,
+  getAdminUser,
+} from "../../services/auth/authStorage";
 import HeaderSearch from "./HeaderSearch";
 import NotificationDrawer from "./NotificationDrawer";
 
 function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobileMenu }) {
   const navigate = useNavigate();
-  const admin = getAdminUser();
+  const [admin, setAdmin] = useState(() => getAdminUser());
   const adminName = admin?.displayName || "Admin";
   const adminEmail = admin?.email || "";
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(3);
   const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const syncAdmin = () => setAdmin(getAdminUser());
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, syncAdmin);
+    return () => window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, syncAdmin);
+  }, []);
 
   useEffect(() => {
     const handleOutsideClick = (event) => {

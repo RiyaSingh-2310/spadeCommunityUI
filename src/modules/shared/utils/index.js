@@ -1,9 +1,11 @@
 export {
+  extractProfileImageSource,
   getValidImageUrl,
   getUserInitials,
   getUserDisplayName,
   normalizeAdminUser,
   resolveAvatarFromRecord,
+  resolveProfileImageUrl,
   splitFullName,
 } from "./userAvatar";
 export { useFlashMessage } from "../hooks/useFlashMessage";

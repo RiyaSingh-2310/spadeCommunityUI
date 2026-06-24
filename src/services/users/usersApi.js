@@ -12,7 +12,7 @@ import {
 } from "../../modules/shared/utils/statusLabels";
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
 import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
-import { resolveMediaUrl } from "../../modules/shared/utils/userAvatar";
+import { resolveProfileImageUrl } from "../../modules/shared/utils/userAvatar";
 
 function isApiSuccess(data) {
   if (!data || typeof data !== "object") return false;
@@ -119,9 +119,7 @@ export function formStatusToApiStatus(status) {
  */
 export function mapAdminToUserRow(admin) {
   const { firstName, lastName } = splitNameParts(admin?.name);
-  const imageUrl = resolveMediaUrl(
-    admin?.image_url ?? admin?.imageUrl ?? admin?.image ?? null
-  );
+  const imageUrl = resolveProfileImageUrl(admin);
 
   return {
     id: resolveAdminId(admin),

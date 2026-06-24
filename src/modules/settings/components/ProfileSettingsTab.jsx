@@ -9,7 +9,7 @@ import {
   IMAGE_UPLOAD_ACCEPT,
   validateImageFile,
 } from "../../shared/utils/imageUploadValidation";
-import { getValidImageUrl, splitFullName } from "../../shared/utils/userAvatar";
+import { getValidImageUrl, resolveProfileImageUrl, splitFullName } from "../../shared/utils/userAvatar";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
@@ -62,8 +62,10 @@ function ProfileSettingsTab({ isDarkMode }) {
 
   const inputClass = getAdminInputClass();
   const { firstName, lastName } = splitFullName(form.name);
-  const displayImage = preview || existingImage;
-  const hasImage = Boolean(getValidImageUrl(displayImage));
+  const resolvedDisplayImage = preview
+    ? getValidImageUrl(preview)
+    : resolveProfileImageUrl(existingImage);
+  const hasImage = Boolean(resolvedDisplayImage);
   const avatarBorderClass = isDarkMode ? "border-[#344662]" : "border-[#d8e3ef]";
 
   const revokeBlobUrl = () => {
@@ -308,7 +310,7 @@ function ProfileSettingsTab({ isDarkMode }) {
               className={`shrink-0 overflow-hidden rounded-full border ${avatarBorderClass}`}
             >
               <Avatar
-                imageUrl={hasImage ? displayImage : null}
+                imageUrl={hasImage ? resolvedDisplayImage : null}
                 firstName={firstName}
                 lastName={lastName}
                 name={form.name}

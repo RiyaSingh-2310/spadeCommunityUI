@@ -5,7 +5,7 @@ import {
   IMAGE_UPLOAD_ACCEPT,
   validateImageFile,
 } from "../../modules/shared/utils/imageUploadValidation";
-import { getValidImageUrl } from "../../modules/shared/utils/userAvatar";
+import { getValidImageUrl, resolveProfileImageUrl } from "../../modules/shared/utils/userAvatar";
 
 function ProfileImageUpload({
   isDarkMode,
@@ -23,8 +23,10 @@ function ProfileImageUpload({
   const inputRef = useRef(null);
   const blobUrlRef = useRef("");
   const [validationError, setValidationError] = useState("");
-  const displayImage = preview || existingImage;
-  const hasImage = Boolean(getValidImageUrl(displayImage));
+  const resolvedDisplayImage = preview
+    ? getValidImageUrl(preview)
+    : resolveProfileImageUrl(existingImage);
+  const hasImage = Boolean(resolvedDisplayImage);
 
   const revokeBlobUrl = () => {
     if (blobUrlRef.current) {
@@ -83,7 +85,7 @@ function ProfileImageUpload({
           className={`shrink-0 overflow-hidden rounded-full border ${borderClass}`}
         >
           <Avatar
-            imageUrl={hasImage ? displayImage : null}
+            imageUrl={hasImage ? resolvedDisplayImage : null}
             firstName={firstName}
             lastName={lastName}
             name={name}

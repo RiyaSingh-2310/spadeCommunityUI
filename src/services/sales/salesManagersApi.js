@@ -1,7 +1,7 @@
 import { API_ROUTES } from "../../config/api";
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
 import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
-import { resolveMediaUrl, splitFullName } from "../../modules/shared/utils/userAvatar";
+import { resolveProfileImageUrl, splitFullName } from "../../modules/shared/utils/userAvatar";
 import {
   apiStatusToFormValue,
   formValueToApiStatus,
@@ -55,12 +55,7 @@ function extractSalesManagerRecord(data) {
  */
 export function mapSalesManagerToRow(salesManager) {
   const { firstName, lastName } = splitFullName(salesManager?.name);
-  const imageUrl = resolveMediaUrl(
-    salesManager?.image_url ??
-      salesManager?.profile_image ??
-      salesManager?.imageUrl ??
-      null
-  );
+  const imageUrl = resolveProfileImageUrl(salesManager);
 
   return {
     id: salesManager?.id,

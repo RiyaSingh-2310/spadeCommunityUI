@@ -15,7 +15,7 @@ import {
   updateProjectManager,
 } from "../../../services/projectManagers/projectManagersApi";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
-import { resolveMediaUrl } from "../../shared/utils/userAvatar";
+import { resolveProfileImageUrl } from "../../shared/utils/userAvatar";
 import {
   getConfirmPasswordError,
   getOptionalConfirmPasswordError,
@@ -102,14 +102,7 @@ function AddProjectManagerPage({ isDarkMode }) {
 
         const mapped = mapProjectManagerToForm(projectManager);
         setForm(mapped);
-        setExistingImage(
-          resolveMediaUrl(
-            projectManager?.profile_image ??
-              projectManager?.image_url ??
-              projectManager?.imageUrl ??
-              ""
-          ) ?? ""
-        );
+        setExistingImage(resolveProfileImageUrl(projectManager) ?? "");
         setInitialSnapshot({
           name: mapped.name.trim(),
           status: mapped.status,

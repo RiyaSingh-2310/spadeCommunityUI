@@ -1,7 +1,7 @@
 import { API_ROUTES } from "../../config/api";
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
 import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
-import { resolveMediaUrl, splitFullName } from "../../modules/shared/utils/userAvatar";
+import { resolveProfileImageUrl, splitFullName } from "../../modules/shared/utils/userAvatar";
 import {
   apiStatusToFormValue,
   formValueToApiStatus,
@@ -55,12 +55,7 @@ function extractProjectManagerRecord(data) {
  */
 export function mapProjectManagerToRow(projectManager) {
   const { firstName, lastName } = splitFullName(projectManager?.name);
-  const imageUrl = resolveMediaUrl(
-    projectManager?.profile_image ??
-      projectManager?.image_url ??
-      projectManager?.imageUrl ??
-      null
-  );
+  const imageUrl = resolveProfileImageUrl(projectManager);
 
   return {
     id: projectManager?.id,

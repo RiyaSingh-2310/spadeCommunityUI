@@ -5,6 +5,50 @@ import {
 } from "../../permissions/permissionsUtils";
 
 /**
+ * Raw profile image value from an API record (field order matches backend shapes).
+ * @param {Record<string, unknown> | string | null | undefined} record
+ */
+export function extractProfileImageSource(record) {
+  if (record == null) return null;
+  if (typeof record === "string") {
+    const trimmed = record.trim();
+    return trimmed || null;
+  }
+  if (typeof record !== "object" || Array.isArray(record)) return null;
+
+  const candidates = [
+    record.profile_image,
+    record.profileImage,
+    record.image_url,
+    record.imageUrl,
+    record.image,
+    record.avatar,
+    record.photo,
+    record.photo_url,
+    record.photoUrl,
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed) return trimmed;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resolves a profile image URL from an API record or raw path/URL string.
+ * Relative upload paths are prefixed with the API origin when needed.
+ * @param {Record<string, unknown> | string | null | undefined} recordOrSource
+ */
+export function resolveProfileImageUrl(recordOrSource) {
+  const source = extractProfileImageSource(recordOrSource);
+  return getValidImageUrl(source);
+}
+
+/**
  * Resolves API upload paths to a full URL for display.
  * @param {string | null | undefined} imageUrl
  */
@@ -94,14 +138,7 @@ export function resolveAvatarFromRecord(record = {}) {
     (typeof record.last_name === "string" && record.last_name) ||
     fromName.lastName;
 
-  const imageUrl = getValidImageUrl(
-    record.imageUrl ??
-      record.image_url ??
-      record.profile_image ??
-      record.image ??
-      record.avatar ??
-      null
-  );
+  const imageUrl = resolveProfileImageUrl(record);
 
   return {
     firstName,
@@ -133,11 +170,7 @@ export function normalizeAdminUser(admin) {
     (typeof admin.last_name === "string" && admin.last_name) ||
     fromName.lastName;
 
-  const imageUrl = getValidImageUrl(
-    (typeof admin.imageUrl === "string" && admin.imageUrl) ||
-      (typeof admin.image_url === "string" && admin.image_url) ||
-      null
-  );
+  const imageUrl = resolveProfileImageUrl(admin);
 
   const sessionAdmin = prepareAdminSessionUser(admin);
   const permissions =

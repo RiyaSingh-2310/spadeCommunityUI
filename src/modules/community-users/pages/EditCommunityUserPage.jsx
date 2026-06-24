@@ -8,7 +8,7 @@ import TableCard from "../../../components/admin/TableCard";
 import PasswordField from "../../settings/components/PasswordField";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
-import { resolveMediaUrl } from "../../shared/utils/userAvatar";
+import { resolveProfileImageUrl } from "../../shared/utils/userAvatar";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   getOptionalConfirmPasswordError,
@@ -47,10 +47,7 @@ function EditCommunityUserPage({ isDarkMode }) {
 
   const initialName = existing?.name ?? "";
   const initialMobile = existing?.mobileNumber ?? "";
-  const initialImage =
-    resolveMediaUrl(
-      existing?.profileImage ?? existing?.profile_image ?? existing?.imageUrl ?? ""
-    ) ?? "";
+  const initialImage = resolveProfileImageUrl(existing) ?? "";
 
   const [name, setName] = useState(initialName);
   const [emailAddress] = useState(existing?.emailAddress ?? "");
