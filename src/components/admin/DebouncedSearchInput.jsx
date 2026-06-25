@@ -32,18 +32,20 @@ function DebouncedSearchInput({
     onDebouncedChangeRef.current?.(normalizeSearchQuery(debouncedValue));
   }, [debouncedValue]);
 
-  const borderClass = "admin-search-input border";
+  const borderClass = isDarkMode
+    ? "border-[#344662] bg-[#101a2a]"
+    : "border-[#d8e3ef] bg-white";
 
   return (
     <label
-      className={`flex h-11 w-full items-center gap-2.5 rounded-xl border px-3.5 ${maxWidthClass} ${borderClass} ${className}`}
+      className={`flex h-10 w-full items-center gap-2 rounded-xl border px-3 ${maxWidthClass} ${borderClass} ${className}`}
     >
-      <Search size={16} strokeWidth={2} className="admin-text-subtle shrink-0" />
+      <Search size={15} className="admin-text-subtle" />
       <input
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`admin-text w-full bg-transparent text-sm font-medium outline-none placeholder:text-[var(--admin-subtle-foreground)] ${inputClassName}`}
+        className={`admin-text w-full bg-transparent text-sm outline-none placeholder:text-[var(--admin-subtle-foreground)] ${inputClassName}`}
         placeholder={placeholder}
         aria-label={ariaLabel}
       />

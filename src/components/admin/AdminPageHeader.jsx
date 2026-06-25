@@ -14,7 +14,7 @@ function AdminPageHeader({
   return (
     <div className={wrapperClass}>
       <div>
-        <h1 className="admin-text admin-page-title text-xl leading-[1.2] tracking-[-0.02em] sm:text-2xl lg:text-[28px]">
+        <h1 className="admin-text admin-page-title text-xl font-bold leading-[1.2] tracking-[-0.015em] sm:text-2xl lg:text-[28px]">
           {title}
         </h1>
         <Breadcrumbs items={breadcrumbs} isDarkMode={isDarkMode} />

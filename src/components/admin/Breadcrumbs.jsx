@@ -7,7 +7,7 @@ function Breadcrumbs({ items = [] }) {
   }
 
   return (
-    <nav className="admin-text-muted mt-2.5 flex flex-wrap items-center gap-1 text-xs font-medium" aria-label="Breadcrumb">
+    <nav className="admin-text-muted mt-2 flex flex-wrap items-center gap-1 text-xs">
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
         return (

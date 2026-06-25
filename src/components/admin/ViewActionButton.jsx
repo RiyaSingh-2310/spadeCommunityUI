@@ -7,11 +7,14 @@ function ViewActionButton({ isDarkMode, onView, label = "View" }) {
     <button
       type="button"
       onClick={onView}
-      className="admin-icon-action-btn inline-flex h-8 w-auto gap-1.5 rounded-lg px-2.5 text-xs font-semibold"
-      aria-label="View"
-      title="View"
+      className={`inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold whitespace-nowrap transition-colors ${
+        isDarkMode
+          ? "text-[#9fb0c8] hover:bg-[#1e2e45] hover:text-[#f8fafc]"
+          : "text-[#5e718a] hover:bg-[#eef4fb] hover:text-[#203148]"
+      }`}
+      aria-label="view"
     >
-      <Eye size={14} strokeWidth={2} />
+      <Eye size={13} />
       {label}
     </button>
   );

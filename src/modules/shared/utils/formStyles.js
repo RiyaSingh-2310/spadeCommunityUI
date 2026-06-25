@@ -1,5 +1,5 @@
 const ADMIN_INPUT_BASE =
-  "admin-input h-11 w-full rounded-xl border px-3.5 text-sm font-medium outline-none transition border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)] placeholder:font-medium disabled:cursor-not-allowed disabled:opacity-60";
+  "admin-input h-11 w-full rounded-xl border px-3 text-sm outline-none transition border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)] disabled:cursor-not-allowed disabled:opacity-60";
 
 /** Theme-aware form input styling (matches Partner / Client modules). */
 export function getAdminInputClass() {
@@ -22,7 +22,7 @@ export function getAdminCancelButtonClass(size = "form") {
 export function getFormActions(navigate, cancelPath, canSubmit) {
   return {
     submitClass:
-      "admin-btn-primary h-11 rounded-xl px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:transform-none",
+      "h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]",
     cancelClass: getAdminCancelButtonClass(),
     navigate,
     cancelPath,

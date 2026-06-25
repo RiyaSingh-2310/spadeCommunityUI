@@ -12,7 +12,7 @@ function DeleteConfirmModal({
   if (!isOpen) return null;
 
   return (
-    <div className="admin-modal-overlay fixed inset-0 z-[250] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
       <button
         type="button"
         className="admin-header-overlay absolute inset-0"
@@ -21,7 +21,7 @@ function DeleteConfirmModal({
         disabled={isDeleting}
       />
       <div
-        className="admin-header-surface admin-modal-panel relative z-10 w-full max-w-md rounded-2xl border p-5 shadow-2xl"
+        className="admin-header-surface relative z-10 w-full max-w-md rounded-2xl border p-5 shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-modal-title"
