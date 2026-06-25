@@ -57,6 +57,14 @@ export const API_ROUTES = {
     updateStatus: (id) => `/api/salesmanager/status/${id}`,
     delete: (id) => `/api/salesmanager/${id}`,
   },
+  screening: {
+    list: "/api/screening/questions/list",
+    create: "/api/screening/questions/add",
+    byId: (id) => `/api/screening/questions/${id}`,
+    update: (id) => `/api/screening/questions/${id}`,
+    updateStatus: (id) => `/api/screening/questions/${id}/status`,
+    sortOrder: "/api/screening/questions/sort-order",
+  },
   prescreen: {
     list: "/api/prescreen/list",
     create: "/api/prescreen/add",

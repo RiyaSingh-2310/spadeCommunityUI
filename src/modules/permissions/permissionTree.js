@@ -48,10 +48,11 @@ export const PERMISSION_TREE = [
   },
   {
     type: "group",
-    id: "prescreen",
-    label: "Prescreen",
-    parentKey: "prescreen_parent",
+    id: "screening_management",
+    label: "Screening Management",
+    parentKey: "screening_management_parent",
     children: [
+      { key: "user_screening_management", label: "Question Library" },
       { key: "prescreen", label: "Prescreen" },
       { key: "prescreen_group", label: "Prescreen Group" },
     ],
@@ -97,15 +98,6 @@ export const PERMISSION_TREE = [
       { key: "pending_rewards", label: "Pending Rewards" },
       { key: "completed_rewards", label: "Completed Rewards" },
       { key: "reward_settings", label: "Reward Settings" },
-    ],
-  },
-  {
-    type: "group",
-    id: "user_screening",
-    label: "User Screening Management",
-    parentKey: "user_screening_parent",
-    children: [
-      { key: "user_screening_management", label: "List Of All Questions" },
     ],
   },
   { type: "leaf", key: "homepage_management", label: "Homepage Management" },

@@ -1,4 +1,3 @@
-import { ToggleLeft, ToggleRight } from "lucide-react";
 import {
   STATUS_UI_ACTIVE,
   STATUS_UI_INACTIVE,
@@ -6,28 +5,27 @@ import {
 
 function getStatusShellClass(compact) {
   return compact
-    ? "inline-flex min-w-[100px] w-[100px] max-w-[100px] items-center gap-1"
-    : "inline-flex min-w-[140px] w-[140px] items-center gap-1.5";
+    ? "inline-flex min-w-[100px] w-[100px] max-w-[100px] items-center justify-center"
+    : "inline-flex min-w-[88px] items-center justify-center";
 }
 
 function StatusToggleContent({ checked, labelOn, labelOff, compact = false }) {
+  const label = checked ? labelOn : labelOff;
+
   return (
-    <>
-      <span className="inline-flex w-[18px] shrink-0 items-center justify-center">
-        {checked ? (
-          <ToggleRight size={18} className="text-[var(--admin-success-text)]" />
-        ) : (
-          <ToggleLeft size={18} className="text-[var(--admin-warning-text)]" />
-        )}
-      </span>
+    <span
+      className={`admin-status-badge inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
+        compact ? "px-2 py-0.5 text-[11px]" : ""
+      } ${checked ? "admin-status-badge--active" : "admin-status-badge--inactive"}`}
+    >
       <span
-        className={`text-left text-xs font-semibold ${
-          compact ? "min-w-[62px]" : "min-w-[96px]"
-        } ${checked ? "text-[var(--admin-success-text)]" : "text-[var(--admin-warning-text)]"}`}
-      >
-        {checked ? labelOn : labelOff}
-      </span>
-    </>
+        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+          checked ? "bg-[var(--admin-success-text)]" : "bg-[var(--admin-subtle-foreground)]"
+        }`}
+        aria-hidden
+      />
+      {label}
+    </span>
   );
 }
 
@@ -40,12 +38,11 @@ function StatusToggle({
   compact = false,
 }) {
   const statusShellClass = getStatusShellClass(compact);
+  const ariaLabel = checked ? labelOn : labelOff;
+
   if (readOnly) {
     return (
-      <span
-        aria-label={checked ? labelOn : labelOff}
-        className={`${statusShellClass} cursor-default`}
-      >
+      <span aria-label={ariaLabel} className={`${statusShellClass} cursor-default`}>
         <StatusToggleContent
           checked={checked}
           labelOn={labelOn}
@@ -61,7 +58,9 @@ function StatusToggle({
       type="button"
       onClick={onChange}
       aria-pressed={checked}
-      className={`${statusShellClass} cursor-pointer`}
+      aria-label={`${ariaLabel}. Click to toggle status`}
+      title={`Toggle to ${checked ? labelOff : labelOn}`}
+      className={`${statusShellClass} cursor-pointer rounded-full transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]`}
     >
       <StatusToggleContent
         checked={checked}

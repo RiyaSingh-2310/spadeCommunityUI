@@ -208,6 +208,7 @@ function AddPrescreenPage({ isDarkMode }) {
         <AdminPageHeader
           title="Edit Prescreen"
           breadcrumbs={[
+            { label: "Screening Management", to: "/prescreen" },
             { label: "Prescreen", to: "/prescreen" },
             { label: "Edit Prescreen" },
           ]}
@@ -227,6 +228,7 @@ function AddPrescreenPage({ isDarkMode }) {
         <AdminPageHeader
           title="Edit Prescreen"
           breadcrumbs={[
+            { label: "Screening Management", to: "/prescreen" },
             { label: "Prescreen", to: "/prescreen" },
             { label: "Edit Prescreen" },
           ]}
@@ -249,6 +251,7 @@ function AddPrescreenPage({ isDarkMode }) {
       <AdminPageHeader
         title={isEdit ? "Edit Prescreen" : "Add Prescreen"}
         breadcrumbs={[
+          { label: "Screening Management", to: "/prescreen" },
           { label: "Prescreen", to: "/prescreen" },
           { label: isEdit ? "Edit Prescreen" : "Add Prescreen" },
         ]}

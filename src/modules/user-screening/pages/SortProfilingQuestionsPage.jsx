@@ -8,8 +8,8 @@ import { getAdminCancelButtonClass } from "../../shared/utils/formStyles";
 import SortableProfilingQuestionList from "../components/SortableProfilingQuestionList";
 import {
   getRecords,
-  updatePrescreenSortOrder,
-} from "../../../services/prescreen/prescreenQuestionnairesApi";
+  updateScreeningSortOrder,
+} from "../../../services/screening/screeningQuestionsApi";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 
 function SortProfilingQuestionsPage({ isDarkMode }) {
@@ -72,7 +72,7 @@ function SortProfilingQuestionsPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
-      const data = await updatePrescreenSortOrder(
+      const data = await updateScreeningSortOrder(
         items.map((item, index) => ({
           id: item.id,
           sort_order: index,
@@ -109,7 +109,7 @@ function SortProfilingQuestionsPage({ isDarkMode }) {
           title="Sort User Prescreen Questionnaire"
           breadcrumbs={[
             { label: "Screening Management", to: "/user-screening/questions" },
-            { label: "List of All Questions", to: "/user-screening/questions" },
+            { label: "Question Library", to: "/user-screening/questions" },
             { label: "Sort Questions" },
           ]}
           isDarkMode={isDarkMode}
@@ -132,7 +132,7 @@ function SortProfilingQuestionsPage({ isDarkMode }) {
         title="Sort User Prescreen Questionnaire"
         breadcrumbs={[
           { label: "Screening Management", to: "/user-screening/questions" },
-          { label: "List of All Questions", to: "/user-screening/questions" },
+          { label: "Question Library", to: "/user-screening/questions" },
           { label: "Sort Questions" },
         ]}
         isDarkMode={isDarkMode}

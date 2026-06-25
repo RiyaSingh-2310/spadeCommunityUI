@@ -112,6 +112,8 @@ export function mapPartnerToRow(partner) {
     apiSecretKey: partner?.api_secret_key ?? partner?.apiSecretKey ?? "",
     apiBody: partner?.api_body ?? partner?.apiBody ?? "",
     aboutPartner: partner?.about_partner ?? "",
+    updatedAt: partner?.updated_at ?? "",
+    updatedDate: formatLocaleDateTime(partner?.updated_at ?? ""),
   };
 }
 
@@ -291,23 +293,42 @@ export async function getRecord(id) {
 const PARTNER_EXPANDABLE_FIELD_CONFIG = [
   { label: "Contact Person", rowKey: "contactPerson", apiKeys: ["contact_person"] },
   { label: "Panel Size", rowKey: "panelSize", apiKeys: ["panel_size"] },
-  { label: "Complete", rowKey: "completeUrl", apiKeys: ["complete_val", "complete"] },
-  { label: "Terminate", rowKey: "terminateUrl", apiKeys: ["terminate_val", "terminate"] },
-  { label: "Over Quota", rowKey: "overQuotaUrl", apiKeys: ["over_quota_val", "over_quota"] },
   {
-    label: "Quality Term",
+    label: "Complete URL",
+    rowKey: "completeUrl",
+    apiKeys: ["complete_val", "complete"],
+    isUrl: true,
+  },
+  {
+    label: "Over Quota URL",
+    rowKey: "overQuotaUrl",
+    apiKeys: ["over_quota_val", "over_quota"],
+    isUrl: true,
+  },
+  {
+    label: "Quality Term URL",
     rowKey: "qualityTermsUrl",
     apiKeys: ["quality_term_val", "quality_term"],
+    isUrl: true,
   },
   {
-    label: "Survey Closed",
+    label: "Survey Closed URL",
     rowKey: "surveyCloseUrl",
     apiKeys: ["survey_close_val", "survey_close"],
+    isUrl: true,
   },
-  { label: "API Based URL", rowKey: "apiBaseUrl", apiKeys: ["api_base_url", "apiBaseUrl"] },
-  { label: "API Secret Key", rowKey: "apiSecretKey", apiKeys: ["api_secret_key", "apiSecretKey"] },
-  { label: "API Body", rowKey: "apiBody", apiKeys: ["api_body", "apiBody"] },
-  { label: "About Partner", rowKey: "aboutPartner", apiKeys: ["about_partner"], fullWidth: true },
+  {
+    label: "Created At",
+    rowKey: "createdDate",
+    apiKeys: ["created_at"],
+    isDate: true,
+  },
+  {
+    label: "Updated At",
+    rowKey: "updatedDate",
+    apiKeys: ["updated_at"],
+    isDate: true,
+  },
 ];
 
 const PARTNER_TABLE_API_KEYS = new Set([
@@ -351,32 +372,21 @@ export function getPartnerExpandableFields(partner) {
   if (!partner || typeof partner !== "object") return [];
 
   const row = mapPartnerToRow(partner);
-  const consumedApiKeys = new Set();
-  const fields = [];
 
-  for (const config of PARTNER_EXPANDABLE_FIELD_CONFIG) {
-    config.apiKeys.forEach((key) => consumedApiKeys.add(key));
-    if (!hasPartnerApiValue(partner, config.apiKeys)) continue;
+  return PARTNER_EXPANDABLE_FIELD_CONFIG.map((config) => {
+    let value = row[config.rowKey] ?? "";
+    if (config.isDate && !value) {
+      const rawKey = config.apiKeys[0];
+      const raw = partner[rawKey];
+      value = raw ? formatPartnerDetailExtraValue(rawKey, raw) : "";
+    }
 
-    fields.push({
+    return {
       label: config.label,
-      value: row[config.rowKey] ?? "",
-      fullWidth: Boolean(config.fullWidth),
-    });
-  }
-
-  for (const [key, value] of Object.entries(partner)) {
-    if (consumedApiKeys.has(key) || PARTNER_TABLE_API_KEYS.has(key)) continue;
-    if (value == null || String(value).trim() === "") continue;
-
-    fields.push({
-      label: formatPartnerApiKeyLabel(key),
-      value: formatPartnerDetailExtraValue(key, value),
-      fullWidth: key === "about_partner",
-    });
-  }
-
-  return fields;
+      value,
+      isUrl: Boolean(config.isUrl),
+    };
+  });
 }
 
 /**

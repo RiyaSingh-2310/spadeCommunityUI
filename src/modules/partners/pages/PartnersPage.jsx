@@ -127,7 +127,9 @@ function PartnersPage({ isDarkMode }) {
         onPaginationPageSizeChange={handlePageSizeChange}
         showPagination
         nowrapAllCells
-        renderExpandedContent={(row) => <PartnerExpandableDetails partnerId={row.id} />}
+        renderExpandedContent={(row) => (
+          <PartnerExpandableDetails partnerId={row.id} isDarkMode={isDarkMode} />
+        )}
       />
 
       <DeleteConfirmModal

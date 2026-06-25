@@ -22,18 +22,91 @@ import {
   isFormValidForFields,
 } from "../../shared/utils/validation";
 
-const PRESCREEN_GROUP_FORM_FIELDS = ["language", "surveyTitle", "selectedPrescreenId"];
+const PRESCREEN_GROUP_FORM_FIELDS = ["language", "surveyTitle", "prescreenIds"];
 
-const PRESCREEN_GROUP_REQUIRED_FIELDS = ["language", "surveyTitle", "selectedPrescreenId"];
+const PRESCREEN_GROUP_REQUIRED_FIELDS = ["language", "surveyTitle", "prescreenIds"];
 
 const EMPTY_FORM = {
   language: "",
   surveyTitle: "",
-  selectedPrescreenId: "",
-  selectedQuestionnaireLabel: "",
-  status: STATUS_UI_ACTIVE,
   prescreenIds: [],
+  status: STATUS_UI_ACTIVE,
 };
+
+function arraysEqual(left = [], right = []) {
+  if (left.length !== right.length) return false;
+  const sortedLeft = [...left].map(String).sort();
+  const sortedRight = [...right].map(String).sort();
+  return sortedLeft.every((value, index) => value === sortedRight[index]);
+}
+
+function QuestionnaireCheckboxList({
+  options,
+  selectedIds,
+  onChange,
+  disabled,
+  isLoading,
+  hasLanguage,
+}) {
+  if (!hasLanguage) {
+    return (
+      <p className="admin-text-muted rounded-xl border border-dashed border-[var(--admin-border-color)] px-4 py-6 text-sm">
+        Select a language first to load questionnaires.
+      </p>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-[var(--admin-border-color)] px-4 py-6 text-sm">
+        <Loader2 size={16} className="animate-spin text-[#10a950]" />
+        <span className="admin-text-muted">Loading questionnaires...</span>
+      </div>
+    );
+  }
+
+  if (options.length === 0) {
+    return (
+      <p className="admin-text-muted rounded-xl border border-dashed border-[var(--admin-border-color)] px-4 py-6 text-sm">
+        No questionnaires found for this language.
+      </p>
+    );
+  }
+
+  return (
+    <div className="max-h-[min(360px,50vh)] space-y-2 overflow-y-auto rounded-xl border border-[var(--admin-border-color)] bg-[var(--admin-muted-bg)] p-3">
+      {options.map((option) => {
+        const optionId = String(option.value);
+        const checked = selectedIds.includes(optionId);
+
+        return (
+          <label
+            key={optionId}
+            className={`admin-text flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition ${
+              checked
+                ? "border-[#138842]/30 bg-[#e6f6ee] font-medium text-[#138842]"
+                : "border-transparent bg-[var(--admin-surface)] hover:border-[var(--admin-border-color)]"
+            } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
+          >
+            <input
+              type="checkbox"
+              checked={checked}
+              disabled={disabled}
+              onChange={() => {
+                const next = checked
+                  ? selectedIds.filter((id) => id !== optionId)
+                  : [...selectedIds, optionId];
+                onChange(next);
+              }}
+              className="h-4 w-4 rounded accent-[var(--admin-primary-color)]"
+            />
+            <span>{option.label}</span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
 
 function AddPrescreenGroupPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -54,7 +127,8 @@ function AddPrescreenGroupPage({ isDarkMode }) {
     () => ({
       language: getRequiredError(form.language, "Language"),
       surveyTitle: getRequiredError(form.surveyTitle, "Survey Group Title"),
-      selectedPrescreenId: getRequiredError(form.selectedPrescreenId, "Select Questionnaire"),
+      prescreenIds:
+        form.prescreenIds.length > 0 ? "" : "Select at least one questionnaire",
     }),
     [form]
   );
@@ -78,6 +152,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
         const record = await getRecord(id);
         if (cancelled) return;
         const mapped = mapPrescreenGroupToForm(record);
+        const prescreenIds = (mapped.prescreenIds ?? []).map(String);
 
         if (mapped.language) {
           setIsLoadingQuestionnaires(true);
@@ -88,16 +163,14 @@ function AddPrescreenGroupPage({ isDarkMode }) {
             );
             if (cancelled) return;
 
-            const selectedId = String(mapped.selectedPrescreenId ?? "").trim();
-            if (
-              selectedId &&
-              !options.some((option) => String(option.value) === selectedId)
-            ) {
-              options.unshift({
-                value: selectedId,
-                label: mapped.selectedQuestionnaireLabel || `Question #${selectedId}`,
-              });
-            }
+            prescreenIds.forEach((selectedId) => {
+              if (!options.some((option) => String(option.value) === selectedId)) {
+                options.unshift({
+                  value: selectedId,
+                  label: `Question #${selectedId}`,
+                });
+              }
+            });
 
             setQuestionnaireOptions(options);
           } finally {
@@ -105,8 +178,13 @@ function AddPrescreenGroupPage({ isDarkMode }) {
           }
         }
 
-        setForm(mapped);
-        setInitialSnapshot(mapped);
+        const snapshot = {
+          ...mapped,
+          prescreenIds,
+        };
+
+        setForm(snapshot);
+        setInitialSnapshot(snapshot);
       } catch (error) {
         if (cancelled) return;
         toastApiError(error);
@@ -152,7 +230,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
     if (!isEdit || !initialSnapshot) return false;
     return (
       form.surveyTitle !== initialSnapshot.surveyTitle ||
-      form.selectedPrescreenId !== initialSnapshot.selectedPrescreenId
+      !arraysEqual(form.prescreenIds, initialSnapshot.prescreenIds)
     );
   }, [isEdit, initialSnapshot, form]);
 
@@ -172,7 +250,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
     setForm((prev) => ({
       ...prev,
       language,
-      selectedPrescreenId: isEdit ? prev.selectedPrescreenId : "",
+      prescreenIds: isEdit ? prev.prescreenIds : [],
     }));
     touch("language");
   };
@@ -214,16 +292,17 @@ function AddPrescreenGroupPage({ isDarkMode }) {
     }
   };
 
+  const breadcrumbItems = [
+    { label: "Screening Management", to: "/prescreen/group" },
+    { label: "Prescreen Group", to: "/prescreen/group" },
+  ];
+
   if (isEdit && isLoadingRecord) {
     return (
       <div className="space-y-6">
         <AdminPageHeader
           title="Edit Survey Group"
-          breadcrumbs={[
-            { label: "Prescreen", to: "/prescreen/group" },
-            { label: "Prescreen Group", to: "/prescreen/group" },
-            { label: "Edit Survey Group" },
-          ]}
+          breadcrumbs={[...breadcrumbItems, { label: "Edit Survey Group" }]}
           isDarkMode={isDarkMode}
         />
         <div className="admin-text flex items-center gap-2 text-sm">
@@ -239,11 +318,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
       <div className="space-y-6">
         <AdminPageHeader
           title="Edit Survey Group"
-          breadcrumbs={[
-            { label: "Prescreen", to: "/prescreen/group" },
-            { label: "Prescreen Group", to: "/prescreen/group" },
-            { label: "Edit Survey Group" },
-          ]}
+          breadcrumbs={[...breadcrumbItems, { label: "Edit Survey Group" }]}
           isDarkMode={isDarkMode}
         />
         <p className="admin-text-muted text-sm">Survey group not found.</p>
@@ -263,8 +338,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
       <AdminPageHeader
         title={isEdit ? "Edit Survey Group" : "Add Survey Group"}
         breadcrumbs={[
-          { label: "Prescreen", to: "/prescreen/group" },
-          { label: "Prescreen Group", to: "/prescreen/group" },
+          ...breadcrumbItems,
           { label: isEdit ? "Edit Survey Group" : "Add Survey Group" },
         ]}
         isDarkMode={isDarkMode}
@@ -314,37 +388,20 @@ function AddPrescreenGroupPage({ isDarkMode }) {
                 Select Questionnaire
                 <span className="text-[var(--admin-danger-text)]"> *</span>
               </label>
-              <SearchableSelect
-                inputClass={inputClass}
-                value={form.selectedPrescreenId}
-                onChange={(selectedPrescreenId) => {
-                  const selected = questionnaireOptions.find(
-                    (option) => String(option.value) === String(selectedPrescreenId)
-                  );
-                  setForm((prev) => ({
-                    ...prev,
-                    selectedPrescreenId,
-                    selectedQuestionnaireLabel: selected?.label ?? "",
-                  }));
-                  touch("selectedPrescreenId");
-                }}
-                onBlur={() => touch("selectedPrescreenId")}
+              <QuestionnaireCheckboxList
                 options={questionnaireOptions}
-                placeholder="Select Questionnaire"
-                searchPlaceholder="Search questionnaire..."
-                emptyMessage={
-                  form.language
-                    ? "No questionnaires found for this language"
-                    : "Select a language first"
-                }
-                loading={isLoadingQuestionnaires}
-                loadingLabel="Loading questionnaires..."
-                aria-label="Select questionnaire"
+                selectedIds={form.prescreenIds}
+                onChange={(prescreenIds) => {
+                  setField("prescreenIds", prescreenIds);
+                  touch("prescreenIds");
+                }}
                 disabled={controlDisabled || !form.language}
+                isLoading={isLoadingQuestionnaires}
+                hasLanguage={Boolean(form.language)}
               />
-              {showError("selectedPrescreenId") && (
+              {showError("prescreenIds") && (
                 <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
-                  {showError("selectedPrescreenId")}
+                  {showError("prescreenIds")}
                 </p>
               )}
             </div>

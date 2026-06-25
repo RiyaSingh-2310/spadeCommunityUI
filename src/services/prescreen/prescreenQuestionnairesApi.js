@@ -16,6 +16,14 @@ const UI_TO_API_QUESTION_TYPE = {
   Checkbox: "checkbox",
   Dropdown: "dropdown",
   "Radio Button": "radio",
+  Number: "number",
+  Date: "date",
+  Time: "time",
+  "Date Time": "datetime",
+  "Date-Time": "datetime",
+  // Legacy UI labels
+  "Single Line Text": "textbox",
+  "Multi Line Text": "textarea",
 };
 
 const API_TO_UI_QUESTION_TYPE = {
@@ -24,6 +32,10 @@ const API_TO_UI_QUESTION_TYPE = {
   checkbox: "Checkbox",
   dropdown: "Dropdown",
   radio: "Radio Button",
+  number: "Number",
+  date: "Date",
+  time: "Time",
+  datetime: "Date-Time",
 };
 
 function isApiSuccess(data) {
@@ -71,26 +83,83 @@ function normalizeOptionValue(option) {
   if (option == null) return "";
   if (typeof option === "string") return option.trim();
   if (typeof option === "object") {
-    return String(option.mappedOption ?? option.optionText ?? option.option ?? "").trim();
+    return String(
+      option.mapped_option ??
+        option.mappedOption ??
+        option.value ??
+        option.option_text ??
+        option.optionText ??
+        option.option ??
+        ""
+    ).trim();
   }
   return String(option).trim();
 }
 
+function mapOptionToApiObject(option) {
+  if (option == null) return null;
+  if (typeof option === "string") {
+    const trimmed = option.trim();
+    return trimmed ? { option_text: trimmed, mapped_option: trimmed } : null;
+  }
+  if (typeof option === "object") {
+    const label = String(option.label ?? option.option_text ?? option.optionText ?? "").trim();
+    const value = String(
+      option.value ?? option.mapped_option ?? option.mappedOption ?? label
+    ).trim();
+    if (!label && !value) return null;
+    return { option_text: label || value, mapped_option: value || label };
+  }
+  return null;
+}
+
+function mapOptionsToFormItems(options) {
+  if (typeof options === "string") {
+    return options
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => ({ label: line, value: line }));
+  }
+
+  if (!Array.isArray(options)) return [];
+
+  return options
+    .map((opt) => {
+      if (typeof opt === "string") {
+        const trimmed = opt.trim();
+        return trimmed ? { label: trimmed, value: trimmed } : null;
+      }
+      if (typeof opt === "object" && opt) {
+        const label = String(opt.option_text ?? opt.optionText ?? opt.label ?? "").trim();
+        const value = String(
+          opt.mapped_option ?? opt.mappedOption ?? opt.value ?? label
+        ).trim();
+        if (!label && !value) return null;
+        return { label: label || value, value: value || label };
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
 function resolveOptions(payload) {
   if (Array.isArray(payload.options)) {
-    return payload.options.map(normalizeOptionValue).filter(Boolean);
+    return payload.options.map(mapOptionToApiObject).filter(Boolean);
   }
   if (typeof payload.options === "string") {
     return payload.options
       .split(/\r?\n/)
       .map((line) => line.trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .map((line) => ({ option_text: line, mapped_option: line }));
   }
   if (typeof payload.mappedOptions === "string") {
     return payload.mappedOptions
       .split(/\r?\n/)
       .map((line) => line.trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .map((line) => ({ option_text: line, mapped_option: line }));
   }
   return [];
 }
@@ -123,6 +192,7 @@ function buildPrescreenBody(payload, { includeStatus = true } = {}) {
     options: resolveOptions(payload),
     right_answer: rightAnswerTrimmed || null,
     sort_order: Number(payload.sortOrder ?? payload.sort_order ?? 0) || 0,
+    is_required: Boolean(payload.required ?? payload.is_required ?? payload.isRequired),
   };
 
   if (includeStatus) {
@@ -149,10 +219,9 @@ function appendPrescreenListQuery(basePath, { page, limit, search, status = "", 
  * @param {object} record
  */
 export function mapPrescreenToForm(record) {
-  const optionRows = Array.isArray(record?.options) ? record.options : [];
-  const mappedLines = optionRows
-    .map((opt) => normalizeOptionValue(opt))
-    .filter(Boolean);
+  const optionItems = mapOptionsToFormItems(record?.options);
+  const mappedLines = optionItems.map((opt) => opt.label).filter(Boolean);
+  const required = Boolean(record?.is_required ?? record?.required ?? record?.isRequired);
 
   return {
     language: record?.language ?? "",
@@ -160,7 +229,9 @@ export function mapPrescreenToForm(record) {
       record?.question_title ?? record?.questionnaireTitle ?? record?.title ?? "",
     questionType: apiToUiQuestionType(record?.question_type ?? record?.questionType),
     mappedOptions: mappedLines.join("\n"),
-    options: mappedLines.join("\n"),
+    mappedOptions: mappedLines.join("\n"),
+    options: optionItems,
+    optionItems,
     rightAnswer:
       record?.right_answer != null
         ? String(record.right_answer)
@@ -168,6 +239,7 @@ export function mapPrescreenToForm(record) {
           ? String(record.rightAnswer)
           : "",
     sortOrder: String(record?.sort_order ?? record?.sortOrder ?? 0),
+    required,
     status: apiStatusToFormValue(record?.status),
   };
 }

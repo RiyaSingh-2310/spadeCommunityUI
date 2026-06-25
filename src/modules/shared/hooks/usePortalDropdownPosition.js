@@ -21,7 +21,11 @@ export function usePortalDropdownPosition(isOpen, triggerRef, menuRef) {
     const rect = trigger.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom - MENU_GAP;
     const spaceAbove = rect.top - MENU_GAP;
-    const openUpward = spaceBelow < MIN_MENU_HEIGHT && spaceAbove > spaceBelow;
+    const measuredHeight = menuRef.current
+      ? Math.min(menuRef.current.scrollHeight, DEFAULT_MENU_MAX_HEIGHT)
+      : DEFAULT_MENU_MAX_HEIGHT;
+    const preferredHeight = Math.max(MIN_MENU_HEIGHT, measuredHeight);
+    const openUpward = spaceBelow < preferredHeight && spaceAbove > spaceBelow;
     const maxHeight = Math.max(
       MIN_MENU_HEIGHT,
       Math.min(DEFAULT_MENU_MAX_HEIGHT, openUpward ? spaceAbove : spaceBelow)

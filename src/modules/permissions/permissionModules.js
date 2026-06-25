@@ -24,7 +24,7 @@ export const PERMISSION_MODULES = [
   { key: "pending_rewards", label: "Pending Rewards" },
   { key: "completed_rewards", label: "Completed Rewards" },
   { key: "reward_settings", label: "Reward Settings" },
-  { key: "user_screening_management", label: "User Screening Management" },
+  { key: "user_screening_management", label: "Question Library" },
   { key: "homepage_management", label: "Homepage Management" },
   { key: "system_email_templates", label: "System Email Templates" },
   { key: "user_email_templates", label: "User Email Templates" },

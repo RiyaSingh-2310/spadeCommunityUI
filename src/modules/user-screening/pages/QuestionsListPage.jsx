@@ -1,16 +1,29 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { BookOpen, CheckCircle2, Globe, ListChecks } from "lucide-react";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import {
-  deleteRecord,
-  listPrescreenRecords,
-  updatePrescreenStatus,
-} from "../../../services/prescreen/prescreenQuestionnairesApi";
+  listScreeningRecords,
+  updateScreeningQuestionStatus,
+} from "../../../services/screening/screeningQuestionsApi";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+
+function computeSummaryStats(items = [], total = 0) {
+  const active = items.filter((row) => String(row.status).toLowerCase() === "active").length;
+  const inactive = items.filter((row) => String(row.status).toLowerCase() === "inactive").length;
+  const languages = new Set(items.map((row) => row.language).filter(Boolean)).size;
+
+  return {
+    total: total || items.length,
+    active,
+    inactive,
+    languages,
+  };
+}
 
 function QuestionsListPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -27,13 +40,28 @@ function QuestionsListPage({ isDarkMode }) {
     handlePageSizeChange,
     refresh,
   } = useApiListing({
-    fetchFn: listPrescreenRecords,
+    fetchFn: listScreeningRecords,
     initialPageSize: DEFAULT_PAGE_SIZE,
     preserveRowOrder: true,
   });
   useListingRefresh(refresh);
 
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+  const [summaryStats, setSummaryStats] = useState(null);
+
+  const loadSummaryStats = useCallback(async () => {
+    try {
+      const data = await listScreeningRecords({ page: 1, limit: 500 });
+      const items = data.items ?? [];
+      setSummaryStats(computeSummaryStats(items, data.total ?? items.length));
+    } catch {
+      setSummaryStats(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSummaryStats();
+  }, [loadSummaryStats]);
 
   const handleStatusToggle = async (row) => {
     if (!row?.id || statusUpdatingId != null) return;
@@ -42,9 +70,10 @@ function QuestionsListPage({ isDarkMode }) {
     setStatusUpdatingId(row.id);
 
     try {
-      const data = await updatePrescreenStatus(row.id, nextStatus);
+      const data = await updateScreeningQuestionStatus(row.id, nextStatus);
       toastApiSuccess(data);
       await refresh();
+      await loadSummaryStats();
     } catch (error) {
       toastApiError(error);
     } finally {
@@ -56,25 +85,33 @@ function QuestionsListPage({ isDarkMode }) {
     navigate(`/user-screening/questions/edit/${row.id}`);
   };
 
-  const handleDelete = async (row) => {
-    const confirmed = window.confirm(
-      `Delete "${row.questionTitle}"? This action cannot be undone.`
-    );
-    if (!confirmed) return;
-
-    try {
-      const data = await deleteRecord(row.id);
-      toastApiSuccess(data);
-      await refresh();
-    } catch (error) {
-      toastApiError(error);
+  const summaryCards = useMemo(() => {
+    if (!summaryStats) {
+      return [
+        { icon: ListChecks, label: "Total Questions", value: "—" },
+        { icon: CheckCircle2, label: "Active Questions", value: "—" },
+        { icon: BookOpen, label: "Inactive Questions", value: "—" },
+        { icon: Globe, label: "Languages", value: "—" },
+      ];
     }
-  };
+
+    return [
+      { icon: ListChecks, label: "Total Questions", value: summaryStats.total },
+      { icon: CheckCircle2, label: "Active Questions", value: summaryStats.active },
+      { icon: BookOpen, label: "Inactive Questions", value: summaryStats.inactive },
+      { icon: Globe, label: "Languages", value: summaryStats.languages },
+    ];
+  }, [summaryStats]);
 
   return (
     <ModuleListingPage
       isDarkMode={isDarkMode}
-      title="List of All Questions"
+      title="Question Library"
+      breadcrumbs={[
+        { label: "Screening Management" },
+        { label: "Question Library" },
+      ]}
+      summaryCards={summaryCards}
       searchPlaceholder="Search questions..."
       secondaryActionLabel="Sort Profiling Questions"
       onSecondaryActionClick={() => navigate("/user-screening/questions/sort")}
@@ -94,7 +131,6 @@ function QuestionsListPage({ isDarkMode }) {
       nowrapAllCells
       rowIdKey="id"
       onEdit={handleEdit}
-      onDelete={handleDelete}
       onStatusToggle={handleStatusToggle}
       isLoading={isLoading}
       emptyMessage="No questions found"

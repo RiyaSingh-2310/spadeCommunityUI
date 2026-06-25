@@ -68,7 +68,7 @@ function RecontactSupplierDetailsModal({ isOpen, onClose, surveyId }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
+    <div className="admin-modal-overlay fixed inset-0 z-[250] flex items-center justify-center p-4">
       <button
         type="button"
         className="admin-header-overlay absolute inset-0"

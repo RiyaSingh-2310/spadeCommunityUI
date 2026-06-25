@@ -183,7 +183,7 @@ export function isProfileImageColumn(columnLabel) {
 }
 
 export const TABLE_HEAD_BASE =
-  "px-4 py-3 text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+  "px-4 py-3.5 text-[11px] font-bold uppercase tracking-[0.06em] whitespace-nowrap";
 
 export const TABLE_STATUS_COL = "min-w-[140px] w-[140px]";
 

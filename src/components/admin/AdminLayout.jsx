@@ -61,9 +61,7 @@ function AdminLayoutContent({ isDarkMode, onToggleTheme }) {
   return (
     <div
       data-theme={isDarkMode ? "dark" : "light"}
-      className={`h-screen overflow-hidden transition-colors duration-300 ${
-        isDarkMode ? "bg-[#0f1724]" : "bg-[#edf2f8]"
-      } admin-shell`}
+      className="admin-shell h-screen overflow-hidden bg-[var(--admin-shell-bg)] transition-colors duration-300"
     >
       {isMobile && isMobileDrawerOpen && (
         <button
@@ -95,18 +93,20 @@ function AdminLayoutContent({ isDarkMode, onToggleTheme }) {
           data-admin-scroll-region
           className="h-[calc(100vh-72px)] overflow-y-auto overflow-x-hidden p-4 sm:p-6"
         >
-          <ScrollToTopOnNavigate />
-          {hasAccess ? (
-            isFormRoute(location.pathname) ? (
-              <FormAccessProvider isDarkMode={isDarkMode}>
+          <div className="admin-page-root min-w-0">
+            <ScrollToTopOnNavigate />
+            {hasAccess ? (
+              isFormRoute(location.pathname) ? (
+                <FormAccessProvider isDarkMode={isDarkMode}>
+                  <Outlet />
+                </FormAccessProvider>
+              ) : (
                 <Outlet />
-              </FormAccessProvider>
+              )
             ) : (
-              <Outlet />
-            )
-          ) : (
-            <PermissionDenied isDarkMode={isDarkMode} />
-          )}
+              <PermissionDenied isDarkMode={isDarkMode} />
+            )}
+          </div>
         </main>
       </div>
     </div>

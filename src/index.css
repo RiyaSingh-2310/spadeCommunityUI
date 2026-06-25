@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Plus Jakarta Sans", Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -17,31 +17,59 @@ body {
   min-width: 320px;
 }
 
+.admin-shell {
+  background-color: var(--admin-shell-bg);
+  font-weight: 500;
+}
+
 .admin-shell[data-theme="light"] {
   --primary-color: #10a950;
   --admin-primary-color: #10a950;
+  --admin-primary-hover: #0f9b49;
+  --admin-primary-shadow: rgba(16, 169, 80, 0.28);
   --admin-foreground: #1f2b3d;
   --admin-muted-foreground: #6f8098;
   --admin-subtle-foreground: #8b98ab;
   --admin-card-title: #233247;
+  --admin-muted-bg: #f2f7fc;
   --admin-success-text: #138842;
   --admin-warning-text: #c27718;
   --admin-danger-text: #de3d3d;
   --admin-avatar-fill: #10a950;
   --admin-avatar-fg: #ffffff;
+  --admin-sidebar-bg: #ffffff;
+  --admin-sidebar-border: #dce6f1;
+  --admin-sidebar-hover-bg: #f2f7fc;
+  --admin-sidebar-active-text: #138842;
+  --admin-sidebar-icon: #8b98ab;
   --admin-sidebar-flyout-bg: #ffffff;
   --admin-sidebar-flyout-border: #d9e2ee;
   --admin-sidebar-flyout-header-bg: #f4f8fc;
   --admin-sidebar-active-bg: #e6f6ee;
+  --admin-sidebar-active-ring: rgba(19, 136, 66, 0.12);
   --admin-header-search-bg: #f4f8fc;
   --admin-header-search-border: #d8e3ef;
   --admin-input-bg: #ffffff;
   --admin-input-border: #d8e3ef;
+  --admin-input-focus-border: #10a950;
+  --admin-input-focus-ring: rgba(16, 169, 80, 0.22);
   --admin-skeleton-bg: #e6edf5;
   --admin-header-surface: #ffffff;
   --admin-header-surface-border: #dce6f2;
   --admin-header-overlay: rgba(15, 23, 36, 0.45);
   --admin-notification-unread-bg: rgba(14, 162, 70, 0.12);
+  --admin-card-bg: #ffffff;
+  --admin-card-border: #dce7f3;
+  --admin-card-shadow: 0 4px 16px rgba(17, 36, 65, 0.06), 0 12px 32px rgba(17, 36, 65, 0.08);
+  --admin-table-head-bg: #f4f8fc;
+  --admin-table-row-border: #e6edf5;
+  --admin-table-row-hover: #f8fbfe;
+  --admin-status-active-bg: rgba(19, 136, 66, 0.12);
+  --admin-status-inactive-bg: rgba(111, 128, 152, 0.12);
+  --admin-icon-action-hover: #eef4fb;
+  --admin-icon-action-text: #5e718a;
+  --admin-icon-action-delete-hover: #fff1f1;
+  --admin-shell-bg: #edf2f8;
   --admin-checkbox-border: #c5d3e3;
   --admin-checkbox-bg: #ffffff;
   --admin-checkbox-hover-border: #10a950;
@@ -59,28 +87,51 @@ body {
 .admin-shell[data-theme="dark"] {
   --primary-color: #28c56d;
   --admin-primary-color: #28c56d;
+  --admin-primary-hover: #22b35f;
+  --admin-primary-shadow: rgba(40, 197, 109, 0.25);
   --admin-foreground: #f8fafc;
   --admin-muted-foreground: #9fb0c8;
   --admin-subtle-foreground: #8ea5c2;
   --admin-card-title: #f8fafc;
+  --admin-muted-bg: #1a273c;
   --admin-success-text: #28c56d;
   --admin-warning-text: #ffb347;
   --admin-danger-text: #ff8f8f;
   --admin-avatar-fill: #18a354;
   --admin-avatar-fg: #ffffff;
+  --admin-sidebar-bg: #111b2c;
+  --admin-sidebar-border: #2a3c56;
+  --admin-sidebar-hover-bg: #1f3047;
+  --admin-sidebar-active-text: #28c56d;
+  --admin-sidebar-icon: #8ea5c2;
   --admin-sidebar-flyout-bg: #1a273c;
   --admin-sidebar-flyout-border: #344662;
   --admin-sidebar-flyout-header-bg: #131f31;
   --admin-sidebar-active-bg: rgba(24, 163, 84, 0.18);
+  --admin-sidebar-active-ring: rgba(40, 197, 109, 0.2);
   --admin-header-search-bg: #101a2a;
   --admin-header-search-border: #344662;
   --admin-input-bg: #101a2a;
   --admin-input-border: #344662;
+  --admin-input-focus-border: #28c56d;
+  --admin-input-focus-ring: rgba(40, 197, 109, 0.28);
   --admin-skeleton-bg: #263850;
   --admin-header-surface: #121d2f;
   --admin-header-surface-border: #32445f;
   --admin-header-overlay: rgba(2, 6, 23, 0.65);
   --admin-notification-unread-bg: rgba(40, 197, 109, 0.15);
+  --admin-card-bg: #131f31;
+  --admin-card-border: #283b58;
+  --admin-card-shadow: 0 8px 24px rgba(2, 6, 23, 0.35), 0 16px 40px rgba(2, 6, 23, 0.2);
+  --admin-table-head-bg: #152238;
+  --admin-table-row-border: #263850;
+  --admin-table-row-hover: #1a273c;
+  --admin-status-active-bg: rgba(40, 197, 109, 0.15);
+  --admin-status-inactive-bg: rgba(159, 176, 200, 0.12);
+  --admin-icon-action-hover: #1e2e45;
+  --admin-icon-action-text: #9fb0c8;
+  --admin-icon-action-delete-hover: #301f2d;
+  --admin-shell-bg: #0f1724;
   --admin-checkbox-border: #4a5f7a;
   --admin-checkbox-bg: #101a2a;
   --admin-checkbox-hover-border: #28c56d;
@@ -97,14 +148,206 @@ body {
 
 .admin-text {
   color: var(--admin-foreground);
+  font-weight: 500;
 }
 
 .admin-text-muted {
   color: var(--admin-muted-foreground);
+  font-weight: 500;
 }
 
 .admin-text-subtle {
   color: var(--admin-subtle-foreground);
+  font-weight: 500;
+}
+
+.admin-page-title {
+  font-weight: 700;
+}
+
+.admin-section-title,
+.admin-card-title {
+  font-weight: 600;
+}
+
+.admin-card-title {
+  color: var(--admin-card-title);
+}
+
+/* Primary & secondary action buttons */
+.admin-btn-primary {
+  background-color: var(--admin-primary-color);
+  color: #ffffff;
+  box-shadow: 0 6px 18px var(--admin-primary-shadow);
+  transition:
+    background-color 0.18s ease,
+    transform 0.15s ease,
+    box-shadow 0.18s ease;
+}
+
+.admin-btn-primary:hover:not(:disabled) {
+  background-color: var(--admin-primary-hover);
+  transform: translateY(-1px);
+}
+
+.admin-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.admin-btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.admin-btn-secondary {
+  background-color: transparent;
+  border: 1.5px solid var(--admin-header-surface-border);
+  color: var(--admin-foreground);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.admin-btn-secondary:hover:not(:disabled) {
+  background-color: var(--admin-muted-bg);
+  border-color: var(--admin-input-border);
+  transform: translateY(-1px);
+}
+
+.admin-btn-secondary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.admin-btn-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Summary stat cards */
+.admin-summary-card {
+  background-color: var(--admin-header-surface);
+  border-color: var(--admin-header-surface-border);
+  box-shadow: var(--admin-card-shadow);
+}
+
+.admin-summary-card:hover {
+  box-shadow:
+    var(--admin-card-shadow),
+    0 2px 8px rgba(15, 23, 36, 0.04);
+}
+
+.admin-summary-card__icon {
+  background-color: var(--admin-header-search-bg);
+  color: var(--admin-primary-color);
+}
+
+.admin-summary-card__value {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Status pill badges */
+.admin-status-badge--active {
+  background-color: var(--admin-status-active-bg);
+  color: var(--admin-success-text);
+}
+
+.admin-status-badge--inactive {
+  background-color: var(--admin-status-inactive-bg);
+  color: var(--admin-muted-foreground);
+}
+
+/* Table icon action buttons */
+.admin-icon-action-btn {
+  display: inline-flex;
+  height: 1.875rem;
+  width: 1.875rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--admin-icon-action-text);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.admin-icon-action-btn:hover {
+  background-color: var(--admin-icon-action-hover);
+  color: var(--admin-foreground);
+  transform: scale(1.05);
+}
+
+.admin-icon-action-btn--delete {
+  color: var(--admin-danger-text);
+}
+
+.admin-icon-action-btn--delete:hover {
+  background-color: var(--admin-icon-action-delete-hover);
+  color: var(--admin-danger-text);
+}
+
+/* Admin data tables */
+.admin-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-table thead tr {
+  background-color: var(--admin-table-head-bg);
+}
+
+.admin-table thead th {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--admin-table-row-border);
+}
+
+.admin-table tbody tr {
+  transition: background-color 0.12s ease;
+}
+
+.admin-table tbody tr:hover {
+  background-color: var(--admin-table-row-hover);
+}
+
+.admin-table tbody td {
+  border-top: 1px solid var(--admin-table-row-border);
+  font-weight: 500;
+}
+
+.admin-table-card {
+  background-color: var(--admin-card-bg);
+  border-color: var(--admin-card-border);
+  box-shadow: var(--admin-card-shadow);
+}
+
+/* Standardized input focus */
+.admin-shell .admin-input:focus,
+.admin-shell input:not([type="checkbox"]):not([type="radio"]):focus,
+.admin-shell textarea:focus,
+.admin-shell select:focus {
+  border-color: var(--admin-input-focus-border);
+  box-shadow: 0 0 0 3px var(--admin-input-focus-ring);
+  outline: none;
+}
+
+.admin-search-input {
+  background-color: var(--admin-input-bg);
+  border-color: var(--admin-input-border);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.admin-search-input:focus-within {
+  border-color: var(--admin-input-focus-border);
+  box-shadow: 0 0 0 3px var(--admin-input-focus-ring);
 }
 
 .admin-table-description-line-clamp-2 {
@@ -115,10 +358,6 @@ body {
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
-}
-
-.admin-card-title {
-  color: var(--admin-card-title);
 }
 
 .admin-input:-webkit-autofill,
@@ -197,7 +436,7 @@ body {
 }
 
 .admin-rich-editor a {
-  color: #10a950;
+  color: var(--admin-primary-color);
   text-decoration: underline;
 }
 
@@ -305,7 +544,53 @@ input[type="number"],
 
 .admin-sidebar-flyout-item-active {
   background-color: var(--admin-sidebar-active-bg);
-  color: var(--admin-success-text);
+  color: var(--admin-sidebar-active-text);
+  font-weight: 600;
+}
+
+.admin-sidebar-item {
+  color: var(--admin-muted-foreground);
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.admin-sidebar-item:hover {
+  background-color: var(--admin-sidebar-hover-bg);
+  color: var(--admin-foreground);
+}
+
+.admin-sidebar-item--active {
+  background-color: var(--admin-sidebar-active-bg);
+  color: var(--admin-sidebar-active-text);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px var(--admin-sidebar-active-ring);
+}
+
+.admin-sidebar-item__icon {
+  color: var(--admin-sidebar-icon);
+}
+
+.admin-sidebar-item--active .admin-sidebar-item__icon {
+  color: var(--admin-sidebar-active-text);
+}
+
+.admin-sidebar-child {
+  color: var(--admin-muted-foreground);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.admin-sidebar-child:hover {
+  background-color: var(--admin-sidebar-hover-bg);
+  color: var(--admin-foreground);
+}
+
+.admin-sidebar-child--active {
+  background-color: var(--admin-sidebar-active-bg);
+  color: var(--admin-sidebar-active-text);
   font-weight: 600;
 }
 
@@ -325,20 +610,35 @@ input[type="number"],
   color: var(--admin-foreground);
 }
 
-/*
- * Portal-rendered dropdown menus — always solid white with theme primary states.
- * Used by SearchableSelect and all app select fields.
- */
-.admin-portal-dropdown {
+.admin-shell[data-theme="light"] .admin-portal-dropdown {
   --portal-dropdown-bg: #ffffff;
   --portal-dropdown-border: #dce6f2;
   --portal-dropdown-text: #1f2b3d;
   --portal-dropdown-muted: #8b98ab;
   --portal-dropdown-hover-bg: #e6f6ee;
   --portal-dropdown-selected-bg: #e6f6ee;
-  --portal-dropdown-selected-text: #10a950;
+  --portal-dropdown-selected-text: var(--admin-primary-color);
   --portal-dropdown-focus-ring: rgba(16, 169, 80, 0.28);
+  --portal-dropdown-option-hover-selected: #d4f0e0;
+}
 
+.admin-shell[data-theme="dark"] .admin-portal-dropdown {
+  --portal-dropdown-bg: #121d2f;
+  --portal-dropdown-border: #32445f;
+  --portal-dropdown-text: #f8fafc;
+  --portal-dropdown-muted: #8ea5c2;
+  --portal-dropdown-hover-bg: rgba(40, 197, 109, 0.12);
+  --portal-dropdown-selected-bg: rgba(40, 197, 109, 0.18);
+  --portal-dropdown-selected-text: var(--admin-primary-color);
+  --portal-dropdown-focus-ring: rgba(40, 197, 109, 0.28);
+  --portal-dropdown-option-hover-selected: rgba(40, 197, 109, 0.22);
+}
+
+/*
+ * Portal-rendered dropdown menus — theme-aware with solid surfaces.
+ * Used by SearchableSelect and all app select fields.
+ */
+.admin-portal-dropdown {
   background-color: var(--portal-dropdown-bg);
   border: 1px solid var(--portal-dropdown-border);
   color: var(--portal-dropdown-text);
@@ -354,8 +654,8 @@ input[type="number"],
 }
 
 .admin-portal-dropdown-search-input {
-  background-color: #ffffff;
-  border: 1px solid #d8e3ef;
+  background-color: var(--portal-dropdown-bg);
+  border: 1px solid var(--portal-dropdown-border);
   color: var(--portal-dropdown-text);
   transition:
     border-color 0.15s ease,
@@ -367,7 +667,7 @@ input[type="number"],
 }
 
 .admin-portal-dropdown-search-input:focus {
-  border-color: #10a950;
+  border-color: var(--admin-input-focus-border);
   box-shadow: 0 0 0 3px var(--portal-dropdown-focus-ring);
   outline: none;
 }
@@ -382,7 +682,7 @@ input[type="number"],
 
 .admin-portal-dropdown-option {
   color: var(--portal-dropdown-text);
-  background-color: #ffffff;
+  background-color: var(--portal-dropdown-bg);
   padding-top: 0.5625rem;
   padding-bottom: 0.5625rem;
   transition:
@@ -398,7 +698,7 @@ input[type="number"],
 .admin-portal-dropdown-option:focus-visible {
   outline: none;
   background-color: var(--portal-dropdown-hover-bg);
-  box-shadow: inset 0 0 0 2px #10a950;
+  box-shadow: inset 0 0 0 2px var(--admin-primary-color);
 }
 
 .admin-portal-dropdown-option-selected,
@@ -410,7 +710,7 @@ input[type="number"],
 
 .admin-portal-dropdown-option-selected:hover:not(:disabled),
 .admin-portal-dropdown-option[aria-selected="true"]:hover:not(:disabled) {
-  background-color: #d4f0e0;
+  background-color: var(--portal-dropdown-option-hover-selected);
   color: var(--portal-dropdown-selected-text);
 }
 
@@ -428,17 +728,20 @@ input[type="number"],
 
 .admin-btn-cancel {
   background-color: var(--admin-header-search-bg);
-  border: 1px solid var(--admin-header-surface-border);
+  border: 1.5px solid var(--admin-header-surface-border);
   color: var(--admin-foreground);
+  font-weight: 600;
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,
-    color 0.15s ease;
+    color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .admin-btn-cancel:hover:not(:disabled) {
   background-color: var(--admin-permissions-row-hover);
   color: var(--admin-foreground);
+  transform: translateY(-1px);
 }
 
 .admin-btn-cancel:disabled {
@@ -674,6 +977,19 @@ input[type="number"],
   -webkit-overflow-scrolling: touch;
 }
 
+/* Cross-platform hidden scrollbars — preserves scroll, no layout shift */
+.admin-shell,
+.admin-shell * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-shell *::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 .admin-shell .admin-form-actions {
   display: flex;
   flex-wrap: wrap;
@@ -690,5 +1006,102 @@ input[type="number"],
   .admin-shell .admin-form-actions > button,
   .admin-shell .admin-form-actions > a {
     flex: 0 1 auto;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Global admin responsive layout (forms, tables, modals, pages)                */
+/* -------------------------------------------------------------------------- */
+
+.admin-shell main {
+  min-width: 0;
+}
+
+.admin-page-root,
+.admin-form-root {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-form-grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (min-width: 768px) {
+  .admin-form-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.admin-type-required-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.admin-type-required-row__type {
+  flex: 1 1 0;
+  min-width: min(100%, 12rem);
+}
+
+.admin-type-required-row__required {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 2.75rem;
+  white-space: nowrap;
+}
+
+.admin-type-required-row button[type="button"] {
+  width: 100%;
+}
+
+.admin-shell .admin-input,
+.admin-shell input:not([type="checkbox"]):not([type="radio"]),
+.admin-shell textarea,
+.admin-shell select,
+.admin-shell .admin-number-input {
+  max-width: 100%;
+}
+
+.admin-shell label > button[type="button"].admin-input,
+.admin-shell label > button[type="button"]:not(.admin-icon-btn) {
+  max-width: 100%;
+}
+
+.admin-table-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  max-width: 100%;
+}
+
+.admin-table .admin-table-actions-col {
+  white-space: nowrap;
+}
+
+.admin-modal-overlay {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+}
+
+.admin-modal-panel {
+  max-height: min(90dvh, calc(100dvh - 2rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: auto;
+}
+
+@media (max-width: 1023px) {
+  .admin-shell .admin-page-title {
+    overflow-wrap: anywhere;
+  }
+
+  .admin-shell .admin-form-grid-2 > * {
+    min-width: 0;
   }
 }

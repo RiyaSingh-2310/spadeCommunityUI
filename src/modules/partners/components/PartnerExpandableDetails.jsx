@@ -1,23 +1,53 @@
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { ExternalLink, Loader2 } from "lucide-react";
 import { toastApiError } from "../../../services/toast/apiToast";
+import { TABLE_HEAD_BASE } from "../../shared/utils/tableHelpers";
 import {
   getPartnerDetailCached,
   getPartnerExpandableFields,
 } from "../../../services/partners/partnersApi";
 
-function DetailField({ label, value }) {
-  const display = value != null && String(value).trim() !== "" ? String(value) : "—";
-
-  return (
-    <div className="min-w-0">
-      <p className="admin-text-subtle text-xs font-semibold uppercase tracking-wide">{label}</p>
-      <p className="admin-text mt-1 break-words text-sm">{display}</p>
-    </div>
-  );
+function isValidUrl(value) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) return false;
+  try {
+    const url = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
+    return Boolean(url.hostname);
+  } catch {
+    return false;
+  }
 }
 
-function PartnerExpandableDetails({ partnerId }) {
+function formatUrlForHref(value) {
+  const trimmed = String(value ?? "").trim();
+  return trimmed.includes("://") ? trimmed : `https://${trimmed}`;
+}
+
+function CellValue({ value, isUrl }) {
+  const display = value != null && String(value).trim() !== "" ? String(value) : "—";
+
+  if (isUrl && display !== "—" && isValidUrl(display)) {
+    return (
+      <a
+        href={formatUrlForHref(display)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 break-all text-[#138842] hover:underline"
+      >
+        {display}
+        <ExternalLink size={13} className="shrink-0" aria-hidden />
+      </a>
+    );
+  }
+
+  if (isUrl && display !== "—") {
+    return <span className="break-words text-[var(--admin-danger-text)]">{display}</span>;
+  }
+
+  return <span className="admin-text break-words">{display}</span>;
+}
+
+function PartnerExpandableDetails({ partnerId, isDarkMode = false }) {
   const [fields, setFields] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -78,16 +108,30 @@ function PartnerExpandableDetails({ partnerId }) {
     );
   }
 
+  const rowBorderClass = isDarkMode ? "border-[#263850]" : "border-[#e6edf5]";
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {fields.map((field) => (
-        <div
-          key={field.label}
-          className={ "min-w-0"}
-        >
-          <DetailField label={field.label} value={field.value} />
-        </div>
-      ))}
+    <div className="overflow-x-auto">
+      <table className="admin-table min-w-full text-sm">
+        <thead>
+          <tr className="admin-text-muted">
+            {fields.map((field) => (
+              <th key={field.label} className={`${TABLE_HEAD_BASE} text-left`}>
+                {field.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr className={`border-t align-middle ${rowBorderClass}`}>
+            {fields.map((field) => (
+              <td key={field.label} className="px-4 py-3 align-middle">
+                <CellValue value={field.value} isUrl={field.isUrl} />
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -48,7 +48,7 @@ function ModuleListingActionCell({
   handleEdit,
   handleDeleteRequest,
 }) {
-  const cellClass = "px-4 py-3 align-middle text-right whitespace-nowrap";
+  const cellClass = "admin-table-actions-col px-4 py-3 align-middle text-right whitespace-nowrap";
 
   if (!allowRead) return null;
   if (!allowWrite && !readOnlyListingActions) return null;

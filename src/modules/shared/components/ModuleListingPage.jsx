@@ -19,6 +19,7 @@ import {
 } from "../../permissions/moduleListingPermissions";
 import ViewActionButton from "../../../components/admin/ViewActionButton";
 import TableCard from "../../../components/admin/TableCard";
+import AdminSummaryCards from "../../../components/admin/AdminSummaryCards";
 import {
   getColumnKey,
   getRowValue,
@@ -40,6 +41,7 @@ import { DEFAULT_PAGE_SIZE, paginateItems } from "../utils/pagination";
 import { formatStatusLabel } from "../utils/statusLabels";
 import { normalizeSearchQuery, rowMatchesSearchQuery } from "../utils/searchQuery";
 import ModuleListingActionCell from "./moduleListing/ModuleListingActionCell";
+import RfqStatusBadge from "../../sales/components/RfqStatusBadge";
 import {
   formatDescriptionForLineClamp,
   insertCheckboxBeforeName,
@@ -50,6 +52,7 @@ function ModuleListingPage({
   title,
   subtitle,
   breadcrumbs,
+  summaryCards,
   searchPlaceholder = "Search records...",
   actionLabel = "Add",
   onActionClick,
@@ -525,20 +528,25 @@ function ModuleListingPage({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="admin-page-root min-w-0 space-y-6">
       <AdminPageHeader
         title={title}
         subtitle={subtitle}
         breadcrumbs={breadcrumbs}
         isDarkMode={isDarkMode}
       />
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+
+      {summaryCards?.length > 0 ? <AdminSummaryCards cards={summaryCards} /> : null}
+
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <DebouncedSearchInput
           value={query}
           onChange={handleQueryChange}
           onDebouncedChange={onSearch}
           placeholder={searchPlaceholder}
           isDarkMode={isDarkMode}
+          className="min-w-0 w-full sm:flex-1"
+          maxWidthClass="sm:max-w-none lg:max-w-[340px]"
         />
         {(toolbarEnd || showSecondaryAction || showAddButton) && (
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2.5">
@@ -547,7 +555,7 @@ function ModuleListingPage({
               <button
                 type="button"
                 onClick={onSecondaryActionClick}
-                className="admin-btn-cancel h-10 rounded-xl px-4 text-sm font-semibold transition hover:opacity-90"
+                className="admin-btn-secondary h-11 rounded-xl px-4 text-sm font-semibold"
               >
                 {secondaryActionLabel}
               </button>
@@ -556,7 +564,7 @@ function ModuleListingPage({
               <button
                 type="button"
                 onClick={onActionClick}
-                className="h-10 shrink-0 rounded-xl bg-[#10a950] px-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,169,80,0.28)] transition hover:bg-[#0f9b49]"
+                className="admin-btn-primary h-11 shrink-0 rounded-xl px-4 text-sm font-semibold"
               >
                 {actionLabel}
               </button>
@@ -566,7 +574,7 @@ function ModuleListingPage({
       </div>
 
       <TableCard isDarkMode={isDarkMode} footer={paginationFooter}>
-        <div className="overflow-x-auto">
+        <div className="admin-table-scroll min-w-0 overflow-x-auto">
           <table className="admin-table min-w-full text-sm">
           <thead>
             <tr className="admin-text-muted">
@@ -584,7 +592,7 @@ function ModuleListingPage({
                   key={h}
                   className={`${TABLE_HEAD_BASE} ${
                     isStatusColumn(h) ? `admin-table-status-col ${statusColumnClass}` : ""
-                  } ${isActionColumn(h) ? "text-right" : "text-left"}`}
+                  } ${isActionColumn(h) ? "admin-table-actions-col text-right" : "text-left"}`}
                 >
                   {h}
                 </th>
@@ -614,9 +622,7 @@ function ModuleListingPage({
               const isExpanded = hasExpandColumn && expandedRowIds.has(String(rowId));
               return (
               <Fragment key={rowKey}>
-              <tr
-                className={`border-t align-middle ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}
-              >
+              <tr className="align-middle">
                 {hasExpandColumn && (
                   <td className="px-3 py-3 align-middle whitespace-nowrap">
                     <button
@@ -664,6 +670,17 @@ function ModuleListingPage({
                           size="table"
                           alt={avatar.displayName}
                         />
+                      </td>
+                    );
+                  }
+                  if (key === "status" && showStatus && rfq) {
+                    const displayStatus = row.statusRaw ?? row.status;
+                    return (
+                      <td
+                        key={col}
+                        className={`admin-table-status-col px-4 py-3 align-middle whitespace-nowrap ${statusColumnClass}`}
+                      >
+                        <RfqStatusBadge status={displayStatus} />
                       </td>
                     );
                   }
@@ -837,9 +854,7 @@ function ModuleListingPage({
                 })}
               </tr>
               {isExpanded && renderExpandedContent ? (
-                <tr
-                  className={`border-t align-middle ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}
-                >
+                <tr className="align-middle">
                   <td
                     colSpan={tableColumns.length + (hasExpandColumn ? 1 : 0)}
                     className="bg-[var(--admin-permissions-table-head-bg)] px-4 py-4"

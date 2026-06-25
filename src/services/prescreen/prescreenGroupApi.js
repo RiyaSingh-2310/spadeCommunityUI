@@ -207,7 +207,7 @@ export function mapPrescreenGroupToForm(prescreen) {
     status: apiStatusToFormValue(prescreen?.status),
     selectedPrescreenId: prescreenIds[0] != null ? String(prescreenIds[0]) : "",
     selectedQuestionnaireLabel,
-    prescreenIds,
+    prescreenIds: prescreenIds.map(String),
   };
 }
 

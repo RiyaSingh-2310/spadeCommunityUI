@@ -1,49 +1,33 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
-import { isSalesLoginRole } from "../../../services/auth/loginRole";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import {
+  deleteSalesProject,
+  getRecords,
+  resolveSalesProjectLogId,
+} from "../../../services/sales/salesProjectsApi";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
-import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
-import {
-  deleteSalesProject,
-  getRecords,
-} from "../../../services/sales/salesProjectsApi";
 import AddRfqLogModal from "../components/AddRfqLogModal";
-import RfqExpandableDetails from "../components/RfqExpandableDetails";
-import { resolveSalesProjectLogId } from "../../../services/sales/salesProjectsApi";
 
-const ADMIN_RFQ_COLUMNS = [
+const RFQ_COLUMNS = [
   "ID",
   "Name",
   "Email Address",
-  "Project ID (if won)",
-  "Country",
-  "Action",
-];
-
-const SALES_RFQ_COLUMNS = [
-  "ID",
-  "Name",
-  "Email Address",
-  "Project ID (if won)",
-  "Country",
   "Email Subject",
-  "Status",
+  "Project ID (if won)",
   "Sales Manager",
+  "Country",
+  "Status",
   "Action",
 ];
 
 function RfqPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const isSalesRole = isSalesLoginRole();
-  const listColumns = useMemo(
-    () => (isSalesRole ? SALES_RFQ_COLUMNS : ADMIN_RFQ_COLUMNS),
-    [isSalesRole]
-  );
   useFlashMessage();
   const {
     rows: projects,
@@ -95,12 +79,12 @@ function RfqPage({ isDarkMode }) {
         searchPlaceholder="Search RFQ..."
         actionLabel="Add RFQ"
         onActionClick={() => navigate("/sales/rfq/add")}
-        columns={listColumns}
+        columns={RFQ_COLUMNS}
         rows={projects}
         rowIdKey="recordId"
         editPath="/sales/rfq"
         actionVariant="rfq"
-        showStatus={isSalesRole}
+        showStatus
         permissionModule="rfq"
         isLoading={isLoading}
         emptyMessage="No RFQ projects found"
@@ -123,7 +107,6 @@ function RfqPage({ isDarkMode }) {
             navigate(`/sales/rfq/logs/${encodeURIComponent(projectId)}`);
           }
         }}
-        renderExpandedContent={(row) => <RfqExpandableDetails row={row} />}
       />
 
       <DeleteConfirmModal
