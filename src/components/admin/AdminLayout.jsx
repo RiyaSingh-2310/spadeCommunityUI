@@ -61,7 +61,9 @@ function AdminLayoutContent({ isDarkMode, onToggleTheme }) {
   return (
     <div
       data-theme={isDarkMode ? "dark" : "light"}
-      className="admin-shell h-screen overflow-hidden bg-[var(--admin-shell-bg)] transition-colors duration-300"
+      className={`h-screen overflow-hidden transition-colors duration-300 ${
+        isDarkMode ? "bg-[#0f1724]" : "bg-[#edf2f8]"
+      } admin-shell`}
     >
       {isMobile && isMobileDrawerOpen && (
         <button

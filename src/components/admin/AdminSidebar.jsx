@@ -249,9 +249,13 @@ function AdminSidebar({
   return (
     <>
       <aside
-        className={`admin-sidebar fixed left-0 top-0 h-screen max-h-screen select-none border-r border-[var(--admin-sidebar-border)] bg-[var(--admin-sidebar-bg)] text-[var(--admin-foreground)] ${
+        className={`admin-sidebar fixed left-0 top-0 h-screen max-h-screen select-none border-r ${
           isMobile ? "overflow-hidden" : isCollapsed ? "overflow-visible" : "overflow-hidden"
-        } ${sidebarPositionClass} ${sidebarWidthClass}`}
+        } ${sidebarPositionClass} ${
+          isDarkMode
+            ? "bg-[#111b2c] text-[var(--admin-foreground)] border-[#2a3c56]"
+            : "bg-white text-[var(--admin-foreground)] border-[#dce6f1]"
+        } ${sidebarWidthClass}`}
         aria-hidden={isMobile && !isDrawerOpen ? true : undefined}
       >
         <div
@@ -259,7 +263,11 @@ function AdminSidebar({
             isMobile || !isCollapsed ? "overflow-hidden" : "overflow-visible"
           }`}
         >
-          <div className="flex h-[72px] shrink-0 items-center border-b border-[var(--admin-sidebar-border)] px-4">
+          <div
+            className={`flex h-[72px] shrink-0 items-center border-b px-4 ${
+              isDarkMode ? "border-[#2a3c56]" : "border-[#dce6f1]"
+            }`}
+          >
             <div
               className={`flex w-full items-center transition-all duration-300 ${
                 isCollapsed && !isMobile ? "justify-center" : "justify-start gap-3"
@@ -321,8 +329,12 @@ function AdminSidebar({
                         navigateAndClose(item.root);
                       }
                     }}
-                    className={`admin-sidebar-item flex h-10 w-full cursor-pointer items-center rounded-xl px-3.5 text-left text-sm font-medium ${
-                      isActive ? "admin-sidebar-item--active" : ""
+                    className={`flex h-10 w-full cursor-pointer items-center rounded-2xl px-3.5 text-left transition-all duration-200 ${
+                      isActive
+                        ? "bg-[#e6f6ee] font-semibold text-[#138842] shadow-[inset_0_0_0_1px_rgba(19,136,66,0.12)]"
+                        : isDarkMode
+                          ? "text-[var(--admin-muted-foreground)] hover:bg-[#1f3047] hover:text-[var(--admin-foreground)]"
+                          : "text-[var(--admin-muted-foreground)] hover:bg-[#f2f7fc] hover:text-[var(--admin-foreground)]"
                     }`}
                     aria-expanded={isCollapsed && hoveredLabel === item.label}
                   >
@@ -333,7 +345,13 @@ function AdminSidebar({
                           : "flex min-w-0 flex-1 items-center gap-3.5"
                       }
                     >
-                      <span className="admin-sidebar-item__icon">
+                      <span
+                        className={
+                          isActive
+                            ? "text-[#138842]"
+                            : "text-[var(--admin-subtle-foreground)]"
+                        }
+                      >
                         {iconMap[item.label]}
                       </span>
                       {(!isCollapsed || isMobile) && (
@@ -362,8 +380,12 @@ function AdminSidebar({
                             type="button"
                             key={child.label}
                             onClick={() => navigateAndClose(child.root)}
-                            className={`admin-sidebar-child flex h-9 w-full items-center rounded-lg px-3.5 pl-11 text-left text-xs font-medium ${
-                              isChildActive ? "admin-sidebar-child--active" : ""
+                            className={`flex h-9 w-full items-center rounded-xl px-3.5 pl-11 text-left text-xs transition-all ${
+                              isChildActive
+                                ? "bg-[#e6f6ee] font-semibold text-[#138842]"
+                                : isDarkMode
+                                  ? "text-[var(--admin-muted-foreground)] hover:bg-[#1f3047]"
+                                  : "text-[var(--admin-muted-foreground)] hover:bg-[#f2f7fc]"
                             }`}
                           >
                             {child.label}
@@ -378,7 +400,11 @@ function AdminSidebar({
           </nav>
 
           {!isMobile && (
-            <div className="sticky bottom-0 z-10 shrink-0 border-t border-[var(--admin-sidebar-border)]">
+            <div
+              className={`sticky bottom-0 z-10 shrink-0 border-t ${
+                isDarkMode ? "border-[#2a3c56]" : "border-[#dce6f1]"
+              }`}
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -389,7 +415,11 @@ function AdminSidebar({
                     return !prev;
                   });
                 }}
-                className="admin-sidebar-item flex h-14 w-full items-center gap-3 p-4 text-sm font-medium"
+                className={`flex h-14 w-full items-center gap-3 p-4 text-sm font-medium transition-all duration-200 ${
+                  isDarkMode
+                    ? "text-[var(--admin-muted-foreground)] hover:bg-[#1f3047] hover:text-[var(--admin-foreground)]"
+                    : "text-[var(--admin-muted-foreground)] hover:bg-[#f2f7fc] hover:text-[var(--admin-foreground)]"
+                }`}
               >
                 {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
                 {!isCollapsed && <span>Collapse</span>}

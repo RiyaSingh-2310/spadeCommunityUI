@@ -111,7 +111,7 @@ function QuestionsListPage({ isDarkMode }) {
         { label: "Screening Management" },
         { label: "Question Library" },
       ]}
-      summaryCards={summaryCards}
+      // summaryCards={summaryCards}
       searchPlaceholder="Search questions..."
       secondaryActionLabel="Sort Profiling Questions"
       onSecondaryActionClick={() => navigate("/user-screening/questions/sort")}

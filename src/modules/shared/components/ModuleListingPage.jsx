@@ -536,7 +536,9 @@ function ModuleListingPage({
         isDarkMode={isDarkMode}
       />
 
-      {summaryCards?.length > 0 ? <AdminSummaryCards cards={summaryCards} /> : null}
+      {summaryCards?.length > 0 ? (
+        <AdminSummaryCards cards={summaryCards} isDarkMode={isDarkMode} />
+      ) : null}
 
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <DebouncedSearchInput
@@ -555,7 +557,7 @@ function ModuleListingPage({
               <button
                 type="button"
                 onClick={onSecondaryActionClick}
-                className="admin-btn-secondary h-11 rounded-xl px-4 text-sm font-semibold"
+                className="admin-btn-cancel h-10 rounded-xl px-4 text-sm font-semibold transition hover:opacity-90"
               >
                 {secondaryActionLabel}
               </button>
@@ -564,7 +566,7 @@ function ModuleListingPage({
               <button
                 type="button"
                 onClick={onActionClick}
-                className="admin-btn-primary h-11 shrink-0 rounded-xl px-4 text-sm font-semibold"
+                className="h-10 shrink-0 rounded-xl bg-[#10a950] px-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,169,80,0.28)] transition hover:bg-[#0f9b49]"
               >
                 {actionLabel}
               </button>
@@ -622,7 +624,9 @@ function ModuleListingPage({
               const isExpanded = hasExpandColumn && expandedRowIds.has(String(rowId));
               return (
               <Fragment key={rowKey}>
-              <tr className="align-middle">
+              <tr
+                className={`border-t align-middle ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}
+              >
                 {hasExpandColumn && (
                   <td className="px-3 py-3 align-middle whitespace-nowrap">
                     <button
@@ -854,7 +858,9 @@ function ModuleListingPage({
                 })}
               </tr>
               {isExpanded && renderExpandedContent ? (
-                <tr className="align-middle">
+                <tr
+                  className={`border-t align-middle ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}
+                >
                   <td
                     colSpan={tableColumns.length + (hasExpandColumn ? 1 : 0)}
                     className="bg-[var(--admin-permissions-table-head-bg)] px-4 py-4"
