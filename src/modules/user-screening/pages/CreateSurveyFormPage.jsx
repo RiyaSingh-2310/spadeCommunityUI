@@ -19,8 +19,9 @@ import {
   createScreeningQuestion,
   decodeQuestionId,
   deleteScreeningQuestion,
+  getCreateSurveyQuestionOptions,
   getQuestionnaireByQuestionId,
-  getScreeningQuestionTextOptions,
+  getRecord,
   mapQuestionnaireToForm,
   mapScreeningRecordToQuestionItem,
   updateScreeningQuestion,
@@ -64,6 +65,7 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
   const [deletedRecordIds, setDeletedRecordIds] = useState([]);
   const [languageQuestionOptions, setLanguageQuestionOptions] = useState([]);
   const [isLoadingLanguageQuestions, setIsLoadingLanguageQuestions] = useState(false);
+  const [addingQuestionId, setAddingQuestionId] = useState(null);
   const inputClass = getAdminInputClass();
 
   useEffect(() => {
@@ -78,7 +80,7 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
     const loadLanguageQuestions = async () => {
       setIsLoadingLanguageQuestions(true);
       try {
-        const options = await getScreeningQuestionTextOptions(language);
+        const options = await getCreateSurveyQuestionOptions(language);
         if (cancelled) return;
         setLanguageQuestionOptions(options);
       } catch (error) {
@@ -100,7 +102,7 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
     const selectedKeys = new Set(
       form.questions.flatMap((question) => {
         const keys = [];
-        if (question.recordId != null) keys.push(String(question.recordId));
+        if (question.libraryQuestionId != null) keys.push(String(question.libraryQuestionId));
         if (question.sourceKey != null) keys.push(String(question.sourceKey));
         const text = String(question.questionText ?? "").trim();
         if (text) keys.push(text);
@@ -109,8 +111,9 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
     );
 
     return languageQuestionOptions.filter((option) => {
+      const optionId = String(option.value ?? "");
       const label = String(option.label ?? "").trim();
-      return !selectedKeys.has(String(option.value)) && !selectedKeys.has(label);
+      return !selectedKeys.has(optionId) && !selectedKeys.has(label);
     });
   }, [form.questions, languageQuestionOptions]);
 
@@ -218,22 +221,38 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
     });
   };
 
-  const handleAddAvailableQuestion = (option) => {
-    if (!option?.record) return;
+  const handleAddAvailableQuestion = async (option) => {
+    const libraryId = option?.libraryQuestionId ?? option?.value;
+    if (libraryId == null) return;
 
-    const mapped = mapScreeningRecordToQuestionItem(option.record);
-    const nextQuestion = {
-      ...mapped,
-      recordId: undefined,
-      sourceKey: String(option.value),
-    };
+    setAddingQuestionId(String(libraryId));
+    try {
+      let record = option.record;
+      try {
+        record = await getRecord(libraryId);
+      } catch {
+        // Fall back to the language-list payload when detail is unavailable.
+      }
 
-    setForm((prev) => ({
-      ...prev,
-      questions: [...prev.questions, nextQuestion],
-    }));
+      const mapped = mapScreeningRecordToQuestionItem(record);
+      const nextQuestion = {
+        ...mapped,
+        recordId: undefined,
+        libraryQuestionId: libraryId,
+        sourceKey: String(libraryId),
+      };
 
-    setActiveQuestionIndex(form.questions.length);
+      setForm((prev) => ({
+        ...prev,
+        questions: [...prev.questions, nextQuestion],
+      }));
+
+      setActiveQuestionIndex(form.questions.length);
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setAddingQuestionId(null);
+    }
   };
 
   const moveQuestion = (direction) => {
@@ -436,12 +455,19 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
                           <button
                             type="button"
                             onClick={() => handleAddAvailableQuestion(option)}
-                            disabled={isSubmitting}
+                            disabled={
+                              isSubmitting ||
+                              addingQuestionId === String(option.value)
+                            }
                             className="admin-icon-action shrink-0"
                             aria-label={`Add ${option.label}`}
                             title="Add"
                           >
-                            <Plus size={16} strokeWidth={2} />
+                            {addingQuestionId === String(option.value) ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <Plus size={16} strokeWidth={2} />
+                            )}
                           </button>
                         ) : null}
                       </li>

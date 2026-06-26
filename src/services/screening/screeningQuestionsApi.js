@@ -64,6 +64,58 @@ function extractQuestionList(data) {
   return [];
 }
 
+function isLanguageQuestionGroup(item) {
+  return (
+    item &&
+    typeof item === "object" &&
+    Array.isArray(item.questions) &&
+    (item.question_title != null || item.questionTitle != null)
+  );
+}
+
+/**
+ * GET /api/screening/questions/language/:language
+ * Response: { data: [{ question_title, questions: [{ id, question_text }] }] }
+ */
+function flattenLanguageQuestionGroups(groups, language = "") {
+  if (!Array.isArray(groups)) return [];
+
+  const flattened = [];
+
+  for (const group of groups) {
+    if (!isLanguageQuestionGroup(group)) {
+      flattened.push(group);
+      continue;
+    }
+
+    const groupTitle = String(group.question_title ?? group.questionTitle ?? "").trim();
+
+    for (const question of group.questions ?? []) {
+      if (!question || typeof question !== "object") continue;
+
+      flattened.push({
+        ...question,
+        id: question.id ?? question.question_id ?? question.questionId,
+        question_text: question.question_text ?? question.questionText ?? "",
+        question_title: groupTitle,
+        language: group.language ?? language,
+      });
+    }
+  }
+
+  return flattened;
+}
+
+function extractLanguageQuestionRecords(data, language = "") {
+  const payload = data?.data;
+
+  if (Array.isArray(payload) && payload.some(isLanguageQuestionGroup)) {
+    return flattenLanguageQuestionGroups(payload, language);
+  }
+
+  return extractQuestionList(data).map((record) => normalizeScreeningListRecord(record));
+}
+
 function getRecordId(record) {
   if (!record || typeof record !== "object") return null;
 
@@ -423,7 +475,7 @@ export async function getScreeningQuestionsByLanguage(language) {
   try {
     const data = await apiRequest(API_ROUTES.screening.byLanguage(normalizedLanguage));
     assertSuccess(data);
-    return extractQuestionList(data).map((record) => normalizeScreeningListRecord(record));
+    return extractLanguageQuestionRecords(data, normalizedLanguage);
   } catch {
     const data = await apiRequest(
       appendScreeningListQuery(API_ROUTES.screening.list, {
@@ -439,8 +491,8 @@ export async function getScreeningQuestionsByLanguage(language) {
   }
 }
 
-/** Searchable dropdown options — question text labels for a language. */
-export async function getScreeningQuestionTextOptions(language) {
+/** Options for Create Survey — questions available for a language. */
+export async function getCreateSurveyQuestionOptions(language) {
   const records = await getScreeningQuestionsByLanguage(language);
 
   return records
@@ -458,10 +510,16 @@ export async function getScreeningQuestionTextOptions(language) {
       return {
         value: String(recordId ?? questionText ?? fallbackTitle),
         label: questionText || fallbackTitle,
+        libraryQuestionId: recordId,
         record,
       };
     })
     .filter(Boolean);
+}
+
+/** @deprecated Use getCreateSurveyQuestionOptions for Create Survey. */
+export async function getScreeningQuestionTextOptions(language) {
+  return getCreateSurveyQuestionOptions(language);
 }
 
 /**
