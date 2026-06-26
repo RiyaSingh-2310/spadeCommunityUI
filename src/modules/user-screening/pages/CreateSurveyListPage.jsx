@@ -6,14 +6,14 @@ import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import {
+  deleteCreateSurvey,
   getScreeningRowId,
-  listScreeningRecords,
-  deleteScreeningQuestion,
-  updateScreeningQuestionStatus,
+  listCreateSurveyRecords,
+  updateCreateSurveyStatus,
 } from "../../../services/screening/screeningQuestionsApi";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 
-function QuestionsListPage({ isDarkMode }) {
+function CreateSurveyListPage({ isDarkMode }) {
   const navigate = useNavigate();
   useFlashMessage();
 
@@ -29,7 +29,7 @@ function QuestionsListPage({ isDarkMode }) {
     handlePageSizeChange,
     refresh,
   } = useApiListing({
-    fetchFn: listScreeningRecords,
+    fetchFn: listCreateSurveyRecords,
     initialPageSize: DEFAULT_PAGE_SIZE,
     preserveRowOrder: true,
   });
@@ -56,7 +56,7 @@ function QuestionsListPage({ isDarkMode }) {
     );
 
     try {
-      const data = await updateScreeningQuestionStatus(rowId, nextStatus);
+      const data = await updateCreateSurveyStatus(row, nextStatus);
       toastApiSuccess(data);
       await refresh();
     } catch (error) {
@@ -76,7 +76,7 @@ function QuestionsListPage({ isDarkMode }) {
   const handleEdit = (row) => {
     const rowId = getScreeningRowId(row);
     if (rowId == null) return;
-    navigate(`/user-screening/questions/edit/${encodeURIComponent(String(rowId))}`);
+    navigate(`/user-screening/create-survey/edit/${encodeURIComponent(String(rowId))}`);
   };
 
   const handleDeleteRequest = (row) => {
@@ -91,12 +91,11 @@ function QuestionsListPage({ isDarkMode }) {
   };
 
   const handleDeleteConfirm = async () => {
-    const rowId = getScreeningRowId(deleteTarget);
-    if (rowId == null) return;
+    if (!deleteTarget) return;
 
     setIsDeleting(true);
     try {
-      const data = await deleteScreeningQuestion(rowId);
+      const data = await deleteCreateSurvey(deleteTarget);
       setDeleteTarget(null);
       toastApiSuccess(data);
       await refresh();
@@ -111,18 +110,19 @@ function QuestionsListPage({ isDarkMode }) {
     <div className="space-y-4">
       <ModuleListingPage
         isDarkMode={isDarkMode}
-        title="Question Library"
-        searchPlaceholder="Search questions..."
-        secondaryActionLabel="Sort Profiling Questions"
-        onSecondaryActionClick={() => navigate("/user-screening/questions/sort")}
-        actionLabel="Add Profiling Questions"
-        onActionClick={() => navigate("/user-screening/questions/add")}
+        title="Create Survey"
+        breadcrumbs={[
+          { label: "Screening Management" },
+          { label: "Create Survey" },
+        ]}
+        searchPlaceholder="Search surveys..."
+        actionLabel="Add Survey"
+        onActionClick={() => navigate("/user-screening/create-survey/add")}
         columns={[
           "S.No",
-          "Question Title",
+          "Survey Title",
           "Language",
           "Question Type",
-          "Sort Order",
           "Status",
           "Action",
         ]}
@@ -134,7 +134,7 @@ function QuestionsListPage({ isDarkMode }) {
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}
         isLoading={isLoading}
-        emptyMessage="No questions found"
+        emptyMessage="No surveys found"
         onSearch={handleSearch}
         totalRecords={totalRecords}
         serverPaginated
@@ -156,4 +156,4 @@ function QuestionsListPage({ isDarkMode }) {
   );
 }
 
-export default QuestionsListPage;
+export default CreateSurveyListPage;

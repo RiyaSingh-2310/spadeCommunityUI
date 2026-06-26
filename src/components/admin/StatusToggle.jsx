@@ -13,7 +13,7 @@ function getStatusShellClass(compact) {
 function StatusToggleContent({ checked, labelOn, labelOff, compact = false }) {
   return (
     <>
-      <span className="inline-flex w-[18px] shrink-0 items-center justify-center">
+      <span className="admin-status-icon inline-flex h-5 w-5 shrink-0 items-center justify-center">
         {checked ? (
           <ToggleRight size={18} className="text-[var(--admin-success-text)]" />
         ) : (

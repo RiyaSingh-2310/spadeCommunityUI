@@ -1,4 +1,5 @@
 import TableCard from "../../../components/admin/TableCard";
+import { ADMIN_TABLE_INNER_CLASS } from "../../shared/utils/tableHelpers";
 import { formatStatusLabel } from "../../shared/utils/statusLabels";
 
 export function SectionDivider() {
@@ -100,12 +101,12 @@ export function StatusBadge({ status }) {
 }
 
 const TABLE_HEAD =
-  "admin-text-muted px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+  "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
 
 export function SurveyDataTable({ title, columns, rows, renderCell, isDarkMode, footer }) {
   return (
     <TableCard title={title} isDarkMode={isDarkMode} footer={footer}>
-      <table className="admin-table min-w-full text-sm">
+      <table className={ADMIN_TABLE_INNER_CLASS}>
         <thead>
           <tr>
             {columns.map((col) => (
@@ -117,13 +118,9 @@ export function SurveyDataTable({ title, columns, rows, renderCell, isDarkMode, 
         </thead>
         <tbody>
           {rows.map((row, rowIdx) => (
-            <tr
-              key={row.id ?? row.sno ?? rowIdx}
-              className="border-t align-middle"
-              style={{ borderColor: "var(--admin-header-surface-border)" }}
-            >
+            <tr key={row.id ?? row.sno ?? rowIdx} className="align-middle">
               {columns.map((col) => (
-                <td key={col} className="admin-text px-3 py-3 align-middle text-sm">
+                <td key={col} className="admin-text align-middle text-sm">
                   {renderCell(row, col)}
                 </td>
               ))}

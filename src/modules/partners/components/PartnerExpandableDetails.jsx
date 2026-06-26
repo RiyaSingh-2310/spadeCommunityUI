@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { toastApiError } from "../../../services/toast/apiToast";
-import { TABLE_HEAD_BASE } from "../../shared/utils/tableHelpers";
+import {
+  ADMIN_TABLE_INNER_CLASS,
+  ADMIN_TABLE_INNER_SHELL_CLASS,
+  TABLE_HEAD_BASE,
+} from "../../shared/utils/tableHelpers";
 import {
   getPartnerDetailCached,
   getPartnerExpandableFields,
@@ -47,7 +51,7 @@ function CellValue({ value, isUrl }) {
   return <span className="admin-text break-words">{display}</span>;
 }
 
-function PartnerExpandableDetails({ partnerId, isDarkMode = false }) {
+function PartnerExpandableDetails({ partnerId }) {
   const [fields, setFields] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -108,11 +112,9 @@ function PartnerExpandableDetails({ partnerId, isDarkMode = false }) {
     );
   }
 
-  const rowBorderClass = isDarkMode ? "border-[#263850]" : "border-[#e6edf5]";
-
   return (
-    <div className="overflow-x-auto">
-      <table className="admin-table min-w-full text-sm">
+    <div className={ADMIN_TABLE_INNER_SHELL_CLASS}>
+      <table className={ADMIN_TABLE_INNER_CLASS}>
         <thead>
           <tr className="admin-text-muted">
             {fields.map((field) => (
@@ -123,9 +125,9 @@ function PartnerExpandableDetails({ partnerId, isDarkMode = false }) {
           </tr>
         </thead>
         <tbody>
-          <tr className={`border-t align-middle ${rowBorderClass}`}>
+          <tr className="align-middle">
             {fields.map((field) => (
-              <td key={field.label} className="px-4 py-3 align-middle">
+              <td key={field.label} className="align-middle">
                 <CellValue value={field.value} isUrl={field.isUrl} />
               </td>
             ))}

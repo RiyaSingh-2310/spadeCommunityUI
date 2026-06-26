@@ -1,20 +1,17 @@
 import { Eye } from "lucide-react";
 
-function ViewActionButton({ isDarkMode, onView, label = "View" }) {
+function ViewActionButton({ onView, label = "View" }) {
   if (!onView) return null;
 
   return (
     <button
       type="button"
       onClick={onView}
-      className={`inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold whitespace-nowrap transition-colors ${
-        isDarkMode
-          ? "text-[#9fb0c8] hover:bg-[#1e2e45] hover:text-[#f8fafc]"
-          : "text-[#5e718a] hover:bg-[#eef4fb] hover:text-[#203148]"
-      }`}
-      aria-label="view"
+      className="admin-icon-action !h-auto !w-auto gap-1.5 px-2.5 py-1.5 text-xs font-semibold"
+      aria-label={label}
+      title={label}
     >
-      <Eye size={13} />
+      <Eye size={16} strokeWidth={2} />
       {label}
     </button>
   );

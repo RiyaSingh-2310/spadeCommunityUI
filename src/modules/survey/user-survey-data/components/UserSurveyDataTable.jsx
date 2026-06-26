@@ -1,6 +1,7 @@
 import { Eye, Pencil } from "lucide-react";
 import TableCard from "../../../../components/admin/TableCard";
 import TableLoadingSkeleton from "../../../../components/admin/TableLoadingSkeleton";
+import { ADMIN_TABLE_INNER_CLASS } from "../../../shared/utils/tableHelpers";
 import { formatStatusLabel } from "../../../shared/utils/statusLabels";
 import { EMPTY_TABLE_MESSAGE } from "../utils/constants";
 
@@ -15,7 +16,7 @@ const COLUMNS = [
 ];
 
 const TABLE_HEAD =
-  "admin-text-muted px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+  "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
 
 const iconBtnClass = (isDarkMode, disabled) =>
   `inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
@@ -31,8 +32,7 @@ function UserSurveyDataTable({ rows, isLoading, isDarkMode, footer }) {
 
   return (
     <TableCard isDarkMode={isDarkMode} footer={footer}>
-      <div className="overflow-x-auto">
-        <table className="admin-table min-w-full text-sm">
+      <table className={ADMIN_TABLE_INNER_CLASS}>
           <thead>
             <tr>
               {COLUMNS.map((col) => (
@@ -59,17 +59,13 @@ function UserSurveyDataTable({ rows, isLoading, isDarkMode, footer }) {
                 const statusLabel = formatStatusLabel(row.status);
                 const isActive = statusLabel === "Active";
                 return (
-                  <tr
-                    key={row.id}
-                    className="border-t align-middle"
-                    style={{ borderColor: "var(--admin-header-surface-border)" }}
-                  >
-                    <td className="admin-text px-3 py-3 whitespace-nowrap">{row.id}</td>
-                    <td className="admin-text px-3 py-3 whitespace-nowrap">{row.userName}</td>
-                    <td className="admin-text px-3 py-3 whitespace-nowrap">{row.startTime}</td>
-                    <td className="admin-text px-3 py-3 whitespace-nowrap">{row.endTime}</td>
-                    <td className="admin-text px-3 py-3 whitespace-nowrap">{row.points}</td>
-                    <td className="admin-text px-3 py-3 whitespace-nowrap">
+                  <tr key={row.id} className="align-middle">
+                    <td className="admin-text whitespace-nowrap">{row.id}</td>
+                    <td className="admin-text whitespace-nowrap">{row.userName}</td>
+                    <td className="admin-text whitespace-nowrap">{row.startTime}</td>
+                    <td className="admin-text whitespace-nowrap">{row.endTime}</td>
+                    <td className="admin-text whitespace-nowrap">{row.points}</td>
+                    <td className="admin-text whitespace-nowrap">
                       <span
                         className={`inline-flex rounded-lg px-2 py-0.5 text-xs font-semibold ${
                           isActive
@@ -80,7 +76,7 @@ function UserSurveyDataTable({ rows, isLoading, isDarkMode, footer }) {
                         {statusLabel}
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-right whitespace-nowrap">
+                    <td className="text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
@@ -107,8 +103,7 @@ function UserSurveyDataTable({ rows, isLoading, isDarkMode, footer }) {
               })
             )}
           </tbody>
-        </table>
-      </div>
+      </table>
     </TableCard>
   );
 }

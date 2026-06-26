@@ -8,9 +8,10 @@ import { getAdminCancelButtonClass } from "../../shared/utils/formStyles";
 import SortableProfilingQuestionList from "../components/SortableProfilingQuestionList";
 import {
   getRecords,
+  getScreeningRowId,
   updateScreeningSortOrder,
 } from "../../../services/screening/screeningQuestionsApi";
-import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { toastApiError } from "../../../services/toast/apiToast";
 
 function SortProfilingQuestionsPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ function SortProfilingQuestionsPage({ isDarkMode }) {
         if (cancelled) return;
 
         const mapped = (data.items ?? []).map((row) => ({
-          id: row.id,
+          id: getScreeningRowId(row),
           questionTitle: row.questionTitle ?? row.title ?? "",
           sortOrder: Number(row.sortOrder ?? 0),
         }));
@@ -63,10 +64,7 @@ function SortProfilingQuestionsPage({ isDarkMode }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!hasChanges) {
-      navigate("/user-screening/questions", {
-        replace: true,
-        state: { refresh: true },
-      });
+      navigate("/user-screening/questions", { replace: true });
       return;
     }
 
@@ -78,10 +76,15 @@ function SortProfilingQuestionsPage({ isDarkMode }) {
           sort_order: index,
         }))
       );
-      toastApiSuccess(data);
+      const successMessage = data?.message || "Question order updated.";
       navigate("/user-screening/questions", {
         replace: true,
-        state: { refresh: true },
+        state: {
+          flash: {
+            type: "success",
+            message: successMessage,
+          },
+        },
       });
     } catch (error) {
       toastApiError(error);

@@ -4,6 +4,7 @@ import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import DebouncedSearchInput from "../../../components/admin/DebouncedSearchInput";
 import AdminPagination from "../../../components/admin/AdminPagination";
 import TableCard from "../../../components/admin/TableCard";
+import { ADMIN_TABLE_INNER_CLASS } from "../../shared/utils/tableHelpers";
 import TableLoadingSkeleton from "../../../components/admin/TableLoadingSkeleton";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
@@ -11,7 +12,7 @@ import { getCommunityUserById } from "../data/communityUsersStore";
 import { getUserProfilingAnswers } from "../services/communityUsersApi";
 
 const TABLE_HEAD =
-  "admin-text-muted px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+  "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
 
 function CommunityUserDetailsPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -97,8 +98,7 @@ function CommunityUserDetailsPage({ isDarkMode }) {
       />
 
       <TableCard isDarkMode={isDarkMode} footer={paginationFooter}>
-        <div className="overflow-x-auto">
-          <table className="admin-table min-w-full text-sm">
+        <table className={ADMIN_TABLE_INNER_CLASS}>
             <thead>
               <tr>
                 {["Question", "Answer Opted"].map((column) => (
@@ -122,18 +122,14 @@ function CommunityUserDetailsPage({ isDarkMode }) {
                 </tr>
               ) : (
                 rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className={`border-t align-middle ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}
-                  >
-                    <td className="admin-text px-4 py-3 align-middle">{row.question}</td>
-                    <td className="admin-text px-4 py-3 align-middle">{row.answerOpted}</td>
+                  <tr key={row.id} className="align-middle">
+                    <td className="admin-text align-middle">{row.question}</td>
+                    <td className="admin-text align-middle">{row.answerOpted}</td>
                   </tr>
                 ))
               )}
             </tbody>
-          </table>
-        </div>
+        </table>
       </TableCard>
     </div>
   );

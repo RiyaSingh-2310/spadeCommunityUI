@@ -184,13 +184,18 @@ function ModuleListingActionCell({
         labels={surveyActionLabels}
       />
     ) : (
-      <IconActions
-        isDarkMode={isDarkMode}
-        showDelete={canShowDelete}
-        onEdit={canShowEdit ? () => handleEdit(row, globalIdx) : undefined}
-        onDelete={canShowDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}
-      />
-        )}
+      <div className="flex items-center justify-end gap-1">
+        {allowRead && onView ? (
+          <ViewActionButton isDarkMode={isDarkMode} onView={() => onView(row, globalIdx)} />
+        ) : null}
+        <IconActions
+          isDarkMode={isDarkMode}
+          showDelete={canShowDelete}
+          onEdit={canShowEdit ? () => handleEdit(row, globalIdx) : undefined}
+          onDelete={canShowDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}
+        />
+      </div>
+    )}
       </td>
     );
   }

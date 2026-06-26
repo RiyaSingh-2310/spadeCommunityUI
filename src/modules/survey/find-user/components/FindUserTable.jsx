@@ -1,6 +1,7 @@
 import AdminPagination from "../../../../components/admin/AdminPagination";
 import TableCard from "../../../../components/admin/TableCard";
 import TableLoadingSkeleton from "../../../../components/admin/TableLoadingSkeleton";
+import { ADMIN_TABLE_INNER_CLASS } from "../../../shared/utils/tableHelpers";
 import { formatStatusLabel } from "../../../shared/utils/statusLabels";
 
 const COLUMNS = [
@@ -18,7 +19,7 @@ const COLUMNS = [
 ];
 
 const TABLE_HEAD =
-  "admin-text-muted px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+  "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
 
 function FindUserTable({
   users,
@@ -57,8 +58,7 @@ function FindUserTable({
 
   return (
     <TableCard isDarkMode={isDarkMode} footer={paginationFooter}>
-      <div className="overflow-x-auto">
-        <table className="admin-table min-w-full text-sm">
+      <table className={ADMIN_TABLE_INNER_CLASS}>
           <thead>
             <tr>
               {COLUMNS.map((col) => (
@@ -99,13 +99,9 @@ function FindUserTable({
               </tr>
             ) : (
               users.map((user, idx) => (
-                <tr
-                  key={user.id}
-                  className="border-t align-middle"
-                  style={{ borderColor: "var(--admin-header-surface-border)" }}
-                >
-                  <td className="admin-text px-3 py-3 whitespace-nowrap">{rowOffset + idx + 1}</td>
-                  <td className="px-3 py-3">
+                <tr key={user.id} className="align-middle">
+                  <td className="admin-text whitespace-nowrap">{rowOffset + idx + 1}</td>
+                  <td>
                     <input
                       type="checkbox"
                       className="admin-checkbox"
@@ -114,19 +110,19 @@ function FindUserTable({
                       aria-label={`Select ${user.name}`}
                     />
                   </td>
-                  <td className="admin-text px-3 py-3 whitespace-nowrap">{user.name}</td>
-                  <td className="admin-text px-3 py-3 whitespace-nowrap">{user.email}</td>
-                  <td className="admin-text px-3 py-3 whitespace-nowrap">{user.mobile}</td>
-                  <td className="admin-text px-3 py-3 whitespace-nowrap">
+                  <td className="admin-text whitespace-nowrap">{user.name}</td>
+                  <td className="admin-text whitespace-nowrap">{user.email}</td>
+                  <td className="admin-text whitespace-nowrap">{user.mobile}</td>
+                  <td className="admin-text whitespace-nowrap">
                     {user.preScreenCompleted}
                   </td>
-                  <td className="admin-text px-3 py-3 whitespace-nowrap">{user.joiningDate}</td>
-                  <td className="admin-text px-3 py-3 whitespace-nowrap">{user.inviteStatus}</td>
-                  <td className="admin-text px-3 py-3 whitespace-nowrap">{user.earnedPoints}</td>
-                  <td className="admin-text-muted max-w-[160px] truncate px-3 py-3" title={user.message}>
+                  <td className="admin-text whitespace-nowrap">{user.joiningDate}</td>
+                  <td className="admin-text whitespace-nowrap">{user.inviteStatus}</td>
+                  <td className="admin-text whitespace-nowrap">{user.earnedPoints}</td>
+                  <td className="admin-text-muted max-w-[160px] truncate" title={user.message}>
                     {user.message || "—"}
                   </td>
-                  <td className="admin-text px-3 py-3 whitespace-nowrap">
+                  <td className="admin-text whitespace-nowrap">
                     <span
                       className={`inline-flex rounded-lg px-2 py-0.5 text-xs font-semibold ${
                         formatStatusLabel(user.status) === "Active"
@@ -141,8 +137,7 @@ function FindUserTable({
               ))
             )}
           </tbody>
-        </table>
-      </div>
+      </table>
     </TableCard>
   );
 }

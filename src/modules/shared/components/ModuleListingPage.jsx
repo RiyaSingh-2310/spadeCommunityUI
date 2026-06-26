@@ -251,7 +251,7 @@ function ModuleListingPage({
     allowWrite &&
     showDeleteAction &&
     !editOnly &&
-    !viewEdit &&
+    (!viewEdit || Boolean(onDelete)) &&
     !pdfDownload &&
     !groupSurvey &&
     Boolean(onDelete || hasActionColumn);
@@ -536,9 +536,7 @@ function ModuleListingPage({
         isDarkMode={isDarkMode}
       />
 
-      {summaryCards?.length > 0 ? (
-        <AdminSummaryCards cards={summaryCards} isDarkMode={isDarkMode} />
-      ) : null}
+      {summaryCards?.length > 0 ? <AdminSummaryCards cards={summaryCards} /> : null}
 
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <DebouncedSearchInput
@@ -557,7 +555,7 @@ function ModuleListingPage({
               <button
                 type="button"
                 onClick={onSecondaryActionClick}
-                className="admin-btn-cancel h-10 rounded-xl px-4 text-sm font-semibold transition hover:opacity-90"
+                className="admin-btn-cancel h-10 rounded-xl px-4 text-sm font-semibold transition"
               >
                 {secondaryActionLabel}
               </button>
@@ -566,7 +564,7 @@ function ModuleListingPage({
               <button
                 type="button"
                 onClick={onActionClick}
-                className="h-10 shrink-0 rounded-xl bg-[#10a950] px-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,169,80,0.28)] transition hover:bg-[#0f9b49]"
+                className="admin-btn-primary shrink-0"
               >
                 {actionLabel}
               </button>
@@ -575,8 +573,7 @@ function ModuleListingPage({
         )}
       </div>
 
-      <TableCard isDarkMode={isDarkMode} footer={paginationFooter}>
-        <div className="admin-table-scroll min-w-0 overflow-x-auto">
+      <TableCard footer={paginationFooter} flush>
           <table className="admin-table min-w-full text-sm">
           <thead>
             <tr className="admin-text-muted">
@@ -624,9 +621,7 @@ function ModuleListingPage({
               const isExpanded = hasExpandColumn && expandedRowIds.has(String(rowId));
               return (
               <Fragment key={rowKey}>
-              <tr
-                className={`border-t align-middle ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}
-              >
+              <tr className="admin-table-row align-middle">
                 {hasExpandColumn && (
                   <td className="px-3 py-3 align-middle whitespace-nowrap">
                     <button
@@ -807,6 +802,25 @@ function ModuleListingPage({
                   const value = getRowValue(row, col);
                   const displayValue =
                     value === "" || value === "-" ? (key === "projectid" ? "—" : value) : value;
+                  if (key === "questionTitle" && onView && allowRead) {
+                    const titleText = displayValue === "-" ? "—" : String(displayValue);
+                    return (
+                      <td
+                        key={col}
+                        className={`px-4 py-3 align-middle ${
+                          nowrapAllCells || isNowrapDataColumn(col) ? "whitespace-nowrap" : ""
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => onView(row, globalIdx)}
+                          className="admin-text text-left hover:opacity-80"
+                        >
+                          {titleText}
+                        </button>
+                      </td>
+                    );
+                  }
                   if (key === "emailSubject") {
                     const subjectText = displayValue === "-" ? "—" : String(displayValue);
                     return (
@@ -858,14 +872,14 @@ function ModuleListingPage({
                 })}
               </tr>
               {isExpanded && renderExpandedContent ? (
-                <tr
-                  className={`border-t align-middle ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}
-                >
+                <tr className="admin-table-row align-middle">
                   <td
                     colSpan={tableColumns.length + (hasExpandColumn ? 1 : 0)}
-                    className="bg-[var(--admin-permissions-table-head-bg)] px-4 py-4"
+                    className="p-0 align-top"
                   >
-                    {renderExpandedContent(row)}
+                    <div className="admin-table-expanded-panel">
+                      {renderExpandedContent(row)}
+                    </div>
                   </td>
                 </tr>
               ) : null}
@@ -875,7 +889,6 @@ function ModuleListingPage({
             )}
           </tbody>
           </table>
-        </div>
       </TableCard>
 
       <DeleteConfirmModal

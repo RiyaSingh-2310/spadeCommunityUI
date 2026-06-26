@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { getRecontactSupplierDetails } from "../services/recontactSurveyApi";
 import { toastApiError } from "../../../services/toast/apiToast";
+import {
+  ADMIN_TABLE_INNER_CLASS,
+  ADMIN_TABLE_INNER_SHELL_CLASS,
+} from "../../shared/utils/tableHelpers";
 
 const SUPPLIER_COLUMNS = [
   "S.No",
@@ -16,7 +20,7 @@ const SUPPLIER_COLUMNS = [
 ];
 
 const TABLE_HEAD =
-  "admin-text-muted px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+  "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
 
 function renderSupplierCell(row, col) {
   const map = {
@@ -104,8 +108,8 @@ function RecontactSupplierDetailsModal({ isOpen, onClose, surveyId }) {
               <Loader2 size={28} className="animate-spin text-[var(--admin-success-text)]" />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="admin-table min-w-full text-sm">
+            <div className={ADMIN_TABLE_INNER_SHELL_CLASS}>
+              <table className={ADMIN_TABLE_INNER_CLASS}>
                 <thead>
                   <tr>
                     {SUPPLIER_COLUMNS.map((col) => (
@@ -120,20 +124,16 @@ function RecontactSupplierDetailsModal({ isOpen, onClose, surveyId }) {
                     <tr>
                       <td
                         colSpan={SUPPLIER_COLUMNS.length}
-                        className="admin-text-muted px-3 py-8 text-center text-sm"
+                        className="admin-text-muted text-center text-sm"
                       >
                         No supplier details found.
                       </td>
                     </tr>
                   ) : (
                     rows.map((row, rowIdx) => (
-                      <tr
-                        key={row.supplierCode ?? rowIdx}
-                        className="border-t align-middle"
-                        style={{ borderColor: "var(--admin-header-surface-border)" }}
-                      >
+                      <tr key={row.supplierCode ?? rowIdx} className="align-middle">
                         {SUPPLIER_COLUMNS.map((col) => (
-                          <td key={col} className="admin-text px-3 py-3 align-middle text-sm">
+                          <td key={col} className="admin-text align-middle text-sm">
                             {renderSupplierCell(row, col)}
                           </td>
                         ))}

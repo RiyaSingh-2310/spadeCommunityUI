@@ -61,8 +61,13 @@ export const API_ROUTES = {
     list: "/api/screening/questions/list",
     create: "/api/screening/questions/add",
     byId: (id) => `/api/screening/questions/${id}`,
+    byTitle: (title) =>
+      `/api/screening/questions/by-title/${encodeURIComponent(String(title ?? "").trim())}`,
+    byLanguage: (language) =>
+      `/api/screening/questions/language/${encodeURIComponent(String(language ?? "").trim())}`,
     update: (id) => `/api/screening/questions/${id}`,
     updateStatus: (id) => `/api/screening/questions/${id}/status`,
+    delete: (id) => `/api/screening/questions/${id}`,
     sortOrder: "/api/screening/questions/sort-order",
   },
   prescreen: {

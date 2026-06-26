@@ -131,6 +131,12 @@ export const SortProfilingQuestionsPage = lazy(
 export const ProfilingQuestionFormPage = lazy(
   () => import("../modules/user-screening/pages/ProfilingQuestionFormPage")
 );
+export const CreateSurveyListPage = lazy(
+  () => import("../modules/user-screening/pages/CreateSurveyListPage")
+);
+export const CreateSurveyFormPage = lazy(
+  () => import("../modules/user-screening/pages/CreateSurveyFormPage")
+);
 
 /** Community users */
 export const CommunityUsersPage = lazy(

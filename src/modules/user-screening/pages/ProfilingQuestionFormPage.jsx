@@ -15,9 +15,10 @@ import {
   getRequiredError,
   isFormValid,
 } from "../../shared/utils/validation";
-import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { toastApiError } from "../../../services/toast/apiToast";
 import {
   createScreeningQuestion,
+  decodeQuestionId,
   getQuestionnaireByQuestionId,
   mapQuestionnaireToForm,
   updateScreeningQuestion,
@@ -408,7 +409,8 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
   const activeQuestion = form.questions[activeQuestionIndex] ?? form.questions[0];
 
   useEffect(() => {
-    if (!isEdit || !id) {
+    const normalizedId = decodeQuestionId(id);
+    if (!isEdit || !normalizedId) {
       setForm(buildEmptyForm());
       setInitialSnapshot(null);
       setActiveQuestionIndex(0);
@@ -426,7 +428,7 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
       setLoadFailed(false);
 
       try {
-        const records = await getQuestionnaireByQuestionId(id);
+        const records = await getQuestionnaireByQuestionId(normalizedId);
         if (cancelled) return;
 
         const snapshot = mapQuestionnaireToForm(records);
@@ -625,24 +627,32 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
           lastData = await updateScreeningSortOrder(sortItems);
         }
 
-        if (lastData) toastApiSuccess(lastData);
-      } else {
-        let lastData = null;
-        for (let index = 0; index < form.questions.length; index += 1) {
-          const question = form.questions[index];
-          lastData = await createScreeningQuestion(buildQuestionPayload(question, index));
-        }
-        toastApiSuccess(lastData);
+        const successMessage = lastData?.message || "Question updated.";
+        navigate("/user-screening/questions", {
+          replace: true,
+          state: {
+            flash: {
+              type: "success",
+              message: successMessage,
+            },
+          },
+        });
+        return;
       }
 
+      let lastData = null;
+      for (let index = 0; index < form.questions.length; index += 1) {
+        const question = form.questions[index];
+        lastData = await createScreeningQuestion(buildQuestionPayload(question, index));
+      }
+      const successMessage = lastData?.message || "Questions created.";
       navigate("/user-screening/questions", {
         replace: true,
         state: {
           flash: {
             type: "success",
-            message: isEdit ? "Question updated." : "Questions created.",
+            message: successMessage,
           },
-          refresh: true,
         },
       });
     } catch (error) {

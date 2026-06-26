@@ -249,13 +249,9 @@ function AdminSidebar({
   return (
     <>
       <aside
-        className={`admin-sidebar fixed left-0 top-0 h-screen max-h-screen select-none border-r ${
+        className={`admin-sidebar fixed left-0 top-0 h-screen max-h-screen select-none border-r bg-[var(--admin-sidebar-bg)] text-[var(--admin-foreground)] border-[var(--admin-sidebar-border)] ${
           isMobile ? "overflow-hidden" : isCollapsed ? "overflow-visible" : "overflow-hidden"
-        } ${sidebarPositionClass} ${
-          isDarkMode
-            ? "bg-[#111b2c] text-[var(--admin-foreground)] border-[#2a3c56]"
-            : "bg-white text-[var(--admin-foreground)] border-[#dce6f1]"
-        } ${sidebarWidthClass}`}
+        } ${sidebarPositionClass} ${sidebarWidthClass}`}
         aria-hidden={isMobile && !isDrawerOpen ? true : undefined}
       >
         <div
@@ -264,9 +260,7 @@ function AdminSidebar({
           }`}
         >
           <div
-            className={`flex h-[72px] shrink-0 items-center border-b px-4 ${
-              isDarkMode ? "border-[#2a3c56]" : "border-[#dce6f1]"
-            }`}
+            className="flex h-[72px] shrink-0 items-center border-b border-[var(--admin-sidebar-border)] px-4"
           >
             <div
               className={`flex w-full items-center transition-all duration-300 ${
@@ -331,10 +325,8 @@ function AdminSidebar({
                     }}
                     className={`flex h-10 w-full cursor-pointer items-center rounded-2xl px-3.5 text-left transition-all duration-200 ${
                       isActive
-                        ? "bg-[#e6f6ee] font-semibold text-[#138842] shadow-[inset_0_0_0_1px_rgba(19,136,66,0.12)]"
-                        : isDarkMode
-                          ? "text-[var(--admin-muted-foreground)] hover:bg-[#1f3047] hover:text-[var(--admin-foreground)]"
-                          : "text-[var(--admin-muted-foreground)] hover:bg-[#f2f7fc] hover:text-[var(--admin-foreground)]"
+                        ? "bg-[var(--admin-sidebar-active-bg)] font-semibold text-[var(--admin-sidebar-active-text)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--admin-sidebar-active-text)_12%,transparent)]"
+                        : "text-[var(--admin-muted-foreground)] hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-foreground)]"
                     }`}
                     aria-expanded={isCollapsed && hoveredLabel === item.label}
                   >
@@ -346,16 +338,16 @@ function AdminSidebar({
                       }
                     >
                       <span
-                        className={
+                        className={`admin-sidebar-icon ${
                           isActive
-                            ? "text-[#138842]"
+                            ? "text-[var(--admin-sidebar-active-text)]"
                             : "text-[var(--admin-subtle-foreground)]"
-                        }
+                        }`}
                       >
                         {iconMap[item.label]}
                       </span>
                       {(!isCollapsed || isMobile) && (
-                        <span className="text-sm">{item.label}</span>
+                        <span className="admin-sidebar-label">{item.label}</span>
                       )}
                     </div>
 
@@ -380,15 +372,13 @@ function AdminSidebar({
                             type="button"
                             key={child.label}
                             onClick={() => navigateAndClose(child.root)}
-                            className={`flex h-9 w-full items-center rounded-xl px-3.5 pl-11 text-left text-xs transition-all ${
+                            className={`flex h-9 w-full items-center rounded-xl px-3.5 pl-11 text-left transition-all ${
                               isChildActive
-                                ? "bg-[#e6f6ee] font-semibold text-[#138842]"
-                                : isDarkMode
-                                  ? "text-[var(--admin-muted-foreground)] hover:bg-[#1f3047]"
-                                  : "text-[var(--admin-muted-foreground)] hover:bg-[#f2f7fc]"
+                                ? "bg-[var(--admin-sidebar-active-bg)] text-[var(--admin-sidebar-active-text)]"
+                                : "text-[var(--admin-muted-foreground)] hover:bg-[var(--admin-sidebar-hover-bg)]"
                             }`}
                           >
-                            {child.label}
+                            <span className="admin-sidebar-child-label">{child.label}</span>
                           </button>
                         );
                       })}
@@ -401,9 +391,7 @@ function AdminSidebar({
 
           {!isMobile && (
             <div
-              className={`sticky bottom-0 z-10 shrink-0 border-t ${
-                isDarkMode ? "border-[#2a3c56]" : "border-[#dce6f1]"
-              }`}
+              className="sticky bottom-0 z-10 shrink-0 border-t border-[var(--admin-sidebar-border)]"
             >
               <button
                 type="button"
@@ -415,14 +403,10 @@ function AdminSidebar({
                     return !prev;
                   });
                 }}
-                className={`flex h-14 w-full items-center gap-3 p-4 text-sm font-medium transition-all duration-200 ${
-                  isDarkMode
-                    ? "text-[var(--admin-muted-foreground)] hover:bg-[#1f3047] hover:text-[var(--admin-foreground)]"
-                    : "text-[var(--admin-muted-foreground)] hover:bg-[#f2f7fc] hover:text-[var(--admin-foreground)]"
-                }`}
+                className="flex h-14 w-full items-center gap-3 p-4 text-[var(--admin-muted-foreground)] transition-all duration-200 hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-foreground)]"
               >
                 {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-                {!isCollapsed && <span>Collapse</span>}
+                {!isCollapsed && <span className="admin-sidebar-label">Collapse</span>}
               </button>
             </div>
           )}

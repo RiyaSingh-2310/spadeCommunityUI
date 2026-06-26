@@ -8,6 +8,10 @@ import {
   resolveSalesProjectLogId,
 } from "../../../services/sales/salesProjectsApi";
 import { DEFAULT_PAGE_SIZE, paginateItems } from "../../shared/utils/pagination";
+import {
+  ADMIN_TABLE_INNER_CLASS,
+  ADMIN_TABLE_INNER_SHELL_CLASS,
+} from "../../shared/utils/tableHelpers";
 
 function RfqSalesLogListModal({ isOpen, onClose, row, isDarkMode, refreshKey = 0 }) {
   const [logs, setLogs] = useState([]);
@@ -79,15 +83,15 @@ function RfqSalesLogListModal({ isOpen, onClose, row, isDarkMode, refreshKey = 0
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          <div className="overflow-x-auto">
-            <table className="admin-table min-w-full text-sm">
+          <div className={ADMIN_TABLE_INNER_SHELL_CLASS}>
+            <table className={ADMIN_TABLE_INNER_CLASS}>
               <thead>
                 <tr className="admin-text-muted">
                   {["S. No.", "Email Subject", "Comment", "Comment By", "Created By", "Created Date"].map(
                     (heading) => (
                       <th
                         key={heading}
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap"
+                        className="text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap"
                       >
                         {heading}
                       </th>
@@ -109,37 +113,31 @@ function RfqSalesLogListModal({ isOpen, onClose, row, isDarkMode, refreshKey = 0
                   />
                 ) : pagination.items.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={6}
-                      className="admin-text-muted px-4 py-16 text-center text-sm"
-                    >
+                    <td colSpan={6} className="admin-text-muted py-16 text-center text-sm">
                       No Data Available
                     </td>
                   </tr>
                 ) : (
                   pagination.items.map((log, index) => (
-                    <tr
-                      key={log.id ?? `${log.createdDate}-${index}`}
-                      className={`border-t align-middle ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}
-                    >
-                      <td className="px-4 py-3 whitespace-nowrap">
+                    <tr key={log.id ?? `${log.createdDate}-${index}`} className="align-middle">
+                      <td className="whitespace-nowrap">
                         <span className="admin-text">
                           {(pagination.currentPage - 1) * pageSize + index + 1}
                         </span>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="whitespace-nowrap">
                         <span className="admin-text">{log.emailSubject}</span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         <span className="admin-text">{log.comment}</span>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="whitespace-nowrap">
                         <span className="admin-text">{log.commentBy}</span>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="whitespace-nowrap">
                         <span className="admin-text">{log.createdBy}</span>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="whitespace-nowrap">
                         <span className="admin-text">{log.createdDate}</span>
                       </td>
                     </tr>

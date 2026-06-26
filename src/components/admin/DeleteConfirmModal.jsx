@@ -26,7 +26,7 @@ function DeleteConfirmModal({
         aria-modal="true"
         aria-labelledby="delete-modal-title"
       >
-        <h2 id="delete-modal-title" className="admin-text mb-2 text-lg font-bold">
+        <h2 id="delete-modal-title" className="admin-text mb-2 text-lg font-semibold">
           {title}
         </h2>
         <p className="admin-text-muted mb-4 text-sm">

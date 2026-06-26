@@ -4,7 +4,6 @@ import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import {
   apiStatusToFormValue,
   formValueToApiStatus,
-  normalizeStatusKey,
 } from "../../modules/shared/utils/statusLabels";
 import { normalizeSearchQuery } from "../../modules/shared/utils/searchQuery";
 import { apiRequest } from "../api/client";
@@ -33,19 +32,116 @@ function assertSuccess(data) {
   return data;
 }
 
+export function decodeQuestionId(id) {
+  const raw = String(id ?? "").trim();
+  if (!raw || raw === "undefined" || raw === "null") return "";
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 function normalizeQuestionId(id) {
-  const normalizedId = String(id ?? "").trim();
-  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
+  const decodedId = decodeQuestionId(id);
+  if (!decodedId) {
     throw new ApiError("", null);
   }
-  return encodeURIComponent(normalizedId);
+  return encodeURIComponent(decodedId);
 }
 
 function extractQuestionList(data) {
   if (!data || typeof data !== "object") return [];
-  if (Array.isArray(data.data)) return data.data;
+  const payload = data.data;
+
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.questions)) return payload.questions;
+  if (Array.isArray(payload?.records)) return payload.records;
+  if (Array.isArray(data.items)) return data.items;
   if (Array.isArray(data.questions)) return data.questions;
+  if (Array.isArray(data.records)) return data.records;
   return [];
+}
+
+function getRecordId(record) {
+  if (!record || typeof record !== "object") return null;
+
+  const direct =
+    record.id ??
+    record.question_id ??
+    record.questionId ??
+    record.screening_question_id ??
+    record.screeningQuestionId ??
+    record._id;
+
+  if (direct != null && direct !== "") {
+    return direct;
+  }
+
+  const nested = record.questions ?? record.question_list ?? record.questionList;
+  if (Array.isArray(nested) && nested.length > 0) {
+    const sorted = [...nested].sort(
+      (a, b) =>
+        (Number(a?.sort_order ?? a?.sortOrder ?? 0) || 0) -
+        (Number(b?.sort_order ?? b?.sortOrder ?? 0) || 0)
+    );
+    return getRecordId(sorted[0]);
+  }
+
+  return null;
+}
+
+/** Resolves the API id used for list row actions (view, edit, delete, status). */
+export function getScreeningRowId(row) {
+  return getRecordId(row);
+}
+
+function normalizeScreeningListRecord(record) {
+  if (!record || typeof record !== "object") return record;
+
+  const nested = Array.isArray(record.questions)
+    ? record.questions
+    : Array.isArray(record.question_list)
+      ? record.question_list
+      : Array.isArray(record.questionList)
+        ? record.questionList
+        : null;
+
+  if (!nested || nested.length === 0) {
+    return record;
+  }
+
+  const sorted = [...nested].sort(
+    (a, b) =>
+      (Number(a?.sort_order ?? a?.sortOrder ?? 0) || 0) -
+      (Number(b?.sort_order ?? b?.sortOrder ?? 0) || 0)
+  );
+  const primary = sorted[0] ?? {};
+
+  return {
+    ...primary,
+    ...record,
+    id: getRecordId(record) ?? getRecordId(primary),
+    question_title:
+      record.question_title ??
+      record.questionTitle ??
+      primary.question_title ??
+      primary.questionTitle ??
+      "",
+    language: record.language ?? primary.language ?? "",
+    question_type:
+      record.question_type ??
+      record.questionType ??
+      primary.question_type ??
+      primary.questionType,
+    sort_order:
+      record.sort_order ??
+      record.sortOrder ??
+      primary.sort_order ??
+      primary.sortOrder,
+    status: record.status ?? primary.status,
+  };
 }
 
 function extractQuestionRecord(data) {
@@ -149,7 +245,7 @@ function mergeScreeningQuestionRecord(listRecord, detailRecord) {
   return {
     ...listRecord,
     ...detailRecord,
-    id: listRecord?.id ?? detailRecord.id,
+    id: getRecordId(listRecord) ?? getRecordId(detailRecord),
     language: listRecord?.language ?? detailRecord.language ?? "",
     question_title:
       detailRecord.question_title ??
@@ -195,7 +291,7 @@ async function enrichScreeningQuestionRecord(record) {
     return withParsedOptions;
   }
 
-  const recordId = record.id;
+  const recordId = getRecordId(record);
   if (recordId == null) return withParsedOptions;
 
   try {
@@ -280,13 +376,92 @@ function buildQuestionBody(payload, { includeStatus = true, partial = false } = 
   return body;
 }
 
-function appendScreeningListQuery(basePath, { page, limit, search } = {}) {
+function appendScreeningListQuery(basePath, { page, limit, search, language } = {}) {
+  const extra = {};
+  const alwaysIncludeEmpty = ["search"];
+
+  if (language !== undefined) {
+    extra.language = String(language ?? "");
+    alwaysIncludeEmpty.push("language");
+  }
+
   return appendListQuery(basePath, {
     page,
     limit,
     search,
-    alwaysIncludeEmpty: ["search"],
+    alwaysIncludeEmpty,
+    extra: Object.keys(extra).length > 0 ? extra : undefined,
   });
+}
+
+/**
+ * Maps a screening API record to a form question item.
+ * @param {object} record
+ */
+export function mapScreeningRecordToQuestionItem(record) {
+  const mapped = mapScreeningQuestionToForm(record);
+  const recordId = getRecordId(record);
+
+  return {
+    id: `question-${recordId ?? Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    recordId: recordId ?? undefined,
+    questionText: mapped.questionText,
+    questionType: mapped.questionType,
+    options: mapped.options,
+    required: mapped.required,
+  };
+}
+
+/**
+ * GET /api/screening/questions/language/:language
+ * Falls back to list filtering when the language endpoint is unavailable.
+ */
+export async function getScreeningQuestionsByLanguage(language) {
+  const normalizedLanguage = String(language ?? "").trim();
+  if (!normalizedLanguage) return [];
+
+  try {
+    const data = await apiRequest(API_ROUTES.screening.byLanguage(normalizedLanguage));
+    assertSuccess(data);
+    return extractQuestionList(data).map((record) => normalizeScreeningListRecord(record));
+  } catch {
+    const data = await apiRequest(
+      appendScreeningListQuery(API_ROUTES.screening.list, {
+        page: 1,
+        limit: 500,
+        language: normalizedLanguage,
+      })
+    );
+    assertSuccess(data);
+    return extractQuestionList(data)
+      .map((record) => normalizeScreeningListRecord(record))
+      .filter((record) => String(record?.language ?? "").trim() === normalizedLanguage);
+  }
+}
+
+/** Searchable dropdown options — question text labels for a language. */
+export async function getScreeningQuestionTextOptions(language) {
+  const records = await getScreeningQuestionsByLanguage(language);
+
+  return records
+    .map((record) => {
+      const recordId = getRecordId(record);
+      const questionText = String(
+        record?.question_text ?? record?.questionText ?? ""
+      ).trim();
+      const fallbackTitle = String(
+        record?.question_title ?? record?.questionTitle ?? ""
+      ).trim();
+
+      if (!questionText && !fallbackTitle) return null;
+
+      return {
+        value: String(recordId ?? questionText ?? fallbackTitle),
+        label: questionText || fallbackTitle,
+        record,
+      };
+    })
+    .filter(Boolean);
 }
 
 /**
@@ -332,9 +507,10 @@ export function mapQuestionnaireToForm(records) {
     status: apiStatusToFormValue(first.status),
     questions: sorted.map((record) => {
       const mapped = mapScreeningQuestionToForm(record);
+      const recordId = getRecordId(record);
       return {
-        id: `loaded-question-${record.id}`,
-        recordId: record.id,
+        id: `loaded-question-${recordId}`,
+        recordId,
         questionText: mapped.questionText,
         questionType: mapped.questionType,
         options: mapped.options,
@@ -353,7 +529,7 @@ export function mapScreeningQuestionToRow(record) {
   const title = record?.question_title ?? record?.questionTitle ?? "";
 
   return {
-    id: record?.id,
+    id: getRecordId(record),
     title,
     questionTitle: title,
     language: record?.language ?? "",
@@ -390,7 +566,9 @@ export async function getRecords({ page, limit, search } = {}) {
 
   const questions = extractQuestionList(data);
   const total = extractListTotalFromResponse(data, questions.length);
-  const items = questions.map((record) => mapScreeningQuestionToRow(record));
+  const items = questions
+    .map((record) => normalizeScreeningListRecord(record))
+    .map((record) => mapScreeningQuestionToRow(record));
 
   return {
     ...data,
@@ -405,7 +583,12 @@ export async function getRecords({ page, limit, search } = {}) {
 
 /** GET /api/screening/questions/:id — falls back to list lookup when detail is unavailable. */
 export async function getRecord(id) {
-  const normalizedId = normalizeQuestionId(id);
+  const decodedId = decodeQuestionId(id);
+  if (!decodedId) {
+    throw new ApiError("Question not found", null);
+  }
+
+  const normalizedId = normalizeQuestionId(decodedId);
 
   try {
     const data = await apiRequest(API_ROUTES.screening.byId(normalizedId));
@@ -416,9 +599,9 @@ export async function getRecord(id) {
         appendScreeningListQuery(API_ROUTES.screening.list, { page: 1, limit: 500 })
       );
       assertSuccess(listData);
-      const listRecord = extractQuestionList(listData).find(
-        (item) => String(item.id) === String(id)
-      );
+      const listRecord = extractQuestionList(listData)
+        .map((item) => normalizeScreeningListRecord(item))
+        .find((item) => String(getRecordId(item)) === decodedId);
       return enrichScreeningQuestionRecord(
         mergeScreeningQuestionRecord(listRecord ?? {}, record)
       );
@@ -432,8 +615,9 @@ export async function getRecord(id) {
   );
   assertSuccess(data);
 
-  const questions = extractQuestionList(data);
-  const match = questions.find((record) => String(record.id) === String(id));
+  const questions = extractQuestionList(data)
+    .map((record) => normalizeScreeningListRecord(record));
+  const match = questions.find((record) => String(getRecordId(record)) === decodedId);
   if (!match) {
     throw new ApiError("Question not found", null);
   }
@@ -442,44 +626,93 @@ export async function getRecord(id) {
 }
 
 /**
- * Loads every active question that belongs to the same questionnaire title
- * as the record identified by `id`.
+ * GET /api/screening/questions/by-title/:title
+ * Returns the full questionnaire for a title directly from the API.
  */
-export async function getQuestionnaireByQuestionId(id) {
-  const seed = await getRecord(id);
+export async function getQuestionnaireByTitle(questionTitle) {
+  const title = String(questionTitle ?? "").trim();
+  if (!title) {
+    throw new ApiError("Question title is required", null);
+  }
+
+  const data = await apiRequest(API_ROUTES.screening.byTitle(title));
+  assertSuccess(data);
+
+  const questions = data?.data?.questions;
+  if (!Array.isArray(questions) || questions.length === 0) {
+    throw new ApiError("Question not found", null);
+  }
+
+  return questions.map((record) => ({
+    ...record,
+    options: extractRecordOptions(record),
+  }));
+}
+
+async function loadQuestionnaireFromList(seed, id) {
   const questionTitle = String(seed?.question_title ?? seed?.questionTitle ?? "").trim();
   const language = String(seed?.language ?? "").trim();
+  const seedId = String(getRecordId(seed) ?? decodeQuestionId(id));
 
   const data = await apiRequest(
     appendScreeningListQuery(API_ROUTES.screening.list, { page: 1, limit: 500 })
   );
   assertSuccess(data);
 
-  const seedId = String(seed?.id ?? id);
-
   const questions = extractQuestionList(data)
+    .map((record) => normalizeScreeningListRecord(record))
     .filter((record) => {
       const recordTitle = String(record?.question_title ?? record?.questionTitle ?? "").trim();
       const recordLanguage = String(record?.language ?? "").trim();
-      const isActive = normalizeStatusKey(record?.status) !== "inactive";
-      const isSeed = String(record?.id) === seedId;
+      const recordId = String(getRecordId(record) ?? "");
       return (
         recordTitle === questionTitle &&
         recordLanguage === language &&
-        (isActive || isSeed)
+        (apiStatusToFormValue(record?.status) === "Active" || recordId === seedId)
       );
     })
     .sort(
       (a, b) =>
         (Number(a?.sort_order ?? a?.sortOrder ?? 0) || 0) -
         (Number(b?.sort_order ?? b?.sortOrder ?? 0) || 0)
-    );
+    )
+    .map((record) => ({
+      ...record,
+      options: extractRecordOptions(record),
+    }));
 
   if (questions.length === 0) {
     throw new ApiError("Question not found", null);
   }
 
-  return Promise.all(questions.map((record) => enrichScreeningQuestionRecord(record)));
+  return questions;
+}
+
+/**
+ * Loads every question in the questionnaire identified by any member question id.
+ */
+export async function getQuestionnaireByQuestionId(id) {
+  const seed = await getRecord(id);
+  const title = String(seed?.question_title ?? seed?.questionTitle ?? "").trim();
+  if (!title) {
+    throw new ApiError("Question not found", null);
+  }
+
+  try {
+    return await getQuestionnaireByTitle(title);
+  } catch {
+    return loadQuestionnaireFromList(seed, id);
+  }
+}
+
+/** DELETE /api/screening/questions/:id */
+export async function deleteScreeningQuestion(id) {
+  const normalizedId = normalizeQuestionId(id);
+  const data = await apiRequest(API_ROUTES.screening.delete(normalizedId), {
+    method: "DELETE",
+  });
+
+  return assertSuccess(data);
 }
 
 /** POST /api/screening/questions/add */
@@ -529,4 +762,123 @@ export async function updateScreeningSortOrder(items) {
   });
 
   return assertSuccess(data);
+}
+
+function surveyGroupKey(row) {
+  const title = String(row?.questionTitle ?? row?.title ?? "").trim().toLowerCase();
+  const language = String(row?.language ?? "").trim().toLowerCase();
+  return `${title}::${language}`;
+}
+
+function groupQuestionsIntoSurveys(items = []) {
+  const groups = new Map();
+
+  for (const item of items) {
+    const key = surveyGroupKey(item);
+    if (!key || key === "::") continue;
+
+    const rowId = getScreeningRowId(item);
+    const sortOrder = Number(item?.sortOrder ?? 0) || 0;
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        id: rowId,
+        surveyTitle: item.questionTitle ?? item.title ?? "",
+        language: item.language ?? "",
+        questionType: item.questionType ?? "",
+        status: item.status ?? "Active",
+        memberIds: rowId != null ? [rowId] : [],
+        sortOrder,
+      });
+      continue;
+    }
+
+    const group = groups.get(key);
+    if (rowId != null) {
+      group.memberIds.push(rowId);
+    }
+    if (sortOrder < group.sortOrder) {
+      group.sortOrder = sortOrder;
+      if (rowId != null) {
+        group.id = rowId;
+      }
+      group.questionType = item.questionType ?? group.questionType;
+    }
+    if (String(item.status ?? "").toLowerCase() === "inactive") {
+      group.status = "Inactive";
+    }
+  }
+
+  return Array.from(groups.values()).sort((a, b) => {
+    const titleCompare = String(a.surveyTitle).localeCompare(String(b.surveyTitle));
+    if (titleCompare !== 0) return titleCompare;
+    return String(a.language).localeCompare(String(b.language));
+  });
+}
+
+/** Adapter for Create Survey listing — groups screening questions by survey title + language. */
+export async function listCreateSurveyRecords({ page, limit, search } = {}) {
+  const pageNum = Math.max(1, Number(page) || 1);
+  const pageLimit = Math.max(1, Number(limit) || 10);
+
+  const data = await getRecords({
+    page: 1,
+    limit: 500,
+    search: normalizeSearchQuery(search),
+  });
+
+  const surveys = groupQuestionsIntoSurveys(data.items ?? []);
+  const total = surveys.length;
+  const start = (pageNum - 1) * pageLimit;
+  const items = surveys.slice(start, start + pageLimit);
+
+  return {
+    ...data,
+    items,
+    total,
+    count: total,
+    page: pageNum,
+    limit: pageLimit,
+    totalPages: Math.max(1, Math.ceil(total / pageLimit)),
+  };
+}
+
+/** Deletes every question in a survey group. */
+export async function deleteCreateSurvey(row) {
+  const memberIds = Array.isArray(row?.memberIds)
+    ? row.memberIds.filter((id) => id != null)
+    : row?.id != null
+      ? [row.id]
+      : [];
+
+  if (memberIds.length === 0) {
+    throw new ApiError("Survey not found", null);
+  }
+
+  let lastData = null;
+  for (const memberId of memberIds) {
+    lastData = await deleteScreeningQuestion(memberId);
+  }
+
+  return lastData;
+}
+
+/** Updates status for every question in a survey group. */
+export async function updateCreateSurveyStatus(row, status) {
+  const memberIds = Array.isArray(row?.memberIds)
+    ? row.memberIds.filter((id) => id != null)
+    : row?.id != null
+      ? [row.id]
+      : [];
+
+  if (memberIds.length === 0) {
+    throw new ApiError("Survey not found", null);
+  }
+
+  let lastData = null;
+  for (const memberId of memberIds) {
+    lastData = await updateScreeningQuestionStatus(memberId, status);
+  }
+
+  return lastData;
 }

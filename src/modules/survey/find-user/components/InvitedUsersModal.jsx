@@ -3,11 +3,12 @@ import { X } from "lucide-react";
 import AdminPagination from "../../../../components/admin/AdminPagination";
 import TableCard from "../../../../components/admin/TableCard";
 import { getAdminCancelButtonClass } from "../../../shared/utils/formStyles";
+import { ADMIN_TABLE_INNER_CLASS } from "../../../shared/utils/tableHelpers";
 import { DEFAULT_PAGE_SIZE, paginateItems } from "../../../shared/utils/pagination";
 import { INVITED_USERS_DEMO } from "../utils/demoData";
 
 const TABLE_HEAD =
-  "admin-text-muted px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+  "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
 
 function InvitedUsersModal({ isOpen, onClose, isDarkMode }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -71,39 +72,33 @@ function InvitedUsersModal({ isOpen, onClose, isDarkMode }) {
               />
             }
           >
-            <div className="overflow-x-auto">
-              <table className="admin-table min-w-full text-sm">
-                <thead>
-                  <tr>
-                    {["S.No", "Name", "Email", "Invite Status", "Earned Points"].map(
-                      (col) => (
-                        <th key={col} className={TABLE_HEAD}>
-                          {col}
-                        </th>
-                      )
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagination.items.map((row, idx) => {
-                    const globalIdx = (pagination.currentPage - 1) * pageSize + idx;
-                    return (
-                      <tr
-                        key={row.id}
-                        className="border-t align-middle"
-                        style={{ borderColor: "var(--admin-header-surface-border)" }}
-                      >
-                        <td className="admin-text px-3 py-3">{globalIdx + 1}</td>
-                        <td className="admin-text px-3 py-3">{row.name}</td>
-                        <td className="admin-text px-3 py-3">{row.email}</td>
-                        <td className="admin-text px-3 py-3">{row.inviteStatus}</td>
-                        <td className="admin-text px-3 py-3">{row.earnedPoints}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <table className={ADMIN_TABLE_INNER_CLASS}>
+              <thead>
+                <tr>
+                  {["S.No", "Name", "Email", "Invite Status", "Earned Points"].map(
+                    (col) => (
+                      <th key={col} className={TABLE_HEAD}>
+                        {col}
+                      </th>
+                    )
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {pagination.items.map((row, idx) => {
+                  const globalIdx = (pagination.currentPage - 1) * pageSize + idx;
+                  return (
+                    <tr key={row.id} className="align-middle">
+                      <td className="admin-text">{globalIdx + 1}</td>
+                      <td className="admin-text">{row.name}</td>
+                      <td className="admin-text">{row.email}</td>
+                      <td className="admin-text">{row.inviteStatus}</td>
+                      <td className="admin-text">{row.earnedPoints}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </TableCard>
         </div>
 

@@ -8,6 +8,7 @@ import {
 import { ApiError } from "./ApiError";
 
 const MAX_UNAUTHORIZED_RETRIES = 3;
+const DEFAULT_REQUEST_TIMEOUT_MS = 30000;
 
 const HTTP_STATUS_MESSAGES = {
   400: "Bad request. Please check your input.",
@@ -69,14 +70,25 @@ export async function readResponseBody(response) {
 }
 
 async function executeRequest(url, fetchInit) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS);
+
   let response;
   try {
-    response = await fetch(url, fetchInit);
+    response = await fetch(url, {
+      ...fetchInit,
+      signal: controller.signal,
+    });
   } catch (networkError) {
+    if (networkError?.name === "AbortError") {
+      throw new ApiError("Request timed out. Please try again.");
+    }
     if (API_DEBUG) {
       console.error("[API] Network error:", networkError);
     }
     throw new ApiError("Unable to reach the server. Please try again.");
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   const { data, rawText } = await readResponseBody(response);

@@ -22,7 +22,7 @@ export function getAdminCancelButtonClass(size = "form") {
 export function getFormActions(navigate, cancelPath, canSubmit) {
   return {
     submitClass:
-      "h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]",
+      "admin-btn-primary h-11 px-5 disabled:cursor-not-allowed disabled:opacity-50",
     cancelClass: getAdminCancelButtonClass(),
     navigate,
     cancelPath,

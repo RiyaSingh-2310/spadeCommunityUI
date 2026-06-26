@@ -183,7 +183,14 @@ export function isProfileImageColumn(columnLabel) {
 }
 
 export const TABLE_HEAD_BASE =
-  "px-4 py-3.5 text-[11px] font-bold uppercase tracking-[0.06em] whitespace-nowrap";
+  "px-4 py-3.5 text-[12px] font-bold uppercase tracking-[0.06em] whitespace-nowrap";
+
+/** Nested / inner tables (expandable rows, detail sections, modals). */
+export const ADMIN_TABLE_INNER_CLASS = "admin-table admin-table-inner min-w-full text-sm";
+
+export const ADMIN_TABLE_INNER_SHELL_CLASS = "admin-table-inner-shell";
+
+export const ADMIN_TABLE_EXPANDED_PANEL_CLASS = "admin-table-expanded-panel";
 
 export const TABLE_STATUS_COL = "min-w-[140px] w-[140px]";
 

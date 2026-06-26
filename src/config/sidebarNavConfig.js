@@ -131,6 +131,28 @@ export const SIDEBAR_NAV_ITEMS = [
   },
   {
     type: "group",
+    label: "Users",
+    key: "community-users",
+    matcher: /^\/(community-users|user-email-templates)(\/|$)/,
+    permissionKeys: ["community_users", "user_email_templates"],
+    children: [
+      {
+        label: "User List",
+        root: "/community-users",
+        isActive: matchesCommunityUsersMain,
+        matcher: /^\/community-users(\/|$)/,
+        permissionKeys: ["community_users"],
+      },
+      {
+        label: "User Email Templates",
+        root: "/user-email-templates",
+        matcher: /^\/user-email-templates(\/|$)/,
+        permissionKeys: ["user_email_templates"],
+      },
+    ],
+  },
+  {
+    type: "group",
     label: "Reward Points",
     key: "reward-points",
     matcher: /^\/reward-points(\/|$)/,
@@ -163,35 +185,6 @@ export const SIDEBAR_NAV_ITEMS = [
   },
   {
     type: "group",
-    label: "Users",
-    key: "community-users",
-    matcher: /^\/(community-users|user-email-templates)(\/|$)/,
-    permissionKeys: ["community_users", "user_email_templates"],
-    children: [
-      {
-        label: "User List",
-        root: "/community-users",
-        isActive: matchesCommunityUsersMain,
-        matcher: /^\/community-users(\/|$)/,
-        permissionKeys: ["community_users"],
-      },
-      {
-        label: "User Email Templates",
-        root: "/user-email-templates",
-        matcher: /^\/user-email-templates(\/|$)/,
-        permissionKeys: ["user_email_templates"],
-      },
-    ],
-  },
-  {
-    type: "link",
-    label: "Log Activity",
-    root: "/log-activity",
-    matcher: /^\/log-activity(\/|$)/,
-    permissionKeys: ["log_activity"],
-  },
-  {
-    type: "group",
     label: "Screening Management",
     key: "screening-management",
     matcher: /^\/(user-screening|prescreen)(\/|$)/,
@@ -200,7 +193,13 @@ export const SIDEBAR_NAV_ITEMS = [
       {
         label: "Question Library",
         root: "/user-screening/questions",
-        matcher: /^\/user-screening(\/|$)/,
+        matcher: /^\/user-screening\/questions(\/|$)/,
+        permissionKeys: ["user_screening_management"],
+      },
+      {
+        label: "Create Survey",
+        root: "/user-screening/create-survey",
+        matcher: /^\/user-screening\/create-survey(\/|$)/,
         permissionKeys: ["user_screening_management"],
       },
       {
@@ -231,6 +230,13 @@ export const SIDEBAR_NAV_ITEMS = [
     root: "/system-email",
     matcher: /^\/system-email(\/|$)/,
     permissionKeys: ["system_email_templates"],
+  },
+  {
+    type: "link",
+    label: "Log Activity",
+    root: "/log-activity",
+    matcher: /^\/log-activity(\/|$)/,
+    permissionKeys: ["log_activity"],
   },
   {
     type: "link",
