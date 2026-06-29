@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import PermissionDenied from "../../../components/admin/PermissionDenied";
@@ -13,6 +14,8 @@ import {
   getRequiredError,
   isFormValidForFields,
 } from "../../shared/utils/validation";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { fetchRewardSettings, updateRewardSettings } from "../services/rewardSettingsApi";
 
 const REWARD_TYPE_OPTIONS = ["Registration Reward", "Survey Completion Reward"];
 
@@ -22,22 +25,53 @@ const YES_NO_OPTIONS = ["Yes", "No"];
 
 const DEFAULT_FORM = {
   rewardType: "Registration Reward",
-  registrationReward: "200",
-  surveyCompletionReward: "100",
-  minimumPayout: "500",
-  amazon: "Yes",
-  flipkart: "Yes",
+  registrationReward: "",
+  surveyCompletionReward: "",
+  minimumPayout: "",
+  amazon: "No",
+  flipkart: "No",
   paypal: "No",
 };
 
 function RewardSettingsPage({ isDarkMode }) {
   const navigate = useNavigate();
   const [form, setForm] = useState(DEFAULT_FORM);
-  const [initialSnapshot, setInitialSnapshot] = useState(DEFAULT_FORM);
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { canRead, canWrite, isReadOnly } = useModulePermission("reward_settings");
   const readOnly = isReadOnly;
   const showSubmit = canWrite;
   const inputClass = getAdminInputClass();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSettings = async () => {
+      setIsLoading(true);
+      setLoadFailed(false);
+
+      try {
+        const settings = await fetchRewardSettings();
+        if (cancelled) return;
+
+        setForm(settings);
+        setInitialSnapshot(settings);
+      } catch (error) {
+        if (cancelled) return;
+        toastApiError(error);
+        setLoadFailed(true);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadSettings();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const isRegistrationType = form.rewardType === "Registration Reward";
 
@@ -70,18 +104,18 @@ function RewardSettingsPage({ isDarkMode }) {
     fields: ["registrationReward", "surveyCompletionReward", "minimumPayout"],
   });
 
-  const isDirty = useMemo(
-    () =>
-      ["rewardType", "registrationReward", "surveyCompletionReward", "minimumPayout", ...REDEMPTION_METHOD_FIELDS].some(
-        (key) =>
-          String(form[key] ?? "").trim() !== String(initialSnapshot[key] ?? "").trim()
-      ),
-    [form, initialSnapshot]
-  );
+  const isDirty = useMemo(() => {
+    if (!initialSnapshot) return false;
+    return ["rewardType", "registrationReward", "surveyCompletionReward", "minimumPayout", ...REDEMPTION_METHOD_FIELDS].some(
+      (key) =>
+        String(form[key] ?? "").trim() !== String(initialSnapshot[key] ?? "").trim()
+    );
+  }, [form, initialSnapshot]);
 
   const canSubmit =
     showSubmit &&
     !readOnly &&
+    !isSubmitting &&
     isFormValidForFields(errors, validationFields) &&
     isDirty;
 
@@ -89,23 +123,59 @@ function RewardSettingsPage({ isDarkMode }) {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const onSubmit = (event) => {
+  const onSubmit = async (event) => {
     event.preventDefault();
     if (
       readOnly ||
       !showSubmit ||
       !validateSubmit() ||
       !isFormValidForFields(errors, validationFields) ||
-      !isDirty
+      !isDirty ||
+      isSubmitting
     ) {
       return;
     }
 
-    setInitialSnapshot({ ...form });
+    setIsSubmitting(true);
+    try {
+      const data = await updateRewardSettings(form);
+      const nextForm = data.form ?? form;
+      setForm(nextForm);
+      setInitialSnapshot({ ...nextForm });
+      toastApiSuccess(data);
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!canRead) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-[#10a950]" />
+      </div>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader title="Reward Settings" isDarkMode={isDarkMode} />
+        <p className="admin-text-muted text-sm">Unable to load reward settings.</p>
+        <button
+          type="button"
+          onClick={() => navigate("/reward-points/history")}
+          className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white"
+        >
+          Back
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -242,8 +312,9 @@ function RewardSettingsPage({ isDarkMode }) {
             <button
               type="submit"
               disabled={!canSubmit}
-              className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50"
             >
+              {isSubmitting && <Loader2 size={16} className="animate-spin" />}
               Update
             </button>
           )}

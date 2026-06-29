@@ -135,6 +135,10 @@ export const API_ROUTES = {
   invoice: {
     settings: "/api/invoice/settings",
   },
+  rewardSettings: {
+    get: "/api/reward-settings/get",
+    update: "/api/reward-settings/update",
+  },
   systemEmails: {
     list: "/api/system-emails/list",
     byId: (id) => `/api/system-emails/${id}`,
