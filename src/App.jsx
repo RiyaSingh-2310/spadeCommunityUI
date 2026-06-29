@@ -1,24 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { consumeSessionExpiredToast } from "./services/auth/sessionExpiry";
 import ToastContainer from "./components/shared/ToastContainer";
 import AppRoutes from "./Routes/AppRoutes";
+import { ThemeProvider, useTheme } from "./context/ThemeContext";
 
-function App() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+function AppContent() {
+  const { isDarkMode, toggleTheme } = useTheme();
 
   useEffect(() => {
     consumeSessionExpiredToast();
   }, []);
-
-  const toggleTheme = () => {
-    setIsDarkMode((prev) => !prev);
-  };
 
   return (
     <>
       <ToastContainer isDarkMode={isDarkMode} />
       <AppRoutes isDarkMode={isDarkMode} onToggleTheme={toggleTheme} />
     </>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 

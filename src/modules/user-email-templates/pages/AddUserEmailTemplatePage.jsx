@@ -64,7 +64,7 @@ function AddUserEmailTemplatePage({ isDarkMode }) {
       <AdminPageHeader
         title="Add User Email Template"
         breadcrumbs={[
-          { label: "Users", to: "/community-users" },
+          { label: "System Email Template", to: "/system-email" },
           { label: "User Email Templates", to: "/user-email-templates" },
           { label: "Add User Email Template" },
         ]}

@@ -261,7 +261,7 @@ function UserPermissionsTable({
                 node.children.forEach((child) => {
                   rows.push(
                     <tr
-                      key={`${node.id}__child__${child.key}`}
+                      key={`${node.id}__child__${child.label}`}
                       className="admin-permissions-table__row border-t align-middle transition-colors"
                     >
                       <td className="px-4 py-2.5 pl-10 whitespace-nowrap">

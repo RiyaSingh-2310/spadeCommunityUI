@@ -81,6 +81,9 @@ body {
   --admin-summary-icon-bg: #f4f8fc;
   --admin-summary-icon-color: #5e718a;
   --admin-pagination-active-shadow: 0 4px 12px rgba(16, 169, 80, 0.25);
+  --admin-scrollbar-thumb: #c5d3e3;
+  --admin-scrollbar-thumb-hover: #a8b9cc;
+  --admin-scrollbar-track: transparent;
 }
 
 .admin-shell[data-theme="dark"] {
@@ -147,6 +150,9 @@ body {
   --admin-summary-icon-bg: #1a273c;
   --admin-summary-icon-color: #9fb0c8;
   --admin-pagination-active-shadow: 0 4px 12px rgba(40, 197, 109, 0.22);
+  --admin-scrollbar-thumb: #3d5270;
+  --admin-scrollbar-thumb-hover: #4d6585;
+  --admin-scrollbar-track: transparent;
 }
 
 .admin-text {
@@ -164,6 +170,59 @@ body {
 .admin-shell {
   font-family: "Plus Jakarta Sans", Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-weight: 500;
+  scrollbar-gutter: stable;
+  scroll-behavior: smooth;
+}
+
+/* Cross-platform scrollbar styling (macOS, Windows, Linux) */
+.admin-shell .admin-scrollbar,
+.admin-shell #admin-main-scroll,
+.admin-shell .admin-table-scroll,
+.admin-shell .admin-table-inner-shell,
+.admin-shell .admin-modal-panel,
+.admin-shell .admin-sidebar nav {
+  scrollbar-width: thin;
+  scrollbar-color: var(--admin-scrollbar-thumb) var(--admin-scrollbar-track);
+}
+
+.admin-shell .admin-scrollbar::-webkit-scrollbar,
+.admin-shell #admin-main-scroll::-webkit-scrollbar,
+.admin-shell .admin-table-scroll::-webkit-scrollbar,
+.admin-shell .admin-table-inner-shell::-webkit-scrollbar,
+.admin-shell .admin-modal-panel::-webkit-scrollbar,
+.admin-shell .admin-sidebar nav::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.admin-shell .admin-scrollbar::-webkit-scrollbar-track,
+.admin-shell #admin-main-scroll::-webkit-scrollbar-track,
+.admin-shell .admin-table-scroll::-webkit-scrollbar-track,
+.admin-shell .admin-table-inner-shell::-webkit-scrollbar-track,
+.admin-shell .admin-modal-panel::-webkit-scrollbar-track,
+.admin-shell .admin-sidebar nav::-webkit-scrollbar-track {
+  background: var(--admin-scrollbar-track);
+}
+
+.admin-shell .admin-scrollbar::-webkit-scrollbar-thumb,
+.admin-shell #admin-main-scroll::-webkit-scrollbar-thumb,
+.admin-shell .admin-table-scroll::-webkit-scrollbar-thumb,
+.admin-shell .admin-table-inner-shell::-webkit-scrollbar-thumb,
+.admin-shell .admin-modal-panel::-webkit-scrollbar-thumb,
+.admin-shell .admin-sidebar nav::-webkit-scrollbar-thumb {
+  background-color: var(--admin-scrollbar-thumb);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.admin-shell .admin-scrollbar::-webkit-scrollbar-thumb:hover,
+.admin-shell #admin-main-scroll::-webkit-scrollbar-thumb:hover,
+.admin-shell .admin-table-scroll::-webkit-scrollbar-thumb:hover,
+.admin-shell .admin-table-inner-shell::-webkit-scrollbar-thumb:hover,
+.admin-shell .admin-modal-panel::-webkit-scrollbar-thumb:hover,
+.admin-shell .admin-sidebar nav::-webkit-scrollbar-thumb:hover {
+  background-color: var(--admin-scrollbar-thumb-hover);
 }
 
 .admin-page-title {
@@ -1001,6 +1060,7 @@ input[type="number"],
 .admin-form-root {
   min-width: 0;
   max-width: 100%;
+  scrollbar-gutter: stable;
 }
 
 .admin-card-body {

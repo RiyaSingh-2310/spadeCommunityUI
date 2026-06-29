@@ -163,7 +163,7 @@ function CommunityUsersPage({ isDarkMode }) {
     <div className="space-y-4">
       <ModuleListingPage
         isDarkMode={isDarkMode}
-        title="List Users"
+        title="Panel List"
         searchPlaceholder="Search users..."
         columns={LIST_COLUMNS}
         rows={users}

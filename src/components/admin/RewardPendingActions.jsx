@@ -1,9 +1,12 @@
 import { Check, Eye, X } from "lucide-react";
 
-function RewardPendingActions({ isDarkMode, onView, onApprove, onReject }) {
+function RewardPendingActions({ isDarkMode, row, onView, onApprove, onReject }) {
   if (!onView && !onApprove && !onReject) {
     return null;
   }
+
+  const canActOnReward =
+    !row?.status || String(row.status).toLowerCase() === "pending";
 
   const base =
     "inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold transition-colors";
@@ -25,7 +28,7 @@ function RewardPendingActions({ isDarkMode, onView, onApprove, onReject }) {
         View
       </button>
       )}
-      {onApprove && (
+      {onApprove && canActOnReward && (
       <button
         type="button"
         onClick={onApprove}
@@ -40,7 +43,7 @@ function RewardPendingActions({ isDarkMode, onView, onApprove, onReject }) {
         Approve
       </button>
       )}
-      {onReject && (
+      {onReject && canActOnReward && (
       <button
         type="button"
         onClick={onReject}

@@ -695,8 +695,8 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
       <AdminPageHeader
         title={pageTitle}
         breadcrumbs={[
-          { label: "Screening Management", to: "/user-screening/questions" },
-          { label: "Question Library", to: "/user-screening/questions" },
+          { label: "Panelist", to: "/user-screening/questions" },
+          { label: "Panel Questionnaire", to: "/user-screening/questions" },
           { label: pageTitle },
         ]}
         isDarkMode={isDarkMode}

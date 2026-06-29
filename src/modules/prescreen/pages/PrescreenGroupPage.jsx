@@ -56,8 +56,8 @@ function PrescreenGroupPage({ isDarkMode }) {
   return (
     <ModuleListingPage
       isDarkMode={isDarkMode}
-      title="Prescreen Group"
-      searchPlaceholder="Search prescreen groups..."
+      title="Questionnaire Group"
+      searchPlaceholder="Search questionnaire groups..."
       actionLabel="Add Survey Group"
       onActionClick={() => navigate("/prescreen/group/add")}
       columns={LIST_COLUMNS}
@@ -67,7 +67,7 @@ function PrescreenGroupPage({ isDarkMode }) {
       permissionModule="prescreen_group"
       onStatusToggle={handleStatusToggle}
       isLoading={isLoading}
-      emptyMessage="No prescreen groups found"
+      emptyMessage="No questionnaire groups found"
       onSearch={handleSearch}
       totalRecords={totalRecords}
       serverPaginated

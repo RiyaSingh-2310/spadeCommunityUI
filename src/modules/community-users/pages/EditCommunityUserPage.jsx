@@ -149,8 +149,8 @@ function EditCommunityUserPage({ isDarkMode }) {
       <AdminPageHeader
         title="Edit User Details"
         breadcrumbs={[
-          { label: "Users", to: "/community-users" },
-          { label: "User List", to: "/community-users" },
+          { label: "Panelist", to: "/community-users" },
+          { label: "Panel List", to: "/community-users" },
           { label: "Edit User Details" },
         ]}
         isDarkMode={isDarkMode}

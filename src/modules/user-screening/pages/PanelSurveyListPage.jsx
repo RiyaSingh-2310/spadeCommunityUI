@@ -6,14 +6,13 @@ import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import {
-  getScreeningRowId,
-  listScreeningRecords,
-  deleteScreeningQuestion,
-  updateScreeningQuestionStatus,
+  deletePanelSurvey,
+  listPanelSurveyRecords,
+  updatePanelSurveyStatus,
 } from "../../../services/screening/screeningQuestionsApi";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 
-function QuestionsListPage({ isDarkMode }) {
+function PanelSurveyListPage({ isDarkMode }) {
   const navigate = useNavigate();
   useFlashMessage();
 
@@ -29,7 +28,7 @@ function QuestionsListPage({ isDarkMode }) {
     handlePageSizeChange,
     refresh,
   } = useApiListing({
-    fetchFn: listScreeningRecords,
+    fetchFn: listPanelSurveyRecords,
     initialPageSize: DEFAULT_PAGE_SIZE,
     preserveRowOrder: true,
   });
@@ -39,33 +38,28 @@ function QuestionsListPage({ isDarkMode }) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleStatusToggle = async (row) => {
-    const rowId = getScreeningRowId(row);
-    if (rowId == null || statusUpdatingId != null) return;
+    if (row?.id == null || statusUpdatingId != null) return;
 
     const previousStatus = row.status;
     const nextStatus =
       String(previousStatus ?? "").toLowerCase() === "active" ? "Inactive" : "Active";
 
-    setStatusUpdatingId(rowId);
+    setStatusUpdatingId(row.id);
     setRows((prev) =>
       prev.map((item) =>
-        String(getScreeningRowId(item)) === String(rowId)
-          ? { ...item, status: nextStatus }
-          : item
+        String(item.id) === String(row.id) ? { ...item, status: nextStatus } : item
       )
     );
 
     try {
-      const data = await updateScreeningQuestionStatus(rowId, nextStatus);
+      const data = await updatePanelSurveyStatus(row, nextStatus);
       toastApiSuccess(data);
       await refresh();
     } catch (error) {
       toastApiError(error);
       setRows((prev) =>
         prev.map((item) =>
-          String(getScreeningRowId(item)) === String(rowId)
-            ? { ...item, status: previousStatus }
-            : item
+          String(item.id) === String(row.id) ? { ...item, status: previousStatus } : item
         )
       );
     } finally {
@@ -74,14 +68,12 @@ function QuestionsListPage({ isDarkMode }) {
   };
 
   const handleEdit = (row) => {
-    const rowId = getScreeningRowId(row);
-    if (rowId == null) return;
-    navigate(`/user-screening/questions/edit/${encodeURIComponent(String(rowId))}`);
+    if (row?.id == null) return;
+    navigate(`/user-screening/panel-survey/edit/${encodeURIComponent(String(row.id))}`);
   };
 
   const handleDeleteRequest = (row) => {
-    const rowId = getScreeningRowId(row);
-    if (rowId == null) return;
+    if (row?.id == null) return;
     setDeleteTarget(row);
   };
 
@@ -91,12 +83,11 @@ function QuestionsListPage({ isDarkMode }) {
   };
 
   const handleDeleteConfirm = async () => {
-    const rowId = getScreeningRowId(deleteTarget);
-    if (rowId == null) return;
+    if (!deleteTarget?.id) return;
 
     setIsDeleting(true);
     try {
-      const data = await deleteScreeningQuestion(rowId);
+      const data = await deletePanelSurvey(deleteTarget.id);
       setDeleteTarget(null);
       toastApiSuccess(data);
       await refresh();
@@ -111,30 +102,24 @@ function QuestionsListPage({ isDarkMode }) {
     <div className="space-y-4">
       <ModuleListingPage
         isDarkMode={isDarkMode}
-        title="Panel Questionnaire"
-        searchPlaceholder="Search questions..."
-        secondaryActionLabel="Sort Profiling Questions"
-        onSecondaryActionClick={() => navigate("/user-screening/questions/sort")}
-        actionLabel="Add Profiling Questions"
-        onActionClick={() => navigate("/user-screening/questions/add")}
-        columns={[
-          "S.No",
-          "Question Title",
-          "Language",
-          "Question Type",
-          "Sort Order",
-          "Status",
-          "Action",
+        title="Panel Survey"
+        breadcrumbs={[
+          { label: "Panelist", to: "/community-users" },
+          { label: "Panel Survey" },
         ]}
+        searchPlaceholder="Search panel surveys..."
+        actionLabel="Add Panel Survey"
+        onActionClick={() => navigate("/user-screening/panel-survey/add")}
+        columns={["S.No", "Survey Title", "Language", "Status", "Action"]}
         rows={rows}
-        permissionModule="user_screening_management"
+        permissionModule="panel_survey"
         nowrapAllCells
         rowIdKey="id"
         onEdit={handleEdit}
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}
         isLoading={isLoading}
-        emptyMessage="No questions found"
+        emptyMessage="No panel surveys found"
         onSearch={handleSearch}
         totalRecords={totalRecords}
         serverPaginated
@@ -151,9 +136,10 @@ function QuestionsListPage({ isDarkMode }) {
         onCancel={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
         isDeleting={isDeleting}
+        message="Are you sure you want to delete this Panel Survey?"
       />
     </div>
   );
 }
 
-export default QuestionsListPage;
+export default PanelSurveyListPage;

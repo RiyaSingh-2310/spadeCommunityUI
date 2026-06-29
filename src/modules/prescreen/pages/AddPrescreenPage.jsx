@@ -206,11 +206,11 @@ function AddPrescreenPage({ isDarkMode }) {
     return (
       <div className="space-y-6">
         <AdminPageHeader
-          title="Edit Prescreen"
+          title="Edit Question"
           breadcrumbs={[
             { label: "Screening Management", to: "/prescreen" },
-            { label: "Prescreen", to: "/prescreen" },
-            { label: "Edit Prescreen" },
+            { label: "Question Library", to: "/prescreen" },
+            { label: "Edit Question" },
           ]}
           isDarkMode={isDarkMode}
         />
@@ -226,11 +226,11 @@ function AddPrescreenPage({ isDarkMode }) {
     return (
       <div className="space-y-6">
         <AdminPageHeader
-          title="Edit Prescreen"
+          title="Edit Question"
           breadcrumbs={[
             { label: "Screening Management", to: "/prescreen" },
-            { label: "Prescreen", to: "/prescreen" },
-            { label: "Edit Prescreen" },
+            { label: "Question Library", to: "/prescreen" },
+            { label: "Edit Question" },
           ]}
           isDarkMode={isDarkMode}
         />
@@ -249,11 +249,11 @@ function AddPrescreenPage({ isDarkMode }) {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title={isEdit ? "Edit Prescreen" : "Add Prescreen"}
+        title={isEdit ? "Edit Question" : "Add Question"}
         breadcrumbs={[
           { label: "Screening Management", to: "/prescreen" },
-          { label: "Prescreen", to: "/prescreen" },
-          { label: isEdit ? "Edit Prescreen" : "Add Prescreen" },
+          { label: "Question Library", to: "/prescreen" },
+          { label: isEdit ? "Edit Question" : "Add Question" },
         ]}
         isDarkMode={isDarkMode}
       />

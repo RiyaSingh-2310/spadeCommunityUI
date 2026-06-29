@@ -26,6 +26,7 @@ import { getLoginRole } from "../../services/auth/loginRole";
 import {
   findActiveSidebarGroupKey,
   isSidebarItemActive,
+  resolveActiveGroupChildLabel,
 } from "../../config/sidebarNavUtils";
 import { usePermissions } from "../../modules/permissions/PermissionsContext";
 import heroLogo from "../../assets/SpadeCommunitylogoWhite.png";
@@ -72,21 +73,23 @@ function AdminSidebar({
   const iconMap = {
     Dashboard: <LayoutDashboard size={21} strokeWidth={2} />,
     "Admin Users": <Users size={21} strokeWidth={2} />,
-    Users: <UserRound size={21} strokeWidth={2} />,
-    "User List": <UserRound size={21} strokeWidth={2} />,
+    Panelist: <UserRound size={21} strokeWidth={2} />,
+    "Panel List": <UserRound size={21} strokeWidth={2} />,
+    "Panel Questionnaire": <ClipboardList size={21} strokeWidth={2} />,
+    "Panel Survey": <ClipboardList size={21} strokeWidth={2} />,
     Clients: <UserCog size={21} strokeWidth={2} />,
     Partners: <Handshake size={21} strokeWidth={2} />,
     "Project Managers": <BriefcaseBusiness size={21} strokeWidth={2} />,
     "Sales Manager": <FileSpreadsheet size={21} strokeWidth={2} />,
     RFQ: <FileSpreadsheet size={21} strokeWidth={2} />,
     Projects: <ScrollText size={21} strokeWidth={2} />,
-    "Question Library": <ShieldCheck size={21} strokeWidth={2} />,
-    Prescreen: <ClipboardList size={21} strokeWidth={2} />,
-    "Prescreen Group": <ClipboardList size={21} strokeWidth={2} />,
+    "Question Library": <ClipboardList size={21} strokeWidth={2} />,
+    "Questionnaire Group": <ClipboardList size={21} strokeWidth={2} />,
     Survey: <ScrollText size={21} strokeWidth={2} />,
     Invoice: <ReceiptIndianRupee size={21} strokeWidth={2} />,
     Notifications: <Bell size={21} strokeWidth={2} />,
     "Reward Points": <Gift size={21} strokeWidth={2} />,
+    "Reward History": <Gift size={21} strokeWidth={2} />,
     "Screening Management": <ShieldCheck size={21} strokeWidth={2} />,
     "Home Page Management": <Home size={21} strokeWidth={2} />,
     "System Email Template": <Mail size={21} strokeWidth={2} />,
@@ -198,10 +201,11 @@ function AdminSidebar({
               </div>
               <div className="py-1">
                 {item.children.map((child) => {
-                  const isChildActive = isSidebarItemActive(
-                    child,
+                  const activeChildLabel = resolveActiveGroupChildLabel(
+                    item.children,
                     location.pathname
                   );
+                  const isChildActive = child.label === activeChildLabel;
                   return (
                     <button
                       type="button"
@@ -363,10 +367,11 @@ function AdminSidebar({
                   {item.type === "group" && isExpanded && (!isCollapsed || isMobile) && (
                     <div className="mt-0.5 space-y-0.5">
                       {item.children.map((child) => {
-                        const isChildActive = isSidebarItemActive(
-                    child,
-                    location.pathname
-                  );
+                        const activeChildLabel = resolveActiveGroupChildLabel(
+                          item.children,
+                          location.pathname
+                        );
+                        const isChildActive = child.label === activeChildLabel;
                         return (
                           <button
                             type="button"

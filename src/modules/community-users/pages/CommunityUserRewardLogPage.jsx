@@ -87,7 +87,7 @@ function CommunityUserRewardLogPage({ isDarkMode }) {
           onClick={() => navigate("/community-users")}
           className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white"
         >
-          Back to User List
+          Back to Panel List
         </button>
       </div>
     );
@@ -99,8 +99,8 @@ function CommunityUserRewardLogPage({ isDarkMode }) {
         isDarkMode={isDarkMode}
         title="List Reward Logs"
         breadcrumbs={[
-          { label: "Users", to: "/community-users" },
-          { label: "User List", to: "/community-users" },
+          { label: "Panelist", to: "/community-users" },
+          { label: "Panel List", to: "/community-users" },
           { label: user.name },
           { label: "List Reward Logs" },
         ]}

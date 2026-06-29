@@ -8,6 +8,7 @@ import {
   useMediaQuery,
 } from "../../modules/shared/hooks/useMediaQuery";
 import ScrollToTopOnNavigate from "../shared/ScrollToTopOnNavigate";
+import PageErrorBoundary from "../shared/PageErrorBoundary";
 import AdminNavbar from "./AdminNavbar";
 import AdminSidebar from "./AdminSidebar";
 import PermissionDenied from "./PermissionDenied";
@@ -91,18 +92,20 @@ function AdminLayoutContent({ isDarkMode, onToggleTheme }) {
         <main
           id="admin-main-scroll"
           data-admin-scroll-region
-          className="h-[calc(100vh-72px)] overflow-y-auto overflow-x-hidden p-4 sm:p-6"
+          className="admin-scrollbar h-[calc(100vh-72px)] overflow-y-auto overflow-x-hidden p-4 sm:p-6"
         >
           <div className="admin-page-root min-w-0">
             <ScrollToTopOnNavigate />
             {hasAccess ? (
-              isFormRoute(location.pathname) ? (
-                <FormAccessProvider isDarkMode={isDarkMode}>
+              <PageErrorBoundary isDarkMode={isDarkMode}>
+                {isFormRoute(location.pathname) ? (
+                  <FormAccessProvider isDarkMode={isDarkMode}>
+                    <Outlet />
+                  </FormAccessProvider>
+                ) : (
                   <Outlet />
-                </FormAccessProvider>
-              ) : (
-                <Outlet />
-              )
+                )}
+              </PageErrorBoundary>
             ) : (
               <PermissionDenied isDarkMode={isDarkMode} />
             )}

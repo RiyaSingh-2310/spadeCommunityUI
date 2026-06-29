@@ -90,9 +90,9 @@ function PrescreenPage({ isDarkMode }) {
     <div className="space-y-4">
       <ModuleListingPage
         isDarkMode={isDarkMode}
-        title="Prescreen"
-        searchPlaceholder="Search prescreens..."
-        actionLabel="Add Prescreen"
+        title="Question Library"
+        searchPlaceholder="Search questions..."
+        actionLabel="Add Question"
         onActionClick={() => navigate("/prescreen/add")}
         columns={LIST_COLUMNS}
         rows={rows}
@@ -102,7 +102,7 @@ function PrescreenPage({ isDarkMode }) {
         onStatusToggle={handleStatusToggle}
         permissionModule="prescreen"
         isLoading={isLoading}
-        emptyMessage="No prescreens found"
+        emptyMessage="No questions found"
         onSearch={handleSearch}
         totalRecords={totalRecords}
         serverPaginated

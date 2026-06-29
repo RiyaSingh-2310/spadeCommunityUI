@@ -290,9 +290,24 @@ export async function getRecord(id) {
   return partner;
 }
 
-const PARTNER_EXPANDABLE_FIELD_CONFIG = [
+const PARTNER_INFO_FIELD_CONFIG = [
   { label: "Contact Person", rowKey: "contactPerson", apiKeys: ["contact_person"] },
   { label: "Panel Size", rowKey: "panelSize", apiKeys: ["panel_size"] },
+  {
+    label: "Created At",
+    rowKey: "createdDate",
+    apiKeys: ["created_at"],
+    isDate: true,
+  },
+  {
+    label: "Updated At",
+    rowKey: "updatedDate",
+    apiKeys: ["updated_at"],
+    isDate: true,
+  },
+];
+
+const PARTNER_URL_FIELD_CONFIG = [
   {
     label: "Complete URL",
     rowKey: "completeUrl",
@@ -317,18 +332,11 @@ const PARTNER_EXPANDABLE_FIELD_CONFIG = [
     apiKeys: ["survey_close_val", "survey_close"],
     isUrl: true,
   },
-  {
-    label: "Created At",
-    rowKey: "createdDate",
-    apiKeys: ["created_at"],
-    isDate: true,
-  },
-  {
-    label: "Updated At",
-    rowKey: "updatedDate",
-    apiKeys: ["updated_at"],
-    isDate: true,
-  },
+];
+
+const PARTNER_EXPANDABLE_FIELD_CONFIG = [
+  ...PARTNER_INFO_FIELD_CONFIG,
+  ...PARTNER_URL_FIELD_CONFIG,
 ];
 
 const PARTNER_TABLE_API_KEYS = new Set([
@@ -364,29 +372,43 @@ function formatPartnerApiKeyLabel(key) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-/**
- * Builds expandable-row fields from Partner Detail API response.
- * @param {object} partner
- */
-export function getPartnerExpandableFields(partner) {
+function buildPartnerExpandableFields(partner, config) {
   if (!partner || typeof partner !== "object") return [];
 
   const row = mapPartnerToRow(partner);
 
-  return PARTNER_EXPANDABLE_FIELD_CONFIG.map((config) => {
-    let value = row[config.rowKey] ?? "";
-    if (config.isDate && !value) {
-      const rawKey = config.apiKeys[0];
+  return config.map((fieldConfig) => {
+    let value = row[fieldConfig.rowKey] ?? "";
+    if (fieldConfig.isDate && !value) {
+      const rawKey = fieldConfig.apiKeys[0];
       const raw = partner[rawKey];
       value = raw ? formatPartnerDetailExtraValue(rawKey, raw) : "";
     }
 
     return {
-      label: config.label,
+      label: fieldConfig.label,
       value,
-      isUrl: Boolean(config.isUrl),
+      isUrl: Boolean(fieldConfig.isUrl),
     };
   });
+}
+
+/**
+ * Builds expandable-row fields from Partner Detail API response.
+ * @param {object} partner
+ */
+export function getPartnerExpandableFields(partner) {
+  return buildPartnerExpandableFields(partner, PARTNER_EXPANDABLE_FIELD_CONFIG);
+}
+
+/**
+ * @param {object} partner
+ */
+export function getPartnerExpandableSections(partner) {
+  return {
+    partnerInfo: buildPartnerExpandableFields(partner, PARTNER_INFO_FIELD_CONFIG),
+    urlInfo: buildPartnerExpandableFields(partner, PARTNER_URL_FIELD_CONFIG),
+  };
 }
 
 /**

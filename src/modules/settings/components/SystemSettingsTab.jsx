@@ -4,28 +4,44 @@ import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { toastApiSuccess } from "../../../services/toast/apiToast";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
+import { useTheme } from "../../../context/ThemeContext";
 import {
   DEFAULT_SYSTEM_SETTINGS,
   getSystemSettings,
   saveSystemSettings,
 } from "../utils/settingsStorage";
+import {
+  THEME_PREFERENCE_OPTIONS,
+  normalizeThemePreference,
+} from "../utils/themePreference";
 import PreferenceToggle from "./PreferenceToggle";
 
 const LANGUAGE_OPTIONS = ["English", "Spanish", "French", "German", "Hindi"];
 const DATE_FORMAT_OPTIONS = ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"];
 const TIME_FORMAT_OPTIONS = ["12-hour", "24-hour"];
-const THEME_OPTIONS = ["system", "light", "dark"];
 
 function SystemSettingsTab({ isDarkMode }) {
+  const { themePreference, setThemePreference } = useTheme();
   const [form, setForm] = useState(DEFAULT_SYSTEM_SETTINGS);
   const [initialSnapshot, setInitialSnapshot] = useState(null);
   const inputClass = getAdminInputClass();
 
   useEffect(() => {
     const saved = getSystemSettings();
-    setForm(saved);
-    setInitialSnapshot(saved);
+    const normalized = {
+      ...saved,
+      themePreference: normalizeThemePreference(saved.themePreference),
+    };
+    setForm(normalized);
+    setInitialSnapshot(normalized);
   }, []);
+
+  useEffect(() => {
+    setForm((prev) => ({ ...prev, themePreference }));
+    setInitialSnapshot((prev) =>
+      prev ? { ...prev, themePreference } : prev
+    );
+  }, [themePreference]);
 
   const isDirty = useMemo(() => {
     if (!initialSnapshot) return false;
@@ -34,6 +50,15 @@ function SystemSettingsTab({ isDarkMode }) {
 
   const setField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleThemePreferenceChange = (value) => {
+    const normalized = normalizeThemePreference(value);
+    setField("themePreference", normalized);
+    setThemePreference(normalized);
+    setInitialSnapshot((prev) =>
+      prev ? { ...prev, themePreference: normalized } : prev
+    );
   };
 
   const handleSubmit = (event) => {
@@ -96,8 +121,8 @@ function SystemSettingsTab({ isDarkMode }) {
           <SearchableSelect
             inputClass={inputClass}
             value={form.themePreference}
-            onChange={(value) => setField("themePreference", value)}
-            options={THEME_OPTIONS}
+            onChange={handleThemePreferenceChange}
+            options={THEME_PREFERENCE_OPTIONS}
             placeholder="Select theme preference"
             searchable={false}
             aria-label="Theme preference"

@@ -12,7 +12,7 @@ export function isFormRoute(pathname) {
   return (
     /\/(add|edit|settings|permissions)(\/|$)/.test(pathname) ||
     pathname === "/home-page" ||
-    /^\/user-screening\/(questions|create-survey)/.test(pathname)
+    /^\/user-screening\/(questions|create-survey|panel-survey)/.test(pathname)
   );
 }
 

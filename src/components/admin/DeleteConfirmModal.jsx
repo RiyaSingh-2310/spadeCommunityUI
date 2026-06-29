@@ -8,6 +8,9 @@ function DeleteConfirmModal({
   isDeleting = false,
   title = "Delete Record",
   message = "Are you sure you want to delete this record?",
+  confirmLabel = "Delete",
+  confirmingLabel = "Deleting...",
+  confirmClassName = "flex h-10 items-center justify-center gap-2 rounded-xl bg-[var(--admin-danger-text)] px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60",
 }) {
   if (!isOpen) return null;
 
@@ -46,10 +49,10 @@ function DeleteConfirmModal({
             type="button"
             onClick={onConfirm}
             disabled={isDeleting}
-            className="flex h-10 items-center justify-center gap-2 rounded-xl bg-[var(--admin-danger-text)] px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className={confirmClassName}
           >
             {isDeleting && <Loader2 size={16} className="animate-spin" />}
-            {isDeleting ? "Deleting..." : "Delete"}
+            {isDeleting ? confirmingLabel : confirmLabel}
           </button>
         </div>
       </div>

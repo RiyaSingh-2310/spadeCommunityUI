@@ -53,7 +53,8 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
       type="button"
       onClick={onToggleTheme}
       className={iconButtonClass}
-      aria-label="Toggle theme"
+      aria-label={isDarkMode ? "Switch to light theme" : "Switch to dark theme"}
+      title={isDarkMode ? "Dark theme active" : "Light theme active"}
     >
       {isDarkMode ? <Moon size={18} /> : <Sun size={18} />}
     </button>

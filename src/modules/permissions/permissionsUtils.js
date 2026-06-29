@@ -547,14 +547,47 @@ export function areAllPermissionsSelected(permissions, type) {
   return PERMISSION_MODULE_KEYS.every((key) => permissions[key]?.[type] === true);
 }
 
+/** Modules that inherit access from related keys when the API has not granted them yet. */
+const MODULE_ACCESS_FALLBACKS = {
+  reward_history: ["pending_rewards", "completed_rewards", "reward_points"],
+  reward_settings: ["reward_points", "pending_rewards", "completed_rewards"],
+};
+
+function moduleHasGrant(permissions, key) {
+  const flags = permissions?.[key];
+  return flags?.canRead === true || flags?.canWrite === true;
+}
+
+function resolveModuleFlags(permissions, moduleKey) {
+  if (moduleHasGrant(permissions, moduleKey)) {
+    return permissions[moduleKey];
+  }
+
+  const fallbacks = MODULE_ACCESS_FALLBACKS[moduleKey];
+  if (!fallbacks) {
+    return permissions?.[moduleKey];
+  }
+
+  for (const key of fallbacks) {
+    if (moduleHasGrant(permissions, key)) {
+      return permissions[key];
+    }
+  }
+
+  return permissions?.[moduleKey];
+}
+
 /**
  * @param {PermissionsMap | null | undefined} permissions
  * @param {string} moduleKey
  */
 export function canReadModule(permissions, moduleKey, { isSuperAdmin = false } = {}) {
   if (isSuperAdmin) return true;
-  const flags = permissions?.[moduleKey];
-  return flags?.canRead === true || flags?.canWrite === true;
+  const flags = {
+    ...createEmptyModulePermission(),
+    ...resolveModuleFlags(permissions, moduleKey),
+  };
+  return flags.canRead === true || flags.canWrite === true;
 }
 
 /**
@@ -563,7 +596,11 @@ export function canReadModule(permissions, moduleKey, { isSuperAdmin = false } =
  */
 export function canWriteModule(permissions, moduleKey, { isSuperAdmin = false } = {}) {
   if (isSuperAdmin) return true;
-  return permissions?.[moduleKey]?.canWrite === true;
+  const flags = {
+    ...createEmptyModulePermission(),
+    ...resolveModuleFlags(permissions, moduleKey),
+  };
+  return flags.canWrite === true;
 }
 
 /** @deprecated Use canReadModule — supports legacy read flag */

@@ -111,8 +111,8 @@ function SortProfilingQuestionsPage({ isDarkMode }) {
         <AdminPageHeader
           title="Sort User Prescreen Questionnaire"
           breadcrumbs={[
-            { label: "Screening Management", to: "/user-screening/questions" },
-            { label: "Question Library", to: "/user-screening/questions" },
+            { label: "Panelist", to: "/user-screening/questions" },
+            { label: "Panel Questionnaire", to: "/user-screening/questions" },
             { label: "Sort Questions" },
           ]}
           isDarkMode={isDarkMode}
@@ -134,8 +134,8 @@ function SortProfilingQuestionsPage({ isDarkMode }) {
       <AdminPageHeader
         title="Sort User Prescreen Questionnaire"
         breadcrumbs={[
-          { label: "Screening Management", to: "/user-screening/questions" },
-          { label: "Question Library", to: "/user-screening/questions" },
+          { label: "Panelist", to: "/user-screening/questions" },
+          { label: "Panel Questionnaire", to: "/user-screening/questions" },
           { label: "Sort Questions" },
         ]}
         isDarkMode={isDarkMode}

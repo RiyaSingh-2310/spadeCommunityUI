@@ -117,6 +117,9 @@ export const PendingRewardsPage = lazy(
 export const CompletedRewardsPage = lazy(
   () => import("../modules/reward-points/pages/CompletedRewardsPage")
 );
+export const RewardHistoryPage = lazy(
+  () => import("../modules/reward-points/pages/RewardHistoryPage")
+);
 export const RewardSettingsPage = lazy(
   () => import("../modules/reward-points/pages/RewardSettingsPage")
 );
@@ -136,6 +139,12 @@ export const CreateSurveyListPage = lazy(
 );
 export const CreateSurveyFormPage = lazy(
   () => import("../modules/user-screening/pages/CreateSurveyFormPage")
+);
+export const PanelSurveyListPage = lazy(
+  () => import("../modules/user-screening/pages/PanelSurveyListPage")
+);
+export const PanelSurveyFormPage = lazy(
+  () => import("../modules/user-screening/pages/PanelSurveyFormPage")
 );
 
 /** Community users */

@@ -8,7 +8,7 @@ import {
 } from "../../shared/utils/tableHelpers";
 import {
   getPartnerDetailCached,
-  getPartnerExpandableFields,
+  getPartnerExpandableSections,
 } from "../../../services/partners/partnersApi";
 
 function isValidUrl(value) {
@@ -27,7 +27,7 @@ function formatUrlForHref(value) {
   return trimmed.includes("://") ? trimmed : `https://${trimmed}`;
 }
 
-function CellValue({ value, isUrl }) {
+function DetailValue({ value, isUrl }) {
   const display = value != null && String(value).trim() !== "" ? String(value) : "—";
 
   if (isUrl && display !== "—" && isValidUrl(display)) {
@@ -36,30 +36,88 @@ function CellValue({ value, isUrl }) {
         href={formatUrlForHref(display)}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 break-all text-[#138842] hover:underline"
+        className="inline-flex items-start gap-1.5 break-all text-[#138842] hover:underline"
       >
-        {display}
-        <ExternalLink size={13} className="shrink-0" aria-hidden />
+        <span className="min-w-0 break-all">{display}</span>
+        <ExternalLink size={13} className="mt-0.5 shrink-0" aria-hidden />
       </a>
     );
   }
 
   if (isUrl && display !== "—") {
-    return <span className="break-words text-[var(--admin-danger-text)]">{display}</span>;
+    return <span className="break-all text-[var(--admin-danger-text)]">{display}</span>;
   }
 
   return <span className="admin-text break-words">{display}</span>;
 }
 
+function ExpandableSectionTable({ title, fields }) {
+  if (!fields.length) return null;
+
+  return (
+    <div className="space-y-2">
+      {title ? (
+        <h4 className="admin-text text-sm font-semibold">{title}</h4>
+      ) : null}
+      <div className={ADMIN_TABLE_INNER_SHELL_CLASS}>
+        <table className={ADMIN_TABLE_INNER_CLASS}>
+          <thead>
+            <tr className="admin-text-muted">
+              {fields.map((field) => (
+                <th key={field.label} className={`${TABLE_HEAD_BASE} text-left`}>
+                  {field.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="align-middle">
+              {fields.map((field) => (
+                <td key={field.label} className="align-middle">
+                  <DetailValue value={field.value} isUrl={field.isUrl} />
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ExpandableUrlDetails({ title, fields }) {
+  if (!fields.length) return null;
+
+  return (
+    <div className="space-y-3">
+      {title ? (
+        <h4 className="admin-text text-sm font-semibold">{title}</h4>
+      ) : null}
+      <dl className="flex flex-col gap-4">
+        {fields.map((field) => (
+          <div key={field.label} className="min-w-0 max-w-full">
+            <dt className="admin-text-muted mb-1 text-xs font-semibold uppercase tracking-wide">
+              {field.label}
+            </dt>
+            <dd className="admin-text text-sm leading-relaxed">
+              <DetailValue value={field.value} isUrl={field.isUrl} />
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 function PartnerExpandableDetails({ partnerId }) {
-  const [fields, setFields] = useState([]);
+  const [sections, setSections] = useState({ partnerInfo: [], urlInfo: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     const normalizedId = String(partnerId ?? "").trim();
     if (!normalizedId) {
-      setFields([]);
+      setSections({ partnerInfo: [], urlInfo: [] });
       setIsLoading(false);
       setLoadFailed(true);
       return undefined;
@@ -74,10 +132,10 @@ function PartnerExpandableDetails({ partnerId }) {
       try {
         const partner = await getPartnerDetailCached(normalizedId);
         if (cancelled) return;
-        setFields(getPartnerExpandableFields(partner));
+        setSections(getPartnerExpandableSections(partner));
       } catch (error) {
         if (cancelled) return;
-        setFields([]);
+        setSections({ partnerInfo: [], urlInfo: [] });
         setLoadFailed(true);
         toastApiError(error);
       } finally {
@@ -106,34 +164,18 @@ function PartnerExpandableDetails({ partnerId }) {
     );
   }
 
-  if (fields.length === 0) {
+  const hasDetails = sections.partnerInfo.length > 0 || sections.urlInfo.length > 0;
+
+  if (!hasDetails) {
     return (
       <p className="admin-text-muted text-sm">No partner details available.</p>
     );
   }
 
   return (
-    <div className={ADMIN_TABLE_INNER_SHELL_CLASS}>
-      <table className={ADMIN_TABLE_INNER_CLASS}>
-        <thead>
-          <tr className="admin-text-muted">
-            {fields.map((field) => (
-              <th key={field.label} className={`${TABLE_HEAD_BASE} text-left`}>
-                {field.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          <tr className="align-middle">
-            {fields.map((field) => (
-              <td key={field.label} className="align-middle">
-                <CellValue value={field.value} isUrl={field.isUrl} />
-              </td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
+    <div className="space-y-6">
+      <ExpandableSectionTable title="Partner Information" fields={sections.partnerInfo} />
+      <ExpandableUrlDetails title="URL Information" fields={sections.urlInfo} />
     </div>
   );
 }

@@ -17,11 +17,13 @@ export const MODULE_LISTING_READ_MODES = {
   recontact_survey: "hide-action-column",
   messages: "hide-action-column",
   user_screening_management: "hide-action-column",
+  panel_survey: "hide-action-column",
   community_users: "community-user-read",
   user_email_templates: "hide-action-column",
   log_activity: "hide-action-column",
   invoices: "pdf-only",
   pending_rewards: "reward-pending-read",
+  reward_history: "reward-pending-read",
   completed_rewards: "details-only",
 };
 
@@ -100,6 +102,10 @@ export function hasNativeReadOnlyListingActions({
   }
 
   if (mode === "reward-pending-read") {
+    return Boolean(onView || onApprove || onReject);
+  }
+
+  if (mode === "details-only") {
     return Boolean(onView);
   }
 

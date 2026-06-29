@@ -57,6 +57,12 @@ export const API_ROUTES = {
     updateStatus: (id) => `/api/salesmanager/status/${id}`,
     delete: (id) => `/api/salesmanager/${id}`,
   },
+  questionaire: {
+    create: "/api/questionaire/createQuestionaire",
+    list: "/api/questionaire/survey",
+    update: (id) => `/api/questionaire/survey/${id}`,
+    delete: (id) => `/api/questionaire/survey/${id}`,
+  },
   screening: {
     list: "/api/screening/questions/list",
     create: "/api/screening/questions/add",

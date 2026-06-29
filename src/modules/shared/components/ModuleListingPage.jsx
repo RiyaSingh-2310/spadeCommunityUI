@@ -264,14 +264,16 @@ function ModuleListingPage({
     onSecondaryActionClick && secondaryActionLabel && allowWrite
   );
 
-  const rowsSignature = rows.map((row) => row[rowIdKey] ?? row.id ?? "").join(",");
+  const safeRows = Array.isArray(rows) ? rows : [];
+
+  const rowsSignature = safeRows.map((row) => row[rowIdKey] ?? row.id ?? "").join(",");
   const [prevRowsSignature, setPrevRowsSignature] = useState(rowsSignature);
   if (!isExternallyManaged && rowsSignature !== prevRowsSignature) {
     setPrevRowsSignature(rowsSignature);
-    setInternalData(rows);
+    setInternalData(safeRows);
   }
 
-  const data = isExternallyManaged ? rows : internalData;
+  const data = isExternallyManaged ? safeRows : internalData;
 
   const handlePageChange = useCallback(
     (nextPage) => {

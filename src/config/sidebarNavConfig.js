@@ -2,6 +2,8 @@ import {
   matchesPrescreenMain,
   matchesSurveyMain,
   matchesCommunityUsersMain,
+  matchesUserScreeningQuestionsMain,
+  matchesPanelSurveyMain,
 } from "./sidebarNavUtils";
 
 export const SIDEBAR_NAV_ITEMS = [
@@ -53,6 +55,41 @@ export const SIDEBAR_NAV_ITEMS = [
     root: "/sales/rfq",
     matcher: /^\/sales\/rfq(\/|$)/,
     permissionKeys: ["rfq"],
+  },
+  {
+    type: "group",
+    label: "Screening Management",
+    key: "screening-management",
+    matcher: /^\/prescreen(\/|$)/,
+    permissionKeys: ["prescreen", "prescreen_group"],
+    children: [
+      {
+        label: "Question Library",
+        root: "/prescreen",
+        isActive: matchesPrescreenMain,
+        matcher: /^\/prescreen(\/|$)/,
+        permissionKeys: ["prescreen"],
+      },
+      {
+        label: "Questionnaire Group",
+        root: "/prescreen/group",
+        matcher: /^\/prescreen\/group(\/|$)/,
+        permissionKeys: ["prescreen_group"],
+      },
+      // Hidden from navigation — kept for future use
+      // {
+      //   label: "Question Library",
+      //   root: "/user-screening/questions",
+      //   matcher: /^\/user-screening\/questions(\/|$)/,
+      //   permissionKeys: ["user_screening_management"],
+      // },
+      // {
+      //   label: "Create Survey",
+      //   root: "/user-screening/create-survey",
+      //   matcher: /^\/user-screening\/create-survey(\/|$)/,
+      //   permissionKeys: ["user_screening_management"],
+      // },
+    ],
   },
   {
     type: "group",
@@ -131,24 +168,39 @@ export const SIDEBAR_NAV_ITEMS = [
   },
   {
     type: "group",
-    label: "Users",
-    key: "community-users",
-    matcher: /^\/(community-users|user-email-templates)(\/|$)/,
-    permissionKeys: ["community_users", "user_email_templates"],
+    label: "Panelist",
+    key: "panelist",
+    matcher: /^\/(community-users|user-screening\/(?:questions|panel-survey))(\/|$)/,
+    permissionKeys: ["community_users", "user_screening_management", "panel_survey"],
     children: [
       {
-        label: "User List",
+        label: "Panel List",
         root: "/community-users",
         isActive: matchesCommunityUsersMain,
         matcher: /^\/community-users(\/|$)/,
         permissionKeys: ["community_users"],
       },
       {
-        label: "User Email Templates",
-        root: "/user-email-templates",
-        matcher: /^\/user-email-templates(\/|$)/,
-        permissionKeys: ["user_email_templates"],
+        label: "Panel Questionnaire",
+        root: "/user-screening/questions",
+        isActive: matchesUserScreeningQuestionsMain,
+        matcher: /^\/user-screening\/questions(\/|$)/,
+        permissionKeys: ["user_screening_management"],
       },
+      {
+        label: "Panel Survey",
+        root: "/user-screening/panel-survey",
+        isActive: matchesPanelSurveyMain,
+        matcher: /^\/user-screening\/panel-survey(\/|$)/,
+        permissionKeys: ["panel_survey"],
+      },
+      // Hidden from navigation — moved to System Email Template section
+      // {
+      //   label: "User Email Templates",
+      //   root: "/user-email-templates",
+      //   matcher: /^\/user-email-templates(\/|$)/,
+      //   permissionKeys: ["user_email_templates"],
+      // },
     ],
   },
   {
@@ -158,11 +210,23 @@ export const SIDEBAR_NAV_ITEMS = [
     matcher: /^\/reward-points(\/|$)/,
     permissionKeys: [
       "reward_points",
+      "reward_history",
       "pending_rewards",
       "completed_rewards",
       "reward_settings",
     ],
     children: [
+      {
+        label: "Reward History",
+        root: "/reward-points/history",
+        matcher: /^\/reward-points\/history(\/|$)/,
+        permissionKeys: [
+          "reward_history",
+          "pending_rewards",
+          "completed_rewards",
+          "reward_points",
+        ],
+      },
       {
         label: "Pending Rewards",
         root: "/reward-points/pending",
@@ -179,41 +243,12 @@ export const SIDEBAR_NAV_ITEMS = [
         label: "Reward Settings",
         root: "/reward-points/settings",
         matcher: /^\/reward-points\/settings(\/|$)/,
-        permissionKeys: ["reward_settings"],
-      },
-    ],
-  },
-  {
-    type: "group",
-    label: "Screening Management",
-    key: "screening-management",
-    matcher: /^\/(user-screening|prescreen)(\/|$)/,
-    permissionKeys: ["user_screening_management", "prescreen", "prescreen_group"],
-    children: [
-      {
-        label: "Question Library",
-        root: "/user-screening/questions",
-        matcher: /^\/user-screening\/questions(\/|$)/,
-        permissionKeys: ["user_screening_management"],
-      },
-      {
-        label: "Create Survey",
-        root: "/user-screening/create-survey",
-        matcher: /^\/user-screening\/create-survey(\/|$)/,
-        permissionKeys: ["user_screening_management"],
-      },
-      {
-        label: "Prescreen",
-        root: "/prescreen",
-        isActive: matchesPrescreenMain,
-        matcher: /^\/prescreen(\/|$)/,
-        permissionKeys: ["prescreen"],
-      },
-      {
-        label: "Prescreen Group",
-        root: "/prescreen/group",
-        matcher: /^\/prescreen\/group(\/|$)/,
-        permissionKeys: ["prescreen_group"],
+        permissionKeys: [
+          "reward_settings",
+          "reward_points",
+          "pending_rewards",
+          "completed_rewards",
+        ],
       },
     ],
   },
@@ -225,11 +260,25 @@ export const SIDEBAR_NAV_ITEMS = [
     permissionKeys: ["homepage_management"],
   },
   {
-    type: "link",
+    type: "group",
     label: "System Email Template",
-    root: "/system-email",
-    matcher: /^\/system-email(\/|$)/,
-    permissionKeys: ["system_email_templates"],
+    key: "system-email",
+    matcher: /^\/(system-email|user-email-templates)(\/|$)/,
+    permissionKeys: ["system_email_templates", "user_email_templates"],
+    children: [
+      {
+        label: "System Email Template",
+        root: "/system-email",
+        matcher: /^\/system-email(\/|$)/,
+        permissionKeys: ["system_email_templates"],
+      },
+      {
+        label: "User Email Templates",
+        root: "/user-email-templates",
+        matcher: /^\/user-email-templates(\/|$)/,
+        permissionKeys: ["user_email_templates"],
+      },
+    ],
   },
   {
     type: "link",

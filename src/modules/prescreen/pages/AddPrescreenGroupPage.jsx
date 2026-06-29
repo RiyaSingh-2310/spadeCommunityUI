@@ -294,7 +294,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
 
   const breadcrumbItems = [
     { label: "Screening Management", to: "/prescreen/group" },
-    { label: "Prescreen Group", to: "/prescreen/group" },
+    { label: "Questionnaire Group", to: "/prescreen/group" },
   ];
 
   if (isEdit && isLoadingRecord) {

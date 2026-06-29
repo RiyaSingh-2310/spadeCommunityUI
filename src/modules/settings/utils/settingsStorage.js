@@ -6,7 +6,7 @@ export const DEFAULT_SYSTEM_SETTINGS = {
   defaultLanguage: "English",
   dateFormat: "DD/MM/YYYY",
   timeFormat: "12-hour",
-  themePreference: "system",
+  themePreference: "light",
   twoFactorAuth: false,
   loginAlerts: true,
   sessionTimeout: "30",
