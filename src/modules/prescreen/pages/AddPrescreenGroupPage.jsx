@@ -48,9 +48,17 @@ function QuestionnaireCheckboxList({
   isLoading,
   hasLanguage,
 }) {
+  const allIds = useMemo(() => options.map((option) => String(option.value)), [options]);
+  const allSelected =
+    allIds.length > 0 && allIds.every((optionId) => selectedIds.includes(optionId));
+
+  const handleSelectAll = () => {
+    onChange(allSelected ? [] : allIds);
+  };
+
   if (!hasLanguage) {
     return (
-      <p className="admin-text-muted rounded-xl border border-dashed border-[var(--admin-border-color)] px-4 py-6 text-sm">
+      <p className="admin-text-muted rounded-xl border border-dashed border-[var(--admin-input-border)] px-4 py-6 text-sm">
         Select a language first to load questionnaires.
       </p>
     );
@@ -58,7 +66,7 @@ function QuestionnaireCheckboxList({
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 rounded-xl border border-[var(--admin-border-color)] px-4 py-6 text-sm">
+      <div className="flex items-center gap-2 rounded-xl border border-[var(--admin-input-border)] px-4 py-6 text-sm">
         <Loader2 size={16} className="animate-spin text-[#10a950]" />
         <span className="admin-text-muted">Loading questionnaires...</span>
       </div>
@@ -67,14 +75,30 @@ function QuestionnaireCheckboxList({
 
   if (options.length === 0) {
     return (
-      <p className="admin-text-muted rounded-xl border border-dashed border-[var(--admin-border-color)] px-4 py-6 text-sm">
+      <p className="admin-text-muted rounded-xl border border-dashed border-[var(--admin-input-border)] px-4 py-6 text-sm">
         No questionnaires found for this language.
       </p>
     );
   }
 
   return (
-    <div className="max-h-[min(360px,50vh)] space-y-2 overflow-y-auto rounded-xl border border-[var(--admin-border-color)] bg-[var(--admin-muted-bg)] p-3">
+    <div className="space-y-2">
+      <label
+        className={`admin-text flex cursor-pointer items-center gap-3 rounded-lg border border-[var(--admin-input-border)] bg-[var(--admin-surface-bg)] px-3 py-2.5 text-sm font-semibold transition ${
+          disabled ? "cursor-not-allowed opacity-60" : "hover:bg-[var(--admin-sidebar-hover-bg)]"
+        }`}
+      >
+        <input
+          type="checkbox"
+          checked={allSelected}
+          disabled={disabled}
+          onChange={handleSelectAll}
+          className="h-4 w-4 rounded accent-[var(--admin-primary-color)]"
+        />
+        <span>Select All</span>
+      </label>
+
+      <div className="max-h-[min(360px,50vh)] space-y-2 overflow-y-auto rounded-xl border border-[var(--admin-input-border)] bg-[var(--admin-header-search-bg)] p-3">
       {options.map((option) => {
         const optionId = String(option.value);
         const checked = selectedIds.includes(optionId);
@@ -84,8 +108,8 @@ function QuestionnaireCheckboxList({
             key={optionId}
             className={`admin-text flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition ${
               checked
-                ? "border-[#138842]/30 bg-[#e6f6ee] font-medium text-[#138842]"
-                : "border-transparent bg-[var(--admin-surface)] hover:border-[var(--admin-border-color)]"
+                ? "border-[var(--admin-primary-color)]/30 bg-[var(--admin-sidebar-active-bg)] font-medium text-[var(--admin-sidebar-active-text)]"
+                : "border-transparent bg-[var(--admin-surface-bg)] hover:border-[var(--admin-input-border)]"
             } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
           >
             <input
@@ -104,6 +128,7 @@ function QuestionnaireCheckboxList({
           </label>
         );
       })}
+      </div>
     </div>
   );
 }
@@ -293,7 +318,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
   };
 
   const breadcrumbItems = [
-    { label: "Screening Management", to: "/prescreen/group" },
+    { label: "Pre-Screen", to: "/prescreen/group" },
     { label: "Questionnaire Group", to: "/prescreen/group" },
   ];
 

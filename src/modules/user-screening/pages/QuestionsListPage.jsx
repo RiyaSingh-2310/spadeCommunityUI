@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
@@ -13,9 +13,24 @@ import {
 } from "../../../services/screening/screeningQuestionsApi";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 
+function compareSnoValues(left, right) {
+  const leftNum = Number(left);
+  const rightNum = Number(right);
+
+  if (Number.isFinite(leftNum) && Number.isFinite(rightNum)) {
+    return leftNum - rightNum;
+  }
+
+  return String(left ?? "").localeCompare(String(right ?? ""), undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
 function QuestionsListPage({ isDarkMode }) {
   const navigate = useNavigate();
   useFlashMessage();
+  const [snoSort, setSnoSort] = useState(null);
 
   const {
     rows,
@@ -37,6 +52,32 @@ function QuestionsListPage({ isDarkMode }) {
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const displayRows = useMemo(() => {
+    if (!snoSort) return rows;
+
+    const sorted = [...rows];
+    sorted.sort((left, right) => {
+      const comparison = compareSnoValues(left?.id, right?.id);
+      return snoSort === "asc" ? comparison : -comparison;
+    });
+    return sorted;
+  }, [rows, snoSort]);
+
+  const columnSort = useMemo(
+    () => (snoSort ? { column: "S.No", direction: snoSort } : null),
+    [snoSort]
+  );
+
+  const handleColumnSort = useCallback((column) => {
+    if (column !== "S.No") return;
+
+    setSnoSort((current) => {
+      if (current === null) return "asc";
+      if (current === "asc") return "desc";
+      return null;
+    });
+  }, []);
 
   const handleStatusToggle = async (row) => {
     const rowId = getScreeningRowId(row);
@@ -126,7 +167,7 @@ function QuestionsListPage({ isDarkMode }) {
           "Status",
           "Action",
         ]}
-        rows={rows}
+        rows={displayRows}
         permissionModule="user_screening_management"
         nowrapAllCells
         rowIdKey="id"
@@ -144,6 +185,9 @@ function QuestionsListPage({ isDarkMode }) {
         paginationPageSize={pageSize}
         onPaginationPageSizeChange={handlePageSizeChange}
         showPagination
+        sortableColumns={["S.No"]}
+        columnSort={columnSort}
+        onColumnSort={handleColumnSort}
       />
 
       <DeleteConfirmModal

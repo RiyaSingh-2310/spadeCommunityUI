@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Minus, Plus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DebouncedSearchInput from "../../../components/admin/DebouncedSearchInput";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
@@ -94,6 +94,10 @@ function ModuleListingPage({
   emptyMessage = "No records found",
   searchFields = null,
   toolbarEnd = null,
+  toolbarFilters = null,
+  sortableColumns = null,
+  columnSort = null,
+  onColumnSort = null,
   selectable = false,
   selectedRowIds = null,
   onSelectedRowIdsChange = null,
@@ -529,6 +533,35 @@ function ModuleListingPage({
     [displayColumns, selectable]
   );
 
+  const sortableColumnSet = useMemo(
+    () => new Set(Array.isArray(sortableColumns) ? sortableColumns : []),
+    [sortableColumns]
+  );
+
+  const renderSortableHeader = (columnLabel) => {
+    const isActive = columnSort?.column === columnLabel;
+    const direction = columnSort?.direction;
+    const SortIcon = !isActive
+      ? ArrowUpDown
+      : direction === "asc"
+        ? ArrowUp
+        : ArrowDown;
+
+    return (
+      <button
+        type="button"
+        onClick={() => onColumnSort?.(columnLabel)}
+        className={`admin-table-sort-trigger inline-flex items-center gap-1.5 transition hover:text-[var(--admin-foreground)] ${
+          isActive ? "text-[var(--admin-primary-color)]" : ""
+        }`}
+        aria-label={`Sort by ${columnLabel}`}
+      >
+        <span>{columnLabel}</span>
+        <SortIcon size={14} strokeWidth={2} aria-hidden />
+      </button>
+    );
+  };
+
   return (
     <div className="admin-page-root min-w-0 space-y-6">
       <AdminPageHeader
@@ -541,15 +574,32 @@ function ModuleListingPage({
       {summaryCards?.length > 0 ? <AdminSummaryCards cards={summaryCards} /> : null}
 
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <DebouncedSearchInput
-          value={query}
-          onChange={handleQueryChange}
-          onDebouncedChange={onSearch}
-          placeholder={searchPlaceholder}
-          isDarkMode={isDarkMode}
-          className="min-w-0 w-full sm:flex-1"
-          maxWidthClass="sm:max-w-none lg:max-w-[340px]"
-        />
+        {toolbarFilters ? (
+          <div className="flex min-w-0 w-full flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <DebouncedSearchInput
+              value={query}
+              onChange={handleQueryChange}
+              onDebouncedChange={onSearch}
+              placeholder={searchPlaceholder}
+              isDarkMode={isDarkMode}
+              className="min-w-0 w-full shrink-0 sm:flex-1"
+              maxWidthClass="sm:max-w-none lg:max-w-[340px]"
+            />
+            <div className="flex shrink-0 flex-wrap items-end justify-end gap-3 sm:flex-nowrap sm:gap-4">
+              {toolbarFilters}
+            </div>
+          </div>
+        ) : (
+          <DebouncedSearchInput
+            value={query}
+            onChange={handleQueryChange}
+            onDebouncedChange={onSearch}
+            placeholder={searchPlaceholder}
+            isDarkMode={isDarkMode}
+            className="min-w-0 w-full sm:flex-1"
+            maxWidthClass="sm:max-w-none lg:max-w-[340px]"
+          />
+        )}
         {(toolbarEnd || showSecondaryAction || showAddButton) && (
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2.5">
             {toolbarEnd}
@@ -595,7 +645,9 @@ function ModuleListingPage({
                     isStatusColumn(h) ? `admin-table-status-col ${statusColumnClass}` : ""
                   } ${isActionColumn(h) ? "admin-table-actions-col text-right" : "text-left"}`}
                 >
-                  {h}
+                  {sortableColumnSet.has(h) && onColumnSort
+                    ? renderSortableHeader(h)
+                    : h}
                 </th>
                 );
               })}

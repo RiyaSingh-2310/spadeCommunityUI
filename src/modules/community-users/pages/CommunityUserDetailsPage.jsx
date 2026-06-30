@@ -77,7 +77,7 @@ function CommunityUserDetailsPage({ isDarkMode }) {
       <AdminPageHeader
         title="User Details"
         breadcrumbs={[
-          { label: "Panelist", to: "/community-users" },
+          { label: "Questionnaire Management", to: "/community-users" },
           { label: "Panel List", to: "/community-users" },
           { label: "User Details" },
         ]}

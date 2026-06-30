@@ -140,12 +140,6 @@ export const CreateSurveyListPage = lazy(
 export const CreateSurveyFormPage = lazy(
   () => import("../modules/user-screening/pages/CreateSurveyFormPage")
 );
-export const PanelSurveyListPage = lazy(
-  () => import("../modules/user-screening/pages/PanelSurveyListPage")
-);
-export const PanelSurveyFormPage = lazy(
-  () => import("../modules/user-screening/pages/PanelSurveyFormPage")
-);
 
 /** Community users */
 export const CommunityUsersPage = lazy(

@@ -17,7 +17,6 @@ export const MODULE_LISTING_READ_MODES = {
   recontact_survey: "hide-action-column",
   messages: "hide-action-column",
   user_screening_management: "hide-action-column",
-  panel_survey: "hide-action-column",
   community_users: "community-user-read",
   user_email_templates: "hide-action-column",
   log_activity: "hide-action-column",

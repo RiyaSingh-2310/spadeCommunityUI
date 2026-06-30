@@ -43,7 +43,7 @@ const TONE_CLASS = {
   warning: "bg-[var(--admin-warning-text)]/15 text-[var(--admin-warning-text)]",
   pending: "bg-[#f59e0b]/15 text-[#d97706]",
   danger: "bg-[var(--admin-danger-text)]/15 text-[var(--admin-danger-text)]",
-  neutral: "bg-[var(--admin-muted-bg)] text-[var(--admin-muted-foreground)]",
+  neutral: "bg-[var(--admin-header-search-bg)] text-[var(--admin-muted-foreground)]",
 };
 
 function RfqStatusBadge({ status }) {

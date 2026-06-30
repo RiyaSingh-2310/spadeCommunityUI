@@ -25,13 +25,8 @@ export function matchesCommunityUsersMain(pathname) {
 }
 
 export function matchesUserScreeningQuestionsMain(pathname) {
-  if (matchesPathPrefix(pathname, "/user-screening/panel-survey")) return false;
   if (matchesPathPrefix(pathname, "/user-screening/create-survey")) return false;
   return matchesPathPrefix(pathname, "/user-screening/questions");
-}
-
-export function matchesPanelSurveyMain(pathname) {
-  return matchesPathPrefix(pathname, "/user-screening/panel-survey");
 }
 
 /**

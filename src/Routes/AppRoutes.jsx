@@ -42,15 +42,6 @@ function CreateSurveyEditRoute({ isDarkMode }) {
   });
 }
 
-function PanelSurveyEditRoute({ isDarkMode }) {
-  const { id } = useParams();
-  return withSuspense(Pages.PanelSurveyFormPage, {
-    key: id,
-    isDarkMode,
-    mode: "edit",
-  });
-}
-
 function EditEmailTemplateRoute({ isDarkMode }) {
   const { id } = useParams();
   return withSuspense(Pages.EditEmailTemplatePage, { key: id, isDarkMode });
@@ -322,18 +313,6 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
           <Route
             path="/user-screening/create-survey/edit/:id"
             element={<CreateSurveyEditRoute isDarkMode={isDarkMode} />}
-          />
-          <Route
-            path="/user-screening/panel-survey"
-            element={withSuspense(Pages.PanelSurveyListPage, { isDarkMode })}
-          />
-          <Route
-            path="/user-screening/panel-survey/add"
-            element={withSuspense(Pages.PanelSurveyFormPage, { isDarkMode, mode: "add" })}
-          />
-          <Route
-            path="/user-screening/panel-survey/edit/:id"
-            element={<PanelSurveyEditRoute isDarkMode={isDarkMode} />}
           />
           <Route
             path="/home-page"

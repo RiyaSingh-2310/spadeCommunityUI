@@ -17,14 +17,11 @@ import {
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { fetchRewardSettings, updateRewardSettings } from "../services/rewardSettingsApi";
 
-const REWARD_TYPE_OPTIONS = ["Registration Reward", "Survey Completion Reward"];
-
 const REDEMPTION_METHOD_FIELDS = ["amazon", "flipkart", "paypal"];
 
 const YES_NO_OPTIONS = ["Yes", "No"];
 
 const DEFAULT_FORM = {
-  rewardType: "Registration Reward",
   registrationReward: "",
   surveyCompletionReward: "",
   minimumPayout: "",
@@ -73,26 +70,13 @@ function RewardSettingsPage({ isDarkMode }) {
     };
   }, []);
 
-  const isRegistrationType = form.rewardType === "Registration Reward";
-
-  const activeRewardField = isRegistrationType
-    ? "registrationReward"
-    : "surveyCompletionReward";
-
-  const validationFields = useMemo(
-    () => [activeRewardField, "minimumPayout"],
-    [activeRewardField]
-  );
+  const validationFields = useMemo(() => ["registrationReward", "minimumPayout"], []);
 
   const errors = useMemo(
     () => ({
       registrationReward: getRequiredError(
         form.registrationReward,
         "User Registration Reward Points"
-      ),
-      surveyCompletionReward: getRequiredError(
-        form.surveyCompletionReward,
-        "Survey Completion Reward Points"
       ),
       minimumPayout: getRequiredError(form.minimumPayout, "Minimum Payout"),
     }),
@@ -101,12 +85,16 @@ function RewardSettingsPage({ isDarkMode }) {
 
   const { showError, touch, validateSubmit } = useFormValidation({
     errors,
-    fields: ["registrationReward", "surveyCompletionReward", "minimumPayout"],
+    fields: validationFields,
   });
 
   const isDirty = useMemo(() => {
     if (!initialSnapshot) return false;
-    return ["rewardType", "registrationReward", "surveyCompletionReward", "minimumPayout", ...REDEMPTION_METHOD_FIELDS].some(
+    return [
+      "registrationReward",
+      "minimumPayout",
+      ...REDEMPTION_METHOD_FIELDS,
+    ].some(
       (key) =>
         String(form[key] ?? "").trim() !== String(initialSnapshot[key] ?? "").trim()
     );
@@ -138,7 +126,10 @@ function RewardSettingsPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
-      const data = await updateRewardSettings(form);
+      const data = await updateRewardSettings({
+        ...form,
+        surveyCompletionReward: initialSnapshot?.surveyCompletionReward ?? form.surveyCompletionReward,
+      });
       const nextForm = data.form ?? form;
       setForm(nextForm);
       setInitialSnapshot({ ...nextForm });
@@ -186,58 +177,22 @@ function RewardSettingsPage({ isDarkMode }) {
         <TableCard title="Reward Configuration">
           <div className="space-y-8">
             <section className="space-y-5">
-              {/* <div>
-                <h3 className="admin-text text-sm font-semibold">Reward Type</h3>
-                <p className="admin-text-muted mt-1 text-xs">
-                  Select the reward category to configure its point value.
-                </p>
-              </div> */}
-
-              <FormRadioGroup
-                label="Reward Type"
-                name="rewardType"
-                value={form.rewardType}
-                onChange={(value) => setField("rewardType", value)}
-                options={REWARD_TYPE_OPTIONS}
-                isDarkMode={isDarkMode}
-                disabled={readOnly}
-              />
-
-              <div className="max-w-md">
-                {isRegistrationType ? (
-                  <FormField
-                    label="User Registration Reward Points"
-                    required
-                    error={showError("registrationReward")}
-                  >
-                    <NumericInput
-                      className={inputClass}
-                      value={form.registrationReward}
-                      onChange={(v) => setField("registrationReward", v)}
-                      onBlur={() => touch("registrationReward")}
-                      disabled={readOnly}
-                      readOnly={readOnly}
-                      placeholder="200"
-                    />
-                  </FormField>
-                ) : (
-                  <FormField
-                    label="Survey Completion Reward Points"
-                    required
-                    error={showError("surveyCompletionReward")}
-                  >
-                    <NumericInput
-                      className={inputClass}
-                      value={form.surveyCompletionReward}
-                      onChange={(v) => setField("surveyCompletionReward", v)}
-                      onBlur={() => touch("surveyCompletionReward")}
-                      disabled={readOnly}
-                      readOnly={readOnly}
-                      placeholder="100"
-                    />
-                  </FormField>
-                )}
-              </div>
+              <FormField
+                className="max-w-md"
+                label="User Registration Reward Points"
+                required
+                error={showError("registrationReward")}
+              >
+                <NumericInput
+                  className={inputClass}
+                  value={form.registrationReward}
+                  onChange={(v) => setField("registrationReward", v)}
+                  onBlur={() => touch("registrationReward")}
+                  disabled={readOnly}
+                  readOnly={readOnly}
+                  placeholder="200"
+                />
+              </FormField>
             </section>
 
             <section className="space-y-4 border-t border-[var(--admin-header-search-border)] pt-8">
@@ -274,7 +229,7 @@ function RewardSettingsPage({ isDarkMode }) {
                 </p>
               </div>
 
-              <div className="max-w-md flex flex-col gap-5">
+              <div className="flex max-w-md flex-col gap-5">
                 <FormRadioGroup
                   label="Amazon"
                   name="amazon"

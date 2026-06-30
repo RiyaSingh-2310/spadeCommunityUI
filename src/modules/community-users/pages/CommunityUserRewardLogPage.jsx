@@ -99,7 +99,7 @@ function CommunityUserRewardLogPage({ isDarkMode }) {
         isDarkMode={isDarkMode}
         title="List Reward Logs"
         breadcrumbs={[
-          { label: "Panelist", to: "/community-users" },
+          { label: "Questionnaire Management", to: "/community-users" },
           { label: "Panel List", to: "/community-users" },
           { label: user.name },
           { label: "List Reward Logs" },

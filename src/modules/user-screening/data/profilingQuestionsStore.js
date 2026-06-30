@@ -313,3 +313,36 @@ export function createEmptyQuestionItem() {
     required: false,
   };
 }
+
+/** Convert stored option arrays to newline-separated textarea text. */
+export function optionsArrayToTextarea(options, questionType) {
+  const type = normalizeQuestionTypeLabel(questionType);
+  if (!needsQuestionOptions(type)) return "";
+
+  const normalized = normalizeOptionsForQuestionType(options, type);
+  if (isLabeledOptionQuestionType(type)) {
+    return normalized
+      .map((option) => option?.label?.trim() || option?.value?.trim() || "")
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  return normalized.map((option) => String(option ?? "").trim()).filter(Boolean).join("\n");
+}
+
+/** Parse newline-separated textarea text into option arrays for the given type. */
+export function parseOptionsTextarea(text, questionType) {
+  const type = normalizeQuestionTypeLabel(questionType);
+  const lines = String(text ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return normalizeOptionsForQuestionType(lines, type);
+}
+
+export function optionsTextareaHasContent(text) {
+  return String(text ?? "")
+    .split(/\r?\n/)
+    .some((line) => line.trim());
+}

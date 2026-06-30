@@ -3,7 +3,6 @@ import {
   matchesSurveyMain,
   matchesCommunityUsersMain,
   matchesUserScreeningQuestionsMain,
-  matchesPanelSurveyMain,
 } from "./sidebarNavUtils";
 
 export const SIDEBAR_NAV_ITEMS = [
@@ -15,11 +14,31 @@ export const SIDEBAR_NAV_ITEMS = [
     permissionKeys: ["dashboard"],
   },
   {
-    type: "link",
-    label: "Admin Users",
-    root: "/users",
-    matcher: /^\/users(\/|$)/,
-    permissionKeys: ["users"],
+    type: "group",
+    label: "User Management",
+    key: "user-management",
+    matcher: /^\/(users|project-managers|sales\/sales-manager)(\/|$)/,
+    permissionKeys: ["users", "project_managers", "sales_manager"],
+    children: [
+      {
+        label: "Admin User",
+        root: "/users",
+        matcher: /^\/users(\/|$)/,
+        permissionKeys: ["users"],
+      },
+      {
+        label: "Project Manager",
+        root: "/project-managers",
+        matcher: /^\/project-managers(\/|$)/,
+        permissionKeys: ["project_managers"],
+      },
+      {
+        label: "Sales Manager",
+        root: "/sales/sales-manager",
+        matcher: /^\/sales\/sales-manager(\/|$)/,
+        permissionKeys: ["sales_manager"],
+      },
+    ],
   },
   {
     type: "link",
@@ -37,20 +56,6 @@ export const SIDEBAR_NAV_ITEMS = [
   },
   {
     type: "link",
-    label: "Project Managers",
-    root: "/project-managers",
-    matcher: /^\/project-managers(\/|$)/,
-    permissionKeys: ["project_managers"],
-  },
-  {
-    type: "link",
-    label: "Sales Manager",
-    root: "/sales/sales-manager",
-    matcher: /^\/sales\/sales-manager(\/|$)/,
-    permissionKeys: ["sales_manager"],
-  },
-  {
-    type: "link",
     label: "RFQ",
     root: "/sales/rfq",
     matcher: /^\/sales\/rfq(\/|$)/,
@@ -58,8 +63,8 @@ export const SIDEBAR_NAV_ITEMS = [
   },
   {
     type: "group",
-    label: "Screening Management",
-    key: "screening-management",
+    label: "Pre-Screen",
+    key: "pre-screen",
     matcher: /^\/prescreen(\/|$)/,
     permissionKeys: ["prescreen", "prescreen_group"],
     children: [
@@ -76,24 +81,11 @@ export const SIDEBAR_NAV_ITEMS = [
         matcher: /^\/prescreen\/group(\/|$)/,
         permissionKeys: ["prescreen_group"],
       },
-      // Hidden from navigation — kept for future use
-      // {
-      //   label: "Question Library",
-      //   root: "/user-screening/questions",
-      //   matcher: /^\/user-screening\/questions(\/|$)/,
-      //   permissionKeys: ["user_screening_management"],
-      // },
-      // {
-      //   label: "Create Survey",
-      //   root: "/user-screening/create-survey",
-      //   matcher: /^\/user-screening\/create-survey(\/|$)/,
-      //   permissionKeys: ["user_screening_management"],
-      // },
     ],
   },
   {
     type: "group",
-    label: "Survey",
+    label: "Projects",
     key: "survey",
     matcher: /^\/survey(\/|$)/,
     permissionKeys: [
@@ -168,10 +160,10 @@ export const SIDEBAR_NAV_ITEMS = [
   },
   {
     type: "group",
-    label: "Panelist",
-    key: "panelist",
-    matcher: /^\/(community-users|user-screening\/(?:questions|panel-survey))(\/|$)/,
-    permissionKeys: ["community_users", "user_screening_management", "panel_survey"],
+    label: "Questionnaire Management",
+    key: "questionnaire-management",
+    matcher: /^\/(community-users|user-screening\/questions)(\/|$)/,
+    permissionKeys: ["community_users", "user_screening_management"],
     children: [
       {
         label: "Panel List",
@@ -187,20 +179,6 @@ export const SIDEBAR_NAV_ITEMS = [
         matcher: /^\/user-screening\/questions(\/|$)/,
         permissionKeys: ["user_screening_management"],
       },
-      {
-        label: "Panel Survey",
-        root: "/user-screening/panel-survey",
-        isActive: matchesPanelSurveyMain,
-        matcher: /^\/user-screening\/panel-survey(\/|$)/,
-        permissionKeys: ["panel_survey"],
-      },
-      // Hidden from navigation — moved to System Email Template section
-      // {
-      //   label: "User Email Templates",
-      //   root: "/user-email-templates",
-      //   matcher: /^\/user-email-templates(\/|$)/,
-      //   permissionKeys: ["user_email_templates"],
-      // },
     ],
   },
   {

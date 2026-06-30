@@ -32,7 +32,6 @@ export const MOCK_PERMISSIONS = {
   completed_rewards: { canRead: true, canWrite: false },
   reward_settings: { canRead: true, canWrite: true },
   user_screening_management: { canRead: true, canWrite: false },
-  panel_survey: { canRead: true, canWrite: false },
   homepage_management: { canRead: true, canWrite: false },
   system_email_templates: { canRead: true, canWrite: false },
   user_email_templates: { canRead: true, canWrite: true },

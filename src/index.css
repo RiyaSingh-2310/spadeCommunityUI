@@ -364,6 +364,21 @@ body {
   background: transparent;
 }
 
+.admin-table-sort-trigger {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.admin-table-sort-trigger:focus-visible {
+  outline: none;
+  border-radius: 0.375rem;
+  box-shadow: 0 0 0 3px var(--admin-input-focus-ring);
+}
+
 .admin-sidebar-icon {
   display: inline-flex;
   height: 1.25rem;
