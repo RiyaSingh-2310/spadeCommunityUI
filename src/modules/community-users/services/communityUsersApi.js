@@ -30,6 +30,11 @@ function matchesFilters(user, filters = {}) {
     const expected = filters.prescreenCompleted === "yes" ? "Yes" : "No";
     if (user.prescreenCompleted !== expected) return false;
   }
+  if (filters.emailVerified && filters.emailVerified !== "all") {
+    const expected = filters.emailVerified === "yes" ? "Yes" : "No";
+    const userValue = user.emailVerified ?? "Yes";
+    if (userValue !== expected) return false;
+  }
   return true;
 }
 
@@ -141,4 +146,12 @@ export async function updateStatus(id, status) {
     throw new Error("User not found.");
   }
   return { message: "User status updated successfully." };
+}
+
+export async function resendEmail(id) {
+  const user = getCommunityUserById(id);
+  if (!user) {
+    throw new Error("User not found.");
+  }
+  return { message: `Verification email resent to ${user.emailAddress}.` };
 }

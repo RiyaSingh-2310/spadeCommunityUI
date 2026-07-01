@@ -160,13 +160,13 @@ export const SIDEBAR_NAV_ITEMS = [
   },
   {
     type: "group",
-    label: "Questionnaire Management",
+    label: "Panel Management",
     key: "questionnaire-management",
     matcher: /^\/(community-users|user-screening\/questions)(\/|$)/,
     permissionKeys: ["community_users", "user_screening_management"],
     children: [
       {
-        label: "Panel List",
+        label: "Panelist",
         root: "/community-users",
         isActive: matchesCommunityUsersMain,
         matcher: /^\/community-users(\/|$)/,
@@ -238,25 +238,11 @@ export const SIDEBAR_NAV_ITEMS = [
     permissionKeys: ["homepage_management"],
   },
   {
-    type: "group",
-    label: "System Email Template",
-    key: "system-email",
-    matcher: /^\/(system-email|user-email-templates)(\/|$)/,
-    permissionKeys: ["system_email_templates", "user_email_templates"],
-    children: [
-      {
-        label: "System Email Template",
-        root: "/system-email",
-        matcher: /^\/system-email(\/|$)/,
-        permissionKeys: ["system_email_templates"],
-      },
-      {
-        label: "User Email Templates",
-        root: "/user-email-templates",
-        matcher: /^\/user-email-templates(\/|$)/,
-        permissionKeys: ["user_email_templates"],
-      },
-    ],
+    type: "link",
+    label: "User Email Template",
+    root: "/user-email-templates",
+    matcher: /^\/user-email-templates(\/|$)/,
+    permissionKeys: ["user_email_templates"],
   },
   {
     type: "link",

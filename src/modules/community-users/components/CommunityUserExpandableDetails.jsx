@@ -11,7 +11,8 @@ function DetailField({ label, value }) {
 
 function CommunityUserExpandableDetails({ row }) {
   const fields = [
-    { label: "Prescreen Completed", value: row.prescreenCompleted },
+    { label: "Email Verified", value: row.emailVerified },
+    { label: "Questionnaire Completed", value: row.prescreenCompleted },
     { label: "Reward Points", value: row.rewardPoints },
     { label: "Joining Date", value: row.joiningDate },
     { label: "IP Address", value: row.ipAddress },

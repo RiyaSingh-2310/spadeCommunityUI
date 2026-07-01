@@ -83,6 +83,7 @@ function ModuleListingPage({
   onAddLog,
   onViewLogs,
   onRewardLog,
+  onResendEmail,
   surveyActionLabels,
   onApprove,
   onReject,
@@ -95,6 +96,8 @@ function ModuleListingPage({
   searchFields = null,
   toolbarEnd = null,
   toolbarFilters = null,
+  /** When set, replaces the default search + toolbarFilters layout. */
+  renderToolbar = null,
   sortableColumns = null,
   columnSort = null,
   onColumnSort = null,
@@ -102,6 +105,8 @@ function ModuleListingPage({
   selectedRowIds = null,
   onSelectedRowIdsChange = null,
   onBulkDeleteRequest = null,
+  /** When true, hides the select-all checkbox in the table header (row checkboxes remain). */
+  hideSelectAllCheckbox = false,
   /** API total record count (used for pagination summary when not searching). */
   totalRecords = null,
   /** When true, rows are already paginated by the API; parent controls page + page size. */
@@ -488,31 +493,35 @@ function ModuleListingPage({
 
   const renderCheckboxHeader = () => (
     <th className={`${TABLE_HEAD_BASE} text-left`}>
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          className="admin-checkbox"
-          checked={allVisibleSelected}
-          ref={(el) => {
-            if (el) el.indeterminate = someVisibleSelected;
-          }}
-          onChange={(event) => handleToggleAllVisible(event.target.checked)}
-          disabled={visibleRowIds.length === 0 || isLoading}
-          aria-label="Select all rows"
-        />
-        {onBulkDeleteRequest && (selectedRowIds?.size ?? 0) > 0 && (
-          <button
-            type="button"
-            onClick={onBulkDeleteRequest}
-            disabled={isLoading || isDeleting}
-            className="inline-flex items-center justify-center rounded-md p-1 text-[var(--admin-danger-text)] transition-colors hover:bg-[var(--admin-danger-text)]/10 disabled:cursor-not-allowed disabled:opacity-50"
-            aria-label="Delete selected rows"
-            title="Delete"
-          >
-            <Trash2 size={14} />
-          </button>
-        )}
-      </div>
+      {hideSelectAllCheckbox ? (
+        <span className="sr-only">Select</span>
+      ) : (
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            className="admin-checkbox"
+            checked={allVisibleSelected}
+            ref={(el) => {
+              if (el) el.indeterminate = someVisibleSelected;
+            }}
+            onChange={(event) => handleToggleAllVisible(event.target.checked)}
+            disabled={visibleRowIds.length === 0 || isLoading}
+            aria-label="Select all rows"
+          />
+          {onBulkDeleteRequest && (selectedRowIds?.size ?? 0) > 0 && (
+            <button
+              type="button"
+              onClick={onBulkDeleteRequest}
+              disabled={isLoading || isDeleting}
+              className="inline-flex items-center justify-center rounded-md p-1 text-[var(--admin-danger-text)] transition-colors hover:bg-[var(--admin-danger-text)]/10 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Delete selected rows"
+              title="Delete"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      )}
     </th>
   );
 
@@ -574,7 +583,17 @@ function ModuleListingPage({
       {summaryCards?.length > 0 ? <AdminSummaryCards cards={summaryCards} /> : null}
 
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {toolbarFilters ? (
+        {renderToolbar ? (
+          <div className="w-full min-w-0">
+            {renderToolbar({
+              query,
+              onQueryChange: handleQueryChange,
+              onDebouncedSearch: onSearch,
+              searchPlaceholder,
+              isDarkMode,
+            })}
+          </div>
+        ) : toolbarFilters ? (
           <div className="flex min-w-0 w-full flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <DebouncedSearchInput
               value={query}
@@ -833,6 +852,7 @@ function ModuleListingPage({
                         onAddLog={onAddLog}
                         onViewLogs={onViewLogs}
                         onRewardLog={onRewardLog}
+                        onResendEmail={onResendEmail}
                         surveyActionLabels={surveyActionLabels}
                         handleEdit={handleEdit}
                         handleDeleteRequest={handleDeleteRequest}

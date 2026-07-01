@@ -2,7 +2,7 @@
 export const PERMISSION_MODULES = [
   { key: "dashboard", label: "Dashboard" },
   { key: "users", label: "Admin Users" },
-  { key: "community_users", label: "Panel List" },
+  { key: "community_users", label: "Panelist" },
   { key: "clients", label: "Clients" },
   { key: "partners", label: "Partners" },
   { key: "project_managers", label: "Project Managers" },

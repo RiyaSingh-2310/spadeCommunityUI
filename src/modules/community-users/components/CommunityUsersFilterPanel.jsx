@@ -13,6 +13,12 @@ export const PRESCREEN_OPTIONS = [
   { value: "no", label: "No" },
 ];
 
+export const EMAIL_VERIFIED_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
+];
+
 function CommunityUsersFilterPanel({ filters, onChange }) {
   const inputClass = getAdminInputClass();
 
@@ -36,12 +42,26 @@ function CommunityUsersFilterPanel({ filters, onChange }) {
           ))}
         </select>
       </FormField>
-      <FormField label="Prescreen Completed">
+      <FormField label="Email Verified">
+        <select
+          className={inputClass}
+          value={filters.emailVerified}
+          onChange={(event) => setFilter("emailVerified", event.target.value)}
+          aria-label="Filter by email verified"
+        >
+          {EMAIL_VERIFIED_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </FormField>
+      <FormField label="Questionnaire Completed">
         <select
           className={inputClass}
           value={filters.prescreenCompleted}
           onChange={(event) => setFilter("prescreenCompleted", event.target.value)}
-          aria-label="Filter by prescreen completed"
+          aria-label="Filter by questionnaire completed"
         >
           {PRESCREEN_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>

@@ -1,4 +1,4 @@
-import { Eye, KeyRound, Pencil, Trash2 } from "lucide-react";
+import { Eye, KeyRound, Mail, Pencil, Trash2 } from "lucide-react";
 
 function ActionIconButton({
   label,
@@ -26,10 +26,12 @@ function CommunityUserListingActions({
   onEdit,
   onDelete,
   onRewardLog,
+  onResendEmail,
   showEdit = true,
   showDelete = true,
+  resendDisabled = false,
 }) {
-  if (!onView && !onEdit && !onDelete && !onRewardLog) return null;
+  if (!onView && !onEdit && !onDelete && !onRewardLog && !onResendEmail) return null;
 
   return (
     <div className="flex flex-nowrap items-center justify-end gap-1 whitespace-nowrap">
@@ -51,6 +53,15 @@ function CommunityUserListingActions({
       {onRewardLog && (
         <ActionIconButton label="Reward Log" onClick={onRewardLog}>
           <KeyRound size={16} strokeWidth={2} />
+        </ActionIconButton>
+      )}
+      {onResendEmail && (
+        <ActionIconButton
+          label="Resend Email"
+          onClick={onResendEmail}
+          disabled={resendDisabled}
+        >
+          <Mail size={16} strokeWidth={2} />
         </ActionIconButton>
       )}
     </div>

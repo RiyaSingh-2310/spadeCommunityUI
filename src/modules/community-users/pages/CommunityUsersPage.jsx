@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
@@ -8,8 +8,13 @@ import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import CommunityUserExpandableDetails from "../components/CommunityUserExpandableDetails";
-import CommunityUsersInlineFilters from "../components/CommunityUsersInlineFilters";
-import { deleteRecord, getRecords, updateStatus } from "../services/communityUsersApi";
+import CommunityUsersToolbar from "../components/CommunityUsersToolbar";
+import {
+  deleteRecord,
+  getRecords,
+  resendEmail,
+  updateStatus,
+} from "../services/communityUsersApi";
 
 const LIST_COLUMNS = [
   "ID",
@@ -23,6 +28,7 @@ const LIST_COLUMNS = [
 const DEFAULT_FILTERS = {
   status: "all",
   prescreenCompleted: "all",
+  emailVerified: "all",
 };
 
 function CommunityUsersPage({ isDarkMode }) {
@@ -33,7 +39,9 @@ function CommunityUsersPage({ isDarkMode }) {
   const [selectedRowIds, setSelectedRowIds] = useState(() => new Set());
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkResendOpen, setBulkResendOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
   const fetchUsers = useCallback(
@@ -54,12 +62,34 @@ function CommunityUsersPage({ isDarkMode }) {
   } = useApiListing({ fetchFn: fetchUsers, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(refresh);
 
+  const visibleRowIds = useMemo(
+    () => users.map((user) => String(user.id)),
+    [users]
+  );
+
+  const allVisibleSelected =
+    visibleRowIds.length > 0 && visibleRowIds.every((rowId) => selectedRowIds.has(rowId));
+
+  const someVisibleSelected =
+    visibleRowIds.some((rowId) => selectedRowIds.has(rowId)) && !allVisibleSelected;
+
   const handleFiltersChange = useCallback(
     (nextFilters) => {
       setFilters(nextFilters);
       handlePageChange(1);
     },
     [handlePageChange]
+  );
+
+  const handleBulkSelectChange = useCallback(
+    (checked) => {
+      if (checked) {
+        setSelectedRowIds(new Set(visibleRowIds));
+        return;
+      }
+      setSelectedRowIds(new Set());
+    },
+    [visibleRowIds]
   );
 
   const handleDeleteRequest = (row) => {
@@ -111,7 +141,7 @@ function CommunityUsersPage({ isDarkMode }) {
       await Promise.all(ids.map((userId) => deleteRecord(userId)));
       setBulkDeleteOpen(false);
       setSelectedRowIds(new Set());
-      toastApiSuccess({ message: "Selected users deleted successfully." });
+      toastApiSuccess({ message: "Selected panelists deleted successfully." });
       await refresh();
     } catch (error) {
       toastApiError(error);
@@ -119,6 +149,51 @@ function CommunityUsersPage({ isDarkMode }) {
       setIsDeleting(false);
     }
   }, [selectedRowIds, refresh]);
+
+  const handleBulkResendRequest = useCallback(() => {
+    if (selectedRowIds.size === 0) return;
+    setBulkResendOpen(true);
+  }, [selectedRowIds]);
+
+  const handleBulkResendCancel = useCallback(() => {
+    if (isResending) return;
+    setBulkResendOpen(false);
+  }, [isResending]);
+
+  const handleBulkResendConfirm = useCallback(async () => {
+    const ids = Array.from(selectedRowIds);
+    if (ids.length === 0 || isResending) return;
+
+    setIsResending(true);
+    try {
+      await Promise.all(ids.map((userId) => resendEmail(userId)));
+      setBulkResendOpen(false);
+      toastApiSuccess({
+        message: `Verification email resent to ${ids.length} panelist(s).`,
+      });
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsResending(false);
+    }
+  }, [selectedRowIds, isResending]);
+
+  const handleResendEmail = useCallback(
+    async (row) => {
+      if (!row?.id || isResending) return;
+
+      setIsResending(true);
+      try {
+        const data = await resendEmail(row.id);
+        toastApiSuccess(data);
+      } catch (error) {
+        toastApiError(error);
+      } finally {
+        setIsResending(false);
+      }
+    },
+    [isResending]
+  );
 
   const handleStatusToggle = async (row) => {
     if (!row?.id || statusUpdatingId != null) return;
@@ -141,7 +216,7 @@ function CommunityUsersPage({ isDarkMode }) {
     <div className="space-y-4">
       <ModuleListingPage
         isDarkMode={isDarkMode}
-        title="Panel List"
+        title="Panelist"
         searchPlaceholder="Search User"
         columns={LIST_COLUMNS}
         rows={users}
@@ -158,6 +233,7 @@ function CommunityUsersPage({ isDarkMode }) {
         onRewardLog={(row) =>
           navigate(`/community-users/${encodeURIComponent(String(row.id))}/reward-log`)
         }
+        onResendEmail={handleResendEmail}
         onStatusToggle={handleStatusToggle}
         onSearch={handleSearch}
         totalRecords={totalRecords}
@@ -171,12 +247,28 @@ function CommunityUsersPage({ isDarkMode }) {
         nowrapAllCells
         nameAsText
         selectable
+        hideSelectAllCheckbox
         selectedRowIds={selectedRowIds}
         onSelectedRowIdsChange={setSelectedRowIds}
-        onBulkDeleteRequest={handleBulkDeleteRequest}
-        toolbarFilters={
-          <CommunityUsersInlineFilters filters={filters} onChange={handleFiltersChange} />
-        }
+        renderToolbar={(toolbarProps) => (
+          <CommunityUsersToolbar
+            isDarkMode={isDarkMode}
+            query={toolbarProps.query}
+            onQueryChange={toolbarProps.onQueryChange}
+            onDebouncedSearch={toolbarProps.onDebouncedSearch}
+            searchPlaceholder={toolbarProps.searchPlaceholder}
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            allVisibleSelected={allVisibleSelected}
+            someVisibleSelected={someVisibleSelected}
+            onSelectAllChange={handleBulkSelectChange}
+            onBulkDeleteRequest={handleBulkDeleteRequest}
+            onBulkResendRequest={handleBulkResendRequest}
+            selectedCount={selectedRowIds.size}
+            disabled={isLoading || isDeleting}
+            isResending={isResending}
+          />
+        )}
         renderExpandedContent={(row) => <CommunityUserExpandableDetails row={row} />}
       />
 
@@ -192,8 +284,20 @@ function CommunityUsersPage({ isDarkMode }) {
         onCancel={handleBulkDeleteCancel}
         onConfirm={handleBulkDeleteConfirm}
         isDeleting={isDeleting}
-        title="Delete Selected Users"
-        message="Are you sure you want to delete the selected users?"
+        title="Delete Selected"
+        message="Are you sure you want to delete selected records?"
+      />
+
+      <DeleteConfirmModal
+        isOpen={bulkResendOpen}
+        onCancel={handleBulkResendCancel}
+        onConfirm={handleBulkResendConfirm}
+        isDeleting={isResending}
+        title="Resend Email"
+        message="Are you sure you want to resend email to the selected panelists?"
+        confirmLabel="Send Email"
+        confirmingLabel="Sending..."
+        confirmClassName="admin-btn-primary flex h-10 items-center justify-center gap-2 px-4 text-sm font-semibold disabled:cursor-not-allowed"
       />
     </div>
   );

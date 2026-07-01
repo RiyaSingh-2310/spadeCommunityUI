@@ -78,7 +78,7 @@ function CommunityUserDetailsPage({ isDarkMode }) {
         title="User Details"
         breadcrumbs={[
           { label: "Questionnaire Management", to: "/community-users" },
-          { label: "Panel List", to: "/community-users" },
+          { label: "Panelist", to: "/community-users" },
           { label: "User Details" },
         ]}
         isDarkMode={isDarkMode}
