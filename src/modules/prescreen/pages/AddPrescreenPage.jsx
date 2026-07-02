@@ -9,9 +9,9 @@ import { PRESCREEN_LANGUAGES } from "../data/prescreenLanguages";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   getRecord,
-  mapPrescreenToForm,
+  mapQuestionToForm,
   saveRecord,
-} from "../../../services/prescreen/prescreenQuestionnairesApi";
+} from "../../../services/question-library/questionLibraryApi";
 import {
   getAdminCancelButtonClass,
   getAdminInputClass,
@@ -113,7 +113,7 @@ function AddPrescreenPage({ isDarkMode }) {
       try {
         const record = await getRecord(id);
         if (cancelled) return;
-        const mapped = mapPrescreenToForm(record);
+        const mapped = mapQuestionToForm(record);
         const nextForm = {
           language: mapped.language ?? "",
           questionTitle: mapped.questionTitle ?? "",

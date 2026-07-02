@@ -10,8 +10,8 @@ import {
   getRecord,
   mapPrescreenGroupToForm,
   updatePrescreenGroup,
-} from "../../../services/prescreen/prescreenGroupApi";
-import { getQuestionnaireOptionsForLanguage } from "../../../services/prescreen/prescreenQuestionnairesApi";
+} from "../../../services/questionnaire-group/questionnaireGroupApi";
+import { getQuestionnaireOptionsForLanguage } from "../../../services/question-library/questionLibraryApi";
 import { PRESCREEN_LANGUAGES } from "../data/prescreenLanguages";
 import { useAdminFormAccess } from "../../permissions/FormAccessContext";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
@@ -189,10 +189,13 @@ function AddPrescreenGroupPage({ isDarkMode }) {
             if (cancelled) return;
 
             prescreenIds.forEach((selectedId) => {
+              const linkedQuestion = mapped.linkedQuestions?.find(
+                (item) => String(item.id) === selectedId
+              );
               if (!options.some((option) => String(option.value) === selectedId)) {
                 options.unshift({
                   value: selectedId,
-                  label: `Question #${selectedId}`,
+                  label: linkedQuestion?.questionTitle || `Question #${selectedId}`,
                 });
               }
             });

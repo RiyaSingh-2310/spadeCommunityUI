@@ -21,15 +21,15 @@ function CommunityUsersToolbar({
 }) {
   return (
     <div className="flex w-full min-w-0 flex-col-reverse gap-3 lg:flex-row lg:flex-wrap lg:items-end lg:gap-4 justify-between">
-      <div className="flex w-full min-w-0 flex-col-reverse gap-3 sm:flex-row sm:items-end sm:gap-3 lg:w-auto lg:flex-row">
+      <div className="flex w-full min-w-0 flex-col-reverse gap-3 sm:flex-row sm:items-end sm:gap-3 lg:min-w-0 lg:flex-1">
         <DebouncedSearchInput
           value={query}
           onChange={onQueryChange}
           onDebouncedChange={onDebouncedSearch}
           placeholder={searchPlaceholder}
           isDarkMode={isDarkMode}
-          className="min-w-0 w-full shrink-0 sm:flex-1 lg:w-[min(100%,340px)]"
-          maxWidthClass="max-w-none"
+          className="min-w-0 w-full shrink-0 sm:flex-1"
+          maxWidthClass="sm:max-w-none lg:max-w-[340px]"
         />
         <CommunityUsersBulkActions
           allVisibleSelected={allVisibleSelected}

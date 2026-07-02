@@ -76,21 +76,26 @@ export const API_ROUTES = {
     delete: (id) => `/api/screening/questions/${id}`,
     sortOrder: "/api/screening/questions/sort-order",
   },
-  prescreen: {
-    list: "/api/prescreen/list",
-    create: "/api/prescreen/add",
-    byId: (id) => `/api/prescreen/${id}`,
-    byLanguage: (language) => `/api/prescreen/language/${encodeURIComponent(language)}`,
-    update: (id) => `/api/prescreen/${id}`,
-    updateStatus: (id) => `/api/prescreen/${id}/status`,
-    sortOrder: "/api/prescreen/sort-order",
-    delete: (id) => `/api/prescreen/${id}`,
+  questionLibrary: {
+    list: "/api/question-library/list",
+    create: "/api/question-library/add",
+    byId: (id) => `/api/question-library/${id}`,
+    byLanguage: (language) => {
+      const slug = encodeURIComponent(String(language ?? "").trim().toLowerCase());
+      return `/api/question-library/language/${slug}`;
+    },
+    update: (id) => `/api/question-library/${id}`,
+    updateStatus: (id) => `/api/question-library/${id}/status`,
+    sortOrder: "/api/question-library/sort-order",
+    delete: (id) => `/api/question-library/${id}`,
   },
-  prescreenSurvey: {
-    list: "/api/prescreen-survey/list",
-    create: "/api/prescreen-survey/add",
-    byId: (id) => `/api/prescreen-survey/${id}`,
-    update: (id) => `/api/prescreen-survey/${id}`,
+  questionnaireGroup: {
+    list: "/api/questionnaire-group/list",
+    create: "/api/questionnaire-group/add",
+    byId: (id) => `/api/questionnaire-group/${id}`,
+    update: (id) => `/api/questionnaire-group/${id}`,
+    updateStatus: (id) => `/api/questionnaire-group/${id}/status`,
+    delete: (id) => `/api/questionnaire-group/${id}`,
   },
   survey: {
     list: "/api/survey/list",

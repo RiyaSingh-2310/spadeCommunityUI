@@ -8,9 +8,9 @@ import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import {
   deleteRecord,
-  listPrescreenRecords,
-  updatePrescreenStatus,
-} from "../../../services/prescreen/prescreenQuestionnairesApi";
+  listQuestionLibraryRecords,
+  updateQuestionStatus,
+} from "../../../services/question-library/questionLibraryApi";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 
 const LIST_COLUMNS = ["S.No", "Title", "Language", "Right Answer", "Status", "Action"];
@@ -29,7 +29,7 @@ function PrescreenPage({ isDarkMode }) {
     handlePageSizeChange,
     refresh: fetchPrescreens,
   } = useApiListing({
-    fetchFn: listPrescreenRecords,
+    fetchFn: listQuestionLibraryRecords,
     initialPageSize: DEFAULT_PAGE_SIZE,
     preserveRowOrder: true,
   });
@@ -76,7 +76,7 @@ function PrescreenPage({ isDarkMode }) {
     setStatusUpdatingId(row.id);
 
     try {
-      const data = await updatePrescreenStatus(row.id, nextStatus);
+      const data = await updateQuestionStatus(row.id, nextStatus);
       toastApiSuccess(data);
       await fetchPrescreens();
     } catch (error) {

@@ -2,7 +2,7 @@ import FormField from "../../../components/admin/FormField";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 
 export const STATUS_OPTIONS = [
-  { value: "all", label: "All Statuses" },
+  { value: "all", label: "All Status" },
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
 ];

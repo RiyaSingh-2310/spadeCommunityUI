@@ -21,7 +21,6 @@ const UI_TO_API_QUESTION_TYPE = {
   Time: "time",
   "Date Time": "datetime",
   "Date-Time": "datetime",
-  // Legacy UI labels
   "Single Line Text": "textbox",
   "Multi Line Text": "textarea",
 };
@@ -52,7 +51,11 @@ function assertSuccess(data) {
   return data;
 }
 
-function normalizePrescreenId(id) {
+function normalizeQuestionLibraryLanguageSlug(language) {
+  return String(language ?? "").trim().toLowerCase();
+}
+
+function normalizeQuestionId(id) {
   const normalizedId = String(id ?? "").trim();
   if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
     throw new ApiError("", null);
@@ -60,22 +63,17 @@ function normalizePrescreenId(id) {
   return encodeURIComponent(normalizedId);
 }
 
-function extractPrescreenList(data) {
+function extractQuestionList(data) {
   if (!data || typeof data !== "object") return [];
   if (Array.isArray(data.data)) return data.data;
-  if (Array.isArray(data.prescreens)) return data.prescreens;
   return [];
 }
 
-function extractPrescreenRecord(data) {
+function extractQuestionRecord(data) {
   if (!data || typeof data !== "object") return null;
   if (data.data && typeof data.data === "object" && !Array.isArray(data.data)) {
     return data.data;
   }
-  if (data.prescreen && typeof data.prescreen === "object") {
-    return data.prescreen;
-  }
-  if (data.id != null) return data;
   return null;
 }
 
@@ -83,34 +81,9 @@ function normalizeOptionValue(option) {
   if (option == null) return "";
   if (typeof option === "string") return option.trim();
   if (typeof option === "object") {
-    return String(
-      option.mapped_option ??
-        option.mappedOption ??
-        option.value ??
-        option.option_text ??
-        option.optionText ??
-        option.option ??
-        ""
-    ).trim();
+    return String(option.option_text ?? option.optionText ?? option.value ?? "").trim();
   }
   return String(option).trim();
-}
-
-function mapOptionToApiObject(option) {
-  if (option == null) return null;
-  if (typeof option === "string") {
-    const trimmed = option.trim();
-    return trimmed ? { option_text: trimmed, mapped_option: trimmed } : null;
-  }
-  if (typeof option === "object") {
-    const label = String(option.label ?? option.option_text ?? option.optionText ?? "").trim();
-    const value = String(
-      option.value ?? option.mapped_option ?? option.mappedOption ?? label
-    ).trim();
-    if (!label && !value) return null;
-    return { option_text: label || value, mapped_option: value || label };
-  }
-  return null;
 }
 
 function mapOptionsToFormItems(options) {
@@ -126,15 +99,14 @@ function mapOptionsToFormItems(options) {
 
   return options
     .map((opt) => {
+      if (opt == null) return null;
       if (typeof opt === "string") {
         const trimmed = opt.trim();
         return trimmed ? { label: trimmed, value: trimmed } : null;
       }
-      if (typeof opt === "object" && opt) {
+      if (typeof opt === "object") {
         const label = String(opt.option_text ?? opt.optionText ?? opt.label ?? "").trim();
-        const value = String(
-          opt.mapped_option ?? opt.mappedOption ?? opt.value ?? label
-        ).trim();
+        const value = String(opt.value ?? label).trim();
         if (!label && !value) return null;
         return { label: label || value, value: value || label };
       }
@@ -143,23 +115,21 @@ function mapOptionsToFormItems(options) {
     .filter(Boolean);
 }
 
-function resolveOptions(payload) {
+function resolveOptionsAsStrings(payload) {
   if (Array.isArray(payload.options)) {
-    return payload.options.map(mapOptionToApiObject).filter(Boolean);
+    return payload.options.map(normalizeOptionValue).filter(Boolean);
   }
   if (typeof payload.options === "string") {
     return payload.options
       .split(/\r?\n/)
       .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => ({ option_text: line, mapped_option: line }));
+      .filter(Boolean);
   }
   if (typeof payload.mappedOptions === "string") {
     return payload.mappedOptions
       .split(/\r?\n/)
       .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => ({ option_text: line, mapped_option: line }));
+      .filter(Boolean);
   }
   return [];
 }
@@ -177,11 +147,11 @@ export function apiToUiQuestionType(value) {
   return API_TO_UI_QUESTION_TYPE[key] ?? value ?? "";
 }
 
-function buildPrescreenBody(payload, { includeStatus = true } = {}) {
+function buildQuestionLibraryCreateBody(payload) {
   const rightAnswerRaw = payload.rightAnswer ?? payload.right_answer ?? "";
   const rightAnswerTrimmed = String(rightAnswerRaw ?? "").trim();
 
-  const body = {
+  return {
     language: String(payload.language ?? "").trim(),
     question_title: String(
       payload.questionnaireTitle ?? payload.questionTitle ?? payload.title ?? ""
@@ -189,36 +159,45 @@ function buildPrescreenBody(payload, { includeStatus = true } = {}) {
     question_type: uiToApiQuestionType(
       payload.questionType ?? payload.question_type ?? "textbox"
     ),
-    options: resolveOptions(payload),
+    options: resolveOptionsAsStrings(payload),
     right_answer: rightAnswerTrimmed || null,
     sort_order: Number(payload.sortOrder ?? payload.sort_order ?? 0) || 0,
     is_required: Boolean(payload.required ?? payload.is_required ?? payload.isRequired),
+    status: formValueToApiStatus(payload.status ?? "Active"),
+  };
+}
+
+function buildQuestionLibraryUpdateBody(payload) {
+  const rightAnswerRaw = payload.rightAnswer ?? payload.right_answer ?? "";
+  const rightAnswerTrimmed = String(rightAnswerRaw ?? "").trim();
+  const questionType = payload.questionType ?? payload.question_type;
+
+  const body = {
+    language: String(payload.language ?? "").trim(),
+    question_title: String(
+      payload.questionnaireTitle ?? payload.questionTitle ?? payload.title ?? ""
+    ).trim(),
+    right_answer: rightAnswerTrimmed || null,
+    status: formValueToApiStatus(payload.status ?? "Active"),
+    options: resolveOptionsAsStrings(payload),
   };
 
-  if (includeStatus) {
-    body.status = formValueToApiStatus(payload.status ?? "Active");
+  if (questionType) {
+    body.question_type = uiToApiQuestionType(questionType);
   }
 
   return body;
 }
 
-function appendPrescreenListQuery(basePath, { page, limit, search, status = "", language = "" } = {}) {
+function appendQuestionLibraryListQuery(basePath, { page, limit, search } = {}) {
   return appendListQuery(basePath, {
     page,
     limit,
-    search,
-    alwaysIncludeEmpty: ["search", "status", "language"],
-    extra: {
-      status: String(status ?? ""),
-      language: String(language ?? ""),
-    },
+    search: normalizeSearchQuery(search),
   });
 }
 
-/**
- * @param {object} record
- */
-export function mapPrescreenToForm(record) {
+export function mapQuestionToForm(record) {
   const optionItems = mapOptionsToFormItems(record?.options);
   const mappedLines = optionItems.map((opt) => opt.label).filter(Boolean);
   const required = Boolean(record?.is_required ?? record?.required ?? record?.isRequired);
@@ -228,7 +207,6 @@ export function mapPrescreenToForm(record) {
     questionTitle:
       record?.question_title ?? record?.questionnaireTitle ?? record?.title ?? "",
     questionType: apiToUiQuestionType(record?.question_type ?? record?.questionType),
-    mappedOptions: mappedLines.join("\n"),
     mappedOptions: mappedLines.join("\n"),
     options: optionItems,
     optionItems,
@@ -244,10 +222,7 @@ export function mapPrescreenToForm(record) {
   };
 }
 
-/**
- * @param {object} record
- */
-export function mapPrescreenQuestionnaireToRow(record) {
+export function mapQuestionToRow(record) {
   const createdRaw = record?.created_at ?? record?.createdAt ?? "";
   const sortOrder = Number(record?.sort_order ?? record?.sortOrder ?? 0) || 0;
   const title =
@@ -273,106 +248,7 @@ export function mapPrescreenQuestionnaireToRow(record) {
   };
 }
 
-/** Adapter for listing hooks — sends the query keys this API expects. */
-export function listPrescreenRecords({ page, limit, search } = {}) {
-  return getRecords({
-    page,
-    limit,
-    search: normalizeSearchQuery(search),
-    status: "",
-    language: "",
-  });
-}
-
-/** GET /api/prescreen/list */
-export async function getRecords({ page, limit, search, status = "", language = "" } = {}) {
-  const data = await apiRequest(
-    appendPrescreenListQuery(API_ROUTES.prescreen.list, {
-      page,
-      limit,
-      search,
-      status,
-      language,
-    })
-  );
-  assertSuccess(data);
-
-  const prescreens = extractPrescreenList(data);
-  const total = extractListTotalFromResponse(data, prescreens.length);
-
-  const items = prescreens.map((record) => mapPrescreenQuestionnaireToRow(record));
-
-  return {
-    ...data,
-    total,
-    count: total,
-    page: data.page ?? 1,
-    limit: data.limit ?? prescreens.length,
-    totalPages: data.totalPages ?? 1,
-    items,
-  };
-}
-
-function hasPrescreenOptions(record) {
-  if (!Array.isArray(record?.options)) return false;
-  return record.options.some((option) => Boolean(normalizeOptionValue(option)));
-}
-
-/** Merges options/right_answer from the language list when detail/list omits them. */
-async function enrichPrescreenRecord(record, id) {
-  if (!record || hasPrescreenOptions(record)) return record;
-
-  const language = String(record.language ?? "").trim();
-  if (!language) return record;
-
-  try {
-    const byLanguage = await getPrescreensByLanguage(language);
-    const match = byLanguage.find((item) => String(item.id) === String(id));
-    if (!match) return record;
-
-    return {
-      ...record,
-      question_title:
-        record.question_title ?? match.question_title ?? match.title ?? "",
-      right_answer: record.right_answer ?? match.right_answer ?? match.rightAnswer ?? "",
-      options: hasPrescreenOptions(match) ? match.options : record.options,
-    };
-  } catch {
-    return record;
-  }
-}
-
-/** GET /api/prescreen/:id — falls back to list lookup when detail endpoint is unavailable. */
-export async function getRecord(id) {
-  const normalizedId = normalizePrescreenId(id);
-
-  try {
-    const data = await apiRequest(API_ROUTES.prescreen.byId(normalizedId));
-    assertSuccess(data);
-    const record = extractPrescreenRecord(data);
-    if (record) return enrichPrescreenRecord(record, id);
-  } catch {
-    // Fall back to list lookup below.
-  }
-
-  const data = await apiRequest(
-    appendPrescreenListQuery(API_ROUTES.prescreen.list, { page: 1, limit: 500 })
-  );
-  assertSuccess(data);
-
-  const prescreens = extractPrescreenList(data);
-  const match = prescreens.find((record) => String(record.id) === String(id));
-  if (!match) {
-    throw new ApiError("Prescreen not found", null);
-  }
-
-  return enrichPrescreenRecord(match, id);
-}
-
-/**
- * @param {object} record
- */
-export function mapPrescreenLanguageQuestion(record) {
+function mapLanguageQuestion(record) {
   const options = Array.isArray(record?.options)
     ? record.options.map(normalizeOptionValue).filter(Boolean)
     : [];
@@ -390,22 +266,65 @@ export function mapPrescreenLanguageQuestion(record) {
   };
 }
 
-/** GET /api/prescreen/language/:language */
-export async function getPrescreensByLanguage(language) {
-  const normalizedLanguage = String(language ?? "").trim();
-  if (!normalizedLanguage) return [];
-
-  const data = await apiRequest(API_ROUTES.prescreen.byLanguage(normalizedLanguage));
-  assertSuccess(data);
-
-  return extractPrescreenList(data);
+/** Adapter for listing hooks. */
+export function listQuestionLibraryRecords({ page, limit, search } = {}) {
+  return getRecords({
+    page,
+    limit,
+    search,
+  });
 }
 
-/**
- * Questionnaire options for Survey Group selection, filtered by language.
- * @param {string} language Prescreen question language to fetch
- * @param {string} [surveyLanguage] Survey group language — must match to call the API
- */
+/** GET /api/question-library/list */
+export async function getRecords({ page, limit, search } = {}) {
+  const data = await apiRequest(
+    appendQuestionLibraryListQuery(API_ROUTES.questionLibrary.list, {
+      page,
+      limit,
+      search,
+    })
+  );
+  assertSuccess(data);
+
+  const questions = extractQuestionList(data);
+  const total = extractListTotalFromResponse(data, questions.length);
+
+  return {
+    ...data,
+    total,
+    count: total,
+    page: data.page ?? 1,
+    limit: data.limit ?? questions.length,
+    totalPages: data.totalPages ?? 1,
+    items: questions.map((record) => mapQuestionToRow(record)),
+  };
+}
+
+/** GET /api/question-library/:id */
+export async function getRecord(id) {
+  const normalizedId = normalizeQuestionId(id);
+  const data = await apiRequest(API_ROUTES.questionLibrary.byId(normalizedId));
+  assertSuccess(data);
+
+  const record = extractQuestionRecord(data);
+  if (!record) {
+    throw new ApiError("Question not found", null);
+  }
+
+  return record;
+}
+
+/** GET /api/question-library/language/:language */
+export async function getQuestionsByLanguage(language) {
+  const normalizedLanguage = normalizeQuestionLibraryLanguageSlug(language);
+  if (!normalizedLanguage) return [];
+
+  const data = await apiRequest(API_ROUTES.questionLibrary.byLanguage(normalizedLanguage));
+  assertSuccess(data);
+
+  return extractQuestionList(data);
+}
+
 export async function getQuestionnaireOptionsForLanguage(language, surveyLanguage) {
   const questionLanguage = String(language ?? "").trim();
   if (!questionLanguage) return [];
@@ -415,10 +334,10 @@ export async function getQuestionnaireOptionsForLanguage(language, surveyLanguag
     return [];
   }
 
-  const records = await getPrescreensByLanguage(questionLanguage);
+  const records = await getQuestionsByLanguage(questionLanguage);
 
   return records
-    .map((record) => mapPrescreenLanguageQuestion(record))
+    .map((record) => mapLanguageQuestion(record))
     .filter((record) => record.id != null && record.questionTitle)
     .map((record) => ({
       value: String(record.id),
@@ -426,48 +345,36 @@ export async function getQuestionnaireOptionsForLanguage(language, surveyLanguag
     }));
 }
 
-/**
- * Questionnaire titles for Survey Group selection, filtered by language.
- * @param {string} language Prescreen question language to fetch
- * @param {string} [surveyLanguage] Survey group language — must match to call the API
- */
 export async function getQuestionnaireTitlesForLanguage(language, surveyLanguage) {
   const options = await getQuestionnaireOptionsForLanguage(language, surveyLanguage);
   return options.map((option) => option.label);
 }
 
-/**
- * POST /api/prescreen/add
- */
-export async function createPrescreen(payload) {
-  const data = await apiRequest(API_ROUTES.prescreen.create, {
+/** POST /api/question-library/add */
+export async function createQuestion(payload) {
+  const data = await apiRequest(API_ROUTES.questionLibrary.create, {
     method: "POST",
-    body: buildPrescreenBody(payload),
+    body: buildQuestionLibraryCreateBody(payload),
   });
 
   return assertSuccess(data);
 }
 
-/**
- * PUT /api/prescreen/:id
- * @param {string|number} id
- */
-export async function updatePrescreen(id, payload) {
-  const normalizedId = normalizePrescreenId(id);
-  const data = await apiRequest(API_ROUTES.prescreen.update(normalizedId), {
+/** PUT /api/question-library/:id */
+export async function updateQuestion(id, payload) {
+  const normalizedId = normalizeQuestionId(id);
+  const data = await apiRequest(API_ROUTES.questionLibrary.update(normalizedId), {
     method: "PUT",
-    body: buildPrescreenBody(payload),
+    body: buildQuestionLibraryUpdateBody(payload),
   });
 
   return assertSuccess(data);
 }
 
-/**
- * PATCH /api/prescreen/:id/status — status toggle from listing tables.
- */
-export async function updatePrescreenStatus(id, status) {
-  const normalizedId = normalizePrescreenId(id);
-  const data = await apiRequest(API_ROUTES.prescreen.updateStatus(normalizedId), {
+/** PATCH /api/question-library/:id/status */
+export async function updateQuestionStatus(id, status) {
+  const normalizedId = normalizeQuestionId(id);
+  const data = await apiRequest(API_ROUTES.questionLibrary.updateStatus(normalizedId), {
     method: "PATCH",
     body: {
       status: formValueToApiStatus(status),
@@ -477,12 +384,9 @@ export async function updatePrescreenStatus(id, status) {
   return assertSuccess(data);
 }
 
-/**
- * PUT /api/prescreen/sort-order
- * @param {Array<{ id: string|number, sort_order?: number, sortOrder?: number }>} items
- */
-export async function updatePrescreenSortOrder(items) {
-  const data = await apiRequest(API_ROUTES.prescreen.sortOrder, {
+/** PUT /api/question-library/sort-order */
+export async function updateQuestionSortOrder(items) {
+  const data = await apiRequest(API_ROUTES.questionLibrary.sortOrder, {
     method: "PUT",
     body: {
       items: (items ?? []).map((item, index) => ({
@@ -495,20 +399,17 @@ export async function updatePrescreenSortOrder(items) {
   return assertSuccess(data);
 }
 
-/**
- * @param {Parameters<typeof createPrescreen>[0] & { id?: string|number }} payload
- */
 export async function saveRecord(payload) {
   if (payload.id != null && String(payload.id).trim()) {
-    return updatePrescreen(payload.id, payload);
+    return updateQuestion(payload.id, payload);
   }
-  return createPrescreen(payload);
+  return createQuestion(payload);
 }
 
-/** DELETE /api/prescreen/:id */
+/** DELETE /api/question-library/:id */
 export async function deleteRecord(id) {
-  const normalizedId = normalizePrescreenId(id);
-  const data = await apiRequest(API_ROUTES.prescreen.delete(normalizedId), {
+  const normalizedId = normalizeQuestionId(id);
+  const data = await apiRequest(API_ROUTES.questionLibrary.delete(normalizedId), {
     method: "DELETE",
   });
 

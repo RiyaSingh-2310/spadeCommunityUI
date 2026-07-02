@@ -12,7 +12,7 @@ import { formatLocaleDateTime } from "../../modules/shared/utils/dateTime";
 import {
   apiToUiQuestionType,
   uiToApiQuestionType,
-} from "../prescreen/prescreenQuestionnairesApi";
+} from "../question-library/questionLibraryApi";
 import {
   normalizeOptionsForQuestionType,
   normalizeQuestionTypeLabel,
