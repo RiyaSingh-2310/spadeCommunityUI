@@ -95,7 +95,7 @@ function AdminSidebar({
     "Pre-Screen": <ShieldCheck size={21} strokeWidth={2} />,
     "Pre-Screen Management": <ShieldCheck size={21} strokeWidth={2} />,
     "Screening Management": <ShieldCheck size={21} strokeWidth={2} />,
-    "Home Page Management": <Home size={21} strokeWidth={2} />,
+    // "Home Page Management": <Home size={21} strokeWidth={2} />,
     "User Email Template": <Mail size={21} strokeWidth={2} />,
     "User Email Templates": <Mail size={21} strokeWidth={2} />,
     Settings: <Settings size={21} strokeWidth={2} />,

@@ -230,13 +230,13 @@ export const SIDEBAR_NAV_ITEMS = [
       },
     ],
   },
-  {
-    type: "link",
-    label: "Home Page Management",
-    root: "/home-page",
-    matcher: /^\/home-page(\/|$)/,
-    permissionKeys: ["homepage_management"],
-  },
+  // {
+  //   type: "link",
+  //   label: "Home Page Management",
+  //   root: "/home-page",
+  //   matcher: /^\/home-page(\/|$)/,
+  //   permissionKeys: ["homepage_management"],
+  // },
   {
     type: "link",
     label: "User Email Template",
