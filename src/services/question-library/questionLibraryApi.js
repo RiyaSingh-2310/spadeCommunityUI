@@ -1,5 +1,5 @@
 import { API_ROUTES } from "../../config/api";
-import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
+import { extractListTotalFromResponse, safeMapListItems } from "../../modules/shared/utils/listResponse";
 import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import {
   apiStatusToFormValue,
@@ -296,7 +296,7 @@ export async function getRecords({ page, limit, search } = {}) {
     page: data.page ?? 1,
     limit: data.limit ?? questions.length,
     totalPages: data.totalPages ?? 1,
-    items: questions.map((record) => mapQuestionToRow(record)),
+    items: safeMapListItems(questions, (record) => mapQuestionToRow(record)),
   };
 }
 
@@ -334,15 +334,19 @@ export async function getQuestionnaireOptionsForLanguage(language, surveyLanguag
     return [];
   }
 
-  const records = await getQuestionsByLanguage(questionLanguage);
+  try {
+    const records = await getQuestionsByLanguage(questionLanguage);
 
-  return records
-    .map((record) => mapLanguageQuestion(record))
-    .filter((record) => record.id != null && record.questionTitle)
-    .map((record) => ({
-      value: String(record.id),
-      label: record.questionTitle,
-    }));
+    return records
+      .map((record) => mapLanguageQuestion(record))
+      .filter((record) => record.id != null && record.questionTitle)
+      .map((record) => ({
+        value: String(record.id),
+        label: record.questionTitle,
+      }));
+  } catch {
+    return [];
+  }
 }
 
 export async function getQuestionnaireTitlesForLanguage(language, surveyLanguage) {

@@ -40,3 +40,23 @@ export function extractListTotalFromResponse(data, fallbackLength = 0) {
 
   return fallbackLength;
 }
+
+/**
+ * Maps list records defensively so one bad row cannot break listing pages.
+ * @template T
+ * @param {unknown[]} records
+ * @param {(record: unknown) => T | null | undefined} mapper
+ */
+export function safeMapListItems(records, mapper) {
+  if (!Array.isArray(records)) return [];
+
+  return records
+    .map((record) => {
+      try {
+        return mapper(record);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}

@@ -1,5 +1,5 @@
 import { API_ROUTES } from "../../config/api";
-import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
+import { extractListTotalFromResponse, safeMapListItems } from "../../modules/shared/utils/listResponse";
 import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import {
   apiStatusToFormValue,
@@ -249,7 +249,7 @@ export async function getRecords({ page, limit, search } = {}) {
     page: data.page ?? 1,
     limit: data.limit ?? groups.length,
     totalPages: data.totalPages ?? 1,
-    items: groups.map((record) => mapPrescreenGroupToRow(record)),
+    items: safeMapListItems(groups, (record) => mapPrescreenGroupToRow(record)),
   };
 }
 

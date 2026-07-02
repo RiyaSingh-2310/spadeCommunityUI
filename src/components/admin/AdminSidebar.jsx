@@ -76,7 +76,7 @@ function AdminSidebar({
     "Admin User": <Users size={21} strokeWidth={2} />,
     "Admin Users": <Users size={21} strokeWidth={2} />,
     "Panel Management": <UserRound size={21} strokeWidth={2} />,
-    Panelist: <UserRound size={21} strokeWidth={2} />,
+    s: <UserRound size={21} strokeWidth={2} />,
     "Panel Questionnaire": <ClipboardList size={21} strokeWidth={2} />,
     Clients: <UserCog size={21} strokeWidth={2} />,
     Partners: <Handshake size={21} strokeWidth={2} />,

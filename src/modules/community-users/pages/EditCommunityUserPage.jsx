@@ -150,7 +150,7 @@ function EditCommunityUserPage({ isDarkMode }) {
         title="Edit User Details"
         breadcrumbs={[
           { label: "Questionnaire Management", to: "/community-users" },
-          { label: "Panelist", to: "/community-users" },
+          { label: "Panelists", to: "/community-users" },
           { label: "Edit User Details" },
         ]}
         isDarkMode={isDarkMode}

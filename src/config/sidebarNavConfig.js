@@ -166,7 +166,7 @@ export const SIDEBAR_NAV_ITEMS = [
     permissionKeys: ["community_users", "user_screening_management"],
     children: [
       {
-        label: "Panelist",
+        label: "Panelists",
         root: "/community-users",
         isActive: matchesCommunityUsersMain,
         matcher: /^\/community-users(\/|$)/,
