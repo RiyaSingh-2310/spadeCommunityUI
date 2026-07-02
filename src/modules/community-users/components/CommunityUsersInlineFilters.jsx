@@ -32,10 +32,9 @@ function FilterField({ id, label, value, options, onChange }) {
   );
 }
 
-function CommunityUsersInlineFilters({ filters, onChange, onFiltersChange }) {
-  const handleChange = onChange ?? onFiltersChange;
+function CommunityUsersInlineFilters({ filters, onChange }) {
   const setFilter = (key, value) => {
-    handleChange?.({ ...filters, [key]: value });
+    onChange({ ...filters, [key]: value });
   };
 
   return (

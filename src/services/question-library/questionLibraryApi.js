@@ -419,3 +419,20 @@ export async function deleteRecord(id) {
 
   return assertSuccess(data);
 }
+
+/** @deprecated Use listQuestionLibraryRecords */
+export const listPrescreenRecords = listQuestionLibraryRecords;
+/** @deprecated Use updateQuestionStatus */
+export const updatePrescreenStatus = updateQuestionStatus;
+/** @deprecated Use mapQuestionToForm */
+export const mapPrescreenToForm = mapQuestionToForm;
+/** @deprecated Use mapQuestionToRow */
+export const mapPrescreenQuestionnaireToRow = mapQuestionToRow;
+/** @deprecated Use getQuestionsByLanguage */
+export const getPrescreensByLanguage = getQuestionsByLanguage;
+/** @deprecated Use createQuestion */
+export const createPrescreen = createQuestion;
+/** @deprecated Use updateQuestion */
+export const updatePrescreen = updateQuestion;
+/** @deprecated Use updateQuestionSortOrder */
+export const updatePrescreenSortOrder = updateQuestionSortOrder;
