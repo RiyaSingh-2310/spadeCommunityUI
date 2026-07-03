@@ -14,7 +14,7 @@ const initialRows = Array.from({ length: 12 }, (_, idx) => ({
   status: "Pending",
 }));
 
-function validateComment(comment) {
+function validateRejectComment(comment) {
   if (String(comment ?? "").trim().length < 3) {
     return "Comment must be at least 3 characters";
   }
@@ -47,10 +47,12 @@ function PendingRewardsPage({ isDarkMode }) {
   const handleConfirm = () => {
     if (!activeRow?.id) return;
 
-    const error = validateComment(comment);
-    if (error) {
-      setCommentError(error);
-      return;
+    if (modalMode === "reject") {
+      const error = validateRejectComment(comment);
+      if (error) {
+        setCommentError(error);
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -66,8 +68,8 @@ function PendingRewardsPage({ isDarkMode }) {
     <>
       <ModuleListingPage
         isDarkMode={isDarkMode}
-        title="Pending Rewards"
-        searchPlaceholder="Search pending rewards..."
+        title="Reward History"
+        searchPlaceholder="Search reward history..."
         columns={[
           "S.No",
           "User Name",
@@ -84,6 +86,8 @@ function PendingRewardsPage({ isDarkMode }) {
         actionVariant="reward-pending"
         permissionModule="pending_rewards"
         nowrapAllCells
+        compactTable
+        showPagination
         onApprove={(row) => openModal("approve", row)}
         onReject={(row) => openModal("reject", row)}
       />

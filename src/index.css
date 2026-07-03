@@ -536,6 +536,53 @@ body {
   max-width: 100px;
 }
 
+.admin-table-select-wrap {
+  position: relative;
+  display: inline-flex;
+  width: 100%;
+  max-width: 7.25rem;
+}
+
+.admin-table-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: none;
+}
+
+.admin-table-select:not(:disabled):hover {
+  border-color: var(--admin-primary-color);
+}
+
+.admin-table-select:focus {
+  border-color: var(--admin-primary-color);
+  box-shadow: 0 0 0 3px var(--admin-input-focus-ring);
+}
+
+.admin-table-select-chevron {
+  position: absolute;
+  top: 50%;
+  right: 0.5rem;
+  transform: translateY(-50%);
+}
+
+.admin-table.admin-table-compact th,
+.admin-table.admin-table-compact td {
+  padding-inline: 0.75rem;
+  padding-block: 0.5rem;
+}
+
+.admin-table.admin-table-compact .admin-table-status-col {
+  min-width: 7.25rem;
+  width: 7.25rem;
+}
+
+.admin-table.admin-table-compact .admin-table-status-col-compact {
+  min-width: 7.25rem;
+  width: 7.25rem;
+  max-width: 7.25rem;
+}
+
 .admin-rich-editor:empty::before {
   content: attr(data-placeholder);
   color: var(--admin-subtle-foreground);

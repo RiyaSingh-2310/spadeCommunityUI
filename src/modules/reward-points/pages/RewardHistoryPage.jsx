@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import AdminDateRangeFilter from "../../../components/admin/AdminDateRangeFilter";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
-import RewardDetailsModal from "../components/RewardDetailsModal";
 
 const REWARD_TYPES = [
   "Registration Reward",
@@ -11,7 +10,7 @@ const REWARD_TYPES = [
   "Manual Adjustment",
 ];
 
-const STATUSES = ["Pending", "Completed", "Rejected"];
+const STATUS_OPTIONS = ["Approved", "Rejected"];
 
 function buildDemoRow(idx) {
   const rewardType = REWARD_TYPES[idx % REWARD_TYPES.length];
@@ -28,13 +27,13 @@ function buildDemoRow(idx) {
     totalRewardCredit: String(totalRewardCredit),
     totalRewardDebit: String(totalRewardDebit),
     totalRewardBalance: String(totalRewardCredit - totalRewardDebit),
-    status: STATUSES[idx % STATUSES.length],
+    status: STATUS_OPTIONS[idx % STATUS_OPTIONS.length],
     createdAt: `${String(1 + (idx % 28)).padStart(2, "0")}/06/2026`,
     date: `${String(1 + (idx % 28)).padStart(2, "0")}/06/2026`,
   };
 }
 
-const DEMO_ROWS = Array.from({ length: 24 }, (_, idx) => buildDemoRow(idx));
+const INITIAL_ROWS = Array.from({ length: 24 }, (_, idx) => buildDemoRow(idx));
 
 function parseDisplayDate(value) {
   if (!value) return null;
@@ -44,9 +43,9 @@ function parseDisplayDate(value) {
 }
 
 function RewardHistoryPage({ isDarkMode }) {
+  const [rows, setRows] = useState(INITIAL_ROWS);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [viewTarget, setViewTarget] = useState(null);
 
   const filteredRows = useMemo(() => {
     const from = fromDate ? new Date(fromDate) : null;
@@ -55,38 +54,46 @@ function RewardHistoryPage({ isDarkMode }) {
       to.setHours(23, 59, 59, 999);
     }
 
-    return DEMO_ROWS.filter((row) => {
+    return rows.filter((row) => {
       const rowDate = parseDisplayDate(row.createdAt);
       if (from && rowDate && rowDate < from) return false;
       if (to && rowDate && rowDate > to) return false;
       return true;
     });
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, rows]);
+
+  const handleStatusChange = (row, nextStatus) => {
+    if (!row?.id) return;
+    setRows((prev) =>
+      prev.map((item) => (item.id === row.id ? { ...item, status: nextStatus } : item))
+    );
+  };
 
   return (
     <div className="space-y-4">
       <ModuleListingPage
         isDarkMode={isDarkMode}
-        title="Reward History"
-        searchPlaceholder="Search reward history..."
+        title="Reward Request"
+        searchPlaceholder="Search reward requests..."
         columns={[
           "ID",
           "User Name",
           "Reward Type",
-          "Total Reward Credit",
-          "Total Reward Debit",
-          "Total Reward Balance",
+          "Credit",
+          "Debit",
+          "Balance",
           "Status",
           "Created At",
-          "Action",
         ]}
         rows={filteredRows}
         rowIdKey="id"
         showStatus
-        statusAsText
+        statusDropdownOptions={STATUS_OPTIONS}
+        onStatusChange={handleStatusChange}
         permissionModule="reward_history"
-        actionVariant="reward-pending"
         nowrapAllCells
+        compactTable
+        compactStatusColumn
         showPagination
         toolbarEnd={
           <AdminDateRangeFilter
@@ -96,22 +103,6 @@ function RewardHistoryPage({ isDarkMode }) {
             onToChange={setToDate}
           />
         }
-        onView={(row) => setViewTarget(row)}
-      />
-
-      <RewardDetailsModal
-        isOpen={Boolean(viewTarget)}
-        mode="view"
-        row={
-          viewTarget
-            ? {
-                ...viewTarget,
-                rewardPoints: viewTarget.totalRewardBalance,
-                createdDate: viewTarget.createdAt,
-              }
-            : null
-        }
-        onCancel={() => setViewTarget(null)}
       />
     </div>
   );

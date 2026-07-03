@@ -266,6 +266,15 @@ function mapLanguageQuestion(record) {
   };
 }
 
+function sortQuestionsByOrder(records) {
+  if (!Array.isArray(records)) return [];
+  return [...records].sort(
+    (left, right) =>
+      (Number(left?.sort_order ?? left?.sortOrder) || 0) -
+      (Number(right?.sort_order ?? right?.sortOrder) || 0)
+  );
+}
+
 /** Adapter for listing hooks. */
 export function listQuestionLibraryRecords({ page, limit, search } = {}) {
   return getRecords({
@@ -300,7 +309,7 @@ export async function getRecords({ page, limit, search } = {}) {
   };
 }
 
-/** GET /api/question-library/:id */
+/** GET /api/question-library/:id — returns raw `data` object from API. */
 export async function getRecord(id) {
   const normalizedId = normalizeQuestionId(id);
   const data = await apiRequest(API_ROUTES.questionLibrary.byId(normalizedId));
@@ -314,7 +323,13 @@ export async function getRecord(id) {
   return record;
 }
 
-/** GET /api/question-library/language/:language */
+/** GET /api/question-library/:id — mapped for edit forms. */
+export async function getRecordForForm(id) {
+  const record = await getRecord(id);
+  return mapQuestionToForm(record);
+}
+
+/** GET /api/question-library/language/:language (lowercase slug, e.g. english) */
 export async function getQuestionsByLanguage(language) {
   const normalizedLanguage = normalizeQuestionLibraryLanguageSlug(language);
   if (!normalizedLanguage) return [];
@@ -322,15 +337,18 @@ export async function getQuestionsByLanguage(language) {
   const data = await apiRequest(API_ROUTES.questionLibrary.byLanguage(normalizedLanguage));
   assertSuccess(data);
 
-  return extractQuestionList(data);
+  return sortQuestionsByOrder(extractQuestionList(data));
 }
 
 export async function getQuestionnaireOptionsForLanguage(language, surveyLanguage) {
   const questionLanguage = String(language ?? "").trim();
   if (!questionLanguage) return [];
 
-  const normalizedSurveyLanguage = String(surveyLanguage ?? questionLanguage).trim();
-  if (normalizedSurveyLanguage !== questionLanguage) {
+  const surveyLang = String(surveyLanguage ?? questionLanguage).trim();
+  if (
+    normalizeQuestionLibraryLanguageSlug(surveyLang) !==
+    normalizeQuestionLibraryLanguageSlug(questionLanguage)
+  ) {
     return [];
   }
 

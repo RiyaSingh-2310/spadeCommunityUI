@@ -121,7 +121,7 @@ export function hasNativeReadOnlyListingActions({
   }
 
   if (actionVariant === "reward-pending") {
-    return Boolean(onView);
+    return Boolean(onView || onApprove || onReject);
   }
 
   if (actionVariant === "group-survey") {

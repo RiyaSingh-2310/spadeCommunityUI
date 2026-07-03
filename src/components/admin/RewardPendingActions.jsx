@@ -1,7 +1,7 @@
-import { Check, Eye, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 
-function RewardPendingActions({ isDarkMode, row, onView, onApprove, onReject }) {
-  if (!onView && !onApprove && !onReject) {
+function RewardPendingActions({ isDarkMode, row, onApprove, onReject }) {
+  if (!onApprove && !onReject) {
     return null;
   }
 
@@ -13,21 +13,6 @@ function RewardPendingActions({ isDarkMode, row, onView, onApprove, onReject }) 
 
   return (
     <div className="flex items-center justify-end gap-1 whitespace-nowrap">
-      {onView && (
-      <button
-        type="button"
-        onClick={onView}
-        className={`${base} ${
-          isDarkMode
-            ? "text-[#9fb0c8] hover:bg-[#1e2e45] hover:text-[#f8fafc]"
-            : "text-[#5e718a] hover:bg-[#eef4fb] hover:text-[#203148]"
-        }`}
-        aria-label="view"
-      >
-        <Eye size={13} />
-        View
-      </button>
-      )}
       {onApprove && canActOnReward && (
       <button
         type="button"

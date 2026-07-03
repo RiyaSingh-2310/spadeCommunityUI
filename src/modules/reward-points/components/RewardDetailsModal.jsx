@@ -2,19 +2,63 @@ import { Loader2 } from "lucide-react";
 import FormField from "../../../components/admin/FormField";
 import { getAdminCancelButtonClass, getAdminTextareaClass } from "../../shared/utils/formStyles";
 
-const DETAIL_FIELDS = [
+const USER_INFO_FIELDS = [
   { label: "User Name", key: "userName" },
   { label: "Email", key: "email" },
+];
+
+const REWARD_INFO_FIELDS = [
   { label: "Reward Type", key: "rewardType" },
   { label: "Reward Points", key: "rewardPoints" },
+];
+
+const REQUEST_DETAIL_FIELDS = [
   { label: "Created Date", key: "createdDate" },
-  { label: "Completed Date", key: "completedDate" },
   { label: "Status", key: "status" },
 ];
+
+const VIEW_EXTRA_FIELDS = [{ label: "Completed Date", key: "completedDate" }];
 
 function formatDetailValue(value) {
   if (value == null || String(value).trim() === "") return "—";
   return String(value);
+}
+
+function resolveRowValue(row, key) {
+  if (key === "rewardPoints") {
+    return row.rewardPoints ?? row.totalRewardBalance ?? row.totalRewardCredit ?? "";
+  }
+  if (key === "createdDate") {
+    return row.createdDate ?? row.createdAt ?? "";
+  }
+  return row[key];
+}
+
+function DetailSection({ title, fields, row }) {
+  const visibleFields = fields.filter((field) => {
+    const value = resolveRowValue(row, field.key);
+    return value != null && String(value).trim() !== "";
+  });
+
+  if (!visibleFields.length) return null;
+
+  return (
+    <div className="mb-4">
+      <h3 className="admin-text-muted mb-2 text-xs font-semibold uppercase tracking-[0.04em]">
+        {title}
+      </h3>
+      <dl className="grid gap-2 sm:grid-cols-2">
+        {visibleFields.map((field) => (
+          <div key={field.key} className="min-w-0">
+            <dt className="admin-text-muted text-xs font-medium">{field.label}</dt>
+            <dd className="admin-text mt-0.5 text-sm break-words">
+              {formatDetailValue(resolveRowValue(row, field.key))}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
 }
 
 function RewardDetailsModal({
@@ -34,6 +78,7 @@ function RewardDetailsModal({
   const isView = mode === "view";
   const isApprove = mode === "approve";
   const isReject = mode === "reject";
+  const isAction = isApprove || isReject;
 
   const title = isView
     ? "Reward Request Details"
@@ -47,12 +92,9 @@ function RewardDetailsModal({
       ? "Are you sure you want to reject this reward request?"
       : "";
 
-  const visibleFields = DETAIL_FIELDS.filter((field) => {
-    if (field.key === "completedDate") {
-      return isView || row.completedDate;
-    }
-    return true;
-  });
+  const requestFields = isView
+    ? [...REQUEST_DETAIL_FIELDS, ...VIEW_EXTRA_FIELDS.filter((field) => row[field.key])]
+    : REQUEST_DETAIL_FIELDS;
 
   return (
     <div className="admin-modal-overlay fixed inset-0 z-[250] flex items-center justify-center p-4">
@@ -73,16 +115,9 @@ function RewardDetailsModal({
           {title}
         </h2>
 
-        <dl className="mb-4 grid gap-3 sm:grid-cols-2">
-          {visibleFields.map((field) => (
-            <div key={field.key} className="min-w-0">
-              <dt className="admin-text-muted text-xs font-medium">{field.label}</dt>
-              <dd className="admin-text mt-0.5 text-sm break-words">
-                {formatDetailValue(row[field.key])}
-              </dd>
-            </div>
-          ))}
-        </dl>
+        <DetailSection title="User Information" fields={USER_INFO_FIELDS} row={row} />
+        <DetailSection title="Reward Information" fields={REWARD_INFO_FIELDS} row={row} />
+        <DetailSection title="Request Details" fields={requestFields} row={row} />
 
         {isView && row.comments ? (
           <div className="mb-4">
@@ -91,17 +126,18 @@ function RewardDetailsModal({
           </div>
         ) : null}
 
-        {!isView ? (
+        {isAction ? (
           <>
             <p className="admin-text-muted mb-4 text-sm">{confirmMessage}</p>
-            <FormField label="Comments" required error={commentError}>
+            <FormField label="Comments" required={isReject} error={commentError}>
               <textarea
                 className={textareaClass}
                 value={comment}
                 onChange={(e) => onCommentChange?.(e.target.value)}
-                placeholder="Enter comments..."
+                placeholder={
+                  isApprove ? "Optional comments..." : "Enter comments (minimum 3 characters)..."
+                }
                 disabled={isSubmitting}
-                readOnly={false}
               />
             </FormField>
           </>
@@ -116,7 +152,7 @@ function RewardDetailsModal({
           >
             Cancel
           </button>
-          {!isView ? (
+          {isAction ? (
             <button
               type="button"
               onClick={onConfirm}

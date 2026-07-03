@@ -223,7 +223,6 @@ function ModuleListingActionCell({
         <RewardPendingActions
         isDarkMode={isDarkMode}
         row={row}
-        onView={allowRead && onView ? () => onView(row, globalIdx) : undefined}
         onApprove={allowWrite && onApprove ? () => onApprove(row, globalIdx) : undefined}
         onReject={allowWrite && onReject ? () => onReject(row, globalIdx) : undefined}
       />

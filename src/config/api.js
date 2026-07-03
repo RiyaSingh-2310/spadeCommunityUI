@@ -64,17 +64,17 @@ export const API_ROUTES = {
     delete: (id) => `/api/questionaire/survey/${id}`,
   },
   screening: {
-    list: "/api/screening/questions/list",
-    create: "/api/screening/questions/add",
-    byId: (id) => `/api/screening/questions/${id}`,
+    list: "/api/panel-questionnaire/list",
+    create: "/api/panel-questionnaire/add",
+    byId: (id) => `/api/panel-questionnaire/${id}`,
     byTitle: (title) =>
-      `/api/screening/questions/by-title/${encodeURIComponent(String(title ?? "").trim())}`,
+      `/api/panel-questionnaire/by-title/${encodeURIComponent(String(title ?? "").trim())}`,
     byLanguage: (language) =>
-      `/api/screening/questions/language/${encodeURIComponent(String(language ?? "").trim())}`,
-    update: (id) => `/api/screening/questions/${id}`,
-    updateStatus: (id) => `/api/screening/questions/${id}/status`,
-    delete: (id) => `/api/screening/questions/${id}`,
-    sortOrder: "/api/screening/questions/sort-order",
+      `/api/panel-questionnaire/language/${encodeURIComponent(String(language ?? "").trim())}`,
+    update: (id) => `/api/panel-questionnaire/${id}`,
+    updateStatus: (id) => `/api/panel-questionnaire/${id}/status`,
+    delete: (id) => `/api/panel-questionnaire/${id}`,
+    sortOrder: "/api/panel-questionnaire/sort-order",
   },
   questionLibrary: {
     list: "/api/question-library/list",

@@ -1,5 +1,5 @@
 import { API_ROUTES } from "../../config/api";
-import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
+import { extractListTotalFromResponse, safeMapListItems } from "../../modules/shared/utils/listResponse";
 import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import {
   apiStatusToFormValue,
@@ -356,6 +356,16 @@ async function enrichScreeningQuestionRecord(record) {
   }
 }
 
+function normalizePanelQuestionnaireLanguage(language) {
+  return String(language ?? "").trim().toLowerCase();
+}
+
+function formatPanelQuestionnaireLanguageForUi(language) {
+  const slug = normalizePanelQuestionnaireLanguage(language);
+  if (!slug) return "";
+  return slug.charAt(0).toUpperCase() + slug.slice(1);
+}
+
 function resolveOptionsAsStrings(payload) {
   if (Array.isArray(payload.options)) {
     return payload.options
@@ -379,70 +389,88 @@ function resolveOptionsAsStrings(payload) {
   return [];
 }
 
+function hasPayloadField(payload, ...keys) {
+  if (!payload || typeof payload !== "object") return false;
+  return keys.some(
+    (key) => Object.prototype.hasOwnProperty.call(payload, key) && payload[key] !== undefined
+  );
+}
+
 function buildQuestionBody(payload, { includeStatus = true, partial = false } = {}) {
   const body = {};
+  const source = payload ?? {};
 
-  const language = String(payload.language ?? "").trim();
+  const language = String(source.language ?? "").trim();
   const questionTitle = String(
-    payload.questionTitle ?? payload.question_title ?? payload.title ?? ""
+    source.questionTitle ?? source.question_title ?? source.title ?? ""
   ).trim();
   const questionText = String(
-    payload.questionText ?? payload.question_text ?? questionTitle
+    source.questionText ?? source.question_text ?? questionTitle
   ).trim();
   const questionType = uiToApiQuestionType(
-    payload.questionType ?? payload.question_type ?? "textbox"
+    source.questionType ?? source.question_type ?? "textbox"
   );
-  const options = resolveOptionsAsStrings(payload);
-  const sortOrder = Number(payload.sortOrder ?? payload.sort_order ?? 0) || 0;
+  const options = resolveOptionsAsStrings(source);
+  const sortOrder = Number(source.sortOrder ?? source.sort_order ?? 0) || 0;
   const isRequired = Boolean(
-    payload.required ?? payload.is_required ?? payload.isRequired
+    source.required ?? source.is_required ?? source.isRequired
   );
 
-  if (!partial || payload.language != null) body.language = language;
-  if (!partial || payload.questionTitle != null || payload.question_title != null) {
+  const include = (fieldPresent) => !partial || fieldPresent;
+
+  if (include(hasPayloadField(source, "language"))) {
+    body.language = normalizePanelQuestionnaireLanguage(language);
+  }
+  if (include(hasPayloadField(source, "questionTitle", "question_title", "title"))) {
     body.question_title = questionTitle;
   }
   if (
-    !partial ||
-    payload.questionText != null ||
-    payload.question_text != null ||
-    payload.questionTitle != null ||
-    payload.question_title != null
+    include(
+      hasPayloadField(source, "questionText", "question_text") ||
+        (!partial && hasPayloadField(source, "questionTitle", "question_title", "title"))
+    )
   ) {
-    body.question_text = questionText;
+    body.question_text = hasPayloadField(source, "questionText", "question_text")
+      ? String(source.questionText ?? source.question_text ?? "").trim()
+      : questionText;
   }
-  if (!partial || payload.questionType != null || payload.question_type != null) {
+  if (include(hasPayloadField(source, "questionType", "question_type"))) {
     body.question_type = questionType;
   }
-  if (!partial || payload.options != null) body.options = options;
-  if (!partial || payload.sortOrder != null || payload.sort_order != null) {
+  if (include(hasPayloadField(source, "options", "optionsText", "mappedOptions"))) {
+    body.options = options;
+  }
+  if (include(hasPayloadField(source, "sortOrder", "sort_order"))) {
     body.sort_order = sortOrder;
   }
-  if (!partial || payload.required != null || payload.is_required != null) {
+  if (include(hasPayloadField(source, "required", "is_required", "isRequired"))) {
     body.is_required = isRequired ? 1 : 0;
   }
-  if (includeStatus && (!partial || payload.status != null)) {
-    body.status = formValueToApiStatus(payload.status ?? "Active");
+  if (
+    includeStatus &&
+    include(hasPayloadField(source, "status"))
+  ) {
+    body.status = formValueToApiStatus(source.status ?? "Active");
   }
 
   return body;
 }
 
-function appendScreeningListQuery(basePath, { page, limit, search, language } = {}) {
-  const extra = {};
-  const alwaysIncludeEmpty = ["search"];
+/** POST /api/panel-questionnaire/add — request body builder. */
+export function buildPanelQuestionnaireCreateBody(payload) {
+  return buildQuestionBody(payload, { includeStatus: true, partial: false });
+}
 
-  if (language !== undefined) {
-    extra.language = String(language ?? "");
-    alwaysIncludeEmpty.push("language");
-  }
+/** PUT /api/panel-questionnaire/:id — sends only fields present in payload. */
+export function buildPanelQuestionnaireUpdateBody(payload) {
+  return buildQuestionBody(payload, { includeStatus: false, partial: true });
+}
 
+function appendScreeningListQuery(basePath, { page, limit, search } = {}) {
   return appendListQuery(basePath, {
     page,
     limit,
-    search,
-    alwaysIncludeEmpty,
-    extra: Object.keys(extra).length > 0 ? extra : undefined,
+    search: normalizeSearchQuery(search),
   });
 }
 
@@ -481,7 +509,7 @@ export async function getScreeningQuestionsByLanguage(language) {
       appendScreeningListQuery(API_ROUTES.screening.list, {
         page: 1,
         limit: 500,
-        language: normalizedLanguage,
+        search: normalizedLanguage,
       })
     );
     assertSuccess(data);
@@ -536,7 +564,7 @@ export function mapScreeningQuestionToForm(record) {
   const required = mapRequiredValue(record);
 
   return {
-    language: record?.language ?? "",
+    language: formatPanelQuestionnaireLanguageForUi(record?.language),
     questionTitle: record?.question_title ?? record?.questionTitle ?? "",
     questionText: record?.question_text ?? record?.questionText ?? "",
     questionType,
@@ -590,7 +618,7 @@ export function mapScreeningQuestionToRow(record) {
     id: getRecordId(record),
     title,
     questionTitle: title,
-    language: record?.language ?? "",
+    language: formatPanelQuestionnaireLanguageForUi(record?.language),
     questionType: normalizeQuestionTypeLabel(
       apiToUiQuestionType(record?.question_type ?? record?.questionType)
     ),
@@ -611,7 +639,7 @@ export function listScreeningRecords({ page, limit, search } = {}) {
   });
 }
 
-/** GET /api/screening/questions/list */
+/** GET /api/panel-questionnaire/list */
 export async function getRecords({ page, limit, search } = {}) {
   const data = await apiRequest(
     appendScreeningListQuery(API_ROUTES.screening.list, {
@@ -624,9 +652,9 @@ export async function getRecords({ page, limit, search } = {}) {
 
   const questions = extractQuestionList(data);
   const total = extractListTotalFromResponse(data, questions.length);
-  const items = questions
-    .map((record) => normalizeScreeningListRecord(record))
-    .map((record) => mapScreeningQuestionToRow(record));
+  const items = safeMapListItems(questions, (record) =>
+    mapScreeningQuestionToRow(normalizeScreeningListRecord(record))
+  );
 
   return {
     ...data,
@@ -763,7 +791,7 @@ export async function getQuestionnaireByQuestionId(id) {
   }
 }
 
-/** DELETE /api/screening/questions/:id */
+/** DELETE /api/panel-questionnaire/:id */
 export async function deleteScreeningQuestion(id) {
   const normalizedId = normalizeQuestionId(id);
   const data = await apiRequest(API_ROUTES.screening.delete(normalizedId), {
@@ -773,28 +801,34 @@ export async function deleteScreeningQuestion(id) {
   return assertSuccess(data);
 }
 
-/** POST /api/screening/questions/add */
+/** POST /api/panel-questionnaire/add */
 export async function createScreeningQuestion(payload) {
   const data = await apiRequest(API_ROUTES.screening.create, {
     method: "POST",
-    body: buildQuestionBody(payload),
+    body: buildPanelQuestionnaireCreateBody(payload),
   });
 
   return assertSuccess(data);
 }
 
-/** PUT /api/screening/questions/:id */
+/** PUT /api/panel-questionnaire/:id */
 export async function updateScreeningQuestion(id, payload) {
   const normalizedId = normalizeQuestionId(id);
+  const body = buildPanelQuestionnaireUpdateBody(payload);
+
+  if (!body || Object.keys(body).length === 0) {
+    throw new ApiError("No fields to update", null);
+  }
+
   const data = await apiRequest(API_ROUTES.screening.update(normalizedId), {
     method: "PUT",
-    body: buildQuestionBody(payload, { partial: true }),
+    body,
   });
 
   return assertSuccess(data);
 }
 
-/** PATCH /api/screening/questions/:id/status */
+/** PATCH /api/panel-questionnaire/:id/status */
 export async function updateScreeningQuestionStatus(id, status) {
   const normalizedId = normalizeQuestionId(id);
   const data = await apiRequest(API_ROUTES.screening.updateStatus(normalizedId), {

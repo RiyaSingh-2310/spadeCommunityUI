@@ -145,6 +145,9 @@ const VALUE_FALLBACKS = {
   sno: ["id"],
   createdDate: ["createdAt"],
   createdAt: ["createdDate", "date"],
+  credit: ["totalRewardCredit"],
+  debit: ["totalRewardDebit"],
+  balance: ["totalRewardBalance"],
 };
 
 export function getRowValue(row, columnLabel) {

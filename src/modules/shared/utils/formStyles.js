@@ -6,6 +6,11 @@ export function getAdminInputClass() {
   return ADMIN_INPUT_BASE;
 }
 
+/** Compact themed select for table status cells. */
+export function getAdminTableSelectClass() {
+  return "admin-input admin-table-select h-8 w-full cursor-pointer py-1 pl-2.5 pr-7 text-xs font-medium";
+}
+
 /** Theme-aware textarea styling — same as inputs with flexible height. */
 export function getAdminTextareaClass(extraClass = "") {
   return `${ADMIN_INPUT_BASE} min-h-[112px] resize-y py-3 ${extraClass}`.trim();

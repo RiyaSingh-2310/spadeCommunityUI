@@ -39,6 +39,7 @@ import {
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { DEFAULT_PAGE_SIZE, paginateItems } from "../utils/pagination";
 import { formatStatusLabel } from "../utils/statusLabels";
+import TableStatusSelect from "../../../components/admin/TableStatusSelect";
 import { normalizeSearchQuery, rowMatchesSearchQuery } from "../utils/searchQuery";
 import ModuleListingActionCell from "./moduleListing/ModuleListingActionCell";
 import RfqStatusBadge from "../../sales/components/RfqStatusBadge";
@@ -74,6 +75,9 @@ function ModuleListingPage({
   editPath,
   onSearch,
   onStatusToggle,
+  /** When set, status column renders as a themed dropdown (e.g. Approved / Rejected). */
+  statusDropdownOptions = null,
+  onStatusChange,
   onView,
   onFindUser,
   onUserSurveyData,
@@ -123,6 +127,8 @@ function ModuleListingPage({
   renderExpandedContent = null,
   /** Use a narrower fixed-width status column (e.g. group survey inner listing). */
   compactStatusColumn = false,
+  /** Tighter cell padding for dense listings (e.g. reward tables). */
+  compactTable = false,
   /** When set, description cells clamp to this many lines (user email templates). */
   descriptionMaxLines = null,
 }) {
@@ -645,7 +651,9 @@ function ModuleListingPage({
       </div>
 
       <TableCard footer={paginationFooter} flush>
-          <table className="admin-table min-w-full text-sm">
+          <table
+            className={`admin-table min-w-full text-sm${compactTable ? " admin-table-compact" : ""}`}
+          >
           <thead>
             <tr className="admin-text-muted">
               {hasExpandColumn && (
@@ -760,6 +768,44 @@ function ModuleListingPage({
                     return (
                       <td key={col} className="px-4 py-3 align-middle whitespace-nowrap">
                         <span className="admin-text">{formatStatusDisplay(row)}</span>
+                      </td>
+                    );
+                  }
+                  if (
+                    key === "status" &&
+                    showStatus &&
+                    Array.isArray(statusDropdownOptions) &&
+                    statusDropdownOptions.length > 0
+                  ) {
+                    const currentStatus = String(row.status ?? "").trim();
+                    return (
+                      <td
+                        key={col}
+                        className={`admin-table-status-col px-3 py-3 align-middle ${statusColumnClass}`}
+                      >
+                        <TableStatusSelect
+                          value={currentStatus}
+                          options={statusDropdownOptions}
+                          disabled={!allowWrite}
+                          aria-label="Reward request status"
+                          onChange={(nextStatus) => {
+                            if (nextStatus === currentStatus) return;
+                            if (onStatusChange) {
+                              onStatusChange(row, nextStatus, globalIdx);
+                              return;
+                            }
+                            setInternalData((prev) =>
+                              prev.map((item) => {
+                                const matches =
+                                  (row.id && item.id === row.id) ||
+                                  (row[rowIdKey] && item[rowIdKey] === row[rowIdKey]) ||
+                                  item === row;
+                                if (!matches) return item;
+                                return { ...item, status: nextStatus };
+                              })
+                            );
+                          }}
+                        />
                       </td>
                     );
                   }
