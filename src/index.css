@@ -531,16 +531,69 @@ body {
 }
 
 .admin-table .admin-table-status-col-compact {
-  min-width: 100px;
-  width: 100px;
-  max-width: 100px;
+  min-width: 132px;
+  width: 132px;
+  max-width: none;
+}
+
+.admin-table .admin-table-status-col.admin-table-status-col-dropdown {
+  overflow: visible;
+  width: 1%;
+  min-width: 0;
+  max-width: none;
+  white-space: nowrap;
 }
 
 .admin-table-select-wrap {
   position: relative;
   display: inline-flex;
-  width: 100%;
-  max-width: 7.25rem;
+  width: auto;
+  max-width: none;
+}
+
+.admin-table-status-select-trigger {
+  gap: 0.25rem;
+  min-height: 30px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--admin-input-border);
+  background-color: var(--admin-input-bg);
+  color: var(--admin-foreground);
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.admin-table-status-select-label {
+  flex: 0 1 auto;
+  white-space: nowrap;
+  color: var(--admin-foreground);
+}
+
+.admin-table-status-select-chevron {
+  color: var(--admin-subtle-foreground);
+  flex-shrink: 0;
+  margin-left: 0;
+}
+
+.admin-table-status-select-trigger-open,
+.admin-table-status-select-trigger:hover:not(:disabled) {
+  border-color: var(--admin-primary-color);
+}
+
+.admin-table-status-select-trigger:focus-visible {
+  border-color: var(--admin-primary-color);
+  box-shadow: 0 0 0 3px var(--admin-input-focus-ring);
+  outline: none;
+}
+
+.admin-table-status-select-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .admin-table-select {
@@ -573,14 +626,15 @@ body {
 }
 
 .admin-table.admin-table-compact .admin-table-status-col {
-  min-width: 7.25rem;
-  width: 7.25rem;
+  min-width: 132px;
+  width: auto;
 }
 
-.admin-table.admin-table-compact .admin-table-status-col-compact {
-  min-width: 7.25rem;
-  width: 7.25rem;
-  max-width: 7.25rem;
+.admin-table.admin-table-compact .admin-table-status-col-compact,
+.admin-table.admin-table-compact .admin-table-status-col-dropdown {
+  min-width: 132px;
+  width: auto;
+  max-width: none;
 }
 
 .admin-rich-editor:empty::before {

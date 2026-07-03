@@ -1,7 +1,21 @@
 import { Eye } from "lucide-react";
 
-function ViewActionButton({ onView, label = "View" }) {
+function ViewActionButton({ onView, label = "View", iconOnly = false }) {
   if (!onView) return null;
+
+  if (iconOnly) {
+    return (
+      <button
+        type="button"
+        onClick={onView}
+        className="admin-icon-action"
+        aria-label={label}
+        title={label}
+      >
+        <Eye size={16} strokeWidth={2} />
+      </button>
+    );
+  }
 
   return (
     <button

@@ -154,6 +154,7 @@ function ModuleListingPage({
   const hasActionColumn = columns.some(isActionColumn);
   const isExternallyManaged = Boolean(
     onStatusToggle ||
+      onStatusChange ||
       onEdit ||
       onDelete ||
       onManagePermissions ||
@@ -781,12 +782,13 @@ function ModuleListingPage({
                     return (
                       <td
                         key={col}
-                        className={`admin-table-status-col px-3 py-3 align-middle ${statusColumnClass}`}
+                        className={`admin-table-status-col admin-table-status-col-dropdown px-4 py-3 align-middle ${statusColumnClass}`}
                       >
                         <TableStatusSelect
                           value={currentStatus}
                           options={statusDropdownOptions}
                           disabled={!allowWrite}
+                          isDarkMode={isDarkMode}
                           aria-label="Reward request status"
                           onChange={(nextStatus) => {
                             if (nextStatus === currentStatus) return;

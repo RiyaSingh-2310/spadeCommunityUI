@@ -13,14 +13,14 @@ const REWARD_INFO_FIELDS = [
 ];
 
 const REQUEST_DETAIL_FIELDS = [
-  { label: "Created Date", key: "createdDate" },
   { label: "Status", key: "status" },
+  { label: "Created At", key: "createdDate" },
 ];
 
 const VIEW_EXTRA_FIELDS = [{ label: "Completed Date", key: "completedDate" }];
 
-function formatDetailValue(value) {
-  if (value == null || String(value).trim() === "") return "—";
+function formatDetailValue(value, { emptyLabel = "—" } = {}) {
+  if (value == null || String(value).trim() === "") return emptyLabel;
   return String(value);
 }
 
@@ -31,11 +31,15 @@ function resolveRowValue(row, key) {
   if (key === "createdDate") {
     return row.createdDate ?? row.createdAt ?? "";
   }
+  if (key === "remark") {
+    return row.remark ?? row.description ?? row.comments ?? "";
+  }
   return row[key];
 }
 
-function DetailSection({ title, fields, row }) {
+function DetailSection({ title, fields, row, emptyLabel = "—" }) {
   const visibleFields = fields.filter((field) => {
+    if (field.alwaysShow) return true;
     const value = resolveRowValue(row, field.key);
     return value != null && String(value).trim() !== "";
   });
@@ -49,13 +53,48 @@ function DetailSection({ title, fields, row }) {
       </h3>
       <dl className="grid gap-2 sm:grid-cols-2">
         {visibleFields.map((field) => (
-          <div key={field.key} className="min-w-0">
+          <div
+            key={field.key}
+            className={`min-w-0 ${field.fullWidth ? "sm:col-span-2" : ""}`}
+          >
             <dt className="admin-text-muted text-xs font-medium">{field.label}</dt>
             <dd className="admin-text mt-0.5 text-sm break-words">
-              {formatDetailValue(resolveRowValue(row, field.key))}
+              {formatDetailValue(resolveRowValue(row, field.key), { emptyLabel })}
             </dd>
           </div>
         ))}
+      </dl>
+    </div>
+  );
+}
+
+function RequestSummarySection({ row }) {
+  const status = resolveRowValue(row, "status");
+  const createdAt = resolveRowValue(row, "createdDate");
+  const remark = resolveRowValue(row, "remark");
+
+  return (
+    <div className="mb-4">
+      <h3 className="admin-text-muted mb-2 text-xs font-semibold uppercase tracking-[0.04em]">
+        Request Details
+      </h3>
+      <dl className="space-y-2.5">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="min-w-0">
+            <dt className="admin-text-muted text-xs font-medium">Status</dt>
+            <dd className="admin-text mt-0.5 text-sm">{formatDetailValue(status)}</dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="admin-text-muted text-xs font-medium">Created At</dt>
+            <dd className="admin-text mt-0.5 text-sm">{formatDetailValue(createdAt)}</dd>
+          </div>
+        </div>
+        <div className="min-w-0">
+          <dt className="admin-text-muted text-xs font-medium">Remark</dt>
+          <dd className="admin-text mt-0.5 text-sm whitespace-pre-wrap break-words">
+            {formatDetailValue(remark, { emptyLabel: "N/A" })}
+          </dd>
+        </div>
       </dl>
     </div>
   );
@@ -92,9 +131,11 @@ function RewardDetailsModal({
       ? "Are you sure you want to reject this reward request?"
       : "";
 
-  const requestFields = isView
-    ? [...REQUEST_DETAIL_FIELDS, ...VIEW_EXTRA_FIELDS.filter((field) => row[field.key])]
-    : REQUEST_DETAIL_FIELDS;
+  const actionRequestFields = [
+    ...REQUEST_DETAIL_FIELDS,
+    { label: "Remark", key: "remark", alwaysShow: true, fullWidth: true },
+    ...VIEW_EXTRA_FIELDS.filter((field) => row[field.key]),
+  ];
 
   return (
     <div className="admin-modal-overlay fixed inset-0 z-[250] flex items-center justify-center p-4">
@@ -117,14 +158,17 @@ function RewardDetailsModal({
 
         <DetailSection title="User Information" fields={USER_INFO_FIELDS} row={row} />
         <DetailSection title="Reward Information" fields={REWARD_INFO_FIELDS} row={row} />
-        <DetailSection title="Request Details" fields={requestFields} row={row} />
 
-        {isView && row.comments ? (
-          <div className="mb-4">
-            <p className="admin-text-muted text-xs font-medium">Comments</p>
-            <p className="admin-text mt-1 text-sm whitespace-pre-wrap break-words">{row.comments}</p>
-          </div>
-        ) : null}
+        {isView ? (
+          <RequestSummarySection row={row} />
+        ) : (
+          <DetailSection
+            title="Request Details"
+            fields={actionRequestFields}
+            row={row}
+            emptyLabel="N/A"
+          />
+        )}
 
         {isAction ? (
           <>

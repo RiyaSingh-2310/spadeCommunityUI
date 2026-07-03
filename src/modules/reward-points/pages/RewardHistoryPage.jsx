@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import AdminDateRangeFilter from "../../../components/admin/AdminDateRangeFilter";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import RewardDetailsModal from "../components/RewardDetailsModal";
 
 const REWARD_TYPES = [
   "Registration Reward",
@@ -11,6 +12,14 @@ const REWARD_TYPES = [
 ];
 
 const STATUS_OPTIONS = ["Approved", "Rejected"];
+
+const DEMO_REMARKS = [
+  "Requested Amazon voucher redemption for survey rewards.",
+  "Requested reward redemption for completed survey participation.",
+  "Redemption request for referral bonus points.",
+  "Manual adjustment review for registration reward.",
+  "",
+];
 
 function buildDemoRow(idx) {
   const rewardType = REWARD_TYPES[idx % REWARD_TYPES.length];
@@ -28,6 +37,7 @@ function buildDemoRow(idx) {
     totalRewardDebit: String(totalRewardDebit),
     totalRewardBalance: String(totalRewardCredit - totalRewardDebit),
     status: STATUS_OPTIONS[idx % STATUS_OPTIONS.length],
+    remark: DEMO_REMARKS[idx % DEMO_REMARKS.length],
     createdAt: `${String(1 + (idx % 28)).padStart(2, "0")}/06/2026`,
     date: `${String(1 + (idx % 28)).padStart(2, "0")}/06/2026`,
   };
@@ -46,6 +56,7 @@ function RewardHistoryPage({ isDarkMode }) {
   const [rows, setRows] = useState(INITIAL_ROWS);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [viewTarget, setViewTarget] = useState(null);
 
   const filteredRows = useMemo(() => {
     const from = fromDate ? new Date(fromDate) : null;
@@ -84,6 +95,7 @@ function RewardHistoryPage({ isDarkMode }) {
           "Balance",
           "Status",
           "Created At",
+          "Action",
         ]}
         rows={filteredRows}
         rowIdKey="id"
@@ -91,10 +103,9 @@ function RewardHistoryPage({ isDarkMode }) {
         statusDropdownOptions={STATUS_OPTIONS}
         onStatusChange={handleStatusChange}
         permissionModule="reward_history"
-        nowrapAllCells
-        compactTable
-        compactStatusColumn
+        actionVariant="reward-pending"
         showPagination
+        onView={(row) => setViewTarget(row)}
         toolbarEnd={
           <AdminDateRangeFilter
             fromDate={fromDate}
@@ -103,6 +114,21 @@ function RewardHistoryPage({ isDarkMode }) {
             onToChange={setToDate}
           />
         }
+      />
+
+      <RewardDetailsModal
+        isOpen={Boolean(viewTarget)}
+        mode="view"
+        row={
+          viewTarget
+            ? {
+                ...viewTarget,
+                rewardPoints: viewTarget.totalRewardBalance,
+                createdDate: viewTarget.createdAt,
+              }
+            : null
+        }
+        onCancel={() => setViewTarget(null)}
       />
     </div>
   );

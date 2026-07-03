@@ -19,7 +19,6 @@ export function getPortalDropdownStyle(menuStyle, menuWidth) {
     }),
     visibility: menuStyle ? "visible" : "hidden",
     zIndex: PORTAL_DROPDOWN_Z_INDEX,
-    backgroundColor: "#ffffff",
     ...(menuWidth ? { width: menuWidth } : {}),
   };
 }
@@ -30,6 +29,7 @@ export function PortalDropdownMenu({
   menuStyle,
   ariaLabel,
   menuWidth,
+  theme = "light",
   children,
 }) {
   if (!isOpen) return null;
@@ -39,6 +39,7 @@ export function PortalDropdownMenu({
       ref={menuRef}
       role="listbox"
       aria-label={ariaLabel}
+      data-theme={theme}
       className="admin-portal-dropdown flex flex-col overflow-hidden rounded-xl"
       style={getPortalDropdownStyle(menuStyle, menuWidth)}
     >

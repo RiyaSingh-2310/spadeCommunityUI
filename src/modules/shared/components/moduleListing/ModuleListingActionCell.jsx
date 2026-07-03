@@ -218,16 +218,28 @@ function ModuleListingActionCell({
   }
 
   if (actionVariant === "reward-pending") {
-    return (
-      <td key={col} className={cellClass}>
-        <RewardPendingActions
-        isDarkMode={isDarkMode}
-        row={row}
-        onApprove={allowWrite && onApprove ? () => onApprove(row, globalIdx) : undefined}
-        onReject={allowWrite && onReject ? () => onReject(row, globalIdx) : undefined}
-      />
-      </td>
-    );
+    if (onApprove || onReject) {
+      return (
+        <td key={col} className={cellClass}>
+          <RewardPendingActions
+          isDarkMode={isDarkMode}
+          row={row}
+          onApprove={allowWrite && onApprove ? () => onApprove(row, globalIdx) : undefined}
+          onReject={allowWrite && onReject ? () => onReject(row, globalIdx) : undefined}
+        />
+        </td>
+      );
+    }
+
+    if (onView) {
+      return (
+        <td key={col} className={cellClass}>
+          <ViewActionButton onView={() => onView(row, globalIdx)} iconOnly />
+        </td>
+      );
+    }
+
+    return null;
   }
 
   if (!allowWrite) return null;
