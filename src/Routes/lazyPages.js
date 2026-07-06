@@ -165,3 +165,26 @@ export const AddUserEmailTemplatePage = lazy(
 export const EditUserEmailTemplatePage = lazy(
   () => import("../modules/user-email-templates/pages/EditUserEmailTemplatePage")
 );
+
+/** Survey Research Portal (demo) */
+export const SurveyResearchPortalLayout = lazy(
+  () => import("../modules/survey-research/layout/SurveyResearchPortalLayout")
+);
+export const PortalOverviewPage = lazy(
+  () => import("../modules/survey-research/pages/PortalOverviewPage")
+);
+export const PreScreenerGroupsPage = lazy(
+  () => import("../modules/survey-research/pages/PreScreenerGroupsPage")
+);
+export const PreScreenerGroupFormPage = lazy(
+  () => import("../modules/survey-research/pages/PreScreenerGroupFormPage")
+);
+export const QuestionnairePreviewPage = lazy(
+  () => import("../modules/survey-research/pages/QuestionnairePreviewPage")
+);
+export const ProjectSurveyManagementPage = lazy(
+  () => import("../modules/survey-research/pages/ProjectSurveyManagementPage")
+);
+export const SurveyAnalyticsPage = lazy(
+  () => import("../modules/survey-research/pages/SurveyAnalyticsPage")
+);

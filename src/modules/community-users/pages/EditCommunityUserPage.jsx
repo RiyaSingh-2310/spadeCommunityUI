@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
+import FormStatusSelect from "../../../components/admin/FormStatusSelect";
 import ProfileImageUpload from "../../../components/admin/ProfileImageUpload";
 import TableCard from "../../../components/admin/TableCard";
 import PasswordField from "../../settings/components/PasswordField";
@@ -11,16 +12,26 @@ import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/util
 import { resolveProfileImageUrl } from "../../shared/utils/userAvatar";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
+  getEmailError,
   getOptionalConfirmPasswordError,
   getOptionalPasswordError,
-  getRequiredError,
+  getUserNameError,
   isFormValid,
+  limitTextInput,
+  USER_FIELD_MAX_LENGTH,
 } from "../../shared/utils/validation";
-import { toastApiSuccess } from "../../../services/toast/apiToast";
-import { getCommunityUserById } from "../data/communityUsersStore";
-import { updateRecord } from "../services/communityUsersApi";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { getRecord, mapPanelistToForm, updateRecord } from "../services/communityUsersApi";
 
-const FORM_FIELDS = ["name", "password", "confirmPassword"];
+const FORM_FIELDS = ["name", "email", "password", "confirmPassword"];
+
+const EMPTY_FORM = {
+  name: "",
+  email: "",
+  status: "Active",
+  password: "",
+  confirmPassword: "",
+};
 
 function splitFullName(name) {
   const parts = String(name ?? "").trim().split(/\s+/).filter(Boolean);
@@ -30,45 +41,76 @@ function splitFullName(name) {
   };
 }
 
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ""));
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 function EditCommunityUserPage({ isDarkMode }) {
   const navigate = useNavigate();
   const { id } = useParams();
-  const existing = id ? getCommunityUserById(id) : null;
   const { readOnly, showSubmit } = useFormAccess();
 
-  const initialName = existing?.name ?? "";
-  const initialMobile = existing?.mobileNumber ?? "";
-  const initialImage = resolveProfileImageUrl(existing) ?? "";
-
-  const [name, setName] = useState(initialName);
-  const [emailAddress] = useState(existing?.emailAddress ?? "");
-  const [mobileNumber, setMobileNumber] = useState(initialMobile);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
+  const [existingImage, setExistingImage] = useState("");
   const [preview, setPreview] = useState("");
   const [imageFile, setImageFile] = useState(null);
-  const [existingImage] = useState(initialImage);
+  const [isLoadingRecord, setIsLoadingRecord] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { firstName, lastName } = splitFullName(name);
   const inputClass = getAdminInputClass();
+  const { firstName, lastName } = splitFullName(form.name);
+
+  useEffect(() => {
+    if (!id) {
+      setIsLoadingRecord(false);
+      setLoadFailed(true);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadPanelist = async () => {
+      setIsLoadingRecord(true);
+      setLoadFailed(false);
+
+      try {
+        const record = await getRecord(id);
+        if (cancelled) return;
+
+        const mapped = mapPanelistToForm(record);
+        const snapshot = {
+          name: mapped.name.trim(),
+          email: mapped.email.trim(),
+          status: mapped.status,
+        };
+
+        setForm({
+          ...EMPTY_FORM,
+          ...mapped,
+        });
+        setInitialSnapshot(snapshot);
+        setExistingImage(resolveProfileImageUrl(record) ?? "");
+      } catch (error) {
+        if (cancelled) return;
+        toastApiError(error);
+        setLoadFailed(true);
+      } finally {
+        if (!cancelled) setIsLoadingRecord(false);
+      }
+    };
+
+    loadPanelist();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const errors = useMemo(
     () => ({
-      name: getRequiredError(name, "Name"),
-      password: getOptionalPasswordError(password),
-      confirmPassword: getOptionalConfirmPasswordError(password, confirmPassword),
+      name: getUserNameError(form.name),
+      email: getEmailError(form.email, { label: "Email Address" }),
+      password: getOptionalPasswordError(form.password),
+      confirmPassword: getOptionalConfirmPasswordError(form.password, form.confirmPassword),
     }),
-    [name, password, confirmPassword]
+    [form]
   );
 
   const { showError, touch, validateSubmit } = useFormValidation({
@@ -77,58 +119,48 @@ function EditCommunityUserPage({ isDarkMode }) {
   });
 
   const isDirty = useMemo(() => {
-    if (!existing) return false;
-    if (imageFile) return true;
-    if (preview && preview !== existingImage) return true;
-    if (name.trim() !== initialName.trim()) return true;
-    if (mobileNumber.trim() !== initialMobile.trim()) return true;
-    if (password.trim()) return true;
-    if (confirmPassword.trim()) return true;
-    return false;
-  }, [
-    existing,
-    imageFile,
-    preview,
-    existingImage,
-    name,
-    initialName,
-    mobileNumber,
-    initialMobile,
-    password,
-    confirmPassword,
-  ]);
+    if (!initialSnapshot) return false;
+    return (
+      form.name.trim() !== initialSnapshot.name ||
+      form.email.trim() !== initialSnapshot.email ||
+      form.status !== initialSnapshot.status
+    );
+  }, [form, initialSnapshot]);
 
   const canSubmit =
-    showSubmit && !readOnly && isFormValid(errors) && !isSubmitting && isDirty && Boolean(existing);
+    showSubmit && !readOnly && isFormValid(errors) && !isSubmitting && isDirty && !loadFailed;
+
+  const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!validateSubmit() || !isFormValid(errors) || !existing || !isDirty) return;
+    if (!validateSubmit() || !isFormValid(errors) || !id || !isDirty) return;
 
     setIsSubmitting(true);
     try {
-      const payload = {
-        name: name.trim(),
-        mobileNumber: mobileNumber.trim(),
-      };
-
-      if (imageFile) {
-        payload.profileImage = await readFileAsDataUrl(imageFile);
-      }
-
-      if (password.trim()) {
-        payload.password = password.trim();
-      }
-
-      await updateRecord(existing.id, payload);
-      toastApiSuccess({ message: "User updated successfully." });
-      navigate("/community-users", { replace: true });
+      const data = await updateRecord(id, {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        status: form.status,
+      });
+      toastApiSuccess(data);
+      navigate("/community-users", { replace: true, state: { refresh: true } });
+    } catch (error) {
+      toastApiError(error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!existing) {
+  if (isLoadingRecord) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-[#10a950]" />
+      </div>
+    );
+  }
+
+  if (loadFailed || !initialSnapshot) {
     return (
       <div className="space-y-6">
         <AdminPageHeader title="Edit User Details" isDarkMode={isDarkMode} />
@@ -164,7 +196,7 @@ function EditCommunityUserPage({ isDarkMode }) {
             onFileChange={setImageFile}
             existingImage={existingImage}
             showCurrentLabel
-            name={name}
+            name={form.name}
             firstName={firstName}
             lastName={lastName}
           />
@@ -172,37 +204,37 @@ function EditCommunityUserPage({ isDarkMode }) {
           <FormField label="Name" required error={showError("name")}>
             <input
               className={inputClass}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
+              value={form.name}
+              maxLength={USER_FIELD_MAX_LENGTH}
+              onChange={(event) => setField("name", limitTextInput(event.target.value))}
               onBlur={() => touch("name")}
               disabled={fieldDisabled(readOnly, isSubmitting)}
             />
           </FormField>
 
-          <FormField label="Email Address">
+          <FormField label="Email Address" required error={showError("email")}>
             <input
               type="email"
-              className={`${inputClass} opacity-70`}
-              value={emailAddress}
-              disabled
-              readOnly
-            />
-          </FormField>
-
-          <FormField label="Mobile Number">
-            <input
               className={inputClass}
-              value={mobileNumber}
-              onChange={(event) => setMobileNumber(event.target.value)}
-              placeholder="Enter Mobile Number"
+              value={form.email}
+              maxLength={USER_FIELD_MAX_LENGTH}
+              onChange={(event) => setField("email", limitTextInput(event.target.value))}
+              onBlur={() => touch("email")}
               disabled={fieldDisabled(readOnly, isSubmitting)}
             />
           </FormField>
 
+          <FormStatusSelect
+            value={form.status}
+            onChange={(status) => setField("status", status)}
+            inputClass={inputClass}
+            disabled={fieldDisabled(readOnly, isSubmitting)}
+          />
+
           <PasswordField
             label="New Password"
-            value={password}
-            onChange={setPassword}
+            value={form.password}
+            onChange={(value) => setField("password", limitTextInput(value))}
             onBlur={() => touch("password")}
             error={showError("password")}
             placeholder="Enter New Password"
@@ -211,8 +243,8 @@ function EditCommunityUserPage({ isDarkMode }) {
 
           <PasswordField
             label="Confirm New Password"
-            value={confirmPassword}
-            onChange={setConfirmPassword}
+            value={form.confirmPassword}
+            onChange={(value) => setField("confirmPassword", limitTextInput(value))}
             onBlur={() => touch("confirmPassword")}
             error={showError("confirmPassword")}
             placeholder="Enter Confirm New Password"

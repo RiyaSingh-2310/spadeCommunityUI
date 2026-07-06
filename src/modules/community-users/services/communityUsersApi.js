@@ -1,59 +1,225 @@
+import { API_ROUTES } from "../../../config/api";
+import { apiRequest } from "../../../services/api/client";
+import { ApiError } from "../../../services/api/ApiError";
 import {
-  deleteCommunityUser,
-  getCommunityUserById,
-  loadCommunityUsers,
-  saveCommunityUser,
-  toListingRow,
-  updateCommunityUserStatus,
-} from "../data/communityUsersStore";
-import { sortListingRowsByIdAsc } from "../../shared/utils/listingSort";
+  extractListTotalFromResponse,
+  safeMapListItems,
+} from "../../shared/utils/listResponse";
+import { appendListQuery } from "../../shared/utils/listQueryParams";
+import {
+  apiStatusToFormValue,
+  formValueToApiStatus,
+} from "../../shared/utils/statusLabels";
 import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
+import {
+  getCommunityUserById,
+} from "../data/communityUsersStore";
 import { normalizeRewardLogEntry } from "../utils/rewardLogUtils";
 
-function matchesSearch(user, search) {
-  if (!search) return true;
-  const query = search.toLowerCase();
-  return (
-    String(user.name ?? "").toLowerCase().includes(query) ||
-    String(user.emailAddress ?? "").toLowerCase().includes(query) ||
-    String(user.mobileNumber ?? "").toLowerCase().includes(query) ||
-    String(user.id ?? "").includes(query)
-  );
+const LIST_LOAD_ERROR_MESSAGE = "Unable to load panelists. Please try again later.";
+
+function isApiSuccess(data) {
+  if (!data || typeof data !== "object") return false;
+  const explicit = data.success;
+  if (explicit === false || explicit === "false") return false;
+  return explicit === true || explicit === "true" || explicit == null;
 }
 
-function matchesFilters(user, filters = {}) {
-  if (filters.status && filters.status !== "all") {
-    const expected = filters.status === "active" ? "Active" : "Inactive";
-    if (user.status !== expected) return false;
+function assertSuccess(data, fallbackMessage = "") {
+  if (!isApiSuccess(data)) {
+    throw new ApiError(data?.message || data?.error || fallbackMessage, data);
   }
-  if (filters.prescreenCompleted && filters.prescreenCompleted !== "all") {
-    const expected = filters.prescreenCompleted === "yes" ? "Yes" : "No";
-    if (user.prescreenCompleted !== expected) return false;
+  return data;
+}
+
+function extractPanelistList(data) {
+  if (!data || typeof data !== "object") return [];
+  if (Array.isArray(data.data)) return data.data;
+  if (Array.isArray(data.panelists)) return data.panelists;
+  return [];
+}
+
+function mapYesNoFromApi(value) {
+  const normalized = String(value ?? "").toLowerCase().trim();
+  if (normalized === "yes" || normalized === "1" || normalized === "true") return "Yes";
+  if (normalized === "no" || normalized === "0" || normalized === "false") return "No";
+  return "No";
+}
+
+function mapIsVerified(value) {
+  if (value === 1 || value === "1" || value === true) return "Yes";
+  if (value === 0 || value === "0" || value === false) return "No";
+  return mapYesNoFromApi(value);
+}
+
+function formatPanelistDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function extractPanelistRecord(data) {
+  if (!data || typeof data !== "object") return null;
+  if (data.data && typeof data.data === "object" && !Array.isArray(data.data)) {
+    return data.data;
+  }
+  if (data.panelist && typeof data.panelist === "object") {
+    return data.panelist;
+  }
+  if (data.id != null) return data;
+  return null;
+}
+
+function normalizePanelistId(id) {
+  const normalizedId = String(id ?? "").trim();
+  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
+    throw new ApiError("Invalid panelist id.", null);
+  }
+  return encodeURIComponent(normalizedId);
+}
+
+function buildPanelistFilterParams(filters = {}) {
+  const extra = {};
+
+  if (filters.status && filters.status !== "all") {
+    extra.status = filters.status === "active" ? "active" : "inactive";
   }
   if (filters.emailVerified && filters.emailVerified !== "all") {
-    const expected = filters.emailVerified === "yes" ? "Yes" : "No";
-    const userValue = user.emailVerified ?? "Yes";
-    if (userValue !== expected) return false;
+    extra.is_verified = filters.emailVerified === "yes" ? "1" : "0";
   }
-  return true;
+  if (filters.prescreenCompleted && filters.prescreenCompleted !== "all") {
+    extra.questionnaire = filters.prescreenCompleted === "yes" ? "yes" : "no";
+  }
+
+  return extra;
 }
 
-/**
- * @param {{ page?: number, limit?: number, search?: string, filters?: { status?: string, prescreenCompleted?: string } }} params
- */
+/** Maps panelist API record to edit form values. */
+export function mapPanelistToForm(panelist) {
+  return {
+    name: panelist?.name ?? "",
+    email: panelist?.email ?? panelist?.emailAddress ?? "",
+    status: apiStatusToFormValue(panelist?.status),
+  };
+}
+
+function buildPanelistUpdatePayload(payload) {
+  const body = {};
+
+  if (payload.name != null) {
+    body.name = String(payload.name).trim();
+  }
+  if (payload.email != null) {
+    body.email = String(payload.email).trim();
+  } else if (payload.emailAddress != null) {
+    body.email = String(payload.emailAddress).trim();
+  }
+  if (payload.status != null) {
+    body.status = formValueToApiStatus(payload.status);
+  }
+
+  return body;
+}
+
+/** Maps GET /api/panelist/list record to listing row shape. */
+export function mapPanelistToListingRow(panelist) {
+  return {
+    id: panelist?.id,
+    name: panelist?.name ?? "",
+    emailAddress: panelist?.email ?? "",
+    mobileNumber:
+      panelist?.mobile_number ??
+      panelist?.mobileNumber ??
+      panelist?.mobile ??
+      panelist?.contact_no ??
+      "—",
+    status: apiStatusToFormValue(panelist?.status),
+    prescreenCompleted: mapYesNoFromApi(panelist?.questionnaire),
+    emailVerified: mapIsVerified(panelist?.is_verified),
+    rewardPoints: panelist?.balance_point ?? panelist?.balancePoint ?? "",
+    joiningDate: formatPanelistDate(panelist?.created_at ?? panelist?.createdAt),
+    ipAddress: panelist?.ip_address ?? panelist?.ipAddress ?? "—",
+    createdAt: panelist?.created_at ?? panelist?.createdAt ?? "",
+  };
+}
+
+/** GET /api/panelist/list */
 export async function getRecords({ page = 1, limit = 10, search, filters } = {}) {
-  const normalizedSearch = normalizeSearchQuery(search);
-  const allUsers = sortListingRowsByIdAsc(
-    loadCommunityUsers()
-      .filter((user) => matchesSearch(user, normalizedSearch))
-      .filter((user) => matchesFilters(user, filters))
-  );
+  const path = appendListQuery(API_ROUTES.panelist.list, {
+    page,
+    limit,
+    search: normalizeSearchQuery(search),
+    extra: buildPanelistFilterParams(filters),
+    alwaysIncludeEmpty: ["search"],
+  });
 
-  const total = allUsers.length;
-  const start = (page - 1) * limit;
-  const items = allUsers.slice(start, start + limit).map(toListingRow);
+  try {
+    const data = await apiRequest(path);
+    assertSuccess(data);
 
-  return { items, total, count: total };
+    const panelists = extractPanelistList(data);
+    const total = extractListTotalFromResponse(data, panelists.length);
+    const items = safeMapListItems(panelists, (panelist) => mapPanelistToListingRow(panelist));
+
+    return {
+      ...data,
+      items,
+      total,
+      count: total,
+      page: data.page ?? page,
+      limit: data.limit ?? limit,
+      totalPages:
+        data.totalPages ?? Math.max(1, Math.ceil(total / (Number(limit) || 10)) || 1),
+    };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw new ApiError(error.message || LIST_LOAD_ERROR_MESSAGE, error.data, error.status, {
+        sessionExpired: error.sessionExpired,
+      });
+    }
+    throw new ApiError(LIST_LOAD_ERROR_MESSAGE, null);
+  }
+}
+
+/** GET /api/panelist/:id — falls back to list lookup when detail endpoint is unavailable. */
+export async function getRecord(id) {
+  const normalizedId = normalizePanelistId(id);
+
+  try {
+    const data = await apiRequest(API_ROUTES.panelist.byId(normalizedId));
+    assertSuccess(data, "Panelist not found.");
+
+    const panelist = extractPanelistRecord(data);
+    if (!panelist) {
+      throw new ApiError("Panelist not found.", data);
+    }
+
+    return {
+      ...mapPanelistToListingRow(panelist),
+      ...mapPanelistToForm(panelist),
+    };
+  } catch (error) {
+    const listData = await getRecords({ page: 1, limit: 100, search: "" });
+    const found = listData.items.find((item) => String(item.id) === String(id));
+    if (found) {
+      return {
+        ...found,
+        email: found.emailAddress ?? found.email ?? "",
+      };
+    }
+
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError("Panelist not found.", null);
+  }
 }
 
 export async function getUserProfilingAnswers(userId, { page = 1, limit = 10, search } = {}) {
@@ -126,26 +292,43 @@ export async function getUserRewardLogs(
   return { items, total, count: total, user };
 }
 
+/** PUT /api/panelist/:id */
 export async function updateRecord(id, payload) {
-  const existing = getCommunityUserById(id);
-  if (!existing) {
-    throw new Error("User not found.");
+  const normalizedId = normalizePanelistId(id);
+  const body = buildPanelistUpdatePayload(payload);
+
+  if (!Object.keys(body).length) {
+    throw new ApiError("No fields to update.", null);
   }
-  saveCommunityUser({ ...existing, ...payload });
-  return { message: "User updated successfully." };
+
+  const data = await apiRequest(API_ROUTES.panelist.byId(normalizedId), {
+    method: "PUT",
+    body,
+  });
+
+  return assertSuccess(data);
 }
 
+/** DELETE /api/panelist/:id */
 export async function deleteRecord(id) {
-  deleteCommunityUser(id);
-  return { message: "User deleted successfully." };
+  const normalizedId = normalizePanelistId(id);
+  const data = await apiRequest(API_ROUTES.panelist.byId(normalizedId), {
+    method: "DELETE",
+  });
+
+  return assertSuccess(data);
 }
 
 export async function updateStatus(id, status) {
-  const updated = updateCommunityUserStatus(id, status);
-  if (!updated) {
-    throw new Error("User not found.");
-  }
-  return { message: "User status updated successfully." };
+  const normalizedId = normalizePanelistId(id);
+  const data = await apiRequest(API_ROUTES.panelist.updateStatus(normalizedId), {
+    method: "PATCH",
+    body: {
+      status: formValueToApiStatus(status),
+    },
+  });
+
+  return assertSuccess(data);
 }
 
 export async function resendEmail(id) {
@@ -155,3 +338,5 @@ export async function resendEmail(id) {
   }
   return { message: `Verification email resent to ${user.emailAddress}.` };
 }
+
+export { toListingRow } from "../data/communityUsersStore";

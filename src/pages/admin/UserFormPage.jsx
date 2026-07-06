@@ -33,7 +33,9 @@ import {
   getOptionalConfirmPasswordError,
   getOptionalPasswordError,
   getPasswordError,
-  getRequiredError,
+  getUserNameError,
+  limitTextInput,
+  USER_FIELD_MAX_LENGTH,
   isFormValid,
 } from "../../modules/shared/utils/validation";
 
@@ -70,7 +72,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
 
   const errors = useMemo(
     () => ({
-      name: getRequiredError(form.name, "Name"),
+      name: getUserNameError(form.name),
       email: isEdit ? "" : getEmailError(form.email),
       password: isEdit
         ? getOptionalPasswordError(form.password)
@@ -260,7 +262,10 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                   placeholder="Enter Name"
                   className={inputClass}
                   value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  maxLength={USER_FIELD_MAX_LENGTH}
+                  onChange={(e) =>
+                    setForm({ ...form, name: limitTextInput(e.target.value) })
+                  }
                   onBlur={() => touch("name")}
                   disabled={fieldDisabled(readOnly, isSubmitting)}
                 />
@@ -275,7 +280,10 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                   placeholder="Enter Email Address"
                   className={`${inputClass} ${isEdit ? "opacity-70" : ""}`}
                   value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  maxLength={USER_FIELD_MAX_LENGTH}
+                  onChange={(e) =>
+                    setForm({ ...form, email: limitTextInput(e.target.value) })
+                  }
                   onBlur={() => touch("email")}
                   disabled={fieldDisabled(readOnly, isSubmitting) || isEdit}
                   readOnly={isEdit}
@@ -292,7 +300,10 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                     placeholder={isEdit ? "Enter New Password" : "Enter Password"}
                     className={`${inputClass} pr-10`}
                     value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    maxLength={USER_FIELD_MAX_LENGTH}
+                    onChange={(e) =>
+                      setForm({ ...form, password: limitTextInput(e.target.value) })
+                    }
                     onBlur={() => touch("password")}
                     disabled={fieldDisabled(readOnly, isSubmitting)}
                   />
@@ -317,8 +328,12 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                     placeholder={isEdit ? "Confirm New Password" : "Confirm Password"}
                     className={`${inputClass} pr-10`}
                     value={form.confirmPassword}
+                    maxLength={USER_FIELD_MAX_LENGTH}
                     onChange={(e) =>
-                      setForm({ ...form, confirmPassword: e.target.value })
+                      setForm({
+                        ...form,
+                        confirmPassword: limitTextInput(e.target.value),
+                      })
                     }
                     onBlur={() => touch("confirmPassword")}
                     disabled={fieldDisabled(readOnly, isSubmitting)}

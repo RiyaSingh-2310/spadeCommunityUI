@@ -48,7 +48,7 @@ function CompletedRewardsPage({ isDarkMode }) {
         statusAsText
         permissionModule="completed_rewards"
         actionVariant="reward-pending"
-        nowrapAllCells
+        showPagination
         onView={(row) => setViewTarget(row)}
       />
 

@@ -76,6 +76,36 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
       </Route>
 
       <Route element={<RequireAuth />}>
+        <Route
+          element={withSuspense(Pages.SurveyResearchPortalLayout, themeProps)}
+        >
+          <Route path="/survey-research" element={withSuspense(Pages.PortalOverviewPage)} />
+          <Route
+            path="/survey-research/pre-screener-groups"
+            element={withSuspense(Pages.PreScreenerGroupsPage)}
+          />
+          <Route
+            path="/survey-research/pre-screener-groups/add"
+            element={withSuspense(Pages.PreScreenerGroupFormPage)}
+          />
+          <Route
+            path="/survey-research/pre-screener-groups/edit/:id"
+            element={withSuspense(Pages.PreScreenerGroupFormPage)}
+          />
+          <Route
+            path="/survey-research/pre-screener-groups/:id/preview"
+            element={withSuspense(Pages.QuestionnairePreviewPage)}
+          />
+          <Route
+            path="/survey-research/projects"
+            element={withSuspense(Pages.ProjectSurveyManagementPage)}
+          />
+          <Route
+            path="/survey-research/analytics"
+            element={withSuspense(Pages.SurveyAnalyticsPage)}
+          />
+        </Route>
+
         <Route element={<AdminLayout isDarkMode={isDarkMode} onToggleTheme={onToggleTheme} />}>
           <Route path="/" element={withSuspense(Pages.DashboardPage, { isDarkMode })} />
           <Route path="/users" element={withSuspense(Pages.UsersPage, { isDarkMode })} />

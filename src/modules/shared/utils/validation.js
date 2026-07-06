@@ -5,6 +5,29 @@ export const URL_REGEX = /^https?:\/\/[^\s/$.?#].[^\s]*$/i;
 
 export const DEFAULT_PASSWORD_MIN_LENGTH = 8;
 
+/** Max length for admin user / manager name, email, and password fields. */
+export const USER_FIELD_MAX_LENGTH = 30;
+
+export function limitTextInput(value, maxLength = USER_FIELD_MAX_LENGTH) {
+  return String(value ?? "").slice(0, maxLength);
+}
+
+function getFieldMaxLengthError(value, maxLength, label) {
+  if (String(value ?? "").length > maxLength) {
+    return `${label} must be at most ${maxLength} characters`;
+  }
+  return "";
+}
+
+export function getUserNameError(
+  value,
+  { label = "Name", maxLength = USER_FIELD_MAX_LENGTH } = {}
+) {
+  const required = getRequiredError(value, label);
+  if (required) return required;
+  return getFieldMaxLengthError(value, maxLength, label);
+}
+
 export function getRequiredError(value, label) {
   if (!String(value ?? "").trim()) {
     return `${label} is required`;
@@ -12,11 +35,16 @@ export function getRequiredError(value, label) {
   return "";
 }
 
-export function getEmailError(value, { required = true, label = "Email Address" } = {}) {
+export function getEmailError(
+  value,
+  { required = true, label = "Email Address", maxLength = USER_FIELD_MAX_LENGTH } = {}
+) {
   const trimmed = String(value ?? "").trim();
   if (!trimmed) {
     return required ? `${label} is required` : "";
   }
+  const maxError = getFieldMaxLengthError(trimmed, maxLength, label);
+  if (maxError) return maxError;
   if (!EMAIL_REGEX.test(trimmed)) {
     return "Please enter a valid email address";
   }
@@ -24,11 +52,16 @@ export function getEmailError(value, { required = true, label = "Email Address" 
 }
 
 /** Lenient email validation for login / forgot-password flows. */
-export function getAuthEmailError(value, { required = true, label = "Email" } = {}) {
+export function getAuthEmailError(
+  value,
+  { required = true, label = "Email", maxLength = USER_FIELD_MAX_LENGTH } = {}
+) {
   const trimmed = String(value ?? "").trim();
   if (!trimmed) {
     return required ? `${label} is required` : "";
   }
+  const maxError = getFieldMaxLengthError(trimmed, maxLength, label);
+  if (maxError) return maxError;
   if (!AUTH_EMAIL_REGEX.test(trimmed)) {
     return "Please enter a valid email address";
   }
@@ -56,10 +89,17 @@ export function getOptionalUrlError(value, label = "URL") {
   return getUrlError(trimmed, { required: false, label });
 }
 
-export function getPasswordError(password, minLength = DEFAULT_PASSWORD_MIN_LENGTH) {
+export function getPasswordError(
+  password,
+  minLength = DEFAULT_PASSWORD_MIN_LENGTH,
+  maxLength = USER_FIELD_MAX_LENGTH
+) {
   const trimmed = String(password ?? "").trim();
   if (!trimmed) {
     return "Password is required";
+  }
+  if (trimmed.length > maxLength) {
+    return `Password must be at most ${maxLength} characters`;
   }
   if (trimmed.length < minLength) {
     return `Password must be at least ${minLength} characters`;
@@ -67,11 +107,18 @@ export function getPasswordError(password, minLength = DEFAULT_PASSWORD_MIN_LENG
   return "";
 }
 
-export function getConfirmPasswordError(password, confirmPassword) {
+export function getConfirmPasswordError(
+  password,
+  confirmPassword,
+  maxLength = USER_FIELD_MAX_LENGTH
+) {
   const pwd = String(password ?? "").trim();
   const confirm = String(confirmPassword ?? "").trim();
   if (!confirm) {
     return "Confirm password is required";
+  }
+  if (confirm.length > maxLength) {
+    return `Confirm password must be at most ${maxLength} characters`;
   }
   if (pwd && confirm && pwd !== confirm) {
     return "Passwords must match";
@@ -79,17 +126,28 @@ export function getConfirmPasswordError(password, confirmPassword) {
   return "";
 }
 
-export function getOptionalPasswordError(password, minLength = DEFAULT_PASSWORD_MIN_LENGTH) {
+export function getOptionalPasswordError(
+  password,
+  minLength = DEFAULT_PASSWORD_MIN_LENGTH,
+  maxLength = USER_FIELD_MAX_LENGTH
+) {
   const trimmed = String(password ?? "").trim();
   if (!trimmed) return "";
-  return getPasswordError(trimmed, minLength);
+  return getPasswordError(trimmed, minLength, maxLength);
 }
 
-export function getOptionalConfirmPasswordError(password, confirmPassword) {
+export function getOptionalConfirmPasswordError(
+  password,
+  confirmPassword,
+  maxLength = USER_FIELD_MAX_LENGTH
+) {
   const pwd = String(password ?? "").trim();
   const confirm = String(confirmPassword ?? "").trim();
   if (!pwd && !confirm) return "";
   if (!confirm) return "Confirm password is required";
+  if (confirm.length > maxLength) {
+    return `Confirm password must be at most ${maxLength} characters`;
+  }
   if (pwd && confirm && pwd !== confirm) return "Passwords must match";
   return "";
 }

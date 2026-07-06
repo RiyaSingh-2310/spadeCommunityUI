@@ -959,6 +959,29 @@ function ModuleListingPage({
                       </td>
                     );
                   }
+                  if (key === "websiteUrl") {
+                    const urlText = displayValue === "-" ? "" : String(displayValue).trim();
+                    return (
+                      <td
+                        key={col}
+                        className="max-w-[min(320px,42vw)] px-4 py-3 align-middle"
+                      >
+                        {urlText ? (
+                          <a
+                            href={urlText}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="admin-text block truncate text-[var(--admin-primary-color)] hover:underline"
+                            title={urlText}
+                          >
+                            {urlText}
+                          </a>
+                        ) : (
+                          <span className="admin-text">—</span>
+                        )}
+                      </td>
+                    );
+                  }
                   if (isDescriptionColumn(col)) {
                     const rawDescription =
                       displayValue === "-" ? "—" : String(displayValue);

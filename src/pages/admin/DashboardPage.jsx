@@ -1,5 +1,5 @@
 import { Gift, Handshake, UserCog, Wallet } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../components/admin/AdminPageHeader";
 import PermissionDenied from "../../components/admin/PermissionDenied";
 import TableCard from "../../components/admin/TableCard";
@@ -57,6 +57,22 @@ function DashboardPage({ isDarkMode }) {
         subtitle={dashboardSubtitle}
         isDarkMode={isDarkMode}
       />
+
+      <Link
+        to="/survey-research"
+        className={`block rounded-2xl border px-5 py-4 transition hover:shadow-md ${
+          isDarkMode
+            ? "border-indigo-500/30 bg-indigo-500/10 hover:border-indigo-400/50"
+            : "border-indigo-200 bg-indigo-50 hover:border-indigo-300"
+        }`}
+      >
+        <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-300">
+          Survey Research Portal
+        </p>
+        <p className={`mt-1 text-sm ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>
+          Open the enterprise survey management demo — pre-screeners, projects, and analytics.
+        </p>
+      </Link>
 
       {isSales ? (
         <div className="grid gap-4 lg:grid-cols-2">

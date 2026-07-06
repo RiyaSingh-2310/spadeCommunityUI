@@ -16,9 +16,20 @@ function isApiSuccess(data) {
   return explicit === true || explicit === "true" || explicit == null;
 }
 
-function assertSuccess(data) {
+function getApiFailureMessage(data) {
+  const message = String(data?.message ?? "").trim();
+  const detail = String(data?.error ?? "").trim();
+
+  if (message && detail && detail !== message) {
+    return `${message} (${detail})`;
+  }
+
+  return message || detail || "Request failed";
+}
+
+function assertSuccess(data, status = 0) {
   if (!isApiSuccess(data)) {
-    throw new ApiError(data?.message ?? "", data);
+    throw new ApiError(getApiFailureMessage(data), data, status);
   }
   return data;
 }
@@ -63,6 +74,10 @@ function normalizeQuestionLibraryIds(ids) {
 }
 
 function resolveQuestionLibraryIds(payload) {
+  if (Array.isArray(payload.questionIds)) {
+    return normalizeQuestionLibraryIds(payload.questionIds);
+  }
+
   if (Array.isArray(payload.questionLibraryIds)) {
     return normalizeQuestionLibraryIds(payload.questionLibraryIds);
   }
@@ -86,18 +101,18 @@ function resolveGroupTitle(payload) {
 
 function buildQuestionnaireGroupCreateBody(payload) {
   return {
-    group_title: resolveGroupTitle(payload),
+    surveyTitle: resolveGroupTitle(payload),
     language: normalizeQuestionnaireGroupLanguage(payload.language),
     status: formValueToApiStatus(payload.status),
-    question_library_ids: resolveQuestionLibraryIds(payload),
+    questionIds: resolveQuestionLibraryIds(payload),
   };
 }
 
-/** PUT /api/questionnaire-group/:id — group_title + question_library_ids only. */
+/** PUT /api/questionnaire-group/:id — surveyTitle + questionIds. */
 function buildQuestionnaireGroupUpdateBody(payload) {
   return {
-    group_title: resolveGroupTitle(payload),
-    question_library_ids: resolveQuestionLibraryIds(payload),
+    surveyTitle: resolveGroupTitle(payload),
+    questionIds: resolveQuestionLibraryIds(payload),
   };
 }
 
@@ -109,6 +124,10 @@ function getQuestionItemsFromRecord(record) {
 }
 
 function extractQuestionLibraryIdsFromRecord(record) {
+  if (Array.isArray(record?.questionIds)) {
+    return normalizeQuestionLibraryIds(record.questionIds);
+  }
+
   if (Array.isArray(record?.question_library_ids)) {
     return normalizeQuestionLibraryIds(record.question_library_ids);
   }
@@ -130,7 +149,46 @@ function extractQuestionLibraryIdsFromRecord(record) {
 }
 
 function resolveGroupTitleFromRecord(record) {
-  return String(record?.group_title ?? record?.survey_title ?? "").trim();
+  return String(
+    record?.surveyTitle ?? record?.group_title ?? record?.survey_title ?? record?.groupTitle ?? ""
+  ).trim();
+}
+
+function getQuestionnaireGroupPublicUrlBase() {
+  const explicit = import.meta.env.VITE_QUESTIONNAIRE_GROUP_URL_BASE?.trim();
+  if (explicit) return explicit.replace(/\/$/, "");
+
+  const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || "http://localhost:5050/api";
+  const normalized = apiBase.replace(/\/$/, "");
+  if (normalized.endsWith("/api")) {
+    return `${normalized.slice(0, -4)}/questionnaire-group`;
+  }
+
+  return `${normalized}/questionnaire-group`;
+}
+
+function resolveQuestionnaireGroupWebsiteUrl(record) {
+  const fromApi = [
+    record?.websiteUrl,
+    record?.website_url,
+    record?.url,
+    record?.groupUrl,
+    record?.group_url,
+    record?.questionnaireUrl,
+    record?.questionnaire_url,
+    record?.previewUrl,
+    record?.preview_url,
+  ]
+    .map((value) => String(value ?? "").trim())
+    .find(Boolean);
+
+  if (fromApi) return fromApi;
+
+  const id = record?.id;
+  if (id == null || String(id).trim() === "") return "";
+
+  const base = getQuestionnaireGroupPublicUrlBase();
+  return base ? `${base}/${encodeURIComponent(String(id))}` : "";
 }
 
 function normalizeGroupQuestionOptions(options) {
@@ -165,8 +223,8 @@ function mapGroupQuestionsFromRecord(record) {
 }
 
 export function mapPrescreenGroupToDetail(record) {
-  const createdRaw = record?.created_at ?? record?.createdAt ?? "";
-  const updatedRaw = record?.updated_at ?? record?.updatedAt ?? "";
+  const createdRaw = record?.createdAt ?? record?.created_at ?? "";
+  const updatedRaw = record?.updatedAt ?? record?.updated_at ?? "";
   const groupTitle = resolveGroupTitleFromRecord(record);
   const questions = mapGroupQuestionsFromRecord(record);
 
@@ -176,6 +234,7 @@ export function mapPrescreenGroupToDetail(record) {
     surveyTitle: groupTitle,
     language: formatQuestionnaireGroupLanguageForUi(record?.language),
     status: apiStatusToFormValue(record?.status),
+    websiteUrl: resolveQuestionnaireGroupWebsiteUrl(record),
     prescreenIds: questions.map((item) => item.id),
     questions,
     createdAt: createdRaw,
@@ -187,7 +246,7 @@ export function mapPrescreenGroupToDetail(record) {
 }
 
 export function mapPrescreenGroupToRow(record) {
-  const createdRaw = record?.created_at ?? record?.createdAt ?? "";
+  const createdRaw = record?.createdAt ?? record?.created_at ?? "";
   const questionLibraryIds = extractQuestionLibraryIdsFromRecord(record);
   const groupTitle = resolveGroupTitleFromRecord(record);
 
@@ -197,6 +256,7 @@ export function mapPrescreenGroupToRow(record) {
     surveyTitle: groupTitle,
     language: formatQuestionnaireGroupLanguageForUi(record?.language),
     status: apiStatusToFormValue(record?.status),
+    websiteUrl: resolveQuestionnaireGroupWebsiteUrl(record),
     prescreenIds: questionLibraryIds,
     createdAt: createdRaw,
     createdDate: formatLocaleDateTime(createdRaw),
@@ -233,7 +293,7 @@ export function mapPrescreenGroupToForm(record) {
 }
 
 /** GET /api/questionnaire-group/list */
-export async function getRecords({ page, limit, search } = {}) {
+export async function getRecords({ page = 1, limit = 10, search } = {}) {
   const data = await apiRequest(
     appendListQuery(API_ROUTES.questionnaireGroup.list, { page, limit, search })
   );
@@ -241,15 +301,18 @@ export async function getRecords({ page, limit, search } = {}) {
 
   const groups = extractQuestionnaireGroupList(data);
   const total = extractListTotalFromResponse(data, groups.length);
+  const safeLimit = Number(limit) || 10;
+  const items = safeMapListItems(groups, (record) => mapPrescreenGroupToRow(record));
 
   return {
     ...data,
+    items,
     total,
     count: total,
-    page: data.page ?? 1,
-    limit: data.limit ?? groups.length,
-    totalPages: data.totalPages ?? 1,
-    items: safeMapListItems(groups, (record) => mapPrescreenGroupToRow(record)),
+    page: Number(data.page) || page,
+    limit: Number(data.limit) || safeLimit,
+    totalPages:
+      Number(data.totalPages) || Math.max(1, Math.ceil(total / safeLimit) || 1),
   };
 }
 

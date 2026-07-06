@@ -131,6 +131,11 @@ export const API_ROUTES = {
     list: "/api/activity/list",
     delete: (id) => `/api/activity/${id}`,
   },
+  panelist: {
+    list: "/api/panelist/list",
+    byId: (id) => `/api/panelist/${id}`,
+    updateStatus: (id) => `/api/panelist/${id}/status`,
+  },
   emailTemplates: {
     list: "/api/email-templates/list",
     create: "/api/email-templates/add",

@@ -21,7 +21,9 @@ import {
   getOptionalConfirmPasswordError,
   getOptionalPasswordError,
   getPasswordError,
-  getRequiredError,
+  getUserNameError,
+  limitTextInput,
+  USER_FIELD_MAX_LENGTH,
   isFormValidForFields,
 } from "../../shared/utils/validation";
 
@@ -63,7 +65,7 @@ function AddSalesManagerPage({ isDarkMode }) {
 
   const errors = useMemo(
     () => ({
-      name: getRequiredError(form.name, "Name"),
+      name: getUserNameError(form.name),
       email: isEdit ? "" : getAuthEmailError(form.email, { label: "Email Address" }),
       password: isEdit
         ? getOptionalPasswordError(form.password, SALES_MANAGER_PASSWORD_MIN_LENGTH)
@@ -255,7 +257,10 @@ function AddSalesManagerPage({ isDarkMode }) {
                 className={inputClass}
                 placeholder="Enter Name"
                 value={form.name}
-                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                maxLength={USER_FIELD_MAX_LENGTH}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, name: limitTextInput(e.target.value) }))
+                }
                 onBlur={() => touch("name")}
                 disabled={fieldDisabled()}
               />
@@ -272,7 +277,10 @@ function AddSalesManagerPage({ isDarkMode }) {
                 className={`${inputClass}${isEdit ? " cursor-not-allowed opacity-70" : ""}`}
                 placeholder="Enter Email Address"
                 value={form.email}
-                onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                maxLength={USER_FIELD_MAX_LENGTH}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, email: limitTextInput(e.target.value) }))
+                }
                 onBlur={() => touch("email")}
                 disabled={fieldDisabled(isEdit)}
                 readOnly={isEdit}
@@ -292,7 +300,13 @@ function AddSalesManagerPage({ isDarkMode }) {
                   className={`${inputClass} pr-10`}
                   placeholder="Enter New Password"
                   value={form.password}
-                  onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+                  maxLength={USER_FIELD_MAX_LENGTH}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      password: limitTextInput(e.target.value),
+                    }))
+                  }
                   onBlur={() => touch("password")}
                   disabled={fieldDisabled()}
                 />
@@ -322,8 +336,12 @@ function AddSalesManagerPage({ isDarkMode }) {
                   className={`${inputClass} pr-10`}
                   placeholder="Retype New Password"
                   value={form.confirmPassword}
+                  maxLength={USER_FIELD_MAX_LENGTH}
                   onChange={(e) =>
-                    setForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                    setForm((prev) => ({
+                      ...prev,
+                      confirmPassword: limitTextInput(e.target.value),
+                    }))
                   }
                   onBlur={() => touch("confirmPassword")}
                   disabled={fieldDisabled()}

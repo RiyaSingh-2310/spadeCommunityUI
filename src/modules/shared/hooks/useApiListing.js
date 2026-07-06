@@ -25,6 +25,7 @@ export function useApiListing({
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [listError, setListError] = useState("");
   const fetchRequestIdRef = useRef(0);
 
   const fetchList = useCallback(async () => {
@@ -32,12 +33,14 @@ export function useApiListing({
       setIsLoading(false);
       setRows([]);
       setTotalRecords(0);
+      setListError("");
       return;
     }
 
     const requestId = ++fetchRequestIdRef.current;
     setIsLoading(true);
     setRows([]);
+    setListError("");
 
     try {
       const normalizedSearch = normalizeSearchQuery(search);
@@ -71,6 +74,11 @@ export function useApiListing({
       if (requestId !== fetchRequestIdRef.current) {
         return;
       }
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Unable to load records.";
+      setListError(message);
       toastApiError(error);
       setRows([]);
       setTotalRecords(0);
@@ -120,6 +128,7 @@ export function useApiListing({
     currentPage,
     pageSize,
     search,
+    listError,
     handleSearch,
     handlePageChange,
     handlePageSizeChange,

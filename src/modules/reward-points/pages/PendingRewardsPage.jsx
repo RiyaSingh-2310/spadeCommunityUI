@@ -85,8 +85,6 @@ function PendingRewardsPage({ isDarkMode }) {
         statusAsText
         actionVariant="reward-pending"
         permissionModule="pending_rewards"
-        nowrapAllCells
-        compactTable
         showPagination
         onApprove={(row) => openModal("approve", row)}
         onReject={(row) => openModal("reject", row)}

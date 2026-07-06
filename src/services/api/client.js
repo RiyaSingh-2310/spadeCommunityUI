@@ -22,8 +22,26 @@ const HTTP_STATUS_MESSAGES = {
 };
 
 export function extractErrorMessage(response, data, rawText) {
-  if (data?.message) return String(data.message);
-  if (data?.error) return String(data.error);
+  const message = data?.message ? String(data.message).trim() : "";
+  const detail = data?.error ? String(data.error).trim() : "";
+
+  if (message && detail && detail !== message) {
+    const genericMessages = new Set([
+      "server error!",
+      "internal server error",
+      "request failed",
+      "something went wrong",
+    ]);
+
+    if (genericMessages.has(message.toLowerCase())) {
+      return detail;
+    }
+
+    return `${message} (${detail})`;
+  }
+
+  if (message) return message;
+  if (detail) return detail;
 
   if (data?.errors && typeof data.errors === "object") {
     const messages = Object.values(data.errors)

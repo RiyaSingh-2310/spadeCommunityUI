@@ -143,6 +143,7 @@ const VALUE_FALLBACKS = {
   websiteUrl: ["website"],
   clientCode: ["code"],
   sno: ["id"],
+  surveyTitle: ["title", "groupTitle", "group_title"],
   createdDate: ["createdAt"],
   createdAt: ["createdDate", "date"],
   credit: ["totalRewardCredit"],
