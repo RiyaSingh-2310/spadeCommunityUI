@@ -218,7 +218,12 @@ function ModuleListingActionCell({
   }
 
   if (actionVariant === "reward-pending") {
-    if (onApprove || onReject) {
+    const statusKey = String(row?.status ?? "").trim().toLowerCase();
+    const isPending = !statusKey || statusKey === "pending";
+    const isViewOnly =
+      statusKey === "completed" || statusKey === "approved" || statusKey === "rejected";
+
+    if (isPending && (onApprove || onReject)) {
       return (
         <td key={col} className={cellClass}>
           <RewardPendingActions
@@ -231,7 +236,7 @@ function ModuleListingActionCell({
       );
     }
 
-    if (onView) {
+    if (isViewOnly && allowRead && onView) {
       return (
         <td key={col} className={cellClass}>
           <ViewActionButton onView={() => onView(row, globalIdx)} iconOnly />

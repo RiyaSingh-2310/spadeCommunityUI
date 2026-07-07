@@ -1,14 +1,18 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import AdminDateRangeFilter from "../../../components/admin/AdminDateRangeFilter";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import RewardDetailsModal from "../components/RewardDetailsModal";
+import RewardHistoryStatusFilter from "../components/RewardHistoryStatusFilter";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
+import { formatSurveyListDate } from "../../shared/utils/dateTime";
 import { getAdminDisplayName } from "../../../services/auth/authStorage";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   fetchRedeemRequests,
   updateRedeemRequestStatus,
 } from "../services/rewardHistoryApi";
+import { filterRewardHistoryRows } from "../utils/rewardHistoryFilters";
 
 function validateRejectComment(comment) {
   if (String(comment ?? "").trim().length < 3) {
@@ -18,6 +22,24 @@ function validateRejectComment(comment) {
 }
 
 function PendingRewardsPage({ isDarkMode }) {
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [modalMode, setModalMode] = useState(null);
+  const [activeRow, setActiveRow] = useState(null);
+  const [comment, setComment] = useState("");
+  const [commentError, setCommentError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchRedeemList = useCallback(
+    (params) =>
+      fetchRedeemRequests({
+        ...params,
+        status: statusFilter,
+      }),
+    [statusFilter]
+  );
+
   const {
     rows,
     totalRecords,
@@ -27,18 +49,22 @@ function PendingRewardsPage({ isDarkMode }) {
     handleSearch,
     handlePageChange,
     handlePageSizeChange,
-    refresh: fetchRedeemList,
+    refresh: reloadRedeemList,
   } = useApiListing({
-    fetchFn: fetchRedeemRequests,
+    fetchFn: fetchRedeemList,
     initialPageSize: DEFAULT_PAGE_SIZE,
     preserveRowOrder: true,
   });
 
-  const [modalMode, setModalMode] = useState(null);
-  const [activeRow, setActiveRow] = useState(null);
-  const [comment, setComment] = useState("");
-  const [commentError, setCommentError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const filteredRows = useMemo(
+    () =>
+      filterRewardHistoryRows(rows, {
+        statusFilter,
+        fromDate,
+        toDate,
+      }),
+    [rows, statusFilter, fromDate, toDate]
+  );
 
   const closeModal = () => {
     if (isSubmitting) return;
@@ -53,6 +79,11 @@ function PendingRewardsPage({ isDarkMode }) {
     setActiveRow(row);
     setComment("");
     setCommentError("");
+  };
+
+  const handleStatusFilterChange = (value) => {
+    setStatusFilter(value);
+    handlePageChange(1);
   };
 
   const handleConfirm = async () => {
@@ -77,7 +108,7 @@ function PendingRewardsPage({ isDarkMode }) {
       });
 
       toastApiSuccess(data);
-      await fetchRedeemList();
+      await reloadRedeemList();
       closeModal();
     } catch (error) {
       toastApiError(error);
@@ -85,6 +116,18 @@ function PendingRewardsPage({ isDarkMode }) {
       setIsSubmitting(false);
     }
   };
+
+  const toolbarFilters = (
+    <div className="flex w-full flex-wrap items-end justify-end gap-3 sm:flex-nowrap sm:gap-4 lg:w-auto">
+      <AdminDateRangeFilter
+        fromDate={fromDate}
+        toDate={toDate}
+        onFromChange={setFromDate}
+        onToChange={setToDate}
+      />
+      <RewardHistoryStatusFilter value={statusFilter} onChange={handleStatusFilterChange} />
+    </div>
+  );
 
   return (
     <>
@@ -101,7 +144,7 @@ function PendingRewardsPage({ isDarkMode }) {
           "Status",
           "Action",
         ]}
-        rows={rows}
+        rows={filteredRows}
         rowIdKey="id"
         showStatus
         statusAsText
@@ -110,6 +153,7 @@ function PendingRewardsPage({ isDarkMode }) {
         isLoading={isLoading}
         emptyMessage="No reward history found"
         onSearch={handleSearch}
+        toolbarFilters={toolbarFilters}
         showPagination
         serverPaginated
         serverSearch
@@ -120,12 +164,22 @@ function PendingRewardsPage({ isDarkMode }) {
         onPaginationPageSizeChange={handlePageSizeChange}
         onApprove={(row) => openModal("approve", row)}
         onReject={(row) => openModal("reject", row)}
+        onView={(row) => openModal("view", row)}
       />
 
       <RewardDetailsModal
         isOpen={Boolean(modalMode && activeRow)}
         mode={modalMode ?? "view"}
-        row={activeRow}
+        row={
+          activeRow && modalMode === "view"
+            ? {
+                ...activeRow,
+                createdDate: formatSurveyListDate(
+                  activeRow.createdAtRaw ?? activeRow.createdAt ?? activeRow.createdDate
+                ),
+              }
+            : activeRow
+        }
         comment={comment}
         commentError={commentError}
         isSubmitting={isSubmitting}
@@ -134,7 +188,7 @@ function PendingRewardsPage({ isDarkMode }) {
           if (commentError) setCommentError("");
         }}
         onCancel={closeModal}
-        onConfirm={handleConfirm}
+        onConfirm={modalMode === "view" ? undefined : handleConfirm}
       />
     </>
   );

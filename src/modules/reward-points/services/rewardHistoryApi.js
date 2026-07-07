@@ -102,11 +102,19 @@ export async function fetchRewardHistoryList({ page = 1, limit = 10, search } = 
 }
 
 /** GET /api/reward-history/redeem/list */
-export async function fetchRedeemRequests({ page = 1, limit = 10, search } = {}) {
+export async function fetchRedeemRequests({ page = 1, limit = 10, search, status } = {}) {
+  const extra = {};
+  const statusQuery = String(status ?? "").trim().toLowerCase();
+
+  if (statusQuery && statusQuery !== "all") {
+    extra.status = statusQuery === "completed" ? "approved" : statusQuery;
+  }
+
   const path = appendListQuery(API_ROUTES.rewardHistory.redeemList, {
     page,
     limit,
     search,
+    extra,
   });
   const data = await apiRequest(path);
   assertSuccess(data);

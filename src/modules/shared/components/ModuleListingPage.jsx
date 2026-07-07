@@ -53,7 +53,7 @@ function ModuleListingPage({
   title,
   subtitle,
   breadcrumbs,
-  summaryCards,
+  // summaryCards,
   searchPlaceholder = "Search records...",
   actionLabel = "Add",
   onActionClick,
@@ -587,7 +587,7 @@ function ModuleListingPage({
         isDarkMode={isDarkMode}
       />
 
-      {summaryCards?.length > 0 ? <AdminSummaryCards cards={summaryCards} /> : null}
+      {/* {summaryCards?.length > 0 ? <AdminSummaryCards cards={summaryCards} /> : null} */}
 
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {renderToolbar ? (
