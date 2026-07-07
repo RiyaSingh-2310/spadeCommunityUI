@@ -12,6 +12,7 @@ function PasswordField({
   placeholder,
   disabled = false,
   required = false,
+  maxLength,
 }) {
   const [visible, setVisible] = useState(false);
   const inputClass = getAdminInputClass();
@@ -26,6 +27,7 @@ function PasswordField({
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
           placeholder={placeholder}
+          maxLength={maxLength}
           disabled={disabled}
           readOnly={disabled}
           autoComplete={label === "Current Password" ? "current-password" : label === "New Password" ? "new-password" : "new-password"}

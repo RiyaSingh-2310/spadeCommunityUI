@@ -13,10 +13,13 @@ import { getValidImageUrl, resolveProfileImageUrl, splitFullName } from "../../s
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
+  NAME_FIELD_MAX_LENGTH,
+  PASSWORD_FIELD_MAX_LENGTH,
   getConfirmPasswordError,
   getPasswordError,
-  getRequiredError,
+  getUserNameError,
   isFormValidForFields,
+  limitTextInput,
 } from "../../shared/utils/validation";
 import {
   changePassword,
@@ -132,7 +135,7 @@ function ProfileSettingsTab({ isDarkMode }) {
 
   const profileErrors = useMemo(
     () => ({
-      name: getRequiredError(form.name, "Full Name"),
+      name: getUserNameError(form.name, { label: "Full Name" }),
     }),
     [form.name]
   );
@@ -375,10 +378,14 @@ function ProfileSettingsTab({ isDarkMode }) {
                 className={inputClass}
                 value={form.name}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, name: event.target.value }))
+                  setForm((prev) => ({
+                    ...prev,
+                    name: limitTextInput(event.target.value, NAME_FIELD_MAX_LENGTH),
+                  }))
                 }
                 onBlur={() => touchProfile("name")}
                 autoComplete="name"
+                maxLength={NAME_FIELD_MAX_LENGTH}
               />
             </FormField>
 
@@ -431,6 +438,7 @@ function ProfileSettingsTab({ isDarkMode }) {
               onBlur={() => touchPassword("currentPassword")}
               error={showPasswordError("currentPassword")}
               required
+              maxLength={PASSWORD_FIELD_MAX_LENGTH}
             />
             <PasswordField
               label="New Password"
@@ -441,6 +449,7 @@ function ProfileSettingsTab({ isDarkMode }) {
               onBlur={() => touchPassword("newPassword")}
               error={showPasswordError("newPassword")}
               required
+              maxLength={PASSWORD_FIELD_MAX_LENGTH}
             />
             <PasswordField
               label="Confirm Password"
@@ -451,6 +460,7 @@ function ProfileSettingsTab({ isDarkMode }) {
               onBlur={() => touchPassword("confirmPassword")}
               error={showPasswordError("confirmPassword")}
               required
+              maxLength={PASSWORD_FIELD_MAX_LENGTH}
             />
           </div>
 

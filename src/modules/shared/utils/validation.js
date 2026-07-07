@@ -5,8 +5,14 @@ export const URL_REGEX = /^https?:\/\/[^\s/$.?#].[^\s]*$/i;
 
 export const DEFAULT_PASSWORD_MIN_LENGTH = 8;
 
-/** Max length for admin user / manager name, email, and password fields. */
+/** Legacy shared max length retained for non-form fields. */
 export const USER_FIELD_MAX_LENGTH = 30;
+export const NAME_FIELD_MAX_LENGTH = 70;
+export const CONTACT_PERSON_MAX_LENGTH = 70;
+export const EMAIL_FIELD_MAX_LENGTH = 150;
+export const PASSWORD_FIELD_MAX_LENGTH = 60;
+
+const NAME_REGEX = /^[A-Za-z ]+$/;
 
 export function limitTextInput(value, maxLength = USER_FIELD_MAX_LENGTH) {
   return String(value ?? "").slice(0, maxLength);
@@ -21,11 +27,29 @@ function getFieldMaxLengthError(value, maxLength, label) {
 
 export function getUserNameError(
   value,
-  { label = "Name", maxLength = USER_FIELD_MAX_LENGTH } = {}
+  { label = "Name", maxLength = NAME_FIELD_MAX_LENGTH } = {}
 ) {
   const required = getRequiredError(value, label);
   if (required) return required;
+  const trimmed = String(value ?? "").trim();
+  if (!NAME_REGEX.test(trimmed)) {
+    return `${label} can only contain letters and spaces`;
+  }
   return getFieldMaxLengthError(value, maxLength, label);
+}
+
+export function getContactPersonError(
+  value,
+  { required = false, label = "Contact Person", maxLength = CONTACT_PERSON_MAX_LENGTH } = {}
+) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) {
+    return required ? `${label} is required` : "";
+  }
+  if (!NAME_REGEX.test(trimmed)) {
+    return `${label} can only contain letters and spaces`;
+  }
+  return getFieldMaxLengthError(trimmed, maxLength, label);
 }
 
 export function getRequiredError(value, label) {
@@ -37,11 +61,15 @@ export function getRequiredError(value, label) {
 
 export function getEmailError(
   value,
-  { required = true, label = "Email Address", maxLength = USER_FIELD_MAX_LENGTH } = {}
+  { required = true, label = "Email Address", maxLength = EMAIL_FIELD_MAX_LENGTH } = {}
 ) {
-  const trimmed = String(value ?? "").trim();
+  const raw = String(value ?? "");
+  const trimmed = raw.trim();
   if (!trimmed) {
     return required ? `${label} is required` : "";
+  }
+  if (/\s/.test(raw)) {
+    return `${label} cannot contain spaces`;
   }
   const maxError = getFieldMaxLengthError(trimmed, maxLength, label);
   if (maxError) return maxError;
@@ -54,11 +82,15 @@ export function getEmailError(
 /** Lenient email validation for login / forgot-password flows. */
 export function getAuthEmailError(
   value,
-  { required = true, label = "Email", maxLength = USER_FIELD_MAX_LENGTH } = {}
+  { required = true, label = "Email", maxLength = EMAIL_FIELD_MAX_LENGTH } = {}
 ) {
-  const trimmed = String(value ?? "").trim();
+  const raw = String(value ?? "");
+  const trimmed = raw.trim();
   if (!trimmed) {
     return required ? `${label} is required` : "";
+  }
+  if (/\s/.test(raw)) {
+    return `${label} cannot contain spaces`;
   }
   const maxError = getFieldMaxLengthError(trimmed, maxLength, label);
   if (maxError) return maxError;
@@ -92,11 +124,15 @@ export function getOptionalUrlError(value, label = "URL") {
 export function getPasswordError(
   password,
   minLength = DEFAULT_PASSWORD_MIN_LENGTH,
-  maxLength = USER_FIELD_MAX_LENGTH
+  maxLength = PASSWORD_FIELD_MAX_LENGTH
 ) {
-  const trimmed = String(password ?? "").trim();
+  const raw = String(password ?? "");
+  const trimmed = raw.trim();
   if (!trimmed) {
     return "Password is required";
+  }
+  if (raw !== trimmed) {
+    return "Password cannot start or end with spaces";
   }
   if (trimmed.length > maxLength) {
     return `Password must be at most ${maxLength} characters`;
@@ -110,12 +146,17 @@ export function getPasswordError(
 export function getConfirmPasswordError(
   password,
   confirmPassword,
-  maxLength = USER_FIELD_MAX_LENGTH
+  maxLength = PASSWORD_FIELD_MAX_LENGTH
 ) {
-  const pwd = String(password ?? "").trim();
-  const confirm = String(confirmPassword ?? "").trim();
+  const pwdRaw = String(password ?? "");
+  const confirmRaw = String(confirmPassword ?? "");
+  const pwd = pwdRaw.trim();
+  const confirm = confirmRaw.trim();
   if (!confirm) {
     return "Confirm password is required";
+  }
+  if (confirmRaw !== confirm) {
+    return "Confirm password cannot start or end with spaces";
   }
   if (confirm.length > maxLength) {
     return `Confirm password must be at most ${maxLength} characters`;
@@ -129,22 +170,27 @@ export function getConfirmPasswordError(
 export function getOptionalPasswordError(
   password,
   minLength = DEFAULT_PASSWORD_MIN_LENGTH,
-  maxLength = USER_FIELD_MAX_LENGTH
+  maxLength = PASSWORD_FIELD_MAX_LENGTH
 ) {
-  const trimmed = String(password ?? "").trim();
-  if (!trimmed) return "";
-  return getPasswordError(trimmed, minLength, maxLength);
+  const raw = String(password ?? "");
+  if (!raw.trim()) return "";
+  return getPasswordError(raw, minLength, maxLength);
 }
 
 export function getOptionalConfirmPasswordError(
   password,
   confirmPassword,
-  maxLength = USER_FIELD_MAX_LENGTH
+  maxLength = PASSWORD_FIELD_MAX_LENGTH
 ) {
-  const pwd = String(password ?? "").trim();
-  const confirm = String(confirmPassword ?? "").trim();
+  const pwdRaw = String(password ?? "");
+  const confirmRaw = String(confirmPassword ?? "");
+  const pwd = pwdRaw.trim();
+  const confirm = confirmRaw.trim();
   if (!pwd && !confirm) return "";
   if (!confirm) return "Confirm password is required";
+  if (confirmRaw !== confirm) {
+    return "Confirm password cannot start or end with spaces";
+  }
   if (confirm.length > maxLength) {
     return `Confirm password must be at most ${maxLength} characters`;
   }

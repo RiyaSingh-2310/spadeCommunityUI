@@ -28,6 +28,9 @@ import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
 import { resolveProfileImageUrl } from "../../modules/shared/utils/userAvatar";
 import { useFormValidation } from "../../modules/shared/hooks/useFormValidation";
 import {
+  EMAIL_FIELD_MAX_LENGTH,
+  NAME_FIELD_MAX_LENGTH,
+  PASSWORD_FIELD_MAX_LENGTH,
   getConfirmPasswordError,
   getEmailError,
   getOptionalConfirmPasswordError,
@@ -35,7 +38,6 @@ import {
   getPasswordError,
   getUserNameError,
   limitTextInput,
-  USER_FIELD_MAX_LENGTH,
   isFormValid,
 } from "../../modules/shared/utils/validation";
 
@@ -262,9 +264,9 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                   placeholder="Enter Name"
                   className={inputClass}
                   value={form.name}
-                  maxLength={USER_FIELD_MAX_LENGTH}
+                  maxLength={NAME_FIELD_MAX_LENGTH}
                   onChange={(e) =>
-                    setForm({ ...form, name: limitTextInput(e.target.value) })
+                    setForm({ ...form, name: limitTextInput(e.target.value, NAME_FIELD_MAX_LENGTH) })
                   }
                   onBlur={() => touch("name")}
                   disabled={fieldDisabled(readOnly, isSubmitting)}
@@ -280,9 +282,12 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                   placeholder="Enter Email Address"
                   className={`${inputClass} ${isEdit ? "opacity-70" : ""}`}
                   value={form.email}
-                  maxLength={USER_FIELD_MAX_LENGTH}
+                  maxLength={EMAIL_FIELD_MAX_LENGTH}
                   onChange={(e) =>
-                    setForm({ ...form, email: limitTextInput(e.target.value) })
+                    setForm({
+                      ...form,
+                      email: limitTextInput(e.target.value, EMAIL_FIELD_MAX_LENGTH),
+                    })
                   }
                   onBlur={() => touch("email")}
                   disabled={fieldDisabled(readOnly, isSubmitting) || isEdit}
@@ -300,9 +305,12 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                     placeholder={isEdit ? "Enter New Password" : "Enter Password"}
                     className={`${inputClass} pr-10`}
                     value={form.password}
-                    maxLength={USER_FIELD_MAX_LENGTH}
+                    maxLength={PASSWORD_FIELD_MAX_LENGTH}
                     onChange={(e) =>
-                      setForm({ ...form, password: limitTextInput(e.target.value) })
+                      setForm({
+                        ...form,
+                        password: limitTextInput(e.target.value, PASSWORD_FIELD_MAX_LENGTH),
+                      })
                     }
                     onBlur={() => touch("password")}
                     disabled={fieldDisabled(readOnly, isSubmitting)}
@@ -328,11 +336,14 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                     placeholder={isEdit ? "Confirm New Password" : "Confirm Password"}
                     className={`${inputClass} pr-10`}
                     value={form.confirmPassword}
-                    maxLength={USER_FIELD_MAX_LENGTH}
+                    maxLength={PASSWORD_FIELD_MAX_LENGTH}
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        confirmPassword: limitTextInput(e.target.value),
+                        confirmPassword: limitTextInput(
+                          e.target.value,
+                          PASSWORD_FIELD_MAX_LENGTH
+                        ),
                       })
                     }
                     onBlur={() => touch("confirmPassword")}

@@ -58,7 +58,7 @@ function DashboardPage({ isDarkMode }) {
         isDarkMode={isDarkMode}
       />
 
-      <Link
+      {/* <Link
         to="/survey-research"
         className={`block rounded-2xl border px-5 py-4 transition hover:shadow-md ${
           isDarkMode
@@ -72,7 +72,7 @@ function DashboardPage({ isDarkMode }) {
         <p className={`mt-1 text-sm ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>
           Open the enterprise survey management demo — pre-screeners, projects, and analytics.
         </p>
-      </Link>
+      </Link> */}
 
       {isSales ? (
         <div className="grid gap-4 lg:grid-cols-2">

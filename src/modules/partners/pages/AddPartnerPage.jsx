@@ -17,14 +17,20 @@ import {
   updatePartner,
 } from "../../../services/partners/partnersApi";
 import {
+  CONTACT_PERSON_MAX_LENGTH,
+  EMAIL_FIELD_MAX_LENGTH,
+  NAME_FIELD_MAX_LENGTH,
+  getContactPersonError,
   getEmailError,
   getOptionalUrlError,
   getPhoneError,
   getRequiredError,
   getRichTextError,
   getUrlError,
+  getUserNameError,
   isFormValid,
   isFormValidForFields,
+  limitTextInput,
 } from "../../shared/utils/validation";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 
@@ -88,13 +94,14 @@ function AddPartnerPage({ isDarkMode }) {
 
   const errors = useMemo(() => {
     const shared = {
-      name: getRequiredError(form.name, "Name"),
+      name: getUserNameError(form.name),
       country: getRequiredError(form.country, "Country"),
       contactNumber: getPhoneError(form.contactNumber, {
         required: true,
         label: "Contact Number",
         defaultCountryCode: getDefaultPhoneCountryCode(form.country),
       }),
+      contactPerson: getContactPersonError(form.contactPerson),
     };
 
     const apiBaseUrlError = getOptionalUrlError(form.apiBaseUrl, "API Base URL");
@@ -104,16 +111,15 @@ function AddPartnerPage({ isDarkMode }) {
         ...shared,
         code: "",
         email: getEmailError(form.email),
-        contactPerson: "",
         website: form.website.trim()
           ? getUrlError(form.website, { required: false })
           : "",
         panelSize: "",
-        complete: "",
-        terminate: "",
-        overQuota: "",
-        qualityTerm: "",
-        surveyClose: "",
+        complete: getOptionalUrlError(form.complete, "Complete URL"),
+        terminate: getOptionalUrlError(form.terminate, "Terminate URL"),
+        overQuota: getOptionalUrlError(form.overQuota, "Over Quota URL"),
+        qualityTerm: getOptionalUrlError(form.qualityTerm, "Quality Term URL"),
+        surveyClose: getOptionalUrlError(form.surveyClose, "Survey Closed URL"),
         aboutPartner: "",
         apiBaseUrl: apiBaseUrlError,
       };
@@ -123,16 +129,15 @@ function AddPartnerPage({ isDarkMode }) {
       ...shared,
       code: "",
       email: "",
-      contactPerson: "",
       website: form.website.trim()
         ? getUrlError(form.website, { required: false })
         : "",
       panelSize: "",
-      complete: "",
-      terminate: "",
-      overQuota: "",
-      qualityTerm: "",
-      surveyClose: "",
+      complete: getOptionalUrlError(form.complete, "Complete URL"),
+      terminate: getOptionalUrlError(form.terminate, "Terminate URL"),
+      overQuota: getOptionalUrlError(form.overQuota, "Over Quota URL"),
+      qualityTerm: getOptionalUrlError(form.qualityTerm, "Quality Term URL"),
+      surveyClose: getOptionalUrlError(form.surveyClose, "Survey Closed URL"),
       aboutPartner: form.aboutPartner.trim()
         ? getRichTextError(form.aboutPartner, "About Partner")
         : "",
@@ -285,11 +290,11 @@ function AddPartnerPage({ isDarkMode }) {
               ["Contact Person", "contactPerson", "Enter Contact Person", "text", false],
               ["Website URL", "website", "Enter Website URL", "url", false],
               ...(isEdit ? [["Panel Size", "panelSize", "Enter Panel Size", "text", false]] : []),
-              ["Complete", "complete", "Enter Complete", "text", false],
-              ["Terminate", "terminate", "Enter Terminate", "text", false],
-              ["Over Quota", "overQuota", "Enter Over Quota", "text", false],
-              ["Quality Term", "qualityTerm", "Enter Quality Term", "text", false],
-              ["Survey Closed", "surveyClose", "Enter Survey Closed", "text", false],
+              ["Complete URL", "complete", "Enter Complete URL", "text", false],
+              ["Terminate URL", "terminate", "Enter Terminate URL", "text", false],
+              ["Over Quota URL", "overQuota", "Enter Over Quota URL", "text", false],
+              ["Quality Term URL", "qualityTerm", "Enter Quality Term URL", "text", false],
+              ["Survey Closed URL", "surveyClose", "Enter Survey Closed URL", "text", false],
             ].map(([label, key, placeholder, fieldType, required]) => {
               const readOnlyField = readOnly || (isEdit && (key === "code" || key === "email"));
               return (
@@ -315,7 +320,27 @@ function AddPartnerPage({ isDarkMode }) {
                       type={fieldType === "email" ? "email" : "text"}
                       placeholder={placeholder}
                       value={form[key]}
-                      onChange={(e) => setField(key, e.target.value)}
+                      maxLength={
+                        key === "name"
+                          ? NAME_FIELD_MAX_LENGTH
+                          : key === "email"
+                            ? EMAIL_FIELD_MAX_LENGTH
+                            : key === "contactPerson"
+                              ? CONTACT_PERSON_MAX_LENGTH
+                              : undefined
+                      }
+                      onChange={(e) =>
+                        setField(
+                          key,
+                          key === "name"
+                            ? limitTextInput(e.target.value, NAME_FIELD_MAX_LENGTH)
+                            : key === "email"
+                              ? limitTextInput(e.target.value, EMAIL_FIELD_MAX_LENGTH)
+                              : key === "contactPerson"
+                                ? limitTextInput(e.target.value, CONTACT_PERSON_MAX_LENGTH)
+                                : e.target.value
+                        )
+                      }
                       onBlur={() => touch(key)}
                       disabled={fieldDisabled(readOnlyField)}
                       readOnly={readOnlyField}

@@ -5,6 +5,7 @@ import AuthLayout from "../components/auth/AuthLayout";
 import AuthSecondaryAction from "../components/auth/AuthSecondaryAction";
 import { resetPassword } from "../services/auth/authApi";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
+import { PASSWORD_FIELD_MAX_LENGTH } from "../modules/shared/utils/validation";
 
 const getPasswordStrength = (password) => {
   if (!password) {
@@ -52,12 +53,27 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
     touched.confirmPassword &&
     confirmPassword.trim().length > 0 &&
     password !== confirmPassword;
+  const showPasswordLengthError =
+    touched.password && password.length > PASSWORD_FIELD_MAX_LENGTH;
+  const showConfirmPasswordLengthError =
+    touched.confirmPassword && confirmPassword.length > PASSWORD_FIELD_MAX_LENGTH;
+  const showPasswordTrimError = touched.password && password !== password.trim();
+  const showConfirmPasswordTrimError =
+    touched.confirmPassword && confirmPassword !== confirmPassword.trim();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setTouched({ password: true, confirmPassword: true });
 
-    if (!password.trim() || !confirmPassword.trim() || !passwordsMatch) {
+    if (
+      !password.trim() ||
+      !confirmPassword.trim() ||
+      !passwordsMatch ||
+      password.length > PASSWORD_FIELD_MAX_LENGTH ||
+      confirmPassword.length > PASSWORD_FIELD_MAX_LENGTH ||
+      password !== password.trim() ||
+      confirmPassword !== confirmPassword.trim()
+    ) {
       return;
     }
 
@@ -123,6 +139,7 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
               autoComplete="new-password"
               placeholder="Enter new password"
               value={password}
+              maxLength={PASSWORD_FIELD_MAX_LENGTH}
               disabled={isResetting}
               onChange={(event) => setPassword(event.target.value)}
               onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
@@ -147,6 +164,16 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
           </div>
           {showPasswordError && (
             <p className="mt-1.5 text-xs text-[#de3d3d]">New Password is required.</p>
+          )}
+          {showPasswordLengthError && (
+            <p className="mt-1.5 text-xs text-[#de3d3d]">
+              New Password must be at most {PASSWORD_FIELD_MAX_LENGTH} characters.
+            </p>
+          )}
+          {showPasswordTrimError && (
+            <p className="mt-1.5 text-xs text-[#de3d3d]">
+              New Password cannot start or end with spaces.
+            </p>
           )}
           {!!password && (
             <div className="mt-2">
@@ -203,6 +230,7 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
               autoComplete="new-password"
               placeholder="Confirm new password"
               value={confirmPassword}
+              maxLength={PASSWORD_FIELD_MAX_LENGTH}
               disabled={isResetting}
               onChange={(event) => setConfirmPassword(event.target.value)}
               onBlur={() =>
@@ -232,6 +260,16 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
           {showConfirmPasswordError && (
             <p className="mt-1.5 text-xs text-[#de3d3d]">
               Confirm Password is required.
+            </p>
+          )}
+          {showConfirmPasswordLengthError && (
+            <p className="mt-1.5 text-xs text-[#de3d3d]">
+              Confirm Password must be at most {PASSWORD_FIELD_MAX_LENGTH} characters.
+            </p>
+          )}
+          {showConfirmPasswordTrimError && (
+            <p className="mt-1.5 text-xs text-[#de3d3d]">
+              Confirm Password cannot start or end with spaces.
             </p>
           )}
           {showMismatchError && (

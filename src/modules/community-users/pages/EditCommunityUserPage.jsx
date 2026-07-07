@@ -12,13 +12,15 @@ import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/util
 import { resolveProfileImageUrl } from "../../shared/utils/userAvatar";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
+  EMAIL_FIELD_MAX_LENGTH,
+  NAME_FIELD_MAX_LENGTH,
+  PASSWORD_FIELD_MAX_LENGTH,
   getEmailError,
   getOptionalConfirmPasswordError,
   getOptionalPasswordError,
   getUserNameError,
   isFormValid,
   limitTextInput,
-  USER_FIELD_MAX_LENGTH,
 } from "../../shared/utils/validation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { getRecord, mapPanelistToForm, updateRecord } from "../services/communityUsersApi";
@@ -205,8 +207,10 @@ function EditCommunityUserPage({ isDarkMode }) {
             <input
               className={inputClass}
               value={form.name}
-              maxLength={USER_FIELD_MAX_LENGTH}
-              onChange={(event) => setField("name", limitTextInput(event.target.value))}
+              maxLength={NAME_FIELD_MAX_LENGTH}
+              onChange={(event) =>
+                setField("name", limitTextInput(event.target.value, NAME_FIELD_MAX_LENGTH))
+              }
               onBlur={() => touch("name")}
               disabled={fieldDisabled(readOnly, isSubmitting)}
             />
@@ -217,8 +221,10 @@ function EditCommunityUserPage({ isDarkMode }) {
               type="email"
               className={inputClass}
               value={form.email}
-              maxLength={USER_FIELD_MAX_LENGTH}
-              onChange={(event) => setField("email", limitTextInput(event.target.value))}
+              maxLength={EMAIL_FIELD_MAX_LENGTH}
+              onChange={(event) =>
+                setField("email", limitTextInput(event.target.value, EMAIL_FIELD_MAX_LENGTH))
+              }
               onBlur={() => touch("email")}
               disabled={fieldDisabled(readOnly, isSubmitting)}
             />
@@ -234,7 +240,9 @@ function EditCommunityUserPage({ isDarkMode }) {
           <PasswordField
             label="New Password"
             value={form.password}
-            onChange={(value) => setField("password", limitTextInput(value))}
+            onChange={(value) =>
+              setField("password", limitTextInput(value, PASSWORD_FIELD_MAX_LENGTH))
+            }
             onBlur={() => touch("password")}
             error={showError("password")}
             placeholder="Enter New Password"
@@ -244,7 +252,9 @@ function EditCommunityUserPage({ isDarkMode }) {
           <PasswordField
             label="Confirm New Password"
             value={form.confirmPassword}
-            onChange={(value) => setField("confirmPassword", limitTextInput(value))}
+            onChange={(value) =>
+              setField("confirmPassword", limitTextInput(value, PASSWORD_FIELD_MAX_LENGTH))
+            }
             onBlur={() => touch("confirmPassword")}
             error={showError("confirmPassword")}
             placeholder="Enter Confirm New Password"

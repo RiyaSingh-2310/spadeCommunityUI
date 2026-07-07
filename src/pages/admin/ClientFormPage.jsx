@@ -16,13 +16,19 @@ import { getDefaultPhoneCountryCode } from "../../modules/shared/data/phoneCount
 import { useAdminFormAccess } from "../../modules/permissions/FormAccessContext";
 import { useFormValidation } from "../../modules/shared/hooks/useFormValidation";
 import {
+  CONTACT_PERSON_MAX_LENGTH,
+  EMAIL_FIELD_MAX_LENGTH,
+  NAME_FIELD_MAX_LENGTH,
   getEmailError,
+  getContactPersonError,
   getPhoneError,
   getOptionalUrlError,
   getRequiredError,
   getUrlError,
+  getUserNameError,
   isFormValid,
   isFormValidForFields,
+  limitTextInput,
 } from "../../modules/shared/utils/validation";
 import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
 
@@ -104,14 +110,14 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
   const errors = useMemo(() => {
     const phoneCountry = getDefaultPhoneCountryCode(form.country);
     const shared = {
-      name: getRequiredError(form.name, "Name"),
+      name: getUserNameError(form.name),
       country: getRequiredError(form.country, "Country"),
       contactNumber: getPhoneError(form.contactNumber, {
         required: true,
         label: "Contact Number",
         defaultCountryCode: phoneCountry,
       }),
-      contactPerson: "",
+      contactPerson: getContactPersonError(form.contactPerson),
     };
 
     const apiBaseUrlError = getOptionalUrlError(form.apiBaseUrl, "API Base URL");
@@ -276,7 +282,27 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                           : "Enter Website URL"
                   }
                   value={form[key]}
-                  onChange={(e) => setField(key, e.target.value)}
+                  maxLength={
+                    key === "name"
+                      ? NAME_FIELD_MAX_LENGTH
+                      : key === "email"
+                        ? EMAIL_FIELD_MAX_LENGTH
+                        : key === "contactPerson"
+                          ? CONTACT_PERSON_MAX_LENGTH
+                          : undefined
+                  }
+                  onChange={(e) =>
+                    setField(
+                      key,
+                      key === "name"
+                        ? limitTextInput(e.target.value, NAME_FIELD_MAX_LENGTH)
+                        : key === "email"
+                          ? limitTextInput(e.target.value, EMAIL_FIELD_MAX_LENGTH)
+                          : key === "contactPerson"
+                            ? limitTextInput(e.target.value, CONTACT_PERSON_MAX_LENGTH)
+                            : e.target.value
+                    )
+                  }
                   onBlur={() => touch(key)}
                   disabled={fieldDisabled(isEdit && key === "email")}
                   readOnly={isEdit && key === "email"}

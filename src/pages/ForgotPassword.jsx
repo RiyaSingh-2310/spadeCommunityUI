@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
 import AuthSecondaryAction from "../components/auth/AuthSecondaryAction";
 import { useFormValidation } from "../modules/shared/hooks/useFormValidation";
-import { getAuthEmailError } from "../modules/shared/utils/validation";
+import { EMAIL_FIELD_MAX_LENGTH, getAuthEmailError } from "../modules/shared/utils/validation";
 import { forgotPassword } from "../services/auth/authApi";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 
@@ -91,6 +91,7 @@ function ForgotPassword({ isDarkMode, onToggleTheme }) {
               placeholder="Enter your email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
+              maxLength={EMAIL_FIELD_MAX_LENGTH}
               onBlur={() => touch("email")}
               disabled={isSending}
               className={`kh-input h-full w-full bg-transparent pl-2.5 text-[15px] outline-none ${

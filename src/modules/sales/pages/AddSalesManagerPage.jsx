@@ -16,6 +16,9 @@ import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { resolveProfileImageUrl } from "../../shared/utils/userAvatar";
 import {
+  EMAIL_FIELD_MAX_LENGTH,
+  NAME_FIELD_MAX_LENGTH,
+  PASSWORD_FIELD_MAX_LENGTH,
   getAuthEmailError,
   getConfirmPasswordError,
   getOptionalConfirmPasswordError,
@@ -23,7 +26,6 @@ import {
   getPasswordError,
   getUserNameError,
   limitTextInput,
-  USER_FIELD_MAX_LENGTH,
   isFormValidForFields,
 } from "../../shared/utils/validation";
 
@@ -257,9 +259,12 @@ function AddSalesManagerPage({ isDarkMode }) {
                 className={inputClass}
                 placeholder="Enter Name"
                 value={form.name}
-                maxLength={USER_FIELD_MAX_LENGTH}
+                maxLength={NAME_FIELD_MAX_LENGTH}
                 onChange={(e) =>
-                  setForm((prev) => ({ ...prev, name: limitTextInput(e.target.value) }))
+                  setForm((prev) => ({
+                    ...prev,
+                    name: limitTextInput(e.target.value, NAME_FIELD_MAX_LENGTH),
+                  }))
                 }
                 onBlur={() => touch("name")}
                 disabled={fieldDisabled()}
@@ -277,9 +282,12 @@ function AddSalesManagerPage({ isDarkMode }) {
                 className={`${inputClass}${isEdit ? " cursor-not-allowed opacity-70" : ""}`}
                 placeholder="Enter Email Address"
                 value={form.email}
-                maxLength={USER_FIELD_MAX_LENGTH}
+                maxLength={EMAIL_FIELD_MAX_LENGTH}
                 onChange={(e) =>
-                  setForm((prev) => ({ ...prev, email: limitTextInput(e.target.value) }))
+                  setForm((prev) => ({
+                    ...prev,
+                    email: limitTextInput(e.target.value, EMAIL_FIELD_MAX_LENGTH),
+                  }))
                 }
                 onBlur={() => touch("email")}
                 disabled={fieldDisabled(isEdit)}
@@ -300,11 +308,11 @@ function AddSalesManagerPage({ isDarkMode }) {
                   className={`${inputClass} pr-10`}
                   placeholder="Enter New Password"
                   value={form.password}
-                  maxLength={USER_FIELD_MAX_LENGTH}
+                  maxLength={PASSWORD_FIELD_MAX_LENGTH}
                   onChange={(e) =>
                     setForm((prev) => ({
                       ...prev,
-                      password: limitTextInput(e.target.value),
+                      password: limitTextInput(e.target.value, PASSWORD_FIELD_MAX_LENGTH),
                     }))
                   }
                   onBlur={() => touch("password")}
@@ -336,11 +344,14 @@ function AddSalesManagerPage({ isDarkMode }) {
                   className={`${inputClass} pr-10`}
                   placeholder="Retype New Password"
                   value={form.confirmPassword}
-                  maxLength={USER_FIELD_MAX_LENGTH}
+                  maxLength={PASSWORD_FIELD_MAX_LENGTH}
                   onChange={(e) =>
                     setForm((prev) => ({
                       ...prev,
-                      confirmPassword: limitTextInput(e.target.value),
+                      confirmPassword: limitTextInput(
+                        e.target.value,
+                        PASSWORD_FIELD_MAX_LENGTH
+                      ),
                     }))
                   }
                   onBlur={() => touch("confirmPassword")}
