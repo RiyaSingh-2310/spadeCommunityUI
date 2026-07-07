@@ -154,17 +154,14 @@ function resolveGroupTitleFromRecord(record) {
   ).trim();
 }
 
+const DEFAULT_QUESTIONNAIRE_GROUP_PUBLIC_URL_BASE =
+  "https://spade-community-client-ui.vercel.app/questionnaire";
+
 function getQuestionnaireGroupPublicUrlBase() {
   const explicit = import.meta.env.VITE_QUESTIONNAIRE_GROUP_URL_BASE?.trim();
   if (explicit) return explicit.replace(/\/$/, "");
 
-  const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || "http://localhost:5050/api";
-  const normalized = apiBase.replace(/\/$/, "");
-  if (normalized.endsWith("/api")) {
-    return `${normalized.slice(0, -4)}/questionnaire-group`;
-  }
-
-  return `${normalized}/questionnaire-group`;
+  return DEFAULT_QUESTIONNAIRE_GROUP_PUBLIC_URL_BASE;
 }
 
 function resolveQuestionnaireGroupWebsiteUrl(record) {
@@ -343,7 +340,21 @@ export async function createPrescreenGroup(payload) {
     body: buildQuestionnaireGroupCreateBody(payload),
   });
 
-  return assertSuccess(data);
+  const result = assertSuccess(data);
+  const record = extractQuestionnaireGroupRecord(result);
+  const websiteUrl = record ? resolveQuestionnaireGroupWebsiteUrl(record) : "";
+
+  return {
+    ...result,
+    websiteUrl,
+    data: record
+      ? {
+          ...record,
+          websiteUrl,
+          website_url: record.website_url ?? websiteUrl,
+        }
+      : result.data,
+  };
 }
 
 /** PUT /api/questionnaire-group/:id */

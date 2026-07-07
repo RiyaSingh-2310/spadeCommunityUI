@@ -306,10 +306,19 @@ function AddPrescreenGroupPage({ isDarkMode }) {
 
       toastApiSuccess(data);
 
+      const websiteUrl = String(data?.websiteUrl ?? data?.data?.website_url ?? "").trim();
+
       navigate("/prescreen/group", {
         replace: true,
         state: {
-          flash: data.message ? { type: "success", message: data.message } : null,
+          flash: data.message
+            ? {
+                type: "success",
+                message: websiteUrl
+                  ? `${data.message} Website URL: ${websiteUrl}`
+                  : data.message,
+              }
+            : null,
           refresh: true,
         },
       });
