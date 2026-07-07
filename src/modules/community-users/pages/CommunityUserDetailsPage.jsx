@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import DebouncedSearchInput from "../../../components/admin/DebouncedSearchInput";
@@ -8,8 +8,8 @@ import { ADMIN_TABLE_INNER_CLASS } from "../../shared/utils/tableHelpers";
 import TableLoadingSkeleton from "../../../components/admin/TableLoadingSkeleton";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
-import { getCommunityUserById } from "../data/communityUsersStore";
-import { getUserProfilingAnswers } from "../services/communityUsersApi";
+import { toastApiError } from "../../../services/toast/apiToast";
+import { getRecord, getUserProfilingAnswers } from "../services/communityUsersApi";
 
 const TABLE_HEAD =
   "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
@@ -17,8 +17,38 @@ const TABLE_HEAD =
 function CommunityUserDetailsPage({ isDarkMode }) {
   const navigate = useNavigate();
   const { id } = useParams();
-  const user = id ? getCommunityUserById(id) : null;
+  const [user, setUser] = useState(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(Boolean(id));
   const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    if (!id) {
+      setUser(null);
+      setIsLoadingUser(false);
+      return;
+    }
+
+    let cancelled = false;
+    const loadPanelist = async () => {
+      setIsLoadingUser(true);
+      try {
+        const record = await getRecord(id);
+        if (cancelled) return;
+        setUser(record);
+      } catch (error) {
+        if (cancelled) return;
+        setUser(null);
+        toastApiError(error);
+      } finally {
+        if (!cancelled) setIsLoadingUser(false);
+      }
+    };
+
+    loadPanelist();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const fetchAnswers = useCallback(
     async (params) => getUserProfilingAnswers(id, params),
@@ -47,7 +77,9 @@ function CommunityUserDetailsPage({ isDarkMode }) {
     return (
       <div className="space-y-6">
         <AdminPageHeader title="User Details" isDarkMode={isDarkMode} />
-        <p className="admin-text-muted text-sm">User not found.</p>
+        <p className="admin-text-muted text-sm">
+          {isLoadingUser ? "Loading user details..." : "User not found."}
+        </p>
         <button
           type="button"
           onClick={() => navigate("/community-users")}
@@ -86,7 +118,7 @@ function CommunityUserDetailsPage({ isDarkMode }) {
 
       <div className="admin-text space-y-1">
         <p className="text-lg font-semibold">{user.name}</p>
-        <p className="admin-text-muted text-sm">{user.emailAddress}</p>
+        <p className="admin-text-muted text-sm">{user.emailAddress ?? user.email ?? "—"}</p>
       </div>
 
       <DebouncedSearchInput

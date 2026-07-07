@@ -1,11 +1,14 @@
 import { useState } from "react";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import RewardDetailsModal from "../components/RewardDetailsModal";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { addRewardTransaction } from "../services/rewardTransactionsApi";
 
 const REWARD_TYPES = ["Registration Reward", "Survey Completion", "Reward Redemption"];
 
 const initialRows = Array.from({ length: 12 }, (_, idx) => ({
   id: `pr-${idx + 1}`,
+  userId: idx + 1,
   userName: `user_${idx + 1}`,
   email: `user_${idx + 1}@example.com`,
   rewardType: REWARD_TYPES[idx % REWARD_TYPES.length],
@@ -44,7 +47,7 @@ function PendingRewardsPage({ isDarkMode }) {
     setCommentError("");
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!activeRow?.id) return;
 
     if (modalMode === "reject") {
@@ -57,8 +60,18 @@ function PendingRewardsPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
+      await addRewardTransaction({
+        row: activeRow,
+        transactionType: modalMode === "reject" ? "debit" : "credit",
+        status: modalMode === "reject" ? "rejected" : "completed",
+        transactionBy: "Admin",
+        comment,
+      });
       setRows((prev) => prev.filter((item) => item.id !== activeRow.id));
+      toastApiSuccess({ message: "Reward transaction added successfully." });
       closeModal();
+    } catch (error) {
+      toastApiError(error);
     } finally {
       setIsSubmitting(false);
     }

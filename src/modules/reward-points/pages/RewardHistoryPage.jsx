@@ -1,62 +1,71 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AdminDateRangeFilter from "../../../components/admin/AdminDateRangeFilter";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import RewardDetailsModal from "../components/RewardDetailsModal";
+import { formatSurveyListDate } from "../../shared/utils/dateTime";
+import { toastApiError } from "../../../services/toast/apiToast";
+import {
+  fetchRewardTransactionById,
+  fetchRewardTransactions,
+} from "../services/rewardTransactionsApi";
 
-const REWARD_TYPES = [
-  "Registration Reward",
-  "Survey Completion",
-  "Referral Bonus",
-  "Reward Redemption",
-  "Manual Adjustment",
-];
-
-const STATUS_OPTIONS = ["Approved", "Rejected"];
-
-const DEMO_REMARKS = [
-  "Requested Amazon voucher redemption for survey rewards.",
-  "Requested reward redemption for completed survey participation.",
-  "Redemption request for referral bonus points.",
-  "Manual adjustment review for registration reward.",
-  "",
-];
-
-function buildDemoRow(idx) {
-  const rewardType = REWARD_TYPES[idx % REWARD_TYPES.length];
-  const points = 100 + idx * 50;
-  const isDebit = rewardType === "Reward Redemption";
-  const totalRewardCredit = isDebit ? 0 : points;
-  const totalRewardDebit = isDebit ? points : 0;
-
-  return {
-    id: `rh-${idx + 1}`,
-    userName: `user_${idx + 1}`,
-    email: `user_${idx + 1}@example.com`,
-    rewardType,
-    totalRewardCredit: String(totalRewardCredit),
-    totalRewardDebit: String(totalRewardDebit),
-    totalRewardBalance: String(totalRewardCredit - totalRewardDebit),
-    status: STATUS_OPTIONS[idx % STATUS_OPTIONS.length],
-    remark: DEMO_REMARKS[idx % DEMO_REMARKS.length],
-    createdAt: `${String(1 + (idx % 28)).padStart(2, "0")}/06/2026`,
-    date: `${String(1 + (idx % 28)).padStart(2, "0")}/06/2026`,
-  };
-}
-
-const INITIAL_ROWS = Array.from({ length: 24 }, (_, idx) => buildDemoRow(idx));
-
-function parseDisplayDate(value) {
+function parseDate(value) {
   if (!value) return null;
-  const [day, month, year] = String(value).split("/").map(Number);
-  if (!day || !month || !year) return null;
-  return new Date(year, month - 1, day);
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function RewardHistoryPage({ isDarkMode }) {
-  const [rows, setRows] = useState(INITIAL_ROWS);
+  const [rows, setRows] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [summary, setSummary] = useState({
+    totalCredit: 0,
+    totalDebit: 0,
+    totalBalance: 0,
+  });
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [viewTarget, setViewTarget] = useState(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadRewardTransactions = async () => {
+      setIsLoading(true);
+      try {
+        const data = await fetchRewardTransactions({
+          page: currentPage,
+          limit: pageSize,
+        });
+        if (cancelled) return;
+
+        setRows(data.rows);
+        setTotalRecords(data.total);
+        setSummary(data.summary);
+      } catch (error) {
+        if (cancelled) return;
+        setRows([]);
+        setTotalRecords(0);
+        setSummary({
+          totalCredit: 0,
+          totalDebit: 0,
+          totalBalance: 0,
+        });
+        toastApiError(error);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadRewardTransactions();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPage, pageSize]);
 
   const filteredRows = useMemo(() => {
     const from = fromDate ? new Date(fromDate) : null;
@@ -66,18 +75,26 @@ function RewardHistoryPage({ isDarkMode }) {
     }
 
     return rows.filter((row) => {
-      const rowDate = parseDisplayDate(row.createdAt);
+      const rowDate = parseDate(row.createdAtRaw ?? row.createdAt);
       if (from && rowDate && rowDate < from) return false;
       if (to && rowDate && rowDate > to) return false;
       return true;
     });
   }, [fromDate, toDate, rows]);
 
-  const handleStatusChange = (row, nextStatus) => {
-    if (!row?.id) return;
-    setRows((prev) =>
-      prev.map((item) => (item.id === row.id ? { ...item, status: nextStatus } : item))
-    );
+  const handleView = async (row) => {
+    const id = row?.id;
+    if (id == null) return;
+
+    setIsDetailLoading(true);
+    try {
+      const detail = await fetchRewardTransactionById(id);
+      setViewTarget(detail);
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsDetailLoading(false);
+    }
   };
 
   return (
@@ -98,14 +115,29 @@ function RewardHistoryPage({ isDarkMode }) {
           "Action",
         ]}
         rows={filteredRows}
+        isLoading={isLoading}
+        emptyMessage="No reward requests found"
+        summaryCards={[
+          { label: "Total Credit", value: summary.totalCredit },
+          { label: "Total Debit", value: summary.totalDebit },
+          { label: "Total Balance", value: summary.totalBalance },
+        ]}
         rowIdKey="id"
         showStatus
-        statusDropdownOptions={STATUS_OPTIONS}
-        onStatusChange={handleStatusChange}
+        statusAsText
         permissionModule="reward_history"
         actionVariant="reward-pending"
         showPagination
-        onView={(row) => setViewTarget(row)}
+        serverPaginated
+        totalRecords={totalRecords}
+        paginationPage={currentPage}
+        paginationPageSize={pageSize}
+        onPaginationPageChange={setCurrentPage}
+        onPaginationPageSizeChange={(nextSize) => {
+          setPageSize(nextSize);
+          setCurrentPage(1);
+        }}
+        onView={handleView}
         toolbarEnd={
           <AdminDateRangeFilter
             fromDate={fromDate}
@@ -117,18 +149,34 @@ function RewardHistoryPage({ isDarkMode }) {
       />
 
       <RewardDetailsModal
-        isOpen={Boolean(viewTarget)}
+        isOpen={Boolean(viewTarget) || isDetailLoading}
         mode="view"
         row={
           viewTarget
             ? {
                 ...viewTarget,
-                rewardPoints: viewTarget.totalRewardBalance,
-                createdDate: viewTarget.createdAt,
+                rewardPoints: viewTarget.rewardPoints,
+                createdDate: formatSurveyListDate(
+                  viewTarget.createdAtRaw ?? viewTarget.createdAt
+                ),
               }
-            : null
+            : isDetailLoading
+              ? {
+                  id: "loading",
+                  userName: "Loading...",
+                  email: "Loading...",
+                  rewardType: "Loading...",
+                  rewardPoints: "—",
+                  createdDate: "—",
+                  status: "Loading...",
+                }
+              : null
         }
-        onCancel={() => setViewTarget(null)}
+        isSubmitting={isDetailLoading}
+        onCancel={() => {
+          if (isDetailLoading) return;
+          setViewTarget(null);
+        }}
       />
     </div>
   );

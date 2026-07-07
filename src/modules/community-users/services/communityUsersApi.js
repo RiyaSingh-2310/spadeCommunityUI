@@ -128,6 +128,72 @@ function buildPanelistUpdatePayload(payload) {
   return body;
 }
 
+function toPanelistDetailRecord(panelist) {
+  return {
+    ...mapPanelistToListingRow(panelist),
+    ...mapPanelistToForm(panelist),
+    email: panelist?.email ?? panelist?.emailAddress ?? "",
+    isVerified: mapIsVerified(panelist?.is_verified),
+    balancePoint: panelist?.balance_point ?? panelist?.balancePoint ?? "",
+    questionnaire: mapYesNoFromApi(panelist?.questionnaire),
+    questionnaireUrl: panelist?.questionnaire_url ?? "",
+    createdAt: panelist?.created_at ?? panelist?.createdAt ?? "",
+    updatedAt: panelist?.updated_at ?? panelist?.updatedAt ?? "",
+  };
+}
+
+async function findPanelistInList(id) {
+  const targetId = String(id);
+
+  const fetchListPage = async (page, limit, search = "") => {
+    const path = appendListQuery(API_ROUTES.panelist.list, {
+      page,
+      limit,
+      search: normalizeSearchQuery(search),
+      alwaysIncludeEmpty: ["search"],
+    });
+    const data = await apiRequest(path);
+    assertSuccess(data);
+    return {
+      panelists: extractPanelistList(data),
+      totalPages:
+        data.totalPages ??
+        Math.max(
+          1,
+          Math.ceil(
+            extractListTotalFromResponse(data, extractPanelistList(data).length) /
+              (Number(limit) || 100),
+          ) || 1,
+        ),
+    };
+  };
+
+  try {
+    const searchData = await fetchListPage(1, 50, targetId);
+    const searchMatch = searchData.panelists.find((panelist) => String(panelist.id) === targetId);
+    if (searchMatch) {
+      return toPanelistDetailRecord(searchMatch);
+    }
+  } catch {
+    // Continue with paginated lookup.
+  }
+
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const listData = await fetchListPage(page, 100);
+    totalPages = listData.totalPages;
+    const match = listData.panelists.find((panelist) => String(panelist.id) === targetId);
+    if (match) {
+      return toPanelistDetailRecord(match);
+    }
+    page += 1;
+  } while (page <= totalPages);
+
+  return null;
+}
+
 /** Maps GET /api/panelist/list record to listing row shape. */
 export function mapPanelistToListingRow(panelist) {
   return {
@@ -201,18 +267,13 @@ export async function getRecord(id) {
       throw new ApiError("Panelist not found.", data);
     }
 
-    return {
-      ...mapPanelistToListingRow(panelist),
-      ...mapPanelistToForm(panelist),
-    };
+    return toPanelistDetailRecord(panelist);
   } catch (error) {
-    const listData = await getRecords({ page: 1, limit: 100, search: "" });
-    const found = listData.items.find((item) => String(item.id) === String(id));
-    if (found) {
-      return {
-        ...found,
-        email: found.emailAddress ?? found.email ?? "",
-      };
+    if (error instanceof ApiError && error.status === 404) {
+      const found = await findPanelistInList(id);
+      if (found) {
+        return found;
+      }
     }
 
     if (error instanceof ApiError) {
