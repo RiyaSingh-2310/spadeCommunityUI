@@ -4,10 +4,7 @@ import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import RewardDetailsModal from "../components/RewardDetailsModal";
 import { formatSurveyListDate } from "../../shared/utils/dateTime";
 import { toastApiError } from "../../../services/toast/apiToast";
-import {
-  fetchRewardTransactionById,
-  fetchRewardTransactions,
-} from "../services/rewardTransactionsApi";
+import { fetchRewardHistoryList } from "../services/rewardHistoryApi";
 
 function parseDate(value) {
   if (!value) return null;
@@ -29,15 +26,14 @@ function RewardHistoryPage({ isDarkMode }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [viewTarget, setViewTarget] = useState(null);
-  const [isDetailLoading, setIsDetailLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    const loadRewardTransactions = async () => {
+    const loadRewardHistory = async () => {
       setIsLoading(true);
       try {
-        const data = await fetchRewardTransactions({
+        const data = await fetchRewardHistoryList({
           page: currentPage,
           limit: pageSize,
         });
@@ -61,7 +57,7 @@ function RewardHistoryPage({ isDarkMode }) {
       }
     };
 
-    loadRewardTransactions();
+    loadRewardHistory();
     return () => {
       cancelled = true;
     };
@@ -82,19 +78,9 @@ function RewardHistoryPage({ isDarkMode }) {
     });
   }, [fromDate, toDate, rows]);
 
-  const handleView = async (row) => {
-    const id = row?.id;
-    if (id == null) return;
-
-    setIsDetailLoading(true);
-    try {
-      const detail = await fetchRewardTransactionById(id);
-      setViewTarget(detail);
-    } catch (error) {
-      toastApiError(error);
-    } finally {
-      setIsDetailLoading(false);
-    }
+  const handleView = (row) => {
+    if (row?.id == null) return;
+    setViewTarget(row);
   };
 
   return (
@@ -117,11 +103,11 @@ function RewardHistoryPage({ isDarkMode }) {
         rows={filteredRows}
         isLoading={isLoading}
         emptyMessage="No reward requests found"
-        // summaryCards={[
-        //   { label: "Total Credit", value: summary.totalCredit },
-        //   { label: "Total Debit", value: summary.totalDebit },
-        //   { label: "Total Balance", value: summary.totalBalance },
-        // ]}
+        summaryCards={[
+          { label: "Total Credit", value: summary.totalCredit },
+          { label: "Total Debit", value: summary.totalDebit },
+          { label: "Total Balance", value: summary.totalBalance },
+        ]}
         rowIdKey="id"
         showStatus
         statusAsText
@@ -149,7 +135,7 @@ function RewardHistoryPage({ isDarkMode }) {
       />
 
       <RewardDetailsModal
-        isOpen={Boolean(viewTarget) || isDetailLoading}
+        isOpen={Boolean(viewTarget)}
         mode="view"
         row={
           viewTarget
@@ -160,23 +146,9 @@ function RewardHistoryPage({ isDarkMode }) {
                   viewTarget.createdAtRaw ?? viewTarget.createdAt
                 ),
               }
-            : isDetailLoading
-              ? {
-                  id: "loading",
-                  userName: "Loading...",
-                  email: "Loading...",
-                  rewardType: "Loading...",
-                  rewardPoints: "—",
-                  createdDate: "—",
-                  status: "Loading...",
-                }
-              : null
+            : null
         }
-        isSubmitting={isDetailLoading}
-        onCancel={() => {
-          if (isDetailLoading) return;
-          setViewTarget(null);
-        }}
+        onCancel={() => setViewTarget(null)}
       />
     </div>
   );

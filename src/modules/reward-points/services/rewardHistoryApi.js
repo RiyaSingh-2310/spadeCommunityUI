@@ -27,6 +27,29 @@ function coerceText(value, fallback = "—") {
   return text || fallback;
 }
 
+function mapRewardHistoryRow(item) {
+  const transactionType = String(item?.transaction_type ?? "").trim().toLowerCase();
+  const points = toNumber(item?.reward_points, 0);
+  const credit = transactionType === "credit" ? points : 0;
+  const debit = transactionType === "debit" ? points : 0;
+
+  return {
+    id: item?.id,
+    userId: item?.user_id ?? null,
+    userName: coerceText(item?.user_name, `User #${item?.user_id ?? "—"}`),
+    rewardType: coerceText(item?.reward_type ?? item?.transaction_type),
+    totalRewardCredit: String(credit),
+    totalRewardDebit: String(debit),
+    totalRewardBalance: String(credit - debit),
+    rewardPoints: String(points),
+    transactionType,
+    status: normalizeStatus(item?.status),
+    createdAt: formatSurveyListDate(item?.created_at),
+    createdAtRaw: item?.created_at ?? "",
+    createdDate: formatSurveyListDate(item?.created_at),
+  };
+}
+
 function mapRedeemRequestRow(item) {
   return {
     id: item?.id,
@@ -47,6 +70,34 @@ function mapRedeemRequestRow(item) {
     createdDate: formatSurveyListDate(item?.created_at),
     updatedAt: formatSurveyListDate(item?.updated_at),
     updatedAtRaw: item?.updated_at ?? "",
+  };
+}
+
+/** GET /api/reward-history/list */
+export async function fetchRewardHistoryList({ page = 1, limit = 10, search } = {}) {
+  const path = appendListQuery(API_ROUTES.rewardHistory.list, {
+    page,
+    limit,
+    search,
+  });
+  const data = await apiRequest(path);
+  assertSuccess(data);
+
+  const items = Array.isArray(data?.data) ? data.data : [];
+  const safePage = toNumber(data?.page, page);
+  const safeLimit = toNumber(data?.limit, limit);
+
+  return {
+    rows: items.map((item) => mapRewardHistoryRow(item)),
+    total: toNumber(data?.total, 0),
+    page: safePage,
+    limit: safeLimit,
+    totalPages: toNumber(data?.totalPages, 1),
+    summary: {
+      totalCredit: toNumber(data?.summary?.total_credit, 0),
+      totalDebit: toNumber(data?.summary?.total_debit, 0),
+      totalBalance: toNumber(data?.summary?.total_balance, 0),
+    },
   };
 }
 
