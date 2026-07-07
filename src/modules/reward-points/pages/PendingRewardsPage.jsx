@@ -1,21 +1,14 @@
 import { useState } from "react";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import RewardDetailsModal from "../components/RewardDetailsModal";
+import { useApiListing } from "../../shared/hooks/useApiListing";
+import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
+import { getAdminDisplayName } from "../../../services/auth/authStorage";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
-import { addRewardTransaction } from "../services/rewardTransactionsApi";
-
-const REWARD_TYPES = ["Registration Reward", "Survey Completion", "Reward Redemption"];
-
-const initialRows = Array.from({ length: 12 }, (_, idx) => ({
-  id: `pr-${idx + 1}`,
-  userId: idx + 1,
-  userName: `user_${idx + 1}`,
-  email: `user_${idx + 1}@example.com`,
-  rewardType: REWARD_TYPES[idx % REWARD_TYPES.length],
-  rewardPoints: String(500 + idx * 100),
-  createdDate: `${String(1 + (idx % 28)).padStart(2, "0")}/06/2026`,
-  status: "Pending",
-}));
+import {
+  fetchRedeemRequests,
+  updateRedeemRequestStatus,
+} from "../services/rewardHistoryApi";
 
 function validateRejectComment(comment) {
   if (String(comment ?? "").trim().length < 3) {
@@ -25,7 +18,22 @@ function validateRejectComment(comment) {
 }
 
 function PendingRewardsPage({ isDarkMode }) {
-  const [rows, setRows] = useState(initialRows);
+  const {
+    rows,
+    totalRecords,
+    isLoading,
+    currentPage,
+    pageSize,
+    handleSearch,
+    handlePageChange,
+    handlePageSizeChange,
+    refresh: fetchRedeemList,
+  } = useApiListing({
+    fetchFn: fetchRedeemRequests,
+    initialPageSize: DEFAULT_PAGE_SIZE,
+    preserveRowOrder: true,
+  });
+
   const [modalMode, setModalMode] = useState(null);
   const [activeRow, setActiveRow] = useState(null);
   const [comment, setComment] = useState("");
@@ -60,15 +68,16 @@ function PendingRewardsPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
-      await addRewardTransaction({
-        row: activeRow,
-        transactionType: modalMode === "reject" ? "debit" : "credit",
-        status: modalMode === "reject" ? "rejected" : "completed",
-        transactionBy: "Admin",
+      const isApprove = modalMode === "approve";
+      const data = await updateRedeemRequestStatus(activeRow.id, {
+        status: isApprove ? "approved" : "rejected",
+        actionBy: getAdminDisplayName(),
+        remark: isApprove ? "Verified" : "Rejected",
         comment,
       });
-      setRows((prev) => prev.filter((item) => item.id !== activeRow.id));
-      toastApiSuccess({ message: "Reward transaction added successfully." });
+
+      toastApiSuccess(data);
+      await fetchRedeemList();
       closeModal();
     } catch (error) {
       toastApiError(error);
@@ -98,7 +107,17 @@ function PendingRewardsPage({ isDarkMode }) {
         statusAsText
         actionVariant="reward-pending"
         permissionModule="pending_rewards"
+        isLoading={isLoading}
+        emptyMessage="No reward history found"
+        onSearch={handleSearch}
         showPagination
+        serverPaginated
+        serverSearch
+        totalRecords={totalRecords}
+        paginationPage={currentPage}
+        onPaginationPageChange={handlePageChange}
+        paginationPageSize={pageSize}
+        onPaginationPageSizeChange={handlePageSizeChange}
         onApprove={(row) => openModal("approve", row)}
         onReject={(row) => openModal("reject", row)}
       />

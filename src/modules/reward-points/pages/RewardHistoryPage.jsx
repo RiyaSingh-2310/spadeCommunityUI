@@ -117,11 +117,11 @@ function RewardHistoryPage({ isDarkMode }) {
         rows={filteredRows}
         isLoading={isLoading}
         emptyMessage="No reward requests found"
-        summaryCards={[
-          { label: "Total Credit", value: summary.totalCredit },
-          { label: "Total Debit", value: summary.totalDebit },
-          { label: "Total Balance", value: summary.totalBalance },
-        ]}
+        // summaryCards={[
+        //   { label: "Total Credit", value: summary.totalCredit },
+        //   { label: "Total Debit", value: summary.totalDebit },
+        //   { label: "Total Balance", value: summary.totalBalance },
+        // ]}
         rowIdKey="id"
         showStatus
         statusAsText

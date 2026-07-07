@@ -1,0 +1,107 @@
+import { API_ROUTES } from "../../../config/api";
+import { ApiError } from "../../../services/api/ApiError";
+import { apiRequest } from "../../../services/api/client";
+import { appendListQuery } from "../../shared/utils/listQueryParams";
+import { formatSurveyListDate } from "../../shared/utils/dateTime";
+
+function assertSuccess(data) {
+  if (data?.success !== true && data?.success !== "true") {
+    throw new ApiError(data?.message ?? "Unable to fetch reward history.", data);
+  }
+  return data;
+}
+
+function toNumber(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeStatus(value) {
+  const status = String(value ?? "").trim();
+  if (!status) return "Pending";
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+}
+
+function coerceText(value, fallback = "—") {
+  const text = String(value ?? "").trim();
+  return text || fallback;
+}
+
+function mapRedeemRequestRow(item) {
+  return {
+    id: item?.id,
+    userId: item?.user_id ?? null,
+    userName: coerceText(item?.user_name, `User #${item?.user_id ?? "—"}`),
+    email: coerceText(item?.user_email, "—"),
+    rewardType: coerceText(item?.remark, "—"),
+    rewardPoints: String(toNumber(item?.reward_points, 0)),
+    requestedBy: coerceText(item?.requested_by, "—"),
+    status: normalizeStatus(item?.status),
+    remark: coerceText(item?.remark, ""),
+    comments: coerceText(item?.comment, ""),
+    actionBy: coerceText(item?.action_by, "—"),
+    actionDate: item?.action_date ? formatSurveyListDate(item.action_date) : "—",
+    actionDateRaw: item?.action_date ?? "",
+    createdAt: formatSurveyListDate(item?.created_at),
+    createdAtRaw: item?.created_at ?? "",
+    createdDate: formatSurveyListDate(item?.created_at),
+    updatedAt: formatSurveyListDate(item?.updated_at),
+    updatedAtRaw: item?.updated_at ?? "",
+  };
+}
+
+/** GET /api/reward-history/redeem/list */
+export async function fetchRedeemRequests({ page = 1, limit = 10, search } = {}) {
+  const path = appendListQuery(API_ROUTES.rewardHistory.redeemList, {
+    page,
+    limit,
+    search,
+  });
+  const data = await apiRequest(path);
+  assertSuccess(data);
+
+  const items = Array.isArray(data?.data) ? data.data : [];
+  const safePage = toNumber(data?.page, page);
+  const safeLimit = toNumber(data?.limit, limit);
+
+  return {
+    items: items.map((item) => mapRedeemRequestRow(item)),
+    total: toNumber(data?.total, 0),
+    page: safePage,
+    limit: safeLimit,
+    totalPages: toNumber(data?.totalPages, 1),
+  };
+}
+
+/** PATCH /api/reward-history/redeem/:id/status */
+export async function updateRedeemRequestStatus(
+  id,
+  { status, actionBy, remark = "", comment = "" } = {}
+) {
+  const normalizedId = String(id ?? "").trim();
+  if (!normalizedId) {
+    throw new ApiError("Redeem request id is required.");
+  }
+
+  const normalizedStatus = String(status ?? "").trim().toLowerCase();
+  if (normalizedStatus !== "approved" && normalizedStatus !== "rejected") {
+    throw new ApiError("Status must be approved or rejected.");
+  }
+
+  const actionByText = String(actionBy ?? "").trim();
+  if (!actionByText) {
+    throw new ApiError("Action by is required.");
+  }
+
+  const data = await apiRequest(API_ROUTES.rewardHistory.redeemUpdateStatus(normalizedId), {
+    method: "PATCH",
+    body: {
+      status: normalizedStatus,
+      action_by: actionByText,
+      remark: String(remark ?? "").trim(),
+      comment: String(comment ?? "").trim(),
+    },
+  });
+
+  return assertSuccess(data);
+}

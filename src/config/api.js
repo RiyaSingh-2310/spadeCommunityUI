@@ -154,6 +154,10 @@ export const API_ROUTES = {
     add: "/api/rewards/transactions/add",
     byId: (id) => `/api/rewards/transactions/${id}`,
   },
+  rewardHistory: {
+    redeemList: "/api/reward-history/redeem/list",
+    redeemUpdateStatus: (id) => `/api/reward-history/redeem/${id}/status`,
+  },
   systemEmails: {
     list: "/api/system-emails/list",
     byId: (id) => `/api/system-emails/${id}`,
