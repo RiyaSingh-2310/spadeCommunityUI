@@ -133,8 +133,8 @@ function PendingRewardsPage({ isDarkMode }) {
     <>
       <ModuleListingPage
         isDarkMode={isDarkMode}
-        title="Reward History"
-        searchPlaceholder="Search reward history..."
+        title="Reward Request"
+        searchPlaceholder="Search reward requests..."
         columns={[
           "S.No",
           "User Name",
@@ -151,7 +151,7 @@ function PendingRewardsPage({ isDarkMode }) {
         actionVariant="reward-pending"
         permissionModule="pending_rewards"
         isLoading={isLoading}
-        emptyMessage="No reward history found"
+        emptyMessage="No reward requests found"
         onSearch={handleSearch}
         toolbarFilters={toolbarFilters}
         showPagination

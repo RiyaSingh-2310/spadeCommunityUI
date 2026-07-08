@@ -62,12 +62,26 @@ export const SIDEBAR_NAV_ITEMS = [
     permissionKeys: ["rfq"],
   },
   {
-    type: "link",
+    type: "group",
     label: "Pre-Screen",
-    root: "/prescreen",
-    isActive: matchesPrescreenMain,
+    key: "pre-screen",
     matcher: /^\/prescreen(\/|$)/,
     permissionKeys: ["prescreen", "prescreen_group"],
+    children: [
+      {
+        label: "Question Library",
+        root: "/prescreen",
+        isActive: matchesPrescreenMain,
+        matcher: /^\/prescreen(\/|$)/,
+        permissionKeys: ["prescreen"],
+      },
+      {
+        label: "Questionnaire Group",
+        root: "/prescreen/group",
+        matcher: /^\/prescreen\/group(\/|$)/,
+        permissionKeys: ["prescreen_group"],
+      },
+    ],
   },
   {
     type: "group",
@@ -181,7 +195,7 @@ export const SIDEBAR_NAV_ITEMS = [
     ],
     children: [
       {
-        label: "Reward Request",
+        label: "Reward History",
         root: "/reward-points/history",
         matcher: /^\/reward-points\/history(\/|$)/,
         permissionKeys: [
@@ -192,7 +206,7 @@ export const SIDEBAR_NAV_ITEMS = [
         ],
       },
       {
-        label: "Reward History",
+        label: "Reward Request",
         root: "/reward-points/pending",
         matcher: /^\/reward-points\/pending(\/|$)/,
         permissionKeys: ["pending_rewards"],

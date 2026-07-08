@@ -4,7 +4,7 @@ import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import RewardDetailsModal from "../components/RewardDetailsModal";
 import { formatSurveyListDate } from "../../shared/utils/dateTime";
 import { toastApiError } from "../../../services/toast/apiToast";
-import { fetchRewardHistoryList } from "../services/rewardHistoryApi";
+import { fetchRewardTransactions } from "../services/rewardTransactionsApi";
 
 function parseDate(value) {
   if (!value) return null;
@@ -33,7 +33,7 @@ function RewardHistoryPage({ isDarkMode }) {
     const loadRewardHistory = async () => {
       setIsLoading(true);
       try {
-        const data = await fetchRewardHistoryList({
+        const data = await fetchRewardTransactions({
           page: currentPage,
           limit: pageSize,
         });
@@ -87,8 +87,8 @@ function RewardHistoryPage({ isDarkMode }) {
     <div className="space-y-4">
       <ModuleListingPage
         isDarkMode={isDarkMode}
-        title="Reward Request"
-        searchPlaceholder="Search reward requests..."
+        title="Reward History"
+        searchPlaceholder="Search reward history..."
         columns={[
           "ID",
           "User Name",
@@ -102,7 +102,7 @@ function RewardHistoryPage({ isDarkMode }) {
         ]}
         rows={filteredRows}
         isLoading={isLoading}
-        emptyMessage="No reward requests found"
+        emptyMessage="No reward history found"
         // summaryCards={[
         //   { label: "Total Credit", value: summary.totalCredit },
         //   { label: "Total Debit", value: summary.totalDebit },

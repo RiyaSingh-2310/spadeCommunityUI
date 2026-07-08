@@ -155,7 +155,7 @@ function resolveGroupTitleFromRecord(record) {
 }
 
 const DEFAULT_QUESTIONNAIRE_GROUP_PUBLIC_URL_BASE =
-  "https://spade-community-client-ui.vercel.app/questionnaire";
+  "https://spade-community-client-ui.vercel.app/questionnaire-group";
 
 function getQuestionnaireGroupPublicUrlBase() {
   const explicit = import.meta.env.VITE_QUESTIONNAIRE_GROUP_URL_BASE?.trim();

@@ -86,6 +86,7 @@ function AdminSidebar({
     RFQ: <FileSpreadsheet size={21} strokeWidth={2} />,
     Projects: <ScrollText size={21} strokeWidth={2} />,
     "Question Library": <ClipboardList size={21} strokeWidth={2} />,
+    "Questionnaire Group": <ClipboardList size={21} strokeWidth={2} />,
     Survey: <ScrollText size={21} strokeWidth={2} />,
     Invoice: <ReceiptIndianRupee size={21} strokeWidth={2} />,
     Notifications: <Bell size={21} strokeWidth={2} />,
