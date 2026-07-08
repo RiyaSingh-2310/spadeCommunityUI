@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useModulePermission } from "../../permissions/useModulePermission";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
@@ -17,6 +18,8 @@ const LIST_COLUMNS = ["S.No", "Title", "Language", "Right Answer", "Status", "Ac
 
 function PrescreenPage({ isDarkMode }) {
   const navigate = useNavigate();
+  const { canRead: canReadQuestions, canWrite: canWriteQuestions } = useModulePermission("prescreen");
+  const { canRead: canReadSurveyGroups } = useModulePermission("prescreen_group");
   useFlashMessage();
   const {
     rows,
@@ -34,6 +37,12 @@ function PrescreenPage({ isDarkMode }) {
     preserveRowOrder: true,
   });
   useListingRefresh(fetchPrescreens);
+
+  useEffect(() => {
+    if (!canReadQuestions && canReadSurveyGroups) {
+      navigate("/prescreen/group", { replace: true });
+    }
+  }, [canReadQuestions, canReadSurveyGroups, navigate]);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -92,8 +101,19 @@ function PrescreenPage({ isDarkMode }) {
         isDarkMode={isDarkMode}
         title="Question Library"
         searchPlaceholder="Search questions..."
+        toolbarEnd={
+          canReadSurveyGroups ? (
+            <button
+              type="button"
+              onClick={() => navigate("/prescreen/group")}
+              className="admin-btn-cancel h-10 rounded-xl px-4 text-sm font-semibold transition"
+            >
+              Survey Groups
+            </button>
+          ) : null
+        }
         actionLabel="Add Question"
-        onActionClick={() => navigate("/prescreen/add")}
+        onActionClick={canWriteQuestions ? () => navigate("/prescreen/add") : undefined}
         columns={LIST_COLUMNS}
         rows={rows}
         rowIdKey="id"

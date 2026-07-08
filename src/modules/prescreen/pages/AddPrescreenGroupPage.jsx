@@ -330,7 +330,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
   };
 
   const breadcrumbItems = [
-    { label: "Pre-Screen", to: "/prescreen/group" },
+    { label: "Question Library", to: "/prescreen" },
     { label: "Questionnaire Group", to: "/prescreen/group" },
   ];
 

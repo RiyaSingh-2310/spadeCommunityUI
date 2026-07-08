@@ -62,26 +62,12 @@ export const SIDEBAR_NAV_ITEMS = [
     permissionKeys: ["rfq"],
   },
   {
-    type: "group",
+    type: "link",
     label: "Pre-Screen",
-    key: "pre-screen",
+    root: "/prescreen",
+    isActive: matchesPrescreenMain,
     matcher: /^\/prescreen(\/|$)/,
     permissionKeys: ["prescreen", "prescreen_group"],
-    children: [
-      {
-        label: "Question Library",
-        root: "/prescreen",
-        isActive: matchesPrescreenMain,
-        matcher: /^\/prescreen(\/|$)/,
-        permissionKeys: ["prescreen"],
-      },
-      {
-        label: "Questionnaire Group",
-        root: "/prescreen/group",
-        matcher: /^\/prescreen\/group(\/|$)/,
-        permissionKeys: ["prescreen_group"],
-      },
-    ],
   },
   {
     type: "group",
