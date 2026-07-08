@@ -24,6 +24,12 @@ const MANAGER_PERMISSIONS = createRolePermissions({
   group_survey: readWrite,
 });
 
+const PANELIST_PERMISSIONS = createRolePermissions({
+  dashboard: readOnly,
+  reward_history: readOnly,
+  pending_rewards: readWrite,
+});
+
 /**
  * Fixed permission sets for portal login roles (sales / manager).
  * Admin login uses API permissions unchanged.
@@ -35,6 +41,9 @@ export function getRolePermissions(loginRole) {
   }
   if (loginRole === LOGIN_ROLES.MANAGER) {
     return MANAGER_PERMISSIONS;
+  }
+  if (loginRole === LOGIN_ROLES.PANELIST) {
+    return PANELIST_PERMISSIONS;
   }
   return null;
 }

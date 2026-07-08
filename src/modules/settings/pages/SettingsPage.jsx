@@ -10,8 +10,10 @@ import NotificationsSettingsTab from "../components/NotificationsSettingsTab";
 import ProfileSettingsTab from "../components/ProfileSettingsTab";
 import SettingsTabNav from "../components/SettingsTabNav";
 import SystemSettingsTab from "../components/SystemSettingsTab";
+import { isPanelistLoginRole } from "../../../services/auth/loginRole";
 
 function SettingsPage({ isDarkMode }) {
+  const isPanelist = isPanelistLoginRole();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
   const activeTab = isValidSettingsTab(tabParam) ? tabParam : DEFAULT_SETTINGS_TAB;
@@ -25,6 +27,19 @@ function SettingsPage({ isDarkMode }) {
   const handleTabChange = (nextTab) => {
     setSearchParams({ tab: nextTab });
   };
+
+  if (isPanelist) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          title="Settings"
+          subtitle="Manage your profile and password."
+          isDarkMode={isDarkMode}
+        />
+        <ProfileSettingsTab isDarkMode={isDarkMode} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

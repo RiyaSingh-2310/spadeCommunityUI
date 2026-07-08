@@ -15,6 +15,7 @@ const LOGIN_ROLE_UI = {
     switchOptions: [
       { role: LOGIN_ROLES.SALES, label: "Login as Sales" },
       { role: LOGIN_ROLES.MANAGER, label: "Login as Manager" },
+      { role: LOGIN_ROLES.PANELIST, label: "Login as Panelist" },
     ],
   },
   [LOGIN_ROLES.SALES]: {
@@ -23,6 +24,7 @@ const LOGIN_ROLE_UI = {
     switchOptions: [
       { role: LOGIN_ROLES.ADMIN, label: "Login as Admin" },
       { role: LOGIN_ROLES.MANAGER, label: "Login as Manager" },
+      { role: LOGIN_ROLES.PANELIST, label: "Login as Panelist" },
     ],
   },
   [LOGIN_ROLES.MANAGER]: {
@@ -31,6 +33,16 @@ const LOGIN_ROLE_UI = {
     switchOptions: [
       { role: LOGIN_ROLES.ADMIN, label: "Login as Admin" },
       { role: LOGIN_ROLES.SALES, label: "Login as Sales" },
+      { role: LOGIN_ROLES.PANELIST, label: "Login as Panelist" },
+    ],
+  },
+  [LOGIN_ROLES.PANELIST]: {
+    title: "Panelist Login",
+    emailLabel: "Panelist Email",
+    switchOptions: [
+      { role: LOGIN_ROLES.ADMIN, label: "Login as Admin" },
+      { role: LOGIN_ROLES.SALES, label: "Login as Sales" },
+      { role: LOGIN_ROLES.MANAGER, label: "Login as Manager" },
     ],
   },
 };

@@ -222,6 +222,7 @@ function ModuleListingActionCell({
     const isPending = !statusKey || statusKey === "pending";
     const isViewOnly =
       statusKey === "completed" || statusKey === "approved" || statusKey === "rejected";
+    const hasDecisionActions = Boolean(onApprove || onReject);
 
     if (isPending && (onApprove || onReject)) {
       return (
@@ -236,7 +237,7 @@ function ModuleListingActionCell({
       );
     }
 
-    if (isViewOnly && allowRead && onView) {
+    if ((isViewOnly || !hasDecisionActions || isPending) && allowRead && onView) {
       return (
         <td key={col} className={cellClass}>
           <ViewActionButton onView={() => onView(row, globalIdx)} iconOnly />

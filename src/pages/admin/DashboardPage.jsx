@@ -4,7 +4,8 @@ import AdminPageHeader from "../../components/admin/AdminPageHeader";
 import PermissionDenied from "../../components/admin/PermissionDenied";
 import TableCard from "../../components/admin/TableCard";
 import { useModulePermission } from "../../modules/permissions/useModulePermission";
-import { isManagerLoginRole } from "../../services/auth/loginRole";
+import { isManagerLoginRole, isPanelistLoginRole } from "../../services/auth/loginRole";
+import { getAdminUser } from "../../services/auth/authStorage";
 import { formatDashboardDate, formatDashboardTime } from "../../modules/shared/utils/dateTime";
 import { formatStatusLabel } from "../../modules/shared/utils/statusLabels";
 import { BarsChart, DonutChart, PolylineChart, SummaryCard } from "./dashboard/dashboardCharts";
@@ -17,6 +18,8 @@ function DashboardPage({ isDarkMode }) {
   const borderRow = isDarkMode ? "border-[#263850]" : "border-[#e6edf5]";
   const headClass = "admin-text-muted";
   const isManager = isManagerLoginRole();
+  const isPanelist = isPanelistLoginRole();
+  const sessionUser = getAdminUser();
 
   const {
     isSales,
@@ -48,6 +51,44 @@ function DashboardPage({ isDarkMode }) {
 
   if (!canRead) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
+  }
+
+  if (isPanelist) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          title="Welcome to Panelist Dashboard"
+          subtitle="View your profile and reward activity."
+          isDarkMode={isDarkMode}
+        />
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <TableCard title="Reward Balance" isDarkMode={isDarkMode}>
+            <p className="text-4xl font-bold admin-text">0</p>
+            <p className="admin-text-muted mt-2 text-sm">
+              Static for now. Live panelist reward balance will be wired from API next.
+            </p>
+          </TableCard>
+
+          <TableCard title="Basic Profile" isDarkMode={isDarkMode}>
+            <dl className="space-y-2 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="admin-text-muted">Name</dt>
+                <dd className="admin-text text-right">{sessionUser?.displayName || sessionUser?.name || "—"}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="admin-text-muted">Email</dt>
+                <dd className="admin-text text-right">{sessionUser?.email || "—"}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="admin-text-muted">Phone</dt>
+                <dd className="admin-text text-right">{sessionUser?.phone || "—"}</dd>
+              </div>
+            </dl>
+          </TableCard>
+        </div>
+      </div>
+    );
   }
 
   return (
