@@ -65,6 +65,15 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
   if (isPanelist) {
     return (
       <Routes>
+        <Route
+          path="/public/questionnaire"
+          element={withSuspense(Pages.PublicQuestionnairePage, themeProps)}
+        />
+        <Route
+          path="/public/questionnaire/:id"
+          element={withSuspense(Pages.PublicQuestionnairePage, themeProps)}
+        />
+
         <Route element={<GuestOnly />}>
           <Route path="/auth" element={withSuspense(Pages.LoginPage, themeProps)} />
           <Route
@@ -102,6 +111,15 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
 
   return (
     <Routes>
+      <Route
+        path="/public/questionnaire"
+        element={withSuspense(Pages.PublicQuestionnairePage, themeProps)}
+      />
+      <Route
+        path="/public/questionnaire/:id"
+        element={withSuspense(Pages.PublicQuestionnairePage, themeProps)}
+      />
+
       <Route element={<GuestOnly />}>
         <Route path="/auth" element={withSuspense(Pages.LoginPage, themeProps)} />
         <Route

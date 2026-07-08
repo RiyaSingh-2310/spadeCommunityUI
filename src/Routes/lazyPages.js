@@ -166,6 +166,11 @@ export const EditUserEmailTemplatePage = lazy(
   () => import("../modules/user-email-templates/pages/EditUserEmailTemplatePage")
 );
 
+/** Public questionnaire (standalone, no admin layout) */
+export const PublicQuestionnairePage = lazy(
+  () => import("../modules/public-questionnaire/pages/PublicQuestionnairePage")
+);
+
 /** Survey Research Portal (demo) */
 export const SurveyResearchPortalLayout = lazy(
   () => import("../modules/survey-research/layout/SurveyResearchPortalLayout")
