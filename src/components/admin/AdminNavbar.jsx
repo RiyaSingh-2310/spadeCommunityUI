@@ -2,20 +2,21 @@ import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, LogOut, Menu, Moon, Settings, Sun, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import heroLogo from "../../assets/SpadeCommunitylogoWhite.png";
-import compressedLogo from "../../assets/SpadeCommunitylogocompressed.png";
 import Avatar from "../shared/Avatar";
 import {
   AUTH_SESSION_CHANGED_EVENT,
   clearAuthSession,
   getAdminUser,
 } from "../../services/auth/authStorage";
+import { isPanelistLoginRole } from "../../services/auth/loginRole";
 import HeaderSearch from "./HeaderSearch";
 import NotificationDrawer from "./NotificationDrawer";
 
 function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobileMenu }) {
   const navigate = useNavigate();
+  const isPanelist = isPanelistLoginRole();
   const [admin, setAdmin] = useState(() => getAdminUser());
-  const adminName = admin?.displayName || "Admin";
+  const adminName = admin?.displayName || (isPanelist ? "Panelist" : "Admin");
   const adminEmail = admin?.email || "";
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -130,7 +131,7 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
               type="button"
               onClick={() => {
                 setIsDropdownOpen(false);
-                navigate("/settings?tab=system");
+                navigate(isPanelist ? "/settings" : "/settings?tab=system");
               }}
               className="admin-icon-btn admin-text-muted flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition"
             >

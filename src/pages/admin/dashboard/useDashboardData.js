@@ -30,14 +30,18 @@ const EMPTY_DASHBOARD = {
   logs: [],
 };
 
-export function useDashboardData() {
+export function useDashboardData({ enabled = true } = {}) {
   const isSales = isSalesLoginRole();
   const [dashboard, setDashboard] = useState({
     ...EMPTY_DASHBOARD,
-    loading: !isSales,
+    loading: enabled && !isSales,
   });
 
   useEffect(() => {
+    if (!enabled) {
+      return undefined;
+    }
+
     let cancelled = false;
     const loadDashboard = async () => {
       if (!isSales) setDashboard((prev) => ({ ...prev, loading: true }));
@@ -91,7 +95,7 @@ export function useDashboardData() {
     return () => {
       cancelled = true;
     };
-  }, [isSales]);
+  }, [enabled, isSales]);
 
   const surveyStatus = useMemo(() => {
     const result = { active: 0, closed: 0, draft: 0, paused: 0 };

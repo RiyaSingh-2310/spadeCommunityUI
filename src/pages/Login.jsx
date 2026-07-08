@@ -3,7 +3,7 @@ import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
 import { AUTH_EMAIL_REGEX } from "../modules/shared/utils/validation";
-import { loginAdmin } from "../services/auth/authApi";
+import { loginAdmin, loginPanelist } from "../services/auth/authApi";
 import { LOGIN_ROLES } from "../services/auth/loginRole";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 import { saveAuthSession } from "../services/auth/authStorage";
@@ -84,10 +84,14 @@ function Login({ isDarkMode, onToggleTheme }) {
 
     setIsSubmitting(true);
     try {
-      const response = await loginAdmin({
+      const credentials = {
         email: email.trim(),
         password,
-      });
+      };
+      const response =
+        loginRole === LOGIN_ROLES.PANELIST
+          ? await loginPanelist(credentials)
+          : await loginAdmin(credentials);
 
       saveAuthSession({
         token: response.token,

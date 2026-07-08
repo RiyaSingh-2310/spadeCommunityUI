@@ -19,10 +19,11 @@ function SettingsPage({ isDarkMode }) {
   const activeTab = isValidSettingsTab(tabParam) ? tabParam : DEFAULT_SETTINGS_TAB;
 
   useEffect(() => {
+    if (isPanelist) return;
     if (!tabParam || !isValidSettingsTab(tabParam)) {
       setSearchParams({ tab: DEFAULT_SETTINGS_TAB }, { replace: true });
     }
-  }, [tabParam, setSearchParams]);
+  }, [isPanelist, tabParam, setSearchParams]);
 
   const handleTabChange = (nextTab) => {
     setSearchParams({ tab: nextTab });

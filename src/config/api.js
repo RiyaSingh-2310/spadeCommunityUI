@@ -136,6 +136,12 @@ export const API_ROUTES = {
     byId: (id) => `/api/panelist/${id}`,
     updateStatus: (id) => `/api/panelist/${id}/status`,
   },
+  panelistPortal: {
+    login: "/api/panelist-portal/login",
+    dashboard: "/api/panelist-portal/dashboard",
+    profile: "/api/panelist-portal/profile",
+    changePassword: "/api/panelist-portal/change-password",
+  },
   emailTemplates: {
     list: "/api/email-templates/list",
     create: "/api/email-templates/add",

@@ -17,10 +17,12 @@ import {
   PASSWORD_FIELD_MAX_LENGTH,
   getConfirmPasswordError,
   getPasswordError,
+  getRequiredError,
   getUserNameError,
   isFormValidForFields,
   limitTextInput,
 } from "../../shared/utils/validation";
+import { isPanelistLoginRole } from "../../../services/auth/loginRole";
 import {
   changePassword,
   fetchProfile,
@@ -32,8 +34,10 @@ const PROFILE_FIELDS = ["name"];
 const PASSWORD_FIELDS = ["currentPassword", "newPassword", "confirmPassword"];
 
 function ProfileSettingsTab({ isDarkMode }) {
+  const isPanelist = isPanelistLoginRole();
   const sessionUser = getAdminUser();
   const userId = sessionUser?.id;
+  const canLoadProfile = isPanelist || Boolean(userId);
 
   const [form, setForm] = useState({
     name: sessionUser?.displayName ?? sessionUser?.name ?? "",
@@ -50,8 +54,8 @@ function ProfileSettingsTab({ isDarkMode }) {
   const [existingImage, setExistingImage] = useState(sessionUser?.imageUrl ?? "");
   const [imageFile, setImageFile] = useState(null);
   const [imageValidationError, setImageValidationError] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const [isLoading, setIsLoading] = useState(canLoadProfile);
+  const [loadFailed, setLoadFailed] = useState(!canLoadProfile);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -81,9 +85,7 @@ function ProfileSettingsTab({ isDarkMode }) {
   useEffect(() => () => revokeBlobUrl(), []);
 
   useEffect(() => {
-    if (!userId) {
-      setIsLoading(false);
-      setLoadFailed(true);
+    if (!canLoadProfile) {
       return undefined;
     }
 
@@ -99,6 +101,7 @@ function ProfileSettingsTab({ isDarkMode }) {
 
         const snapshot = {
           name: loadedForm.name.trim(),
+          phone: String(loadedForm.phone ?? "").trim(),
           imageUrl: loadedForm.imageUrl ?? "",
         };
 
@@ -131,7 +134,7 @@ function ProfileSettingsTab({ isDarkMode }) {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [canLoadProfile, userId]);
 
   const profileErrors = useMemo(
     () => ({
@@ -176,21 +179,26 @@ function ProfileSettingsTab({ isDarkMode }) {
   const isProfileDirty = useMemo(() => {
     if (!initialSnapshot) return false;
     if (form.name.trim() !== initialSnapshot.name) return true;
+    if (isPanelist && form.phone.trim() !== (initialSnapshot.phone ?? "")) {
+      return true;
+    }
     if (imageFile) return true;
     if (preview && preview !== initialSnapshot.imageUrl) return true;
     return false;
-  }, [form.name, imageFile, preview, initialSnapshot]);
+  }, [form.name, form.phone, imageFile, preview, initialSnapshot, isPanelist]);
 
   const canSaveProfile =
     isProfileDirty &&
     isFormValidForFields(profileErrors, PROFILE_FIELDS) &&
     !isSavingProfile &&
-    !isLoading;
+    !isLoading &&
+    (isPanelist || Boolean(userId));
 
   const canUpdatePassword =
     isFormValidForFields(passwordErrors, PASSWORD_FIELDS) &&
     !isSavingPassword &&
-    !isLoading;
+    !isLoading &&
+    (isPanelist || Boolean(userId));
 
   const handleAvatarFileChange = (event) => {
     const file = event.target.files?.[0];
@@ -223,12 +231,14 @@ function ProfileSettingsTab({ isDarkMode }) {
 
   const handleSaveProfile = async (event) => {
     event.preventDefault();
-    if (!validateProfileSubmit() || !canSaveProfile || !userId) return;
+    if (!validateProfileSubmit() || !canSaveProfile) return;
+    if (!isPanelist && !userId) return;
 
     setIsSavingProfile(true);
     try {
       const data = await updateProfile(userId, {
         name: form.name,
+        phone: form.phone,
         status: profileMeta.status,
         permission_type: profileMeta.permission_type,
         permissions: profileMeta.permissions,
@@ -238,6 +248,7 @@ function ProfileSettingsTab({ isDarkMode }) {
       const refreshed = await fetchProfile(userId);
       const snapshot = {
         name: refreshed.form.name.trim(),
+        phone: String(refreshed.form.phone ?? "").trim(),
         imageUrl: refreshed.form.imageUrl ?? "",
       };
       setForm({
@@ -258,7 +269,8 @@ function ProfileSettingsTab({ isDarkMode }) {
 
   const handleUpdatePassword = async (event) => {
     event.preventDefault();
-    if (!validatePasswordSubmit() || !canUpdatePassword || !userId) return;
+    if (!validatePasswordSubmit() || !canUpdatePassword) return;
+    if (!isPanelist && !userId) return;
 
     setIsSavingPassword(true);
     try {
@@ -325,7 +337,7 @@ function ProfileSettingsTab({ isDarkMode }) {
             <div className="min-w-0 flex-1 space-y-3">
               <div>
                 <p className="admin-text text-lg font-semibold">
-                  {form.name || "Admin"}
+                  {form.name || (isPanelist ? "Panelist" : "Admin")}
                 </p>
                 <p className="admin-text-muted text-sm">{form.email}</p>
               </div>
@@ -403,8 +415,17 @@ function ProfileSettingsTab({ isDarkMode }) {
               <input
                 className={inputClass}
                 value={form.phone}
-                disabled
-                readOnly
+                disabled={!isPanelist}
+                readOnly={!isPanelist}
+                onChange={
+                  isPanelist
+                    ? (event) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          phone: event.target.value,
+                        }))
+                    : undefined
+                }
                 autoComplete="tel"
               />
             </FormField>
