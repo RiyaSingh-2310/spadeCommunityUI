@@ -72,37 +72,6 @@ const MANAGER_SIDEBAR_NAV_ITEMS = [
   },
 ];
 
-const PANELIST_SIDEBAR_NAV_ITEMS = [
-  {
-    type: "link",
-    label: "Dashboard",
-    root: "/",
-    matcher: /^\/($|dashboard)/,
-    permissionKeys: ["dashboard"],
-  },
-  {
-    type: "link",
-    label: "Reward History",
-    root: "/reward-points/history",
-    matcher: /^\/reward-points\/history(\/|$)/,
-    permissionKeys: ["reward_history"],
-  },
-  {
-    type: "link",
-    label: "Reward Request",
-    root: "/reward-points/pending",
-    matcher: /^\/reward-points\/pending(\/|$)/,
-    permissionKeys: ["pending_rewards"],
-  },
-  {
-    type: "link",
-    label: "Settings",
-    root: "/settings",
-    matcher: /^\/settings(\/|$)/,
-    permissionKeys: [],
-  },
-];
-
 /**
  * @param {string} loginRole
  */
@@ -112,9 +81,6 @@ export function getSidebarNavItemsForRole(loginRole) {
   }
   if (loginRole === LOGIN_ROLES.MANAGER) {
     return MANAGER_SIDEBAR_NAV_ITEMS;
-  }
-  if (loginRole === LOGIN_ROLES.PANELIST) {
-    return PANELIST_SIDEBAR_NAV_ITEMS;
   }
   return SIDEBAR_NAV_ITEMS;
 }

@@ -8,15 +8,13 @@ import {
   clearAuthSession,
   getAdminUser,
 } from "../../services/auth/authStorage";
-import { isPanelistLoginRole } from "../../services/auth/loginRole";
 import HeaderSearch from "./HeaderSearch";
 import NotificationDrawer from "./NotificationDrawer";
 
 function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobileMenu }) {
   const navigate = useNavigate();
-  const isPanelist = isPanelistLoginRole();
   const [admin, setAdmin] = useState(() => getAdminUser());
-  const adminName = admin?.displayName || (isPanelist ? "Panelist" : "Admin");
+  const adminName = admin?.displayName || "Admin";
   const adminEmail = admin?.email || "";
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -131,7 +129,7 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
               type="button"
               onClick={() => {
                 setIsDropdownOpen(false);
-                navigate(isPanelist ? "/settings" : "/settings?tab=system");
+                navigate("/settings?tab=system");
               }}
               className="admin-icon-btn admin-text-muted flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition"
             >

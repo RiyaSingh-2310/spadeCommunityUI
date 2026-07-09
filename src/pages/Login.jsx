@@ -3,7 +3,7 @@ import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
 import { AUTH_EMAIL_REGEX } from "../modules/shared/utils/validation";
-import { loginAdmin, loginPanelist } from "../services/auth/authApi";
+import { loginAdmin } from "../services/auth/authApi";
 import { LOGIN_ROLES } from "../services/auth/loginRole";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 import { saveAuthSession } from "../services/auth/authStorage";
@@ -13,36 +13,24 @@ const LOGIN_ROLE_UI = {
     title: "Admin Login",
     emailLabel: "Admin's Email",
     switchOptions: [
-      { role: LOGIN_ROLES.SALES, label: "Login as Sales" },
-      { role: LOGIN_ROLES.MANAGER, label: "Login as Manager" },
-      { role: LOGIN_ROLES.PANELIST, label: "Login as Panelist" },
+      { role: LOGIN_ROLES.SALES, label: "Login as Sales Manager" },
+      { role: LOGIN_ROLES.MANAGER, label: "Login as Project Manager" },
     ],
   },
   [LOGIN_ROLES.SALES]: {
-    title: "Sales Login",
-    emailLabel: "Sale's Email",
+    title: "Sales Manager Login",
+    emailLabel: "Sales Manager's Email",
     switchOptions: [
       { role: LOGIN_ROLES.ADMIN, label: "Login as Admin" },
-      { role: LOGIN_ROLES.MANAGER, label: "Login as Manager" },
-      { role: LOGIN_ROLES.PANELIST, label: "Login as Panelist" },
+      { role: LOGIN_ROLES.MANAGER, label: "Login as Project Manager" },
     ],
   },
   [LOGIN_ROLES.MANAGER]: {
-    title: "Manager Login",
-    emailLabel: "Manager's Email",
+    title: "Project Manager Login",
+    emailLabel: "Project Manager's Email",
     switchOptions: [
       { role: LOGIN_ROLES.ADMIN, label: "Login as Admin" },
-      { role: LOGIN_ROLES.SALES, label: "Login as Sales" },
-      { role: LOGIN_ROLES.PANELIST, label: "Login as Panelist" },
-    ],
-  },
-  [LOGIN_ROLES.PANELIST]: {
-    title: "Panelist Login",
-    emailLabel: "Panelist Email",
-    switchOptions: [
-      { role: LOGIN_ROLES.ADMIN, label: "Login as Admin" },
-      { role: LOGIN_ROLES.SALES, label: "Login as Sales" },
-      { role: LOGIN_ROLES.MANAGER, label: "Login as Manager" },
+      { role: LOGIN_ROLES.SALES, label: "Login as Sales Manager" },
     ],
   },
 };
@@ -88,10 +76,7 @@ function Login({ isDarkMode, onToggleTheme }) {
         email: email.trim(),
         password,
       };
-      const response =
-        loginRole === LOGIN_ROLES.PANELIST
-          ? await loginPanelist(credentials)
-          : await loginAdmin(credentials);
+      const response = await loginAdmin(credentials);
 
       saveAuthSession({
         token: response.token,

@@ -4,12 +4,11 @@ import AdminPageHeader from "../../components/admin/AdminPageHeader";
 import PermissionDenied from "../../components/admin/PermissionDenied";
 import TableCard from "../../components/admin/TableCard";
 import { useModulePermission } from "../../modules/permissions/useModulePermission";
-import { isManagerLoginRole, isPanelistLoginRole } from "../../services/auth/loginRole";
+import { isManagerLoginRole } from "../../services/auth/loginRole";
 import { formatDashboardDate, formatDashboardTime } from "../../modules/shared/utils/dateTime";
 import { formatStatusLabel } from "../../modules/shared/utils/statusLabels";
 import { BarsChart, DonutChart, PolylineChart, SummaryCard } from "./dashboard/dashboardCharts";
 import { isStatus, STATUS_ACTIVE, TABLE_HEAD } from "./dashboard/dashboardUtils";
-import PanelistDashboard from "./dashboard/PanelistDashboard";
 import { useDashboardData } from "./dashboard/useDashboardData";
 
 function DashboardPage({ isDarkMode }) {
@@ -18,7 +17,6 @@ function DashboardPage({ isDarkMode }) {
   const borderRow = isDarkMode ? "border-[#263850]" : "border-[#e6edf5]";
   const headClass = "admin-text-muted";
   const isManager = isManagerLoginRole();
-  const isPanelist = isPanelistLoginRole();
 
   const {
     isSales,
@@ -35,7 +33,7 @@ function DashboardPage({ isDarkMode }) {
     rfqTrend,
     userTrend,
     rewardTrend,
-  } = useDashboardData({ enabled: !isPanelist });
+  } = useDashboardData({ enabled: true });
 
   const dashboardTitle = isSales
     ? "Welcome to Sales Dashboard"
@@ -50,10 +48,6 @@ function DashboardPage({ isDarkMode }) {
 
   if (!canRead) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
-  }
-
-  if (isPanelist) {
-    return <PanelistDashboard isDarkMode={isDarkMode} />;
   }
 
   return (
@@ -409,7 +403,7 @@ function DashboardPage({ isDarkMode }) {
                   { label: "Add Client", path: "/clients/add" },
                   { label: "Add Partner", path: "/partners/add" },
                   { label: "Add Survey", path: "/survey/add" },
-                  { label: "Add RFQ", path: "/rfq/add" },
+                  { label: "Add RFQ", path: "/sales/rfq/add" },
                   { label: "Add User", path: "/users/add" },
                   { label: "Generate Invoice", path: "/invoice/list" },
                 ].map((action) => (

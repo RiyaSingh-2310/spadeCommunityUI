@@ -102,65 +102,6 @@ export async function loginAdmin(credentials) {
 }
 
 /**
- * POST /api/panelist-portal/login
- * @param {{ email: string, password: string }} credentials
- */
-export async function loginPanelist(credentials) {
-  const payload = {
-    email: credentials.email.trim(),
-    password: credentials.password,
-  };
-
-  const url = buildApiUrl(API_ROUTES.panelistPortal.login);
-
-  logAuthDebug("Panelist Login", "API base URL", API_BASE_URL);
-  logAuthDebug("Panelist Login", "Request URL", url);
-  logAuthDebug("Panelist Login", "Request payload", {
-    email: payload.email,
-    password: "***",
-  });
-
-  let data;
-  try {
-    data = await apiRequest(API_ROUTES.panelistPortal.login, {
-      method: "POST",
-      auth: false,
-      loginBearer: true,
-      body: payload,
-    });
-    logAuthDebug("Panelist Login", "Response data", data);
-  } catch (error) {
-    logAuthError("Panelist Login", error);
-    throw error;
-  }
-
-  const mapped = mapLoginResponse(data);
-
-  if (!mapped.success || !mapped.token) {
-    throw new ApiError(
-      mapped.message || "Login failed. Please try again.",
-      data,
-      200
-    );
-  }
-
-  const status =
-    mapped.admin?.status ?? data?.data?.panelist?.status ?? data?.data?.admin?.status;
-  if (status && String(status).toLowerCase() !== "active") {
-    throw new ApiError("Your account is inactive. Please contact support.", data);
-  }
-
-  return {
-    success: true,
-    message: mapped.message || "Login successful!",
-    token: mapped.token,
-    refreshToken: mapped.refreshToken,
-    admin: mapped.admin,
-    data: data?.data ?? { token: mapped.token, panelist: mapped.admin },
-  };
-}
-
-/**
  * POST /api/admin/forgot-password — sends OTP to email.
  * @param {{ email: string }} payload
  */

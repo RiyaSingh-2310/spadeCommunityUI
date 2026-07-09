@@ -2,12 +2,6 @@ import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import { getAuthToken, saveAuthSession } from "../../../services/auth/authStorage";
-import { isPanelistLoginRole } from "../../../services/auth/loginRole";
-import {
-  changePanelistPassword,
-  fetchPanelistProfile,
-  updatePanelistProfile,
-} from "../../../services/panelist-portal/panelistPortalApi";
 import { buildPermissionsPayload } from "../../permissions/permissionsUtils";
 import {
   extractAdminFromResponse,
@@ -39,30 +33,15 @@ export function mapAdminToProfileForm(admin) {
 }
 
 export async function fetchProfile(userId) {
-  if (isPanelistLoginRole()) {
-    const { panelist, form } = await fetchPanelistProfile();
-    return {
-      admin: panelist,
-      form,
-    };
-  }
-
   const admin = await getRecord(userId);
   return {
     admin,
+    profile: null,
     form: mapAdminToProfileForm(admin),
   };
 }
 
 export async function updateProfile(userId, payload) {
-  if (isPanelistLoginRole()) {
-    return updatePanelistProfile({
-      name: payload.name,
-      phone: payload.phone,
-      imageFile: payload.imageFile,
-    });
-  }
-
   const { name, status, permission_type, permissions, imageFile } = payload;
 
   if (imageFile instanceof File) {
@@ -112,10 +91,6 @@ export async function updateProfile(userId, payload) {
 }
 
 export async function changePassword(payload) {
-  if (isPanelistLoginRole()) {
-    return changePanelistPassword(payload);
-  }
-
   const data = await apiRequest(API_ROUTES.admin.changePassword, {
     method: "PUT",
     body: {

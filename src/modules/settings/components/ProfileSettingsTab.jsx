@@ -22,7 +22,6 @@ import {
   isFormValidForFields,
   limitTextInput,
 } from "../../shared/utils/validation";
-import { isPanelistLoginRole } from "../../../services/auth/loginRole";
 import {
   changePassword,
   fetchProfile,
@@ -34,10 +33,9 @@ const PROFILE_FIELDS = ["name"];
 const PASSWORD_FIELDS = ["currentPassword", "newPassword", "confirmPassword"];
 
 function ProfileSettingsTab({ isDarkMode }) {
-  const isPanelist = isPanelistLoginRole();
   const sessionUser = getAdminUser();
   const userId = sessionUser?.id;
-  const canLoadProfile = isPanelist || Boolean(userId);
+  const canLoadProfile = Boolean(userId);
 
   const [form, setForm] = useState({
     name: sessionUser?.displayName ?? sessionUser?.name ?? "",
@@ -179,26 +177,23 @@ function ProfileSettingsTab({ isDarkMode }) {
   const isProfileDirty = useMemo(() => {
     if (!initialSnapshot) return false;
     if (form.name.trim() !== initialSnapshot.name) return true;
-    if (isPanelist && form.phone.trim() !== (initialSnapshot.phone ?? "")) {
-      return true;
-    }
     if (imageFile) return true;
     if (preview && preview !== initialSnapshot.imageUrl) return true;
     return false;
-  }, [form.name, form.phone, imageFile, preview, initialSnapshot, isPanelist]);
+  }, [form.name, imageFile, preview, initialSnapshot]);
 
   const canSaveProfile =
     isProfileDirty &&
     isFormValidForFields(profileErrors, PROFILE_FIELDS) &&
     !isSavingProfile &&
     !isLoading &&
-    (isPanelist || Boolean(userId));
+    Boolean(userId);
 
   const canUpdatePassword =
     isFormValidForFields(passwordErrors, PASSWORD_FIELDS) &&
     !isSavingPassword &&
     !isLoading &&
-    (isPanelist || Boolean(userId));
+    Boolean(userId);
 
   const handleAvatarFileChange = (event) => {
     const file = event.target.files?.[0];
@@ -232,7 +227,7 @@ function ProfileSettingsTab({ isDarkMode }) {
   const handleSaveProfile = async (event) => {
     event.preventDefault();
     if (!validateProfileSubmit() || !canSaveProfile) return;
-    if (!isPanelist && !userId) return;
+    if (!userId) return;
 
     setIsSavingProfile(true);
     try {
@@ -270,7 +265,7 @@ function ProfileSettingsTab({ isDarkMode }) {
   const handleUpdatePassword = async (event) => {
     event.preventDefault();
     if (!validatePasswordSubmit() || !canUpdatePassword) return;
-    if (!isPanelist && !userId) return;
+    if (!userId) return;
 
     setIsSavingPassword(true);
     try {
@@ -337,7 +332,7 @@ function ProfileSettingsTab({ isDarkMode }) {
             <div className="min-w-0 flex-1 space-y-3">
               <div>
                 <p className="admin-text text-lg font-semibold">
-                  {form.name || (isPanelist ? "Panelist" : "Admin")}
+                  {form.name || "Admin"}
                 </p>
                 <p className="admin-text-muted text-sm">{form.email}</p>
               </div>
@@ -415,17 +410,8 @@ function ProfileSettingsTab({ isDarkMode }) {
               <input
                 className={inputClass}
                 value={form.phone}
-                disabled={!isPanelist}
-                readOnly={!isPanelist}
-                onChange={
-                  isPanelist
-                    ? (event) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          phone: event.target.value,
-                        }))
-                    : undefined
-                }
+                disabled
+                readOnly
                 autoComplete="tel"
               />
             </FormField>

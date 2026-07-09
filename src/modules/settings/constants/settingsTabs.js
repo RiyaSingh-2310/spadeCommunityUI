@@ -1,3 +1,5 @@
+import { isAdminLoginRole } from "../../../services/auth/loginRole";
+
 export const SETTINGS_TABS = [
   { id: "profile", label: "Profile" },
   { id: "system", label: "System" },
@@ -7,6 +9,18 @@ export const SETTINGS_TABS = [
 
 export const DEFAULT_SETTINGS_TAB = "profile";
 
-export function isValidSettingsTab(tab) {
-  return SETTINGS_TABS.some((item) => item.id === tab);
+const ADMIN_ONLY_TAB_IDS = new Set(["audit-log"]);
+
+/**
+ * Settings tabs visible for the current login role.
+ */
+export function getSettingsTabsForRole() {
+  if (isAdminLoginRole()) {
+    return SETTINGS_TABS;
+  }
+  return SETTINGS_TABS.filter((tab) => !ADMIN_ONLY_TAB_IDS.has(tab.id));
+}
+
+export function isValidSettingsTab(tab, tabs = SETTINGS_TABS) {
+  return tabs.some((item) => item.id === tab);
 }

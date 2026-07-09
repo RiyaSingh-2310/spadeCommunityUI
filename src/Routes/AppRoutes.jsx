@@ -5,7 +5,6 @@ import GuestOnly from "../components/auth/GuestOnly";
 import RequireAuth from "../components/auth/RequireAuth";
 import AdminLayout from "../components/admin/AdminLayout";
 import * as Pages from "./lazyPages";
-import { isPanelistLoginRole } from "../services/auth/loginRole";
 
 function withSuspense(Component, props = {}) {
   return (
@@ -60,54 +59,6 @@ function EditCommunityUserRoute({ isDarkMode }) {
 
 function AppRoutes({ isDarkMode, onToggleTheme }) {
   const themeProps = { isDarkMode, onToggleTheme };
-  const isPanelist = isPanelistLoginRole();
-
-  if (isPanelist) {
-    return (
-      <Routes>
-        <Route
-          path="/public/questionnaire"
-          element={withSuspense(Pages.PublicQuestionnairePage, themeProps)}
-        />
-        <Route
-          path="/public/questionnaire/:id"
-          element={withSuspense(Pages.PublicQuestionnairePage, themeProps)}
-        />
-
-        <Route element={<GuestOnly />}>
-          <Route path="/auth" element={withSuspense(Pages.LoginPage, themeProps)} />
-          <Route
-            path="/auth/forgot-password"
-            element={withSuspense(Pages.ForgotPasswordPage, themeProps)}
-          />
-          <Route
-            path="/auth/verify-otp"
-            element={withSuspense(Pages.VerifyOtpPage, themeProps)}
-          />
-          <Route
-            path="/auth/reset-password"
-            element={withSuspense(Pages.ResetPasswordPage, themeProps)}
-          />
-        </Route>
-
-        <Route element={<RequireAuth />}>
-          <Route element={<AdminLayout isDarkMode={isDarkMode} onToggleTheme={onToggleTheme} />}>
-            <Route path="/" element={withSuspense(Pages.DashboardPage, { isDarkMode })} />
-            <Route
-              path="/reward-points/history"
-              element={withSuspense(Pages.RewardHistoryPage, { isDarkMode })}
-            />
-            <Route
-              path="/reward-points/pending"
-              element={withSuspense(Pages.PendingRewardsPage, { isDarkMode })}
-            />
-            <Route path="/settings" element={withSuspense(Pages.SettingsPage, { isDarkMode })} />
-            <Route path="*" element={withSuspense(Pages.DashboardPage, { isDarkMode })} />
-          </Route>
-        </Route>
-      </Routes>
-    );
-  }
 
   return (
     <Routes>

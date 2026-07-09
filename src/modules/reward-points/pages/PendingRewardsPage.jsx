@@ -13,7 +13,6 @@ import {
   updateRedeemRequestStatus,
 } from "../services/rewardHistoryApi";
 import { filterRewardHistoryRows } from "../utils/rewardHistoryFilters";
-import { isPanelistLoginRole } from "../../../services/auth/loginRole";
 
 function validateRejectComment(comment) {
   if (String(comment ?? "").trim().length < 3) {
@@ -23,7 +22,6 @@ function validateRejectComment(comment) {
 }
 
 function PendingRewardsPage({ isDarkMode }) {
-  const isPanelist = isPanelistLoginRole();
   const [statusFilter, setStatusFilter] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -164,8 +162,8 @@ function PendingRewardsPage({ isDarkMode }) {
         onPaginationPageChange={handlePageChange}
         paginationPageSize={pageSize}
         onPaginationPageSizeChange={handlePageSizeChange}
-        onApprove={isPanelist ? undefined : (row) => openModal("approve", row)}
-        onReject={isPanelist ? undefined : (row) => openModal("reject", row)}
+        onApprove={(row) => openModal("approve", row)}
+        onReject={(row) => openModal("reject", row)}
         onView={(row) => openModal("view", row)}
       />
 

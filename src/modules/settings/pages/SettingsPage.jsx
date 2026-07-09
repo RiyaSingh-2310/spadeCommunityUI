@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import {
   DEFAULT_SETTINGS_TAB,
+  getSettingsTabsForRole,
   isValidSettingsTab,
 } from "../constants/settingsTabs";
 import AuditLogSettingsTab from "../components/AuditLogSettingsTab";
@@ -10,37 +11,24 @@ import NotificationsSettingsTab from "../components/NotificationsSettingsTab";
 import ProfileSettingsTab from "../components/ProfileSettingsTab";
 import SettingsTabNav from "../components/SettingsTabNav";
 import SystemSettingsTab from "../components/SystemSettingsTab";
-import { isPanelistLoginRole } from "../../../services/auth/loginRole";
 
 function SettingsPage({ isDarkMode }) {
-  const isPanelist = isPanelistLoginRole();
+  const settingsTabs = getSettingsTabsForRole();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const activeTab = isValidSettingsTab(tabParam) ? tabParam : DEFAULT_SETTINGS_TAB;
+  const activeTab = isValidSettingsTab(tabParam, settingsTabs)
+    ? tabParam
+    : DEFAULT_SETTINGS_TAB;
 
   useEffect(() => {
-    if (isPanelist) return;
-    if (!tabParam || !isValidSettingsTab(tabParam)) {
+    if (!tabParam || !isValidSettingsTab(tabParam, settingsTabs)) {
       setSearchParams({ tab: DEFAULT_SETTINGS_TAB }, { replace: true });
     }
-  }, [isPanelist, tabParam, setSearchParams]);
+  }, [settingsTabs, tabParam, setSearchParams]);
 
   const handleTabChange = (nextTab) => {
     setSearchParams({ tab: nextTab });
   };
-
-  if (isPanelist) {
-    return (
-      <div className="space-y-6">
-        <AdminPageHeader
-          title="Settings"
-          subtitle="Manage your profile and password."
-          isDarkMode={isDarkMode}
-        />
-        <ProfileSettingsTab isDarkMode={isDarkMode} />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -50,7 +38,11 @@ function SettingsPage({ isDarkMode }) {
         isDarkMode={isDarkMode}
       />
 
-      <SettingsTabNav activeTab={activeTab} onTabChange={handleTabChange} />
+      <SettingsTabNav
+        tabs={settingsTabs}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
 
       {activeTab === "profile" && <ProfileSettingsTab isDarkMode={isDarkMode} />}
       {activeTab === "system" && <SystemSettingsTab isDarkMode={isDarkMode} />}

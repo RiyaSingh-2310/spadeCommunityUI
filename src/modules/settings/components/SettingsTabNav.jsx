@@ -1,5 +1,4 @@
 import { Bell, ClipboardList, Settings, User } from "lucide-react";
-import { SETTINGS_TABS } from "../constants/settingsTabs";
 
 const TAB_ICONS = {
   profile: User,
@@ -8,7 +7,7 @@ const TAB_ICONS = {
   "audit-log": ClipboardList,
 };
 
-function SettingsTabNav({ activeTab, onTabChange }) {
+function SettingsTabNav({ tabs, activeTab, onTabChange }) {
   return (
     <div className="overflow-x-auto">
       <div
@@ -17,7 +16,7 @@ function SettingsTabNav({ activeTab, onTabChange }) {
         role="tablist"
         aria-label="Settings sections"
       >
-        {SETTINGS_TABS.map((tab) => {
+        {tabs.map((tab) => {
           const Icon = TAB_ICONS[tab.id];
           const isActive = activeTab === tab.id;
 
