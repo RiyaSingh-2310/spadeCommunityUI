@@ -1,83 +1,79 @@
 import { useState } from "react";
 import { CircleHelp, Moon, Sun, X } from "lucide-react";
 import logo from "../../../assets/SpadeCommunitylogoWhite.png";
+import "../publicQuestionnaire.css";
 
 function PublicQuestionnaireLayout({ isDarkMode, onToggleTheme, children }) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   return (
     <div
-      className="admin-shell flex min-h-screen flex-col transition-colors duration-300"
+      className="public-questionnaire-shell admin-shell flex min-h-screen flex-col transition-colors duration-300"
       data-theme={isDarkMode ? "dark" : "light"}
       style={{ background: "var(--admin-shell-bg)" }}
     >
       <header
-        className="sticky top-0 z-20 border-b px-4 py-3 sm:px-6"
+        className="sticky top-0 z-20 border-b backdrop-blur-sm"
         style={{
-          background: "var(--admin-header-surface)",
+          background: "color-mix(in srgb, var(--admin-header-surface) 92%, transparent)",
           borderColor: "var(--admin-header-surface-border)",
         }}
       >
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3">
+        <div className="pq-page-container flex items-center justify-between gap-6 py-4 sm:py-5">
           <img
             src={logo}
             alt="Spade Community"
-            className="h-8 w-auto max-w-[180px] object-contain sm:h-9 sm:max-w-[220px]"
+            className="h-9 w-auto max-w-[200px] object-contain sm:h-10 sm:max-w-[240px]"
           />
 
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onToggleTheme}
-              className="admin-icon-btn admin-text-subtle flex h-10 w-10 items-center justify-center rounded-xl transition"
+              className="pq-icon-btn admin-icon-btn admin-text-subtle"
               aria-label="Toggle theme"
               title="Toggle theme"
             >
-              {isDarkMode ? <Moon size={16} /> : <Sun size={16} />}
+              {isDarkMode ? <Moon size={18} /> : <Sun size={18} />}
             </button>
 
             <button
               type="button"
               onClick={() => setIsHelpOpen(true)}
-              className="admin-icon-btn admin-text-subtle flex h-10 w-10 items-center justify-center rounded-xl transition"
+              className="pq-icon-btn admin-icon-btn admin-text-subtle"
               aria-label="Help"
               title="Help"
             >
-              <CircleHelp size={16} />
+              <CircleHelp size={18} />
             </button>
           </div>
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10">
-        <div className="mx-auto w-full max-w-xl">{children}</div>
+      <main className="flex flex-1 flex-col py-8 sm:py-10 lg:py-14">
+        <div className="pq-page-container w-full">{children}</div>
       </main>
 
       {isHelpOpen ? (
         <div
-          className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          className="fixed inset-0 z-40 flex items-end justify-center bg-black/45 p-4 backdrop-blur-[2px] sm:items-center sm:p-6"
           role="dialog"
           aria-modal="true"
           aria-labelledby="public-questionnaire-help-title"
           onClick={() => setIsHelpOpen(false)}
         >
           <div
-            className="w-full max-w-md rounded-2xl border p-5 shadow-xl sm:p-6"
-            style={{
-              background: "var(--admin-surface-bg)",
-              borderColor: "var(--admin-surface-border)",
-              color: "var(--admin-foreground)",
-            }}
+            className="pq-card w-full max-w-md p-6 sm:p-8"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <h2 id="public-questionnaire-help-title" className="text-lg font-semibold">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <h2 id="public-questionnaire-help-title" className="text-xl font-semibold">
                 Need help?
               </h2>
               <button
                 type="button"
                 onClick={() => setIsHelpOpen(false)}
-                className="admin-icon-btn flex h-8 w-8 items-center justify-center rounded-full"
+                className="pq-icon-btn admin-icon-btn flex h-9 w-9 items-center justify-center rounded-full"
                 aria-label="Close help"
               >
                 <X size={16} />
@@ -91,7 +87,7 @@ function PublicQuestionnaireLayout({ isDarkMode, onToggleTheme, children }) {
             <button
               type="button"
               onClick={() => setIsHelpOpen(false)}
-              className="admin-btn-primary mt-5 h-10 w-full sm:w-auto sm:px-6"
+              className="admin-btn-primary pq-nav-btn mt-6 w-full sm:w-auto"
             >
               Got it
             </button>

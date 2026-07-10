@@ -96,6 +96,8 @@ export const API_ROUTES = {
     update: (id) => `/api/questionnaire-group/${id}`,
     updateStatus: (id) => `/api/questionnaire-group/${id}/status`,
     delete: (id) => `/api/questionnaire-group/${id}`,
+    publicQuestions: (id) => `/api/questionnaire-group/public/${id}/questions`,
+    publicSubmit: (id) => `/api/questionnaire-group/public/${id}/submit`,
   },
   survey: {
     list: "/api/survey/list",

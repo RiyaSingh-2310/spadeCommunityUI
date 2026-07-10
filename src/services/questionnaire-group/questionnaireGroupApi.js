@@ -154,17 +154,78 @@ function resolveGroupTitleFromRecord(record) {
   ).trim();
 }
 
-const DEFAULT_QUESTIONNAIRE_GROUP_PUBLIC_URL_BASE =
-  "https://spade-community-client-ui.vercel.app/questionnaire-group";
-
 function getQuestionnaireGroupPublicUrlBase() {
   const explicit = import.meta.env.VITE_QUESTIONNAIRE_GROUP_URL_BASE?.trim();
   if (explicit) return explicit.replace(/\/$/, "");
 
-  return DEFAULT_QUESTIONNAIRE_GROUP_PUBLIC_URL_BASE;
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}/public/questionnaire`;
+  }
+
+  return "/public/questionnaire";
+}
+
+function normalizePanelistId(value) {
+  if (value == null || value === "") return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+function extractPanelistIdFromUrl(urlString) {
+  const raw = String(urlString ?? "").trim();
+  if (!raw) return null;
+
+  try {
+    const base =
+      typeof window !== "undefined" && window.location?.origin
+        ? window.location.origin
+        : "http://localhost";
+    const url = new URL(raw, base);
+    return normalizePanelistId(
+      url.searchParams.get("panelist_id") ?? url.searchParams.get("panelistId")
+    );
+  } catch {
+    return null;
+  }
+}
+
+function resolvePanelistIdForWebsiteUrl(record, fromApiUrl) {
+  return (
+    normalizePanelistId(record?.panelist_id ?? record?.panelistId) ??
+    extractPanelistIdFromUrl(fromApiUrl) ??
+    normalizePanelistId(import.meta.env.VITE_QUESTIONNAIRE_GROUP_PANELIST_ID)
+  );
+}
+
+/**
+ * Canonical public questionnaire URL:
+ * /public/questionnaire/{questionnaireGroupId}?panelist_id={panelistId}
+ */
+export function buildPublicQuestionnaireUrl(groupId, panelistId) {
+  const normalizedGroupId = String(groupId ?? "").trim();
+  if (
+    !normalizedGroupId ||
+    normalizedGroupId === "undefined" ||
+    normalizedGroupId === "null"
+  ) {
+    return "";
+  }
+
+  const base = getQuestionnaireGroupPublicUrlBase();
+  if (!base) return "";
+
+  const url = `${base}/${encodeURIComponent(normalizedGroupId)}`;
+  const normalizedPanelistId = normalizePanelistId(panelistId);
+  if (normalizedPanelistId == null) return url;
+
+  return `${url}?panelist_id=${encodeURIComponent(String(normalizedPanelistId))}`;
 }
 
 function resolveQuestionnaireGroupWebsiteUrl(record) {
+  const groupId = record?.id;
+  if (groupId == null || String(groupId).trim() === "") return "";
+
   const fromApi = [
     record?.websiteUrl,
     record?.website_url,
@@ -179,13 +240,11 @@ function resolveQuestionnaireGroupWebsiteUrl(record) {
     .map((value) => String(value ?? "").trim())
     .find(Boolean);
 
-  if (fromApi) return fromApi;
+  const panelistId = resolvePanelistIdForWebsiteUrl(record, fromApi);
 
-  const id = record?.id;
-  if (id == null || String(id).trim() === "") return "";
-
-  const base = getQuestionnaireGroupPublicUrlBase();
-  return base ? `${base}/${encodeURIComponent(String(id))}` : "";
+  // Always build the canonical local public URL so listing links open this app
+  // with both route + panelist_id query params (never hardcode either value).
+  return buildPublicQuestionnaireUrl(groupId, panelistId);
 }
 
 function normalizeGroupQuestionOptions(options) {

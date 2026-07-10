@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, Minus, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Minus, Plus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DebouncedSearchInput from "../../../components/admin/DebouncedSearchInput";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
@@ -971,10 +971,15 @@ function ModuleListingPage({
                             href={urlText}
                             target="_blank"
                             rel="noreferrer noopener"
-                            className="admin-text block truncate text-[var(--admin-primary-color)] hover:underline"
+                            className="admin-text inline-flex max-w-full items-center gap-1.5 text-[var(--admin-primary-color)] hover:underline"
                             title={urlText}
                           >
-                            {urlText}
+                            <span className="min-w-0 truncate">{urlText}</span>
+                            <ExternalLink
+                              size={13}
+                              className="shrink-0 opacity-70"
+                              aria-hidden
+                            />
                           </a>
                         ) : (
                           <span className="admin-text">—</span>
