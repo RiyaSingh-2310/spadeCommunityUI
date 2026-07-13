@@ -208,7 +208,7 @@ function AddPrescreenPage({ isDarkMode }) {
         questionType,
         required: form.required,
         rightAnswer: showOptionsField ? form.rightAnswer.trim() : null,
-        sortOrder: 0,
+        sortOrder: 1,
         status: isEdit ? initialSnapshot?.status ?? form.status : "Active",
         options: showOptionsField ? mappedLines : [],
       });

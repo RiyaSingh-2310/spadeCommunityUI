@@ -150,40 +150,69 @@ export function apiToUiQuestionType(value) {
 function buildQuestionLibraryCreateBody(payload) {
   const rightAnswerRaw = payload.rightAnswer ?? payload.right_answer ?? "";
   const rightAnswerTrimmed = String(rightAnswerRaw ?? "").trim();
+  const questionType = uiToApiQuestionType(
+    payload.questionType ?? payload.question_type ?? "textbox"
+  );
+  const options = resolveOptionsAsStrings(payload);
 
-  return {
-    language: String(payload.language ?? "").trim(),
+  const body = {
+    language: normalizeQuestionLibraryLanguageSlug(payload.language),
     question_title: String(
       payload.questionnaireTitle ?? payload.questionTitle ?? payload.title ?? ""
     ).trim(),
-    question_type: uiToApiQuestionType(
-      payload.questionType ?? payload.question_type ?? "textbox"
-    ),
-    options: resolveOptionsAsStrings(payload),
-    right_answer: rightAnswerTrimmed || null,
-    sort_order: Number(payload.sortOrder ?? payload.sort_order ?? 0) || 0,
-    is_required: Boolean(payload.required ?? payload.is_required ?? payload.isRequired),
+    question_type: questionType,
     status: formValueToApiStatus(payload.status ?? "Active"),
+    sort_order: Number(payload.sortOrder ?? payload.sort_order ?? 0) || 0,
   };
+
+  // Backend validates: options.optional().isArray({ min: 1 })
+  // So omit options entirely when empty (e.g. textbox/date/datetime).
+  if (options.length > 0) {
+    body.options = options;
+  }
+
+  if (rightAnswerTrimmed) {
+    body.right_answer = rightAnswerTrimmed;
+  }
+
+  return body;
 }
 
 function buildQuestionLibraryUpdateBody(payload) {
   const rightAnswerRaw = payload.rightAnswer ?? payload.right_answer ?? "";
   const rightAnswerTrimmed = String(rightAnswerRaw ?? "").trim();
   const questionType = payload.questionType ?? payload.question_type;
+  const options = resolveOptionsAsStrings(payload);
 
   const body = {
-    language: String(payload.language ?? "").trim(),
+    language: normalizeQuestionLibraryLanguageSlug(payload.language),
     question_title: String(
       payload.questionnaireTitle ?? payload.questionTitle ?? payload.title ?? ""
     ).trim(),
-    right_answer: rightAnswerTrimmed || null,
     status: formValueToApiStatus(payload.status ?? "Active"),
-    options: resolveOptionsAsStrings(payload),
   };
 
   if (questionType) {
     body.question_type = uiToApiQuestionType(questionType);
+  }
+
+  // Same rule as create: never send options: [] (fails min:1 validation).
+  if (options.length > 0) {
+    body.options = options;
+  }
+
+  if (rightAnswerTrimmed) {
+    body.right_answer = rightAnswerTrimmed;
+  } else if (
+    payload.rightAnswer === null ||
+    payload.right_answer === null ||
+    rightAnswerRaw === ""
+  ) {
+    body.right_answer = null;
+  }
+
+  if (payload.sortOrder != null || payload.sort_order != null) {
+    body.sort_order = Number(payload.sortOrder ?? payload.sort_order ?? 0) || 0;
   }
 
   return body;
@@ -197,13 +226,19 @@ function appendQuestionLibraryListQuery(basePath, { page, limit, search } = {}) 
   });
 }
 
+function formatQuestionLibraryLanguageForUi(language) {
+  const slug = String(language ?? "").trim();
+  if (!slug) return "";
+  return slug.charAt(0).toUpperCase() + slug.slice(1).toLowerCase();
+}
+
 export function mapQuestionToForm(record) {
   const optionItems = mapOptionsToFormItems(record?.options);
   const mappedLines = optionItems.map((opt) => opt.label).filter(Boolean);
   const required = Boolean(record?.is_required ?? record?.required ?? record?.isRequired);
 
   return {
-    language: record?.language ?? "",
+    language: formatQuestionLibraryLanguageForUi(record?.language),
     questionTitle:
       record?.question_title ?? record?.questionnaireTitle ?? record?.title ?? "",
     questionType: apiToUiQuestionType(record?.question_type ?? record?.questionType),
