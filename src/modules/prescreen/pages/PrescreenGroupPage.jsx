@@ -5,6 +5,7 @@ import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
@@ -34,6 +35,10 @@ function PrescreenGroupPage({ isDarkMode }) {
     preserveRowOrder: true,
   });
   useListingRefresh(fetchPrescreenGroups);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows,
+    columnLabel: "Survey Title",
+  });
 
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
@@ -66,7 +71,10 @@ function PrescreenGroupPage({ isDarkMode }) {
       actionLabel="Add Survey Group"
       onActionClick={() => navigate("/prescreen/group/add")}
       columns={LIST_COLUMNS}
-      rows={rows}
+      rows={sortedRows}
+      sortableColumns={sortableColumns}
+      columnSort={columnSort}
+      onColumnSort={onColumnSort}
       rowIdKey="id"
       editPath="/prescreen/group"
       permissionModule="prescreen_group"

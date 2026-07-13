@@ -4,6 +4,7 @@ import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
@@ -28,6 +29,10 @@ function ProjectManagersPage({ isDarkMode }) {
     refresh: fetchProjectManagers,
   } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(fetchProjectManagers);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows: projectManagers,
+    columnLabel: "Name",
+  });
 
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
@@ -58,7 +63,10 @@ function ProjectManagersPage({ isDarkMode }) {
       actionLabel="Add Project Manager"
       onActionClick={() => navigate("/project-managers/add")}
       columns={LIST_COLUMNS}
-      rows={projectManagers}
+      rows={sortedRows}
+      sortableColumns={sortableColumns}
+      columnSort={columnSort}
+      onColumnSort={onColumnSort}
       rowIdKey="id"
       editPath="/project-managers"
       permissionModule="project_managers"

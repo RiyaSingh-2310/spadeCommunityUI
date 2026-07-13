@@ -4,6 +4,7 @@ import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { getRecords, updateGroupProjectStatus } from "../services/groupSurveyApi";
@@ -24,6 +25,10 @@ function GroupSurveyPage({ isDarkMode }) {
     setRows,
   } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(fetchGroupProjects);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows,
+    columnLabel: "Project Name",
+  });
 
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
@@ -67,7 +72,10 @@ function GroupSurveyPage({ isDarkMode }) {
       actionLabel="Add Group Survey"
       onActionClick={() => navigate("/survey/group/add")}
       columns={["S. No.", "Client Name", "Project Name", "Status", "Action"]}
-      rows={rows}
+      rows={sortedRows}
+      sortableColumns={sortableColumns}
+      columnSort={columnSort}
+      onColumnSort={onColumnSort}
       rowIdKey="id"
       actionVariant="group-survey"
       onStatusToggle={handleStatusToggle}

@@ -3,6 +3,7 @@ import AdminDateRangeFilter from "../../../components/admin/AdminDateRangeFilter
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import RewardDetailsModal from "../components/RewardDetailsModal";
 import { formatSurveyListDate } from "../../shared/utils/dateTime";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { toastApiError } from "../../../services/toast/apiToast";
 import { fetchRewardTransactions } from "../services/rewardTransactionsApi";
 
@@ -77,6 +78,10 @@ function RewardHistoryPage({ isDarkMode }) {
       return true;
     });
   }, [fromDate, toDate, rows]);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows: filteredRows,
+    columnLabel: "User Name",
+  });
 
   const handleView = (row) => {
     if (row?.id == null) return;
@@ -100,7 +105,10 @@ function RewardHistoryPage({ isDarkMode }) {
           "Created At",
           "Action",
         ]}
-        rows={filteredRows}
+        rows={sortedRows}
+        sortableColumns={sortableColumns}
+        columnSort={columnSort}
+        onColumnSort={onColumnSort}
         isLoading={isLoading}
         emptyMessage="No reward history found"
         // summaryCards={[

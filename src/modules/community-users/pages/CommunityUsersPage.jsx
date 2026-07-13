@@ -5,6 +5,7 @@ import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import CommunityUserExpandableDetails from "../components/CommunityUserExpandableDetails";
@@ -61,6 +62,10 @@ function CommunityUsersPage({ isDarkMode }) {
     refresh,
   } = useApiListing({ fetchFn: fetchUsers, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(refresh);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows: users,
+    columnLabel: "Name",
+  });
 
   const visibleRowIds = useMemo(
     () => users.map((user) => String(user.id)),
@@ -219,7 +224,10 @@ function CommunityUsersPage({ isDarkMode }) {
         title="Panelists"
         searchPlaceholder="Search User"
         columns={LIST_COLUMNS}
-        rows={users}
+        rows={sortedRows}
+        sortableColumns={sortableColumns}
+        columnSort={columnSort}
+        onColumnSort={onColumnSort}
         rowIdKey="id"
         permissionModule="community_users"
         actionVariant="community-user"

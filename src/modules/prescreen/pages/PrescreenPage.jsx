@@ -6,6 +6,7 @@ import { useModulePermission } from "../../permissions/useModulePermission";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import {
   deleteRecord,
@@ -37,6 +38,10 @@ function PrescreenPage({ isDarkMode }) {
     preserveRowOrder: true,
   });
   useListingRefresh(fetchPrescreens);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows,
+    columnLabel: "Title",
+  });
 
   useEffect(() => {
     if (!canReadQuestions && canReadSurveyGroups) {
@@ -115,7 +120,10 @@ function PrescreenPage({ isDarkMode }) {
         actionLabel="Add Question"
         onActionClick={canWriteQuestions ? () => navigate("/prescreen/add") : undefined}
         columns={LIST_COLUMNS}
-        rows={rows}
+        rows={sortedRows}
+        sortableColumns={sortableColumns}
+        columnSort={columnSort}
+        onColumnSort={onColumnSort}
         rowIdKey="id"
         onEdit={handleEdit}
         onDelete={handleDeleteRequest}

@@ -5,6 +5,7 @@ import ModuleListingPage from "../../modules/shared/components/ModuleListingPage
 import { useApiListing } from "../../modules/shared/hooks/useApiListing";
 import { useFlashMessage } from "../../modules/shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../modules/shared/hooks/useListingRefresh";
+import { useNameColumnSort } from "../../modules/shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../modules/shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../services/toast/apiToast";
 import {
@@ -40,6 +41,10 @@ function ClientsPage({ isDarkMode }) {
     refresh: fetchClients,
   } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(fetchClients);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows: clients,
+    columnLabel: "Name",
+  });
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -101,7 +106,10 @@ function ClientsPage({ isDarkMode }) {
         actionLabel="Add Client User"
         onActionClick={() => navigate("/clients/add")}
         columns={LIST_COLUMNS}
-        rows={clients}
+        rows={sortedRows}
+        sortableColumns={sortableColumns}
+        columnSort={columnSort}
+        onColumnSort={onColumnSort}
         rowIdKey="id"
         editPath="/clients"
         onDelete={handleDeleteRequest}

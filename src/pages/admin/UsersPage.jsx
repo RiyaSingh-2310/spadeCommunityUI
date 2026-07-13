@@ -5,6 +5,7 @@ import ModuleListingPage from "../../modules/shared/components/ModuleListingPage
 import { useApiListing } from "../../modules/shared/hooks/useApiListing";
 import { useFlashMessage } from "../../modules/shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../modules/shared/hooks/useListingRefresh";
+import { useNameColumnSort } from "../../modules/shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../modules/shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../services/toast/apiToast";
 import {
@@ -37,6 +38,10 @@ function UsersPage({ isDarkMode }) {
     refresh: fetchUsers,
   } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(fetchUsers);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows: users,
+    columnLabel: "Name",
+  });
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -105,7 +110,10 @@ function UsersPage({ isDarkMode }) {
         actionLabel="Add User"
         onActionClick={() => navigate("/users/add")}
         columns={LIST_COLUMNS}
-        rows={users}
+        rows={sortedRows}
+        sortableColumns={sortableColumns}
+        columnSort={columnSort}
+        onColumnSort={onColumnSort}
         rowIdKey="id"
         permissionModule="users"
         actionVariant="user-management"

@@ -11,6 +11,7 @@ import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import AddRfqLogModal from "../components/AddRfqLogModal";
 
@@ -41,6 +42,10 @@ function RfqPage({ isDarkMode }) {
     refresh: fetchProjects,
   } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(fetchProjects);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows: projects,
+    columnLabel: "Name",
+  });
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -80,7 +85,10 @@ function RfqPage({ isDarkMode }) {
         actionLabel="Add RFQ"
         onActionClick={() => navigate("/sales/rfq/add")}
         columns={RFQ_COLUMNS}
-        rows={projects}
+        rows={sortedRows}
+        sortableColumns={sortableColumns}
+        columnSort={columnSort}
+        onColumnSort={onColumnSort}
         rowIdKey="recordId"
         editPath="/sales/rfq"
         actionVariant="rfq"

@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Minus, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ExternalLink, Minus, Plus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DebouncedSearchInput from "../../../components/admin/DebouncedSearchInput";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
@@ -557,11 +557,8 @@ function ModuleListingPage({
   const renderSortableHeader = (columnLabel) => {
     const isActive = columnSort?.column === columnLabel;
     const direction = columnSort?.direction;
-    const SortIcon = !isActive
-      ? ArrowUpDown
-      : direction === "asc"
-        ? ArrowUp
-        : ArrowDown;
+    const upActive = isActive && direction === "asc";
+    const downActive = isActive && direction === "desc";
 
     return (
       <button
@@ -573,7 +570,18 @@ function ModuleListingPage({
         aria-label={`Sort by ${columnLabel}`}
       >
         <span>{columnLabel}</span>
-        <SortIcon size={14} strokeWidth={2} aria-hidden />
+        <span className="inline-flex flex-col leading-none" aria-hidden>
+          <ArrowUp
+            size={11}
+            strokeWidth={2.5}
+            className={upActive ? "text-[var(--admin-primary-color)]" : "opacity-35"}
+          />
+          <ArrowDown
+            size={11}
+            strokeWidth={2.5}
+            className={`-mt-0.5 ${downActive ? "text-[var(--admin-primary-color)]" : "opacity-35"}`}
+          />
+        </span>
       </button>
     );
   };

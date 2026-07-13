@@ -1,5 +1,6 @@
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useListingPageActions } from "../../shared/hooks/useListingPageActions";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { downloadInvoicePdf } from "../utils/downloadInvoicePdf";
 
 const CLIENTS = ["Alpha Corp", "Beta Labs", "Gamma Tech", "Delta Works"];
@@ -24,6 +25,10 @@ function InvoiceListPage({ isDarkMode }) {
   const { rows, onStatusToggle } = useListingPageActions({
     initialRows,
   });
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows,
+    columnLabel: "Project Name",
+  });
 
   return (
     <ModuleListingPage
@@ -42,7 +47,10 @@ function InvoiceListPage({ isDarkMode }) {
         "Status",
         "Action",
       ]}
-      rows={rows}
+      rows={sortedRows}
+      sortableColumns={sortableColumns}
+      columnSort={columnSort}
+      onColumnSort={onColumnSort}
       rowIdKey="id"
       actionVariant="pdf-download"
       showDeleteAction={false}

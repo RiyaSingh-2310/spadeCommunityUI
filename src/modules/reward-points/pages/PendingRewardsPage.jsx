@@ -4,6 +4,7 @@ import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import RewardDetailsModal from "../components/RewardDetailsModal";
 import RewardHistoryStatusFilter from "../components/RewardHistoryStatusFilter";
 import { useApiListing } from "../../shared/hooks/useApiListing";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { formatSurveyListDate } from "../../shared/utils/dateTime";
 import { getAdminDisplayName } from "../../../services/auth/authStorage";
@@ -65,6 +66,10 @@ function PendingRewardsPage({ isDarkMode }) {
       }),
     [rows, statusFilter, fromDate, toDate]
   );
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows: filteredRows,
+    columnLabel: "User Name",
+  });
 
   const closeModal = () => {
     if (isSubmitting) return;
@@ -144,7 +149,10 @@ function PendingRewardsPage({ isDarkMode }) {
           "Status",
           "Action",
         ]}
-        rows={filteredRows}
+        rows={sortedRows}
+        sortableColumns={sortableColumns}
+        columnSort={columnSort}
+        onColumnSort={onColumnSort}
         rowIdKey="id"
         showStatus
         statusAsText

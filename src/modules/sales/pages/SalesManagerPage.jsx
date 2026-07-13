@@ -5,6 +5,7 @@ import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { isAuthenticated } from "../../../services/auth/authStorage";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
@@ -39,6 +40,10 @@ function SalesManagerPage({ isDarkMode }) {
     refresh: refreshSalesManagers,
   } = useApiListing({ fetchFn: fetchSalesManagers, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(refreshSalesManagers);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows: salesManagers,
+    columnLabel: "Name",
+  });
 
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -97,7 +102,10 @@ function SalesManagerPage({ isDarkMode }) {
         actionLabel="Add Sales Manager"
         onActionClick={() => navigate("/sales/sales-manager/add")}
         columns={LIST_COLUMNS}
-        rows={salesManagers}
+        rows={sortedRows}
+        sortableColumns={sortableColumns}
+        columnSort={columnSort}
+        onColumnSort={onColumnSort}
         rowIdKey="id"
         editPath="/sales/sales-manager"
         permissionModule="sales_manager"

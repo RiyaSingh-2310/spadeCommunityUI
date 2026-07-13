@@ -3,6 +3,7 @@ import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { getRecords, updateSurveyStatus } from "../services/surveyApi";
@@ -23,6 +24,10 @@ function SurveyPage({ isDarkMode }) {
     refresh: fetchSurveys,
   } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(fetchSurveys);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows,
+    columnLabel: "Project Name",
+  });
 
   const handleStatusToggle = async (row) => {
     const recordId = row?.recordId;
@@ -70,7 +75,10 @@ function SurveyPage({ isDarkMode }) {
         "Status",
         "Action",
       ]}
-      rows={rows}
+      rows={sortedRows}
+      sortableColumns={sortableColumns}
+      columnSort={columnSort}
+      onColumnSort={onColumnSort}
       rowIdKey="recordId"
       actionVariant="view-edit"
       showDeleteAction={false}
