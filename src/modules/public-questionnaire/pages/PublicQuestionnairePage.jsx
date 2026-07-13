@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import PublicQuestionnaireLayout from "../layout/PublicQuestionnaireLayout";
 import QuestionRenderer from "../components/QuestionRenderer";
@@ -15,16 +15,65 @@ import {
 } from "../../../services/questionnaire-group/publicQuestionnaireApi";
 import { getAdminCancelButtonClass } from "../../shared/utils/formStyles";
 
-function resolvePanelistId(searchParams) {
-  const raw = searchParams.get("panelist_id");
-  const parsed = Number(raw);
+const PANELIST_QUERY_KEYS = ["panelist_id", "panelistId", "PanelistId", "panelist"];
+
+function normalizePanelistId(value) {
+  if (value == null) return null;
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function readPanelistIdFromSearch(search) {
+  if (search == null) return null;
+  const query = String(search).startsWith("?") ? String(search).slice(1) : String(search);
+  if (!query) return null;
+
+  try {
+    const params = new URLSearchParams(query);
+    for (const key of PANELIST_QUERY_KEYS) {
+      const normalized = normalizePanelistId(params.get(key));
+      if (normalized != null) return normalized;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+/**
+ * Resolve panelist_id from the live URL.
+ * Prefer React Router search params, then fall back to window.location so
+ * query params are not lost after SPA rewrites / lazy route mounts (e.g. Vercel).
+ */
+function resolvePanelistId(searchParams, locationSearch) {
+  const fromRouter =
+    readPanelistIdFromSearch(searchParams?.toString?.() ?? "") ??
+    readPanelistIdFromSearch(locationSearch);
+
+  if (fromRouter != null) return fromRouter;
+
+  if (typeof window !== "undefined") {
+    return readPanelistIdFromSearch(window.location.search);
+  }
+
+  return null;
 }
 
 function PublicQuestionnairePage({ isDarkMode, onToggleTheme }) {
   const { id: questionnaireGroupId } = useParams();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
-  const panelistId = resolvePanelistId(searchParams);
+  const searchKey = searchParams.toString();
+  const panelistId = useMemo(
+    () => resolvePanelistId(searchParams, location.search),
+    // searchKey tracks query changes without depending on URLSearchParams identity
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [searchKey, location.search]
+  );
+  const [isSearchReady, setIsSearchReady] = useState(false);
 
   const [questionnaire, setQuestionnaire] = useState(null);
   const [loadError, setLoadError] = useState("");
@@ -39,6 +88,28 @@ function PublicQuestionnairePage({ isDarkMode, onToggleTheme }) {
   const [submissionId, setSubmissionId] = useState(null);
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Mark search params ready only after mount + location is available.
+  // Prevents false "missing panelist_id" flashes before the router settles.
+  useEffect(() => {
+    setIsSearchReady(true);
+  }, [location.search, searchParams]);
+
+  const resolvedPanelistId = useMemo(() => {
+    if (!isSearchReady) return null;
+    return panelistId;
+  }, [isSearchReady, panelistId]);
+
+  const hasValidPanelistId = resolvedPanelistId != null;
+  const showPanelistError = !isLoading && isSearchReady && !hasValidPanelistId;
+
+  function getPanelistIdForAction() {
+    // Re-read at action time so submit/start never rely on a stale render.
+    return (
+      resolvePanelistId(searchParams, location.search) ??
+      (typeof window !== "undefined" ? readPanelistIdFromSearch(window.location.search) : null)
+    );
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -104,7 +175,8 @@ function PublicQuestionnairePage({ isDarkMode, onToggleTheme }) {
   const errorVariant = classifySurveyError(loadError);
 
   function handleStartSurvey() {
-    if (panelistId == null) {
+    const actionPanelistId = getPanelistIdForAction();
+    if (actionPanelistId == null) {
       setSubmitError(
         "Missing or invalid panelist_id in the link. Please use a valid questionnaire URL."
       );
@@ -148,7 +220,8 @@ function PublicQuestionnairePage({ isDarkMode, onToggleTheme }) {
       return;
     }
 
-    if (panelistId == null) {
+    const actionPanelistId = getPanelistIdForAction();
+    if (actionPanelistId == null) {
       setSubmitError(
         "Missing or invalid panelist_id in the link. Please use a valid questionnaire URL."
       );
@@ -161,7 +234,7 @@ function PublicQuestionnairePage({ isDarkMode, onToggleTheme }) {
 
     try {
       const result = await submitPublicQuestionnaire(questionnaireGroupId, {
-        panelistId,
+        panelistId: actionPanelistId,
         questions,
         answers,
       });
@@ -181,25 +254,25 @@ function PublicQuestionnairePage({ isDarkMode, onToggleTheme }) {
 
   return (
     <PublicQuestionnaireLayout isDarkMode={isDarkMode} onToggleTheme={onToggleTheme}>
-      {isLoading ? (
+      {isLoading || !isSearchReady ? (
         <div className="pq-card pq-state-card pq-loading-card" aria-busy="true" aria-live="polite">
           <Loader2 className="pq-loading-spinner" size={32} aria-hidden />
           <p className="pq-loading-text">Preparing your survey...</p>
         </div>
       ) : null}
 
-      {!isLoading && !questionnaire ? (
+      {!isLoading && isSearchReady && !questionnaire ? (
         <SurveyEmptyState
           variant={errorVariant}
           description={loadError || undefined}
         />
       ) : null}
 
-      {!isLoading && questionnaire && isSubmitted ? (
+      {!isLoading && isSearchReady && questionnaire && isSubmitted ? (
         <SurveyCompletion message={successMessage} submissionId={submissionId} />
       ) : null}
 
-      {!isLoading && questionnaire && !isSubmitted && total === 0 ? (
+      {!isLoading && isSearchReady && questionnaire && !isSubmitted && total === 0 ? (
         <SurveyEmptyState
           variant="empty"
           title={questionnaire.surveyTitle}
@@ -207,15 +280,15 @@ function PublicQuestionnairePage({ isDarkMode, onToggleTheme }) {
         />
       ) : null}
 
-      {!isLoading && questionnaire && !isSubmitted && total > 0 && !hasStarted ? (
+      {!isLoading && isSearchReady && questionnaire && !isSubmitted && total > 0 && !hasStarted ? (
         <>
           <SurveyHero
             questionnaire={questionnaire}
             questionCount={total}
             onStart={handleStartSurvey}
-            disabled={panelistId == null}
+            disabled={showPanelistError}
           />
-          {panelistId == null ? (
+          {showPanelistError ? (
             <p className="pq-hero-error" role="alert">
               Missing or invalid panelist_id in the link. Please use a valid questionnaire URL.
             </p>
@@ -228,7 +301,12 @@ function PublicQuestionnairePage({ isDarkMode, onToggleTheme }) {
         </>
       ) : null}
 
-      {!isLoading && questionnaire && !isSubmitted && hasStarted && currentQuestion ? (
+      {!isLoading &&
+      isSearchReady &&
+      questionnaire &&
+      !isSubmitted &&
+      hasStarted &&
+      currentQuestion ? (
         <div className="pq-survey-card pq-card">
           <div className="pq-survey-card-body">
             <div className="pq-survey-intro">
@@ -297,7 +375,7 @@ function PublicQuestionnairePage({ isDarkMode, onToggleTheme }) {
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={isSubmitting || panelistId == null}
+                disabled={isSubmitting || !hasValidPanelistId}
                 className="pq-nav-btn pq-nav-btn--primary admin-btn-primary"
                 aria-busy={isSubmitting}
               >

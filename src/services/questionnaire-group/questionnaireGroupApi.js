@@ -242,8 +242,9 @@ function resolveQuestionnaireGroupWebsiteUrl(record) {
 
   const panelistId = resolvePanelistIdForWebsiteUrl(record, fromApi);
 
-  // Always build the canonical local public URL so listing links open this app
-  // with both route + panelist_id query params (never hardcode either value).
+  // Always build the canonical local public URL:
+  // /public/questionnaire/{id}?panelist_id={panelistId}
+  // Never trust a stored API URL path alone (may point at an old host or omit panelist_id).
   return buildPublicQuestionnaireUrl(groupId, panelistId);
 }
 
