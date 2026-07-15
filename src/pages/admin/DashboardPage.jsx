@@ -402,7 +402,7 @@ function DashboardPage({ isDarkMode }) {
                 {[
                   { label: "Add Client", path: "/clients/add" },
                   { label: "Add Partner", path: "/partners/add" },
-                  { label: "Add Survey", path: "/survey/add" },
+                  { label: "Add Project", path: "/survey/add" },
                   { label: "Add RFQ", path: "/sales/rfq/add" },
                   { label: "Add User", path: "/users/add" },
                   { label: "Generate Invoice", path: "/invoice/list" },

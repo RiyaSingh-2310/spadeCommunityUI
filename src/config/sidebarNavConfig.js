@@ -85,7 +85,7 @@ export const SIDEBAR_NAV_ITEMS = [
   },
   {
     type: "group",
-    label: "Projects",
+    label: "Project Management",
     key: "survey",
     matcher: /^\/survey(\/|$)/,
     permissionKeys: [
@@ -96,7 +96,7 @@ export const SIDEBAR_NAV_ITEMS = [
     ],
     children: [
       {
-        label: "Survey",
+        label: "Projects",
         root: "/survey",
         isActive: matchesSurveyMain,
         matcher: /^\/survey(\/|$)/,

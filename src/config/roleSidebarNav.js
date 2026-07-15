@@ -43,13 +43,13 @@ const MANAGER_SIDEBAR_NAV_ITEMS = [
   },
   {
     type: "group",
-    label: "Survey",
+    label: "Project Management",
     key: "survey",
     matcher: /^\/survey(\/|$)/,
     permissionKeys: ["survey", "group_survey"],
     children: [
       {
-        label: "Survey",
+        label: "Projects",
         root: "/survey",
         isActive: matchesSurveyMain,
         matcher: /^\/survey(\/|$)/,

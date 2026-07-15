@@ -1,5 +1,5 @@
 /**
- * Temporary in-memory survey/project mock store.
+ * Temporary in-memory project mock store.
  * Replace with real API calls in surveyApi.js when endpoints are ready.
  */
 
@@ -23,6 +23,14 @@ export const MOCK_SURVEY_PARTNERS = [
 const LIVE_BASE = "https://speed-community.com/survey/live";
 const TEST_BASE = "https://speed-community.com/survey/test";
 
+const RFQ_SEED = [
+  { id: "PRJ-011", name: "PRJ-011" },
+  { id: "PRJ-012", name: "PRJ-012" },
+  { id: "PRJ-013", name: "PRJ-013" },
+  { id: "PRJ-014", name: "PRJ-014" },
+  { id: "PRJ-015", name: "PRJ-015" },
+];
+
 function buildRedirects(numId) {
   return {
     complete_url: `${LIVE_BASE}/redirect/complete?id=${numId}`,
@@ -37,15 +45,8 @@ function createSeedSurvey(index) {
   const id = index + 1;
   const client = MOCK_SURVEY_CLIENTS[index % MOCK_SURVEY_CLIENTS.length];
   const partner = MOCK_SURVEY_PARTNERS[index % MOCK_SURVEY_PARTNERS.length];
+  const rfq = RFQ_SEED[index % RFQ_SEED.length];
   const statuses = ["active", "active", "inactive", "active"];
-  const countries = [
-    "United States",
-    "India",
-    "United Kingdom",
-    "Germany",
-    "Japan",
-    "Canada",
-  ];
   const projects = [
     "Brand Tracker Q2 2026",
     "CX Pulse Study",
@@ -59,21 +60,37 @@ function createSeedSurvey(index) {
 
   return {
     id,
-    survey_id: `SRV-${10000 + id}`,
+    Project_code: `PRJ-${10000 + id}`,
+    survey_id: `PRJ-${10000 + id}`,
+    Project_Name: projects[index % projects.length],
     project_name: projects[index % projects.length],
     client_id: client.id,
     client_code: client.code,
+    Clients: client.name,
     client_name: client.name,
     project_manager_id: 1 + (index % 5),
+    Project_Manager: ["Priya Desai", "Arun Kumar", "Meera Shah", "Rohan Verma", "Anita Patel"][
+      index % 5
+    ],
     project_manager_name: ["Priya Desai", "Arun Kumar", "Meera Shah", "Rohan Verma", "Anita Patel"][
       index % 5
     ],
-    project_country: countries[index % countries.length],
-    description: `Dummy description for ${projects[index % projects.length]}.`,
     sales_manager_id: 1 + (index % 4),
+    Sales_Manager: ["Arun Kumar", "Sneha Rao", "Vikram Singh", "Kavya Nair"][index % 4],
     sales_manager_name: ["Arun Kumar", "Sneha Rao", "Vikram Singh", "Kavya Nair"][index % 4],
-    sales_project_id: 14 + index,
-    sales_project_name: `SP-2026-${String(14 + index).padStart(3, "0")}`,
+    rfq_id: rfq.id,
+    RFQ: rfq.name,
+    sales_project_id: rfq.id,
+    sales_project_name: rfq.name,
+    Project_Description: `Dummy description for ${projects[index % projects.length]}.`,
+    description: `Dummy description for ${projects[index % projects.length]}.`,
+    Project_Link_Type: index % 2 === 0 ? "Single Link" : "Multi Link",
+    link_type: index % 2 === 0 ? "single" : "multi",
+    Notes: "Mock project note — APIs pending. Use this record for UI testing.",
+    notes: "Mock project note — APIs pending. Use this record for UI testing.",
+    Status: statuses[index % statuses.length],
+    status: statuses[index % statuses.length],
+    // Legacy URL fields kept for Project URLs mock seeding / group flows
     loi: 10 + (index % 6) * 2,
     ir: 25 + (index % 5) * 5,
     sample_size: 500 + index * 100,
@@ -81,7 +98,6 @@ function createSeedSurvey(index) {
     cpi: Number((1.5 + (index % 5) * 0.35).toFixed(2)),
     start_date: `2026-0${1 + (index % 6)}-01`,
     end_date: `2026-0${2 + (index % 6)}-28`,
-    link_type: index % 2 === 0 ? "single" : "multi",
     live_url: `${LIVE_BASE}/${id}`,
     test_url: `${TEST_BASE}/${id}`,
     geo_location: index % 2 === 0,
@@ -89,15 +105,13 @@ function createSeedSurvey(index) {
     unique_ip: index % 3 === 0,
     prescreen: index % 2 !== 0,
     ...buildRedirects(id),
-    comp_point: String(40 + index * 5),
-    term_point: String(5 + (index % 3)),
-    notes: "Mock survey note — APIs pending. Use this record for UI testing.",
-    status: statuses[index % statuses.length],
     partner_ids: [partner.partner_id],
     partner_names: partner.name,
     partner_allocations: { [String(partner.partner_id)]: String(200 + index * 25) },
     created_at: "2026-01-15T08:00:00.000Z",
     updated_at: "2026-03-10T12:00:00.000Z",
+    deleted_at: null,
+    action_by: "Admin User",
   };
 }
 
@@ -117,9 +131,36 @@ export function getMockSurveyById(id) {
   const target = String(id ?? "").trim();
   if (!target) return null;
   const found = mockSurveys.find(
-    (survey) => String(survey.id) === target || String(survey.survey_id) === target
+    (survey) =>
+      String(survey.id) === target ||
+      String(survey.survey_id) === target ||
+      String(survey.Project_code) === target
   );
   return found ? { ...found } : null;
+}
+
+/**
+ * @param {string} projectCode
+ * @param {string|number} [excludeId]
+ */
+export function isProjectCodeTaken(projectCode, excludeId) {
+  const code = String(projectCode ?? "")
+    .trim()
+    .toLowerCase();
+  if (!code) return false;
+  const exclude = excludeId != null ? String(excludeId).trim() : "";
+
+  return mockSurveys.some((survey) => {
+    const surveyId = String(survey.id);
+    const surveyCode = String(survey.survey_id ?? "");
+    if (exclude && (surveyId === exclude || surveyCode === exclude)) {
+      return false;
+    }
+    const existing = String(survey.Project_code ?? survey.survey_id ?? "")
+      .trim()
+      .toLowerCase();
+    return existing === code;
+  });
 }
 
 export function filterMockSurveys({ page = 1, limit = 10, search = "", groupProjectId } = {}) {
@@ -133,11 +174,15 @@ export function filterMockSurveys({ page = 1, limit = 10, search = "", groupProj
     rows = rows.filter((survey) => {
       const haystack = [
         survey.survey_id,
+        survey.Project_code,
         survey.project_name,
+        survey.Project_Name,
         survey.client_code,
         survey.client_name,
+        survey.Clients,
         survey.project_manager_name,
         survey.status,
+        survey.Status,
       ]
         .join(" ")
         .toLowerCase();
@@ -161,33 +206,42 @@ export function createMockSurvey(payload = {}) {
   const client =
     MOCK_SURVEY_CLIENTS.find((item) => String(item.id) === String(payload.client_id)) ??
     MOCK_SURVEY_CLIENTS[0];
+  const projectCode = payload.Project_code || payload.project_code || `PRJ-${10000 + id}`;
+  const projectName = payload.Project_Name || payload.project_name || `New Mock Project ${id}`;
+  const status = String(payload.Status ?? payload.status ?? "active").toLowerCase();
 
   const record = {
     ...createSeedSurvey(id - 1),
     id,
-    survey_id: `SRV-${10000 + id}`,
-    project_name: payload.project_name ?? `New Mock Project ${id}`,
+    Project_code: projectCode,
+    survey_id: projectCode,
+    Project_Name: projectName,
+    project_name: projectName,
     client_id: client.id,
     client_code: client.code,
-    client_name: client.name,
+    Clients: payload.Clients || client.name,
+    client_name: payload.Clients || client.name,
     project_manager_id: payload.project_manager_id ?? 1,
-    project_manager_name: payload.project_manager_name ?? "Priya Desai",
-    project_country: payload.project_country ?? "United States",
-    description: payload.description ?? "",
-    loi: payload.loi ?? 15,
-    ir: payload.ir ?? 35,
-    sample_size: payload.sample_size ?? 500,
-    currency: payload.currency ?? "USD",
-    cpi: payload.cpi ?? 2.5,
-    start_date: payload.start_date ?? "2026-04-01",
-    end_date: payload.end_date ?? "2026-05-31",
-    link_type: payload.link_type ?? "single",
-    live_url: payload.live_url ?? `${LIVE_BASE}/${id}`,
-    test_url: payload.test_url ?? `${TEST_BASE}/${id}`,
-    term_point: payload.term_point ?? "5",
-    comp_point: payload.comp_point ?? "50",
-    notes: payload.notes ?? "",
-    status: payload.status ?? "active",
+    Project_Manager: payload.Project_Manager ?? "Priya Desai",
+    project_manager_name: payload.Project_Manager ?? "Priya Desai",
+    sales_manager_id: payload.sales_manager_id ?? 1,
+    Sales_Manager: payload.Sales_Manager ?? "Arun Kumar",
+    sales_manager_name: payload.Sales_Manager ?? "Arun Kumar",
+    rfq_id: payload.rfq_id ?? payload.sales_project_id ?? "",
+    RFQ: payload.RFQ ?? payload.sales_project_name ?? "",
+    sales_project_id: payload.rfq_id ?? payload.sales_project_id ?? "",
+    sales_project_name: payload.RFQ ?? payload.sales_project_name ?? "",
+    Project_Description: payload.Project_Description ?? payload.description ?? "",
+    description: payload.Project_Description ?? payload.description ?? "",
+    Project_Link_Type: payload.Project_Link_Type ?? "Single Link",
+    link_type:
+      payload.Project_Link_Type === "Multi Link" || payload.link_type === "multi"
+        ? "multi"
+        : "single",
+    Notes: payload.Notes ?? payload.notes ?? "",
+    notes: payload.Notes ?? payload.notes ?? "",
+    Status: status === "inactive" ? "inactive" : "active",
+    status: status === "inactive" ? "inactive" : "active",
     ...buildRedirects(id),
   };
 
@@ -198,7 +252,10 @@ export function createMockSurvey(payload = {}) {
 export function updateMockSurvey(id, patch = {}) {
   const target = String(id ?? "").trim();
   const index = mockSurveys.findIndex(
-    (survey) => String(survey.id) === target || String(survey.survey_id) === target
+    (survey) =>
+      String(survey.id) === target ||
+      String(survey.survey_id) === target ||
+      String(survey.Project_code) === target
   );
   if (index < 0) return null;
 
@@ -207,16 +264,53 @@ export function updateMockSurvey(id, patch = {}) {
     ...current,
     ...patch,
     id: current.id,
-    survey_id: current.survey_id,
     updated_at: new Date().toISOString(),
   };
+
+  if (patch.Project_code || patch.project_code) {
+    const code = patch.Project_code || patch.project_code;
+    next.Project_code = code;
+    next.survey_id = code;
+  }
+
+  if (patch.Project_Name || patch.project_name) {
+    const name = patch.Project_Name || patch.project_name;
+    next.Project_Name = name;
+    next.project_name = name;
+  }
+
+  if (patch.Project_Description != null || patch.description != null) {
+    const description = patch.Project_Description ?? patch.description;
+    next.Project_Description = description;
+    next.description = description;
+  }
+
+  if (patch.Notes != null || patch.notes != null) {
+    const notes = patch.Notes ?? patch.notes;
+    next.Notes = notes;
+    next.notes = notes;
+  }
+
+  if (patch.Status != null || patch.status != null) {
+    const status = String(patch.Status ?? patch.status).toLowerCase();
+    next.Status = status === "inactive" ? "inactive" : "active";
+    next.status = next.Status;
+  }
+
+  if (patch.RFQ != null || patch.rfq_id != null) {
+    next.RFQ = patch.RFQ ?? next.RFQ;
+    next.rfq_id = patch.rfq_id ?? next.rfq_id;
+    next.sales_project_name = next.RFQ;
+    next.sales_project_id = next.rfq_id;
+  }
 
   if (patch.client_id != null) {
     const client = MOCK_SURVEY_CLIENTS.find((item) => String(item.id) === String(patch.client_id));
     if (client) {
       next.client_id = client.id;
       next.client_code = client.code;
-      next.client_name = client.name;
+      next.client_name = patch.Clients || client.name;
+      next.Clients = patch.Clients || client.name;
     }
   }
 
@@ -228,7 +322,10 @@ export function deleteMockSurvey(id) {
   const target = String(id ?? "").trim();
   const before = mockSurveys.length;
   mockSurveys = mockSurveys.filter(
-    (survey) => String(survey.id) !== target && String(survey.survey_id) !== target
+    (survey) =>
+      String(survey.id) !== target &&
+      String(survey.survey_id) !== target &&
+      String(survey.Project_code) !== target
   );
   return mockSurveys.length < before;
 }
@@ -239,7 +336,8 @@ export function cloneMockSurvey(id) {
 
   return createMockSurvey({
     ...source,
-    project_name: `${source.project_name} (Clone)`,
-    status: "active",
+    Project_Name: `${source.Project_Name || source.project_name} (Clone)`,
+    Project_code: `${source.Project_code || source.survey_id}-CLONE`,
+    Status: "active",
   });
 }

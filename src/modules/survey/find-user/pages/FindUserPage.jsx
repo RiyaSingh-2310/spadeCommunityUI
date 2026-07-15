@@ -116,7 +116,7 @@ function FindUserPage({ isDarkMode }) {
           isGroupView
             ? getGroupSurveyBreadcrumbs(groupId, { currentLabel: "Find User" })
             : [
-                { label: "Survey", to: "/survey" },
+                { label: "Projects", to: "/survey" },
                 { label: "Find User" },
               ]
         }

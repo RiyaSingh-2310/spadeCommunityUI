@@ -1,128 +1,65 @@
-import {
-  getDateRangeError,
-  getOptionalUrlError,
-  getRequiredError,
-  isFormValid,
-} from "../../shared/utils/validation";
-
-function getPositiveNumberError(value, label) {
-  const trimmed = String(value ?? "").trim();
-  if (!trimmed) {
-    return `${label} is required`;
-  }
-  const num = Number(trimmed);
-  if (!Number.isFinite(num) || num <= 0) {
-    return `${label} must be a valid number greater than 0`;
-  }
-  return "";
-}
+import { getRequiredError, isFormValid } from "../../shared/utils/validation";
+import { isProjectCodeTaken } from "../data/mockSurveyStore";
 
 /**
  * @param {ReturnType<import('../data/surveyFormData').createEmptySurveyForm>} form
+ * @param {{ excludeId?: string|number }} [options]
  */
-export function getSurveyFormErrors(form) {
-  const errors = {
+export function getSurveyFormErrors(form, options = {}) {
+  const projectCode = String(form.projectCode ?? "").trim();
+  let projectCodeError = getRequiredError(form.projectCode, "Project Code");
+
+  if (!projectCodeError && projectCode) {
+    if (isProjectCodeTaken(projectCode, options.excludeId)) {
+      projectCodeError = "Project Code must be unique";
+    }
+  }
+
+  return {
     client: getRequiredError(form.client, "Client"),
     projectName: getRequiredError(form.projectName, "Project Name"),
+    projectCode: projectCodeError,
     projectManager: getRequiredError(form.projectManager, "Project Manager"),
-    projectCountry: getRequiredError(form.projectCountry, "Project Country"),
-    loi: getPositiveNumberError(form.loi, "LOI"),
-    ir: getPositiveNumberError(form.ir, "IR"),
-    sampleSize: getPositiveNumberError(form.sampleSize, "Sample Size"),
-    currency: getRequiredError(form.currency, "Currency"),
-    cpi: getPositiveNumberError(form.cpi, "CPI"),
-    startDate: getRequiredError(form.startDate, "Start Date"),
-    endDate: getRequiredError(form.endDate, "End Date"),
     projectLinkType: getRequiredError(form.projectLinkType, "Project Link Type"),
-    userTerminationPoint: getRequiredError(
-      form.userTerminationPoint,
-      "User Termination Point"
-    ),
-    userCompletionPoint: getRequiredError(
-      form.userCompletionPoint,
-      "User Completion Point"
-    ),
-    liveLink: getOptionalUrlError(form.liveLink, "Live Link"),
-    testLink: getOptionalUrlError(form.testLink, "Test Link"),
-    surveyCsvFile: "",
-    language: "",
-    surveyGroup: "",
+    status: getRequiredError(form.status, "Status"),
+    salesManager: "",
+    salesProject: "",
   };
-
-  const dateRangeError = getDateRangeError(form.startDate, form.endDate);
-  if (dateRangeError) {
-    errors.endDate = dateRangeError;
-  }
-
-  if (form.filters.preScreen) {
-    errors.language = getRequiredError(form.language, "Language");
-  }
-
-  return errors;
 }
 
 /**
  * @param {ReturnType<import('../data/surveyFormData').createEmptySurveyForm>} form
+ * @param {{ excludeId?: string|number }} [options]
  */
-export function isSurveyFormSubmittable(form) {
-  return isFormValid(getSurveyFormErrors(form));
+export function isSurveyFormSubmittable(form, options = {}) {
+  return isFormValid(getSurveyFormErrors(form, options));
 }
 
 export const SURVEY_FORM_FIELDS = [
   "client",
   "projectName",
+  "projectCode",
   "projectManager",
-  "projectCountry",
-  "loi",
-  "ir",
-  "sampleSize",
-  "currency",
-  "cpi",
-  "startDate",
-  "endDate",
   "projectLinkType",
-  "liveLink",
-  "testLink",
-  "surveyCsvFile",
-  "language",
-  "surveyGroup",
-  "userTerminationPoint",
-  "userCompletionPoint",
+  "status",
 ];
 
 const SURVEY_FORM_SCALAR_KEYS = [
   "client",
   "projectName",
+  "projectCode",
   "projectManager",
-  "projectCountry",
   "salesManager",
   "salesProject",
   "description",
-  "loi",
-  "ir",
-  "sampleSize",
-  "currency",
-  "cpi",
-  "startDate",
-  "endDate",
-  "projectLinkType",
-  "liveLink",
-  "testLink",
-  "language",
-  "surveyGroup",
-  "userTerminationPoint",
-  "userCompletionPoint",
   "notes",
+  "projectLinkType",
+  "status",
   "groupProjectId",
-  "existingSurveyCsvFileName",
 ];
 
-const SURVEY_FORM_META_KEYS = ["existingMultiLinkSurvey"];
-
-const SURVEY_FILTER_KEYS = ["geoLocation", "urlProtection", "uniqueIp", "preScreen"];
-
 /**
- * Deep equality check for survey form dirty-state detection.
+ * Deep equality check for project form dirty-state detection.
  * @param {ReturnType<import('../data/surveyFormData').createEmptySurveyForm>} current
  * @param {ReturnType<import('../data/surveyFormData').createEmptySurveyForm>} original
  */
@@ -135,62 +72,13 @@ export function areSurveyFormsEqual(current, original) {
     }
   }
 
-  for (const key of SURVEY_FILTER_KEYS) {
-    if (Boolean(current.filters?.[key]) !== Boolean(original.filters?.[key])) {
-      return false;
-    }
-  }
-
-  const currentFileName =
-    current.surveyCsvFile?.name ?? current.existingSurveyCsvFileName ?? "";
-  const originalFileName =
-    original.surveyCsvFile?.name ?? original.existingSurveyCsvFileName ?? "";
-  if (currentFileName !== originalFileName) {
-    return false;
-  }
-
-  for (const key of SURVEY_FORM_META_KEYS) {
-    if (Boolean(current[key]) !== Boolean(original[key])) {
-      return false;
-    }
-  }
-
-  const currentPartners = Array.isArray(current.partners)
-    ? current.partners.map(String).sort()
-    : [];
-  const originalPartners = Array.isArray(original.partners)
-    ? original.partners.map(String).sort()
-    : [];
-  if (currentPartners.join("|") !== originalPartners.join("|")) {
-    return false;
-  }
-
-  const allocationKeys = new Set([
-    ...Object.keys(current.partnerAllocations ?? {}),
-    ...Object.keys(original.partnerAllocations ?? {}),
-  ]);
-  for (const key of allocationKeys) {
-    if (
-      String(current.partnerAllocations?.[key] ?? "") !==
-      String(original.partnerAllocations?.[key] ?? "")
-    ) {
-      return false;
-    }
-  }
-
   return true;
 }
 
 /**
- * Clone survey form state for dirty-state snapshots.
+ * Clone project form state for dirty-state snapshots.
  * @param {ReturnType<import('../data/surveyFormData').createEmptySurveyForm>} form
  */
 export function cloneSurveyForm(form) {
-  return {
-    ...form,
-    filters: { ...form.filters },
-    partners: Array.isArray(form.partners) ? [...form.partners] : [],
-    partnerAllocations: { ...(form.partnerAllocations ?? {}) },
-    surveyCsvFile: null,
-  };
+  return { ...form };
 }

@@ -11,7 +11,7 @@ export const PERMISSION_MODULES = [
   { key: "sales_manager", label: "Sales Manager" },
   { key: "prescreen", label: "Question Library" },
   { key: "prescreen_group", label: "Questionnaire Group" },
-  { key: "survey", label: "Survey" },
+  { key: "survey", label: "Project Management" },
   { key: "group_survey", label: "Group Survey" },
   { key: "recontact_survey", label: "Recontact Survey" },
   { key: "survey_settings", label: "Survey Settings" },

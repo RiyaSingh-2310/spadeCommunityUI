@@ -50,7 +50,7 @@ function UserSurveyDataPage({ isDarkMode }) {
           isGroupView
             ? getGroupSurveyBreadcrumbs(groupId, { currentLabel: "User Survey Data" })
             : [
-                { label: "Survey", to: "/survey" },
+                { label: "Projects", to: "/survey" },
                 { label: "User Survey Data" },
               ]
         }

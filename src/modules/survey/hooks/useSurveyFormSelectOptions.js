@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
-import { getRecords as getClients } from "../../../services/clients/clientsApi";
-import { getRecords as getProjectManagers } from "../../../services/projectManagers/projectManagersApi";
-import { getRecords as getSalesManagers } from "../../../services/sales/salesManagersApi";
 import { getRecords as getSalesProjects } from "../../../services/sales/salesProjectsApi";
+import {
+  PROJECT_MANAGER_OPTIONS,
+  RFQ_OPTIONS,
+  SALES_MANAGER_OPTIONS,
+  SURVEY_CLIENT_OPTIONS,
+} from "../data/surveyFormData";
 
 export function mergeSelectOption(options = [], value, label) {
   const normalizedValue = String(value ?? "").trim();
@@ -12,9 +15,7 @@ export function mergeSelectOption(options = [], value, label) {
     return options;
   }
 
-  const normalizedLabel = String(label ?? "").trim();
-  if (!normalizedLabel) return options;
-
+  const normalizedLabel = String(label ?? "").trim() || normalizedValue;
   return [{ value: normalizedValue, label: normalizedLabel }, ...options];
 }
 
@@ -46,18 +47,36 @@ export function mapSalesManagersToSelectOptions(items = []) {
     .filter((option) => option.value && option.label);
 }
 
+/**
+ * Sales Project dropdown from RFQ list — display and store RFQ ID only (no name).
+ * @param {Array<{ id?: string|number, recordId?: string|number }>} items
+ */
 export function mapSalesProjectsToSelectOptions(items = []) {
   return items
-    .map((item) => ({
-      value: String(item.recordId ?? item.id ?? ""),
-      label: String(item.id ?? item.emailSubject ?? item.name ?? ""),
-      searchText: [item.id, item.name, item.emailSubject, item.emailAddress]
-        .filter(Boolean)
-        .join(" "),
-    }))
-    .filter((option) => option.value);
+    .map((item) => {
+      const rfqId = String(item.id ?? "").trim();
+      if (!rfqId) return null;
+      return {
+        value: rfqId,
+        label: rfqId,
+        searchText: rfqId,
+      };
+    })
+    .filter(Boolean);
 }
 
+/** Fallback IDs when RFQ list API is unavailable. */
+function getMockSalesProjectOptions() {
+  return RFQ_OPTIONS.map((option) => {
+    const id = String(option.value ?? "").trim();
+    return { value: id, label: id, searchText: id };
+  }).filter((option) => option.value);
+}
+
+/**
+ * Loads select options for the project form.
+ * Sales Project uses the live RFQ list API; other lists stay mock/API-ready.
+ */
 export function useSurveyFormSelectOptions() {
   const [clientOptions, setClientOptions] = useState([]);
   const [projectManagerOptions, setProjectManagerOptions] = useState([]);
@@ -70,30 +89,24 @@ export function useSurveyFormSelectOptions() {
 
     const loadOptions = async () => {
       setIsLoading(true);
+
+      let salesProjects = [];
       try {
-        const [clients, projectManagers, salesManagers, salesProjects] = await Promise.all([
-          getClients(),
-          getProjectManagers(),
-          getSalesManagers(),
-          getSalesProjects(),
-        ]);
-
-        if (cancelled) return;
-
-        setClientOptions(mapClientsToSelectOptions(clients.items));
-        setProjectManagerOptions(mapProjectManagersToSelectOptions(projectManagers.items));
-        setSalesManagerOptions(mapSalesManagersToSelectOptions(salesManagers.items));
-        setSalesProjectOptions(mapSalesProjectsToSelectOptions(salesProjects.items));
+        const response = await getSalesProjects({ page: 1, limit: 500 });
+        salesProjects = mapSalesProjectsToSelectOptions(response?.items ?? []);
       } catch {
-        if (!cancelled) {
-          setClientOptions([]);
-          setProjectManagerOptions([]);
-          setSalesManagerOptions([]);
-          setSalesProjectOptions([]);
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
+        salesProjects = [];
       }
+
+      if (cancelled) return;
+
+      setClientOptions([...SURVEY_CLIENT_OPTIONS]);
+      setProjectManagerOptions([...PROJECT_MANAGER_OPTIONS]);
+      setSalesManagerOptions([...SALES_MANAGER_OPTIONS]);
+      setSalesProjectOptions(
+        salesProjects.length ? salesProjects : getMockSalesProjectOptions()
+      );
+      setIsLoading(false);
     };
 
     loadOptions();
@@ -107,6 +120,8 @@ export function useSurveyFormSelectOptions() {
     projectManagerOptions,
     salesManagerOptions,
     salesProjectOptions,
+    /** @deprecated Use salesProjectOptions */
+    rfqOptions: salesProjectOptions,
     isLoading,
   };
 }

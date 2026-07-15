@@ -3,24 +3,32 @@
  * Swap implementations for real endpoints later with minimal UI changes.
  */
 import {
+  createMockProjectUrl,
+  deleteMockProjectUrl,
   getMockPreScreeners,
-  getMockProjectUrlByProjectId,
+  getMockProjectUrlById,
   listMockProjectUrls,
+  listMockProjectUrlsByProjectId,
   PROJECT_URL_COUNTRY_OPTIONS,
   PROJECT_URL_LANGUAGE_OPTIONS,
   PROJECT_URL_STATUS_OPTIONS,
   updateMockProjectUrl,
+  updateMockProjectUrlById,
 } from "../data/mockProjectUrlsData";
 import { delay } from "../data/mockSurveyStore";
+import { getRecords as getQuestionnaireGroups } from "../../../services/questionnaire-group/questionnaireGroupApi";
+import { PRESCREEN_LANGUAGES } from "../../prescreen/data/prescreenLanguages";
 
 export {
   PROJECT_URL_COUNTRY_OPTIONS,
   PROJECT_URL_LANGUAGE_OPTIONS,
   PROJECT_URL_STATUS_OPTIONS,
+  PRESCREEN_LANGUAGES as PROJECT_URL_PRESCREEN_LANGUAGES,
 };
 
 export function createEmptyProjectUrlForm(projectId = "") {
   return {
+    id: "",
     projectId: projectId ? String(projectId) : "",
     clientProjectId: "",
     clientUrl: "",
@@ -40,9 +48,16 @@ export function createEmptyProjectUrlForm(projectId = "") {
     urlProtection: false,
     uniqueIp: false,
     fraudDetection: false,
+    preScreen: false,
+    surveyGroupId: "",
     preScreenerId: "",
     completeRewardPoints: "",
     validateRewardPoints: "",
+    redirectComplete: "",
+    redirectTerminate: "",
+    redirectOverQuota: "",
+    redirectQualityTerm: "",
+    redirectSurveyClose: "",
     addedBy: "—",
     addedOn: "—",
     updatedBy: "—",
@@ -55,7 +70,12 @@ export function createEmptyProjectUrlForm(projectId = "") {
 export function mapProjectUrlToForm(record) {
   if (!record) return createEmptyProjectUrlForm();
 
+  const surveyGroupId =
+    record.surveyGroupId ?? record.preScreenerId ?? record.pre_screener_id ?? "";
+  const preScreen = Boolean(record.preScreen) || Boolean(surveyGroupId);
+
   return {
+    id: record.id != null ? String(record.id) : "",
     projectId: record.projectId != null ? String(record.projectId) : "",
     clientProjectId: record.clientProjectId ?? "",
     clientUrl: record.clientUrl ?? "",
@@ -75,11 +95,18 @@ export function mapProjectUrlToForm(record) {
     urlProtection: Boolean(record.urlProtection),
     uniqueIp: Boolean(record.uniqueIp),
     fraudDetection: Boolean(record.fraudDetection),
-    preScreenerId: record.preScreenerId ?? "",
+    preScreen,
+    surveyGroupId: surveyGroupId ? String(surveyGroupId) : "",
+    preScreenerId: surveyGroupId ? String(surveyGroupId) : "",
     completeRewardPoints:
       record.completeRewardPoints != null ? String(record.completeRewardPoints) : "",
     validateRewardPoints:
       record.validateRewardPoints != null ? String(record.validateRewardPoints) : "",
+    redirectComplete: record.redirectComplete ?? "",
+    redirectTerminate: record.redirectTerminate ?? "",
+    redirectOverQuota: record.redirectOverQuota ?? "",
+    redirectQualityTerm: record.redirectQualityTerm ?? "",
+    redirectSurveyClose: record.redirectSurveyClose ?? "",
     addedBy: record.addedBy || "—",
     addedOn: record.addedOn || "—",
     updatedBy: record.updatedBy || "—",
@@ -118,6 +145,8 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "") {
     geoLocation: Boolean(Number(urlInfo.GeoLocation)),
     urlProtection: Boolean(Number(urlInfo.UrlProtection)),
     uniqueIp: Boolean(Number(urlInfo.UniqueIP)),
+    fraudDetection: Boolean(Number(urlInfo.FraudDetection)),
+    preScreen: Boolean(Number(urlInfo.PreScreen ?? urlInfo.PreScreenid)),
     preScreenerId: urlInfo.PreScreenid ?? "",
     completeRewardPoints: urlInfo.CompletionPoint,
     validateRewardPoints: urlInfo.TerminationPoint,
@@ -129,6 +158,10 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "") {
 }
 
 function buildProjectUrlUpdatePayload(form) {
+  const surveyGroupId = form.preScreen
+    ? String(form.surveyGroupId ?? form.preScreenerId ?? "").trim()
+    : "";
+
   return {
     clientProjectId: String(form.clientProjectId ?? "").trim(),
     clientUrl: String(form.clientUrl ?? "").trim(),
@@ -148,26 +181,64 @@ function buildProjectUrlUpdatePayload(form) {
     urlProtection: Boolean(form.urlProtection),
     uniqueIp: Boolean(form.uniqueIp),
     fraudDetection: Boolean(form.fraudDetection),
-    preScreenerId: form.preScreenerId ?? "",
+    preScreen: Boolean(form.preScreen),
+    surveyGroupId,
+    preScreenerId: surveyGroupId,
     completeRewardPoints:
       form.completeRewardPoints === "" ? null : Number(form.completeRewardPoints),
     validateRewardPoints:
       form.validateRewardPoints === "" ? null : Number(form.validateRewardPoints),
+    redirectComplete: String(form.redirectComplete ?? "").trim(),
+    redirectTerminate: String(form.redirectTerminate ?? "").trim(),
+    redirectOverQuota: String(form.redirectOverQuota ?? "").trim(),
+    redirectQualityTerm: String(form.redirectQualityTerm ?? "").trim(),
+    redirectSurveyClose: String(form.redirectSurveyClose ?? "").trim(),
   };
 }
 
-/** GET project URLs record by survey/project id (mock). */
-export async function getProjectUrls(projectId) {
+/** GET all Project URL configs for a project (mock). */
+export async function listProjectUrlsByProject(projectId) {
   await delay();
-  const record = getMockProjectUrlByProjectId(projectId);
   return {
     success: true,
+    data: listMockProjectUrlsByProjectId(projectId),
+  };
+}
+
+/** GET single Project URL record (mock). Legacy helper. */
+export async function getProjectUrls(projectId) {
+  await delay();
+  const rows = listMockProjectUrlsByProjectId(projectId);
+  return {
+    success: true,
+    data: rows[0] ?? null,
+  };
+}
+
+/** PUT/update a Project URL by url id (mock). */
+export async function updateProjectUrlById(urlId, form) {
+  await delay(350);
+  const payload = buildProjectUrlUpdatePayload(form);
+  const record = updateMockProjectUrlById(urlId, payload);
+  if (!record) {
+    return {
+      success: false,
+      message: "Project URL not found.",
+      data: null,
+    };
+  }
+  return {
+    success: true,
+    message: "Project URLs updated successfully.",
     data: record,
   };
 }
 
-/** PUT/update project URLs (mock persistence). */
+/** PUT/update project URLs (mock persistence). Legacy: updates first URL for project. */
 export async function updateProjectUrls(projectId, form) {
+  if (form?.id) {
+    return updateProjectUrlById(form.id, form);
+  }
   await delay(350);
   const payload = buildProjectUrlUpdatePayload(form);
   const record = updateMockProjectUrl(projectId, payload);
@@ -178,6 +249,40 @@ export async function updateProjectUrls(projectId, form) {
   };
 }
 
+/** Create a new Project URL config under a project (mock). */
+export async function createProjectUrl(projectId, form = {}) {
+  await delay(350);
+  const payload = buildProjectUrlUpdatePayload({
+    ...createEmptyProjectUrlForm(projectId),
+    ...form,
+    status: form.status || "Open",
+  });
+  const record = createMockProjectUrl(projectId, payload);
+  return {
+    success: true,
+    message: "Project URL created successfully.",
+    data: record,
+  };
+}
+
+/** Delete a Project URL config (mock). */
+export async function deleteProjectUrl(urlId) {
+  await delay(200);
+  const removed = deleteMockProjectUrl(urlId);
+  return {
+    success: removed,
+    message: removed ? "Project URL deleted successfully." : "Project URL not found.",
+  };
+}
+
+export async function getProjectUrlById(urlId) {
+  await delay();
+  return {
+    success: true,
+    data: getMockProjectUrlById(urlId),
+  };
+}
+
 /** Filtered pre-screener options for Country + Language (mock). */
 export async function getPreScreenerOptions({ country, language } = {}) {
   await delay(120);
@@ -185,6 +290,47 @@ export async function getPreScreenerOptions({ country, language } = {}) {
     success: true,
     data: getMockPreScreeners({ country, language }),
   };
+}
+
+/**
+ * Survey groups for Pre-Screen, filtered by selected language.
+ * Uses Questionnaire Group list API with mock fallback.
+ */
+export async function getSurveyGroupOptionsForLanguage(language) {
+  const languageKey = String(language ?? "").trim().toLowerCase();
+  if (!languageKey) {
+    return { success: true, data: [] };
+  }
+
+  try {
+    const response = await getQuestionnaireGroups({ page: 1, limit: 500 });
+    const items = Array.isArray(response?.items) ? response.items : [];
+    const options = items
+      .filter(
+        (item) =>
+          String(item.language ?? "")
+            .trim()
+            .toLowerCase() === languageKey
+      )
+      .map((item) => ({
+        value: String(item.id),
+        label: String(item.title || item.surveyTitle || item.id),
+      }))
+      .filter((option) => option.value && option.label);
+
+    if (options.length > 0) {
+      return { success: true, data: options };
+    }
+  } catch {
+    // Fall through to mock options.
+  }
+
+  await delay(120);
+  const mockOptions = getMockPreScreeners({ language }).map((item) => ({
+    value: item.value,
+    label: item.label,
+  }));
+  return { success: true, data: mockOptions };
 }
 
 /** Optional listing helper for future multi-URL views. */

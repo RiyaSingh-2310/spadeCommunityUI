@@ -61,10 +61,10 @@ function SurveyPage({ isDarkMode }) {
   return (
     <ModuleListingPage
       isDarkMode={isDarkMode}
-      title="Survey"
-      subtitle="Manage survey records here."
-      searchPlaceholder="Search surveys..."
-      actionLabel="Add Survey"
+      title="Projects"
+      subtitle="Manage project records here."
+      searchPlaceholder="Search projects..."
+      actionLabel="Add Project"
       onActionClick={() => navigate("/survey/add")}
       columns={[
         "ID",

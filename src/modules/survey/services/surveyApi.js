@@ -223,6 +223,8 @@ export function mapSurveyToProjectDetails(survey) {
   const filterSource = urlInfo ?? survey;
   const projectCode =
     survey.Project_code ?? survey.survey_id ?? String(survey.id ?? "");
+  const linkTypeRaw = survey.Project_Link_Type ?? survey.link_type ?? "";
+  const projectLinkType = apiLinkTypeToForm(linkTypeRaw) || linkTypeRaw || "—";
 
   return {
     id: projectCode,
@@ -230,12 +232,24 @@ export function mapSurveyToProjectDetails(survey) {
     projectStatus: apiStatusToFormValue(survey.Status ?? survey.status),
     clientName: survey.Clients ?? survey.client_name ?? "",
     projectName: survey.Project_Name ?? survey.project_name ?? "",
+    projectCode,
     projectManager: survey.Project_Manager ?? survey.project_manager_name ?? "",
     projectCountry: country ?? "",
     description: survey.Project_Description ?? survey.description ?? "",
     surveyId: projectCode,
     salesManager: survey.Sales_Manager ?? survey.sales_manager_name ?? "",
-    salesProject: survey.RFQ ?? survey.sales_project_name ?? "",
+    salesProject:
+      survey.sales_project_id ??
+      survey.rfq_id ??
+      survey.RFQ ??
+      survey.sales_project_name ??
+      "",
+    rfq:
+      survey.sales_project_id ??
+      survey.rfq_id ??
+      survey.RFQ ??
+      survey.sales_project_name ??
+      "",
     loiMinutes: loi != null ? String(loi) : "—",
     irPercent: ir != null ? String(ir) : "—",
     sampleSize: sampleSize != null ? String(sampleSize) : "—",
@@ -274,7 +288,18 @@ export function mapSurveyToProjectDetails(survey) {
     userCompletionPoint: completionPoint != null ? String(completionPoint) : "",
     userTerminationPoint: terminationPoint != null ? String(terminationPoint) : "",
     note: survey.Notes ?? survey.notes ?? "",
-    projectLinkType: survey.Project_Link_Type ?? survey.link_type ?? "",
+    projectLinkType,
+    actionBy:
+      survey.action_by ??
+      survey.Action_By ??
+      survey.updated_by ??
+      survey.created_by ??
+      "—",
+    createdAt: formatSurveyListDate(survey.created_at ?? survey.Created_At),
+    updatedAt: formatSurveyListDate(survey.updated_at ?? survey.Updated_At),
+    deletedAt: survey.deleted_at ?? survey.Deleted_At
+      ? formatSurveyListDate(survey.deleted_at ?? survey.Deleted_At)
+      : "—",
     urlInfo: Array.isArray(survey.urlInfo) ? survey.urlInfo : [],
     multipleUrls: Array.isArray(survey.multipleUrls) ? survey.multipleUrls : [],
   };
@@ -295,7 +320,6 @@ export function buildCreateProjectPayload(form, selectOptions = {}) {
     clientOptions = [],
     projectManagerOptions = [],
     salesManagerOptions = [],
-    surveyGroupOptions = [],
   } = selectOptions;
 
   const resolveLabel = (options, value) => {
@@ -305,44 +329,28 @@ export function buildCreateProjectPayload(form, selectOptions = {}) {
     return String(match?.label ?? normalized).trim();
   };
 
-  const urlInfo = {
-    LOI: Number(form.loi),
-    IR: Number(form.ir),
-    country: String(form.projectCountry ?? "").trim(),
-    CPI: Number(form.cpi),
-    SampleSize: Number(form.sampleSize),
-    Start_Date: form.startDate,
-    End_Date: form.endDate,
-    GeoLocation: form.filters?.geoLocation ? 1 : 0,
-    UrlProtection: form.filters?.urlProtection ? 1 : 0,
-    UniqueIP: form.filters?.uniqueIp ? 1 : 0,
-    PreScreen: form.filters?.preScreen ? 1 : 0,
-    TerminationPoint: Number(form.userTerminationPoint),
-    CompletionPoint: Number(form.userCompletionPoint),
-  };
-
-  if (form.projectLinkType === "Single Link") {
-    urlInfo.Live_Link = String(form.liveLink ?? "").trim();
-    urlInfo.Test_Link = String(form.testLink ?? "").trim();
-  }
-
-  if (form.filters?.preScreen) {
-    if (form.language) urlInfo.Language = form.language;
-    const preScreenLabel = resolveLabel(surveyGroupOptions, form.surveyGroup);
-    if (form.surveyGroup) urlInfo.PreScreenid = String(form.surveyGroup);
-    if (preScreenLabel) urlInfo.PreScreenName = preScreenLabel;
-  }
+  const salesProjectId = String(form.salesProject ?? form.rfq ?? "").trim();
+  const statusValue =
+    String(form.status ?? "Active").toLowerCase() === "inactive"
+      ? "inactive"
+      : "active";
 
   return {
     Project_Name: String(form.projectName ?? "").trim(),
+    Project_code: String(form.projectCode ?? "").trim(),
     Clients: resolveLabel(clientOptions, form.client),
+    client_id: resolveNumericId(form.client),
     Project_Manager: resolveLabel(projectManagerOptions, form.projectManager),
+    project_manager_id: resolveNumericId(form.projectManager),
     Sales_Manager: resolveLabel(salesManagerOptions, form.salesManager),
+    sales_manager_id: resolveNumericId(form.salesManager),
+    sales_project_id: salesProjectId,
+    RFQ: salesProjectId,
+    rfq_id: salesProjectId,
     Project_Description: String(form.description ?? "").trim(),
     Project_Link_Type: form.projectLinkType || "Single Link",
     Notes: String(form.notes ?? "").trim(),
-    Status: "active",
-    urlInfo,
+    Status: statusValue,
   };
 }
 
@@ -350,45 +358,34 @@ export function buildCreateProjectPayload(form, selectOptions = {}) {
  * @param {object} form
  */
 export function buildCreateSurveyPayload(form) {
+  const salesProjectId = String(form.salesProject ?? form.rfq ?? "").trim();
+  const statusValue =
+    String(form.status ?? "Active").toLowerCase() === "inactive"
+      ? "inactive"
+      : "active";
+
   const payload = {
+    Project_Name: form.projectName?.trim(),
     project_name: form.projectName?.trim(),
+    Project_code: form.projectCode?.trim(),
+    project_code: form.projectCode?.trim(),
     client_id: resolveNumericId(form.client),
     project_manager_id: resolveNumericId(form.projectManager),
-    project_country: form.projectCountry?.trim(),
+    Project_Description: form.description ?? "",
     description: form.description ?? "",
-    loi: Number(form.loi),
-    ir: Number(form.ir),
-    sample_size: Number(form.sampleSize),
-    currency: form.currency,
-    start_date: form.startDate,
-    end_date: form.endDate,
+    Project_Link_Type: form.projectLinkType || "Single Link",
     link_type: formLinkTypeToApi(form.projectLinkType),
-    term_point: String(form.userTerminationPoint ?? "").trim(),
-    comp_point: String(form.userCompletionPoint ?? "").trim(),
-    cpi: Number(form.cpi),
+    Notes: form.notes?.trim() ?? "",
     notes: form.notes?.trim() ?? "",
-    status: "active",
+    Status: statusValue,
+    status: statusValue,
   };
 
   const salesManagerId = resolveNumericId(form.salesManager);
-  const salesProjectId = resolveNumericId(form.salesProject);
   if (salesManagerId != null) payload.sales_manager_id = salesManagerId;
-  if (salesProjectId != null) payload.sales_project_id = salesProjectId;
-
-  if (form.projectLinkType === "Single Link") {
-    payload.live_url = form.liveLink?.trim();
-    payload.test_url = form.testLink?.trim();
-  }
-
-  payload.geo_location = Boolean(form.filters?.geoLocation);
-  payload.url_protection = Boolean(form.filters?.urlProtection);
-  payload.unique_ip = Boolean(form.filters?.uniqueIp);
-  payload.prescreen = Boolean(form.filters?.preScreen);
-
-  if (form.filters?.preScreen) {
-    if (form.language) payload.language = form.language;
-    const prescreenSurveyId = resolveNumericId(form.surveyGroup);
-    if (prescreenSurveyId != null) payload.prescreen_survey_id = prescreenSurveyId;
+  if (salesProjectId) {
+    payload.rfq_id = salesProjectId;
+    payload.sales_project_id = salesProjectId;
   }
 
   const groupProjectId = resolveNumericId(form.groupProjectId);
@@ -402,32 +399,7 @@ export function buildCreateSurveyPayload(form) {
  * @param {object} form
  */
 export function buildGroupSurveyProjectPayload(form) {
-  const payload = {
-    project_name: form.projectName?.trim(),
-    client_id: resolveNumericId(form.client),
-    project_manager_id: resolveNumericId(form.projectManager),
-    project_country: form.projectCountry?.trim(),
-    description: form.description ?? "",
-    loi: Number(form.loi),
-    ir: Number(form.ir),
-    sample_size: Number(form.sampleSize),
-    currency: form.currency,
-    start_date: form.startDate,
-    end_date: form.endDate,
-    link_type: formLinkTypeToApi(form.projectLinkType),
-    term_point: String(form.userTerminationPoint ?? "").trim(),
-    comp_point: String(form.userCompletionPoint ?? "").trim(),
-    notes: form.notes?.trim() ?? "",
-    cpi: Number(form.cpi),
-    status: "active",
-  };
-
-  if (form.projectLinkType === "Single Link") {
-    payload.live_url = form.liveLink?.trim();
-    payload.test_url = form.testLink?.trim();
-  }
-
-  return payload;
+  return buildCreateSurveyPayload(form);
 }
 
 /**
@@ -460,59 +432,9 @@ function resolveNestedSurveyFormId(survey, idKeys, nestedKey, fallback = "") {
 
 export function mapSurveyToForm(survey, fallback = null) {
   const base = fallback ?? createEmptySurveyForm();
-  const urlInfo = getPrimaryUrlInfo(survey);
   const linkType = apiLinkTypeToForm(
     survey?.Project_Link_Type ?? survey?.link_type ?? base.projectLinkType
   );
-  const existingCsvFileName = pickSurveyFormValue(
-    survey?.survey_file_name ??
-      survey?.csv_file_name ??
-      survey?.file_name ??
-      survey?.survey_file ??
-      survey?.uploaded_file_name,
-    ""
-  );
-
-  const loi = pickField(urlInfo, ["LOI(Minute)", "LOI", "loi"], survey?.loi);
-  const ir = pickField(urlInfo, ["IR(%)", "IR", "ir"], survey?.ir);
-  const sampleSize = pickField(
-    urlInfo,
-    ["SampleSize", "sample_size", "sampleSize"],
-    survey?.sample_size
-  );
-  const cpi = pickField(urlInfo, ["CPI", "cpi"], survey?.cpi);
-  const startDate = pickField(
-    urlInfo,
-    ["Start_Date", "start_date", "startDate"],
-    survey?.start_date
-  );
-  const endDate = pickField(urlInfo, ["End_Date", "end_date", "endDate"], survey?.end_date);
-  const country = pickField(
-    urlInfo,
-    ["country", "project_country"],
-    survey?.project_country
-  );
-  const liveLink = pickField(
-    urlInfo,
-    ["Live_Link", "live_url", "liveLink"],
-    survey?.live_url
-  );
-  const testLink = pickField(
-    urlInfo,
-    ["Test_Link", "test_url", "testLink"],
-    survey?.test_url
-  );
-  const terminationPoint = pickField(
-    urlInfo,
-    ["TerminationPoint", "term_point", "termPoint"],
-    survey?.term_point
-  );
-  const completionPoint = pickField(
-    urlInfo,
-    ["CompletionPoint", "comp_point", "compPoint"],
-    survey?.comp_point
-  );
-  const filterSource = urlInfo ?? survey;
 
   return {
     ...base,
@@ -526,6 +448,10 @@ export function mapSurveyToForm(survey, fallback = null) {
       survey?.Project_Name ?? survey?.project_name,
       base.projectName
     ),
+    projectCode: pickSurveyFormValue(
+      survey?.Project_code ?? survey?.survey_id ?? survey?.project_code,
+      base.projectCode
+    ),
     projectManager: resolveNestedSurveyFormId(
       survey,
       ["project_manager_id"],
@@ -538,95 +464,37 @@ export function mapSurveyToForm(survey, fallback = null) {
       "sales_manager",
       base.salesManager
     ),
-    salesProject: resolveNestedSurveyFormId(
+    salesProject: resolveSurveyFormId(
       survey,
-      ["sales_project_id"],
-      "sales_project",
+      ["sales_project_id", "rfq_id"],
       base.salesProject
     ),
-    projectCountry: pickSurveyFormValue(country, base.projectCountry),
     description: pickSurveyFormValue(
       survey?.Project_Description ?? survey?.description,
       base.description
     ),
-    loi: loi != null ? String(loi) : base.loi,
-    ir: ir != null ? String(ir) : base.ir,
-    sampleSize: sampleSize != null ? String(sampleSize) : base.sampleSize,
-    currency: pickSurveyFormValue(survey?.currency, base.currency),
-    cpi: cpi != null ? String(cpi) : base.cpi,
-    startDate: toDateInputValue(startDate) || base.startDate,
-    endDate: toDateInputValue(endDate) || base.endDate,
     projectLinkType: linkType,
-    liveLink: pickSurveyFormValue(liveLink, base.liveLink),
-    testLink: pickSurveyFormValue(testLink, base.testLink),
-    surveyCsvFile: null,
-    existingSurveyCsvFileName: existingCsvFileName,
-    existingMultiLinkSurvey: linkType === "Multi Link",
-    filters: {
-      geoLocation: resolveBooleanFlag(
-        filterSource,
-        ["GeoLocation", "geo_location", "geoLocation"],
-        base.filters.geoLocation
-      ),
-      urlProtection: resolveBooleanFlag(
-        filterSource,
-        ["UrlProtection", "url_protection", "urlProtection"],
-        base.filters.urlProtection
-      ),
-      uniqueIp: resolveBooleanFlag(
-        filterSource,
-        ["UniqueIP", "unique_ip", "uniqueIp"],
-        base.filters.uniqueIp
-      ),
-      preScreen: resolveBooleanFlag(
-        filterSource,
-        ["PreScreen", "prescreen", "pre_screen", "preScreen"],
-        base.filters.preScreen
-      ),
-    },
-    language: pickSurveyFormValue(
-      pickField(urlInfo, ["Language", "language"], survey?.language),
-      base.language
-    ),
-    surveyGroup: resolveSurveyFormId(
-      {
-        ...survey,
-        prescreen_survey_id: pickField(
-          urlInfo,
-          ["PreScreenid", "prescreen_survey_id"],
-          survey?.prescreen_survey_id
-        ),
-      },
-      ["prescreen_survey_id", "survey_group_id"],
-      base.surveyGroup
-    ),
-    userTerminationPoint:
-      terminationPoint != null ? String(terminationPoint) : base.userTerminationPoint,
-    userCompletionPoint:
-      completionPoint != null ? String(completionPoint) : base.userCompletionPoint,
     notes: pickSurveyFormValue(survey?.Notes ?? survey?.notes, base.notes),
+    status: apiStatusToFormValue(survey?.Status ?? survey?.status) || base.status || "Active",
     groupProjectId: resolveSurveyFormId(
       survey,
       ["survey_group_project_id", "group_project_id"],
       base.groupProjectId ?? ""
     ),
-    partners: Array.isArray(survey?.partner_ids)
-      ? survey.partner_ids.map((partnerId) => String(partnerId))
-      : base.partners,
-    partnerAllocations:
-      survey?.partner_allocations && typeof survey.partner_allocations === "object"
-        ? Object.fromEntries(
-            Object.entries(survey.partner_allocations).map(([key, value]) => [
-              String(key),
-              value != null ? String(value) : "",
-            ])
-          )
-        : base.partnerAllocations,
   };
 }
 
 /** GET /api/projects/:id */
 export async function getRecord(id) {
+  if (USE_SURVEY_MOCK_DATA) {
+    await mockDelay();
+    const record = getMockSurveyById(id);
+    if (!record) {
+      throw new ApiError("Project not found.", null, 404);
+    }
+    return record;
+  }
+
   const normalizedId = normalizeSurveyId(id);
   const data = await apiRequest(API_ROUTES.projects.byId(normalizedId));
   assertSuccess(data);
@@ -648,8 +516,7 @@ export function buildUpdateSurveyPayload(form) {
 
 /** GET /api/projects/list */
 export async function getRecords({ page, limit, search, groupProjectId } = {}) {
-  // Group survey project lists still use mock until a dedicated API is available.
-  if (groupProjectId) {
+  if (USE_SURVEY_MOCK_DATA || groupProjectId) {
     await mockDelay();
     const result = filterMockSurveys({ page, limit, search, groupProjectId });
     return {
@@ -699,6 +566,17 @@ export async function getRecords({ page, limit, search, groupProjectId } = {}) {
  * }} [selectOptions]
  */
 export async function createSurvey(form, selectOptions = {}) {
+  if (USE_SURVEY_MOCK_DATA) {
+    await mockDelay(350);
+    const payload = buildCreateProjectPayload(form, selectOptions);
+    const record = createMockSurvey(payload);
+    return {
+      success: true,
+      message: "Project created successfully (mock).",
+      data: record,
+    };
+  }
+
   const data = await apiRequest(API_ROUTES.projects.create, {
     method: "POST",
     body: buildCreateProjectPayload(form, selectOptions),
@@ -739,17 +617,20 @@ export async function createSurveyUnderGroup(groupProjectId, form) {
  * @param {string|number} surveyId
  * @param {object} form
  */
-export async function updateSurvey(surveyId, form) {
+export async function updateSurvey(surveyId, form, selectOptions = {}) {
   if (USE_SURVEY_MOCK_DATA) {
     await mockDelay(350);
-    const payload = buildUpdateSurveyPayload(form);
+    const payload = {
+      ...buildUpdateSurveyPayload(form),
+      ...buildCreateProjectPayload(form, selectOptions),
+    };
     const record = updateMockSurvey(surveyId, payload);
     if (!record) {
-      throw new ApiError("Survey not found.", null, 404);
+      throw new ApiError("Project not found.", null, 404);
     }
     return {
       success: true,
-      message: "Survey updated successfully (mock).",
+      message: "Project updated successfully (mock).",
       data: record,
     };
   }
@@ -757,13 +638,28 @@ export async function updateSurvey(surveyId, form) {
   const normalizedId = normalizeSurveyId(surveyId);
   const data = await apiRequest(API_ROUTES.survey.update(normalizedId), {
     method: "PUT",
-    body: buildUpdateSurveyPayload(form),
+    body: buildCreateProjectPayload(form, selectOptions),
   });
   return assertSuccess(data);
 }
 
 /** PUT /api/survey/:id — status toggle from listing table. */
 export async function updateSurveyStatus(surveyId, { status }) {
+  if (USE_SURVEY_MOCK_DATA) {
+    await mockDelay(250);
+    const record = updateMockSurvey(surveyId, {
+      Status: formValueToApiStatus(status),
+    });
+    if (!record) {
+      throw new ApiError("Project not found.", null, 404);
+    }
+    return {
+      success: true,
+      message: "Project status updated successfully (mock).",
+      data: record,
+    };
+  }
+
   const normalizedId = normalizeSurveyId(surveyId);
   const data = await apiRequest(API_ROUTES.projects.updateStatus(normalizedId), {
     method: "PATCH",

@@ -104,7 +104,11 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
     : isGroupView
       ? getGroupProjectsPath(groupId)
       : "/survey";
-  const listLabel = salesViewMode ? "Projects" : isGroupView ? "Group Survey" : "Survey";
+  const listLabel = salesViewMode
+    ? "Projects"
+    : isGroupView
+      ? "Group Survey"
+      : "Projects";
 
   const breadcrumbs = isGroupView
     ? getGroupSurveyBreadcrumbs(groupId, {
@@ -126,8 +130,8 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
     return (
       <div className="space-y-6">
         <AdminPageHeader
-          title="Survey Details"
-          subtitle={`Survey ${id}`}
+          title="Project Details"
+          subtitle={`Project ${id}`}
           breadcrumbs={loadingBreadcrumbs}
           isDarkMode={isDarkMode}
         />
@@ -143,13 +147,13 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
     return (
       <div className="space-y-6">
         <AdminPageHeader
-          title="Survey Details"
-          subtitle={`Survey ${id}`}
+          title="Project Details"
+          subtitle={`Project ${id}`}
           breadcrumbs={loadingBreadcrumbs}
           isDarkMode={isDarkMode}
         />
         <div className="admin-text rounded-xl border border-[var(--admin-border)] p-6 text-sm">
-          Unable to load survey details.
+          Unable to load project details.
           <button
             type="button"
             onClick={() => navigate(listPath)}
@@ -182,8 +186,8 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title={project.projectName}
-        subtitle={`Survey ${project.surveyId || project.id}`}
+        title="Project Details"
+        subtitle={`${project.projectName} · ${project.projectCode || project.surveyId || project.id}`}
         breadcrumbs={breadcrumbs}
         isDarkMode={isDarkMode}
       />
@@ -196,7 +200,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         onStatusChange={setDraftStatus}
         onStatusUpdate={handleStatusUpdate}
         isUpdatingStatus={isUpdatingStatus}
-        surveyId={project.surveyId || project.id}
+        surveyId={project.projectCode || project.surveyId || project.id}
         tabs={visibleTabs}
         readOnly={salesViewMode}
         onEditSurvey={() => {

@@ -5,15 +5,15 @@ import { PROJECT_STATUS_OPTIONS } from "../data/surveyDetailsData";
 import { primaryBtnClass } from "./surveyDetailsShared";
 
 export const SURVEY_DETAIL_TABS = [
-  { id: "project-details", label: "Project Details" },
+  { id: "project-details", label: "Project Information" },
   { id: "project-urls", label: "Project URLs" },
   { id: "supplier-mapping", label: "Supplier Mapping" },
-  { id: "project-report", label: "Project Report" },
+  { id: "project-report", label: "Project Reports" },
 ];
 
 export const SALES_PROJECT_DETAIL_TABS = [
-  { id: "project-details", label: "Project Details" },
-  { id: "project-report", label: "Project Report" },
+  { id: "project-details", label: "Project Information" },
+  { id: "project-report", label: "Project Reports" },
 ];
 
 function SurveyDetailsHeader({
@@ -41,7 +41,7 @@ function SurveyDetailsHeader({
           className="flex flex-wrap gap-1 rounded-xl border p-1"
           style={{ borderColor: "var(--admin-header-surface-border)" }}
           role="tablist"
-          aria-label="Survey detail sections"
+          aria-label="Project detail sections"
         >
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -67,7 +67,7 @@ function SurveyDetailsHeader({
         <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center xl:justify-center">
           {allowWrite && (
             <button type="button" onClick={onEditSurvey} className={primaryBtnClass}>
-              Edit Survey
+              Edit Project
             </button>
           )}
         </div>
@@ -107,7 +107,7 @@ function SurveyDetailsHeader({
           </div>
         )}
       </div>
-      <p className="admin-text-subtle mt-3 text-xs sm:hidden">Survey ID: {surveyId}</p>
+      <p className="admin-text-subtle mt-3 text-xs sm:hidden">Project Code: {surveyId}</p>
     </div>
   );
 }

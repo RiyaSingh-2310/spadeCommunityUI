@@ -85,6 +85,7 @@ function AdminSidebar({
     "Sales Manager": <FileSpreadsheet size={21} strokeWidth={2} />,
     RFQ: <FileSpreadsheet size={21} strokeWidth={2} />,
     Projects: <ScrollText size={21} strokeWidth={2} />,
+    "Project Management": <ScrollText size={21} strokeWidth={2} />,
     "Question Library": <ClipboardList size={21} strokeWidth={2} />,
     "Questionnaire Group": <ClipboardList size={21} strokeWidth={2} />,
     Survey: <ScrollText size={21} strokeWidth={2} />,

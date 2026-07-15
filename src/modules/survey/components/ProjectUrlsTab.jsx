@@ -8,12 +8,11 @@ import { getAdminInputClass, getAdminTextareaClass } from "../../shared/utils/fo
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   createEmptyProjectUrlForm,
-  getPreScreenerOptions,
-  getProjectUrls,
-  mapApiUrlInfoToForm,
+  getSurveyGroupOptionsForLanguage,
+  listProjectUrlsByProject,
   mapProjectUrlToForm,
   PROJECT_URL_COUNTRY_OPTIONS,
-  PROJECT_URL_LANGUAGE_OPTIONS,
+  PROJECT_URL_PRESCREEN_LANGUAGES,
   PROJECT_URL_STATUS_OPTIONS,
   updateProjectUrls,
 } from "../services/projectUrlsApi";
@@ -48,8 +47,10 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
   const inputClass = getAdminInputClass();
   const textareaClass = getAdminTextareaClass();
   const projectFk = project?.recordId ?? surveyId;
+  const projectCode = project?.projectCode || project?.surveyId || "";
 
   const [form, setForm] = useState(() => createEmptyProjectUrlForm(projectFk));
+  const [selectedUrlId, setSelectedUrlId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [preScreenerOptions, setPreScreenerOptions] = useState([]);
@@ -65,17 +66,16 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
     const load = async () => {
       setIsLoading(true);
       try {
-        const apiUrlInfo = Array.isArray(project?.urlInfo) ? project.urlInfo[0] : null;
-        if (apiUrlInfo) {
-          if (!cancelled) {
-            setForm(mapApiUrlInfoToForm(apiUrlInfo, projectFk));
-          }
-          return;
-        }
-
-        const response = await getProjectUrls(projectFk);
+        const response = await listProjectUrlsByProject(projectFk);
         if (cancelled) return;
-        setForm(mapProjectUrlToForm(response?.data));
+        const rows = Array.isArray(response?.data) ? response.data : [];
+        const selected = rows[0] ?? null;
+        setSelectedUrlId(selected?.id != null ? String(selected.id) : "");
+        setForm(
+          selected
+            ? mapProjectUrlToForm(selected)
+            : createEmptyProjectUrlForm(projectFk)
+        );
       } catch (error) {
         if (!cancelled) toastApiError(error);
       } finally {
@@ -87,28 +87,33 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
     return () => {
       cancelled = true;
     };
-  }, [projectFk, project?.urlInfo]);
+  }, [projectFk]);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadPreScreeners = async () => {
+      if (!form.language) {
+        setPreScreenerOptions([]);
+        return;
+      }
+
       setIsLoadingPreScreeners(true);
       try {
-        const response = await getPreScreenerOptions({
-          country: form.country,
-          language: form.language,
-        });
+        const response = await getSurveyGroupOptionsForLanguage(form.language);
         if (cancelled) return;
         const options = response?.data ?? [];
         setPreScreenerOptions(options);
 
         setForm((prev) => {
-          if (!prev.preScreenerId) return prev;
+          if (!prev.preScreenerId && !prev.surveyGroupId) return prev;
+          const selectedId = String(prev.preScreenerId || prev.surveyGroupId);
           const stillValid = options.some(
-            (option) => String(option.value) === String(prev.preScreenerId)
+            (option) => String(option.value) === selectedId
           );
-          return stillValid ? prev : { ...prev, preScreenerId: "" };
+          return stillValid
+            ? { ...prev, preScreenerId: selectedId, surveyGroupId: selectedId }
+            : { ...prev, preScreenerId: "", surveyGroupId: "" };
         });
       } catch {
         if (!cancelled) setPreScreenerOptions([]);
@@ -121,25 +126,40 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
     return () => {
       cancelled = true;
     };
-  }, [form.country, form.language]);
+  }, [form.language]);
 
   const preScreenerPlaceholder = useMemo(() => {
-    if (!form.country || !form.language) {
-      return "Select country and language first";
-    }
-    if (isLoadingPreScreeners) return "Loading pre-screeners...";
-    if (preScreenerOptions.length === 0) return "No pre-screeners found";
-    return "Select Pre-Screener";
-  }, [form.country, form.language, isLoadingPreScreeners, preScreenerOptions.length]);
+    if (!form.language) return "Select language in Survey Matrix first";
+    if (isLoadingPreScreeners) return "Loading pre-screener groups...";
+    if (preScreenerOptions.length === 0) return "No pre-screener groups found";
+    return "Select Pre-Screener Group";
+  }, [form.language, isLoadingPreScreeners, preScreenerOptions.length]);
+
+  const handleLanguageChange = (language) => {
+    setForm((prev) => ({
+      ...prev,
+      language,
+      preScreenerId: "",
+      surveyGroupId: "",
+    }));
+  };
 
   const handleSave = async (event) => {
     event.preventDefault();
     if (!canWrite) return;
     setIsSaving(true);
     try {
-      const data = await updateProjectUrls(projectFk, form);
+      const data = await updateProjectUrls(projectFk, {
+        ...form,
+        id: selectedUrlId || form.id,
+        surveyGroupId: form.preScreenerId || form.surveyGroupId,
+        preScreenerId: form.preScreenerId || form.surveyGroupId,
+      });
       toastApiSuccess(data);
-      setForm(mapProjectUrlToForm(data?.data));
+      if (data?.data) {
+        setForm(mapProjectUrlToForm(data.data));
+        if (data.data.id != null) setSelectedUrlId(String(data.data.id));
+      }
     } catch (error) {
       toastApiError(error);
     } finally {
@@ -158,9 +178,9 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
 
   return (
     <form className="space-y-0" onSubmit={handleSave} noValidate>
-      <TableCard title="Basic" isDarkMode={isDarkMode}>
+      <TableCard title="Basic Information" isDarkMode={isDarkMode}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="Project ID (Foreign Key)">
+          <FormField label="Project ID">
             <input
               className={inputClass}
               value={form.projectId || String(projectFk ?? "")}
@@ -168,21 +188,21 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
               disabled
             />
           </FormField>
-          <FormField label="Client Project ID">
+          <FormField label="Project Code">
             <input
               className={inputClass}
-              value={form.clientProjectId}
-              onChange={(event) => setField("clientProjectId", event.target.value)}
-              placeholder="Enter client project ID"
-              disabled={!canWrite}
+              value={projectCode}
+              readOnly
+              disabled
             />
           </FormField>
-          <FormField label="Client URL" className="sm:col-span-2">
-            <input
-              className={inputClass}
-              value={form.clientUrl}
-              onChange={(event) => setField("clientUrl", event.target.value)}
-              placeholder="https://"
+          <FormField label="Description" className="sm:col-span-2">
+            <textarea
+              className={textareaClass}
+              value={form.discussion}
+              onChange={(event) => setField("discussion", event.target.value)}
+              placeholder="Enter description"
+              rows={3}
               disabled={!canWrite}
             />
           </FormField>
@@ -191,72 +211,38 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
 
       <SectionDivider />
 
-      <TableCard title="Survey Information" isDarkMode={isDarkMode}>
+      <TableCard title="Survey Matrix" isDarkMode={isDarkMode}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <FormField label="Discussion" className="sm:col-span-2 lg:col-span-3">
-            <textarea
-              className={textareaClass}
-              value={form.discussion}
-              onChange={(event) => setField("discussion", event.target.value)}
-              placeholder="Enter discussion notes"
-              rows={3}
-              disabled={!canWrite}
-            />
-          </FormField>
-          <FormField label="LOI (Float)">
+          <FormField label="LOI">
             <input
               className={inputClass}
               type="number"
               step="0.1"
               value={form.loi}
               onChange={(event) => setField("loi", event.target.value)}
-              placeholder="e.g. 12.5"
+              placeholder="e.g. 15"
               disabled={!canWrite}
             />
           </FormField>
-          <FormField label="IR (Float)">
+          <FormField label="IR">
             <input
               className={inputClass}
               type="number"
               step="0.1"
               value={form.ir}
               onChange={(event) => setField("ir", event.target.value)}
-              placeholder="e.g. 30"
+              placeholder="e.g. 32"
               disabled={!canWrite}
             />
           </FormField>
-          <FormField label="CPI Rate">
+          <FormField label="CPI">
             <input
               className={inputClass}
               type="number"
               step="0.01"
               value={form.cpiRate}
               onChange={(event) => setField("cpiRate", event.target.value)}
-              placeholder="e.g. 2.50"
-              disabled={!canWrite}
-            />
-          </FormField>
-          <FormField label="Country">
-            <SearchableSelect
-              inputClass={inputClass}
-              value={form.country}
-              onChange={(value) => setField("country", value)}
-              options={PROJECT_URL_COUNTRY_OPTIONS}
-              placeholder="Select Country"
-              searchPlaceholder="Search country..."
-              aria-label="Country"
-              disabled={!canWrite}
-            />
-          </FormField>
-          <FormField label="Language">
-            <SearchableSelect
-              inputClass={inputClass}
-              value={form.language}
-              onChange={(value) => setField("language", value)}
-              options={PROJECT_URL_LANGUAGE_OPTIONS}
-              placeholder="Select Language"
-              searchPlaceholder="Search language..."
-              aria-label="Language"
+              placeholder="e.g. 2.5"
               disabled={!canWrite}
             />
           </FormField>
@@ -288,13 +274,30 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
               disabled={!canWrite}
             />
           </FormField>
-        </div>
-      </TableCard>
-
-      <SectionDivider />
-
-      <TableCard title="Status" isDarkMode={isDarkMode}>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <FormField label="Country">
+            <SearchableSelect
+              inputClass={inputClass}
+              value={form.country}
+              onChange={(value) => setField("country", value)}
+              options={PROJECT_URL_COUNTRY_OPTIONS}
+              placeholder="Select Country"
+              searchPlaceholder="Search country..."
+              aria-label="Country"
+              disabled={!canWrite}
+            />
+          </FormField>
+          <FormField label="Language">
+            <SearchableSelect
+              inputClass={inputClass}
+              value={form.language}
+              onChange={handleLanguageChange}
+              options={PROJECT_URL_PRESCREEN_LANGUAGES}
+              placeholder="Select Language"
+              searchPlaceholder="Search language..."
+              aria-label="Language"
+              disabled={!canWrite}
+            />
+          </FormField>
           <FormField label="Status">
             <SearchableSelect
               inputClass={inputClass}
@@ -302,7 +305,7 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
               onChange={(value) => setField("status", value || "Open")}
               options={PROJECT_URL_STATUS_OPTIONS}
               searchable={false}
-              aria-label="Project URL status"
+              aria-label="Survey matrix status"
               disabled={!canWrite}
             />
           </FormField>
@@ -311,17 +314,8 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
 
       <SectionDivider />
 
-      <TableCard title="Links" isDarkMode={isDarkMode}>
+      <TableCard title="Survey Links" isDarkMode={isDarkMode}>
         <div className="grid gap-4 sm:grid-cols-1">
-          <FormField label="Test Link">
-            <input
-              className={inputClass}
-              value={form.testLink}
-              onChange={(event) => setField("testLink", event.target.value)}
-              placeholder="https://"
-              disabled={!canWrite}
-            />
-          </FormField>
           <FormField label="Live Link">
             <input
               className={inputClass}
@@ -331,12 +325,21 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
               disabled={!canWrite}
             />
           </FormField>
+          <FormField label="Test Link">
+            <input
+              className={inputClass}
+              value={form.testLink}
+              onChange={(event) => setField("testLink", event.target.value)}
+              placeholder="https://"
+              disabled={!canWrite}
+            />
+          </FormField>
         </div>
       </TableCard>
 
       <SectionDivider />
 
-      <TableCard title="Security Options" isDarkMode={isDarkMode}>
+      <TableCard title="Project Filters / Security" isDarkMode={isDarkMode}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <InteractiveCheckbox
             label="Geo Location"
@@ -362,23 +365,93 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
             onChange={(checked) => setField("fraudDetection", checked)}
             disabled={!canWrite}
           />
+          <InteractiveCheckbox
+            label="PreScreen"
+            checked={form.preScreen}
+            onChange={(checked) =>
+              setForm((prev) => ({
+                ...prev,
+                preScreen: checked,
+                ...(checked
+                  ? {}
+                  : { preScreenerId: "", surveyGroupId: "" }),
+              }))
+            }
+            disabled={!canWrite}
+          />
         </div>
+
+        {form.preScreen ? (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <FormField label="Pre-Screener Group">
+              <SearchableSelect
+                inputClass={inputClass}
+                value={form.preScreenerId || form.surveyGroupId}
+                onChange={(value) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    preScreenerId: value,
+                    surveyGroupId: value,
+                  }))
+                }
+                options={preScreenerOptions}
+                placeholder={preScreenerPlaceholder}
+                searchPlaceholder="Search pre-screener group..."
+                aria-label="Pre-Screener Group"
+                disabled={!canWrite || !form.language || isLoadingPreScreeners}
+              />
+            </FormField>
+          </div>
+        ) : null}
       </TableCard>
 
       <SectionDivider />
 
-      <TableCard title="Pre-Screener" isDarkMode={isDarkMode}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="Pre-Screener">
-            <SearchableSelect
-              inputClass={inputClass}
-              value={form.preScreenerId}
-              onChange={(value) => setField("preScreenerId", value)}
-              options={preScreenerOptions}
-              placeholder={preScreenerPlaceholder}
-              searchPlaceholder="Search pre-screener..."
-              disabled={!canWrite || !form.country || !form.language || isLoadingPreScreeners}
-              aria-label="Pre-Screener"
+      <TableCard title="Redirect URLs" isDarkMode={isDarkMode}>
+        <div className="grid gap-4 sm:grid-cols-1">
+          <FormField label="Complete Status">
+            <input
+              className={inputClass}
+              value={form.redirectComplete}
+              onChange={(event) => setField("redirectComplete", event.target.value)}
+              placeholder="https://"
+              disabled={!canWrite}
+            />
+          </FormField>
+          <FormField label="Terminate Status">
+            <input
+              className={inputClass}
+              value={form.redirectTerminate}
+              onChange={(event) => setField("redirectTerminate", event.target.value)}
+              placeholder="https://"
+              disabled={!canWrite}
+            />
+          </FormField>
+          <FormField label="Over Quota Status">
+            <input
+              className={inputClass}
+              value={form.redirectOverQuota}
+              onChange={(event) => setField("redirectOverQuota", event.target.value)}
+              placeholder="https://"
+              disabled={!canWrite}
+            />
+          </FormField>
+          <FormField label="Quality Term Status">
+            <input
+              className={inputClass}
+              value={form.redirectQualityTerm}
+              onChange={(event) => setField("redirectQualityTerm", event.target.value)}
+              placeholder="https://"
+              disabled={!canWrite}
+            />
+          </FormField>
+          <FormField label="Survey Close Status">
+            <input
+              className={inputClass}
+              value={form.redirectSurveyClose}
+              onChange={(event) => setField("redirectSurveyClose", event.target.value)}
+              placeholder="https://"
+              disabled={!canWrite}
             />
           </FormField>
         </div>

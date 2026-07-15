@@ -1,4 +1,4 @@
-export const PROJECT_STATUS_OPTIONS = ["Active", "Paused", "Invoiced", "Closed"];
+export const PROJECT_STATUS_OPTIONS = ["Active", "Inactive"];
 
 export const SUPPLIER_OPTIONS = [
   { code: "P1028", name: "Social Media" },
