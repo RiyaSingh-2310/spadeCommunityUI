@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
@@ -10,12 +10,12 @@ import {
   updateSurveyStatus,
 } from "../services/surveyApi";
 import ProjectDetailsTab from "../components/ProjectDetailsTab";
-import ProjectReportTab from "../components/ProjectReportTab";
+import ProjectMultiUrlTab from "../components/ProjectMultiUrlTab";
+// import ProjectReportTab from "../components/ProjectReportTab";
 import ProjectUrlsTab from "../components/ProjectUrlsTab";
-import SupplierMappingTab from "../components/SupplierMappingTab";
+// import SupplierMappingTab from "../components/SupplierMappingTab";
 import SurveyDetailsHeader, {
-  SALES_PROJECT_DETAIL_TABS,
-  SURVEY_DETAIL_TABS,
+  getSurveyDetailTabs,
 } from "../components/SurveyDetailsHeader";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
@@ -23,6 +23,17 @@ import {
   getGroupProjectsPath,
   getGroupSurveyBreadcrumbs,
 } from "../utils/groupSurveyNavigation";
+
+function isMultiLinkProject(project) {
+  return String(project?.projectLinkType ?? "")
+    .toLowerCase()
+    .includes("multi");
+}
+
+function hasSavedProjectUrl(project) {
+  const urls = Array.isArray(project?.urlInfo) ? project.urlInfo : [];
+  return urls.length > 0;
+}
 
 function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
   const navigate = useNavigate();
@@ -39,8 +50,22 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
   const [projectStatus, setProjectStatus] = useState("");
   const [draftStatus, setDraftStatus] = useState("");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [projectUrlSaved, setProjectUrlSaved] = useState(false);
+  const [savedProjectUrlId, setSavedProjectUrlId] = useState("");
 
-  const visibleTabs = salesViewMode ? SALES_PROJECT_DETAIL_TABS : SURVEY_DETAIL_TABS;
+  const isMultiLink = isMultiLinkProject(project);
+  const multiUrlEnabled =
+    Boolean(projectUrlSaved) || hasSavedProjectUrl(project);
+
+  const visibleTabs = useMemo(
+    () =>
+      getSurveyDetailTabs({
+        isMultiLink,
+        multiUrlEnabled,
+        salesViewMode,
+      }),
+    [isMultiLink, multiUrlEnabled, salesViewMode]
+  );
 
   const loadSurvey = useCallback(
     async ({ silent = false } = {}) => {
@@ -48,7 +73,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         setProject(null);
         setIsLoading(false);
         setLoadFailed(true);
-        return;
+        return null;
       }
 
       if (!silent) setIsLoading(true);
@@ -64,11 +89,25 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         setProject(mapped);
         setProjectStatus(mapped.projectStatus);
         setDraftStatus(mapped.projectStatus);
+        if (hasSavedProjectUrl(mapped)) {
+          setProjectUrlSaved(true);
+          const urlInfo = Array.isArray(mapped.urlInfo) ? mapped.urlInfo : [];
+          const nextId =
+            urlInfo[0]?.id ??
+            urlInfo[0]?.url_id ??
+            urlInfo[0]?.project_url_id ??
+            "";
+          if (nextId != null && nextId !== "") {
+            setSavedProjectUrlId(String(nextId));
+          }
+        }
         if (!silent) setActiveTab("project-details");
+        return mapped;
       } catch (error) {
         toastApiError(error);
         setProject(null);
         setLoadFailed(true);
+        return null;
       } finally {
         if (!silent) setIsLoading(false);
       }
@@ -85,7 +124,8 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
   }, [loadSurvey]);
 
   useEffect(() => {
-    if (!visibleTabs.some((tab) => tab.id === activeTab)) {
+    const active = visibleTabs.find((tab) => tab.id === activeTab);
+    if (!active || active.disabled) {
       setActiveTab(visibleTabs[0]?.id ?? "project-details");
     }
   }, [activeTab, visibleTabs]);
@@ -183,6 +223,33 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
     }
   };
 
+  const handleProjectUrlSaved = async (payload = {}) => {
+    setProjectUrlSaved(true);
+    const mapped = await loadSurvey({ silent: true });
+    const urlInfo = Array.isArray(mapped?.urlInfo) ? mapped.urlInfo : [];
+    const fromReload =
+      urlInfo[0]?.id ??
+      urlInfo[0]?.url_id ??
+      urlInfo[0]?.project_url_id ??
+      "";
+    const resolvedUrlId =
+      payload?.projectUrlId ||
+      fromReload ||
+      savedProjectUrlId ||
+      `url-${project?.recordId ?? id}`;
+    setSavedProjectUrlId(String(resolvedUrlId));
+
+    if (isMultiLinkProject(mapped ?? project) || isMultiLink) {
+      setActiveTab("project-multi-url");
+    }
+  };
+
+  const handleTabChange = (tabId) => {
+    const target = visibleTabs.find((tab) => tab.id === tabId);
+    if (!target || target.disabled) return;
+    setActiveTab(tabId);
+  };
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -194,7 +261,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
 
       <SurveyDetailsHeader
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         projectStatus={projectStatus}
         draftStatus={draftStatus}
         onStatusChange={setDraftStatus}
@@ -218,14 +285,26 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
           <ProjectDetailsTab project={project} isDarkMode={isDarkMode} />
         )}
         {!salesViewMode && activeTab === "project-urls" && (
-          <ProjectUrlsTab surveyId={id} project={project} isDarkMode={isDarkMode} />
+          <ProjectUrlsTab
+            surveyId={id}
+            project={project}
+            isDarkMode={isDarkMode}
+            onSaved={handleProjectUrlSaved}
+          />
         )}
-        {!salesViewMode && activeTab === "supplier-mapping" && (
+        {!salesViewMode && activeTab === "project-multi-url" && multiUrlEnabled && (
+          <ProjectMultiUrlTab
+            project={project}
+            projectUrlId={savedProjectUrlId}
+            isDarkMode={isDarkMode}
+          />
+        )}
+        {/* {!salesViewMode && activeTab === "supplier-mapping" && (
           <SupplierMappingTab surveyId={id} isDarkMode={isDarkMode} />
-        )}
-        {activeTab === "project-report" && (
+        )} */}
+        {/* {activeTab === "project-report" && (
           <ProjectReportTab isDarkMode={isDarkMode} />
-        )}
+        )} */}
       </div>
     </div>
   );

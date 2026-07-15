@@ -1,7 +1,8 @@
 /**
- * Project URLs mock service layer (API-ready shape).
- * Swap implementations for real endpoints later with minimal UI changes.
+ * Project URLs service layer (API-ready shape).
+ * Updates go through PUT /api/projects/:id (project fields + URL fields).
  */
+import { ApiError } from "../../../services/api/ApiError";
 import {
   createMockProjectUrl,
   deleteMockProjectUrl,
@@ -18,6 +19,11 @@ import {
 import { delay } from "../data/mockSurveyStore";
 import { getRecords as getQuestionnaireGroups } from "../../../services/questionnaire-group/questionnaireGroupApi";
 import { PRESCREEN_LANGUAGES } from "../../prescreen/data/prescreenLanguages";
+import {
+  getRecord,
+  mapSurveyToProjectDetails,
+  updateProjectUrlsViaProjectApi,
+} from "./surveyApi";
 
 export {
   PROJECT_URL_COUNTRY_OPTIONS,
@@ -25,6 +31,9 @@ export {
   PROJECT_URL_STATUS_OPTIONS,
   PRESCREEN_LANGUAGES as PROJECT_URL_PRESCREEN_LANGUAGES,
 };
+
+/** Toggle when Project URLs should fall back to local mock store. */
+const USE_PROJECT_URLS_MOCK = false;
 
 export function createEmptyProjectUrlForm(projectId = "") {
   return {
@@ -128,28 +137,43 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "") {
     return text.length >= 10 ? text.slice(0, 10) : text;
   };
 
+  const rawLanguage = String(urlInfo.Language ?? urlInfo.language ?? "").trim();
+  const matchedLanguage =
+    PRESCREEN_LANGUAGES.find(
+      (lang) => lang.toLowerCase() === rawLanguage.toLowerCase()
+    ) || rawLanguage;
+
+  const rawStatus = String(urlInfo.Status ?? urlInfo.url_status ?? urlInfo.status ?? "").trim();
+  const status =
+    rawStatus.toLowerCase() === "active" || rawStatus.toLowerCase() === "open"
+      ? "Open"
+      : rawStatus || "Open";
+
   return mapProjectUrlToForm({
+    id: urlInfo.id ?? urlInfo.url_id ?? urlInfo.project_url_id ?? "",
     projectId: urlInfo.project_id ?? projectId,
     discussion: urlInfo.description ?? "",
-    loi: urlInfo["LOI(Minute)"] ?? urlInfo.LOI,
-    ir: urlInfo["IR(%)"] ?? urlInfo.IR,
+    loi: urlInfo["LOI(Minute)"] ?? urlInfo.LOI ?? urlInfo.loi,
+    ir: urlInfo["IR(%)"] ?? urlInfo.IR ?? urlInfo.ir,
     country: urlInfo.country ?? "",
-    language: urlInfo.Language ?? "",
-    cpiRate: urlInfo.CPI,
-    sampleSize: urlInfo.SampleSize,
-    startDate: toDate(urlInfo.Start_Date),
-    endDate: toDate(urlInfo.End_Date),
-    status: urlInfo.Status === "active" ? "Open" : urlInfo.Status || "Open",
-    testLink: urlInfo.Test_Link ?? "",
-    liveLink: urlInfo.Live_Link ?? "",
-    geoLocation: Boolean(Number(urlInfo.GeoLocation)),
-    urlProtection: Boolean(Number(urlInfo.UrlProtection)),
-    uniqueIp: Boolean(Number(urlInfo.UniqueIP)),
-    fraudDetection: Boolean(Number(urlInfo.FraudDetection)),
-    preScreen: Boolean(Number(urlInfo.PreScreen ?? urlInfo.PreScreenid)),
-    preScreenerId: urlInfo.PreScreenid ?? "",
-    completeRewardPoints: urlInfo.CompletionPoint,
-    validateRewardPoints: urlInfo.TerminationPoint,
+    language: matchedLanguage,
+    cpiRate: urlInfo.CPI ?? urlInfo.cpi,
+    sampleSize: urlInfo.SampleSize ?? urlInfo.sample_size,
+    startDate: toDate(urlInfo.Start_Date ?? urlInfo.start_date),
+    endDate: toDate(urlInfo.End_Date ?? urlInfo.end_date),
+    status,
+    testLink: urlInfo.Test_Link ?? urlInfo.test_link ?? "",
+    liveLink: urlInfo.Live_Link ?? urlInfo.live_link ?? "",
+    geoLocation: Boolean(Number(urlInfo.GeoLocation ?? urlInfo.geo_location)),
+    urlProtection: Boolean(Number(urlInfo.UrlProtection ?? urlInfo.url_protection)),
+    uniqueIp: Boolean(Number(urlInfo.UniqueIP ?? urlInfo.unique_ip)),
+    fraudDetection: Boolean(Number(urlInfo.FraudDetection ?? urlInfo.fraud_detection)),
+    preScreen: Boolean(
+      Number(urlInfo.PreScreen ?? urlInfo.pre_screen ?? urlInfo.PreScreenid)
+    ),
+    preScreenerId: urlInfo.PreScreenid ?? urlInfo.pre_screener_id ?? "",
+    completeRewardPoints: urlInfo.CompletionPoint ?? urlInfo.completion_point,
+    validateRewardPoints: urlInfo.TerminationPoint ?? urlInfo.termination_point,
     addedBy: urlInfo.action_by || "—",
     addedOn: urlInfo.created_at || "—",
     updatedBy: urlInfo.action_by || "—",
@@ -196,8 +220,30 @@ function buildProjectUrlUpdatePayload(form) {
   };
 }
 
-/** GET all Project URL configs for a project (mock). */
+/** GET all Project URL configs for a project. Prefers GET /api/projects/:id `urlInfo`. */
 export async function listProjectUrlsByProject(projectId) {
+  if (!USE_PROJECT_URLS_MOCK) {
+    try {
+      const record = await getRecord(projectId);
+      const details = mapSurveyToProjectDetails(record);
+      const urlInfo = Array.isArray(details?.urlInfo) ? details.urlInfo : [];
+      const rows =
+        urlInfo.length > 0
+          ? urlInfo.map((row) => mapApiUrlInfoToForm(row, projectId))
+          : [createEmptyProjectUrlForm(projectId)];
+      return {
+        success: true,
+        data: rows,
+        project: details,
+      };
+    } catch (error) {
+      if (error instanceof ApiError && error.status) {
+        throw error;
+      }
+      // Fall through to mock if the record shape is unexpected.
+    }
+  }
+
   await delay();
   return {
     success: true,
@@ -205,13 +251,12 @@ export async function listProjectUrlsByProject(projectId) {
   };
 }
 
-/** GET single Project URL record (mock). Legacy helper. */
+/** GET single Project URL record. Legacy helper. */
 export async function getProjectUrls(projectId) {
-  await delay();
-  const rows = listMockProjectUrlsByProjectId(projectId);
+  const response = await listProjectUrlsByProject(projectId);
   return {
     success: true,
-    data: rows[0] ?? null,
+    data: Array.isArray(response?.data) ? response.data[0] ?? null : null,
   };
 }
 
@@ -234,8 +279,22 @@ export async function updateProjectUrlById(urlId, form) {
   };
 }
 
-/** PUT/update project URLs (mock persistence). Legacy: updates first URL for project. */
-export async function updateProjectUrls(projectId, form) {
+/**
+ * PUT /api/projects/:id — persists Project URLs as part of the project update contract.
+ * @param {string|number} projectId
+ * @param {object} form
+ * @param {{ project?: object }} [options] Mapped project details for identity fields
+ */
+export async function updateProjectUrls(projectId, form, options = {}) {
+  if (!USE_PROJECT_URLS_MOCK) {
+    let project = options.project;
+    if (!project) {
+      const record = await getRecord(projectId);
+      project = mapSurveyToProjectDetails(record) ?? {};
+    }
+    return updateProjectUrlsViaProjectApi(projectId, project, form);
+  }
+
   if (form?.id) {
     return updateProjectUrlById(form.id, form);
   }
@@ -244,7 +303,7 @@ export async function updateProjectUrls(projectId, form) {
   const record = updateMockProjectUrl(projectId, payload);
   return {
     success: true,
-    message: "Project URLs updated successfully.",
+    message: "Project updated successfully!",
     data: record,
   };
 }

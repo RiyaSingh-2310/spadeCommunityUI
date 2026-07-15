@@ -124,6 +124,8 @@ export const API_ROUTES = {
     update: (id) => `/api/projects/${id}`,
     updateStatus: (id) => `/api/projects/${id}/status`,
     delete: (id) => `/api/projects/${id}`,
+    multiUrls: (id) => `/api/projects/${id}/multiple-urls`,
+    uploadMultiUrls: (id) => `/api/projects/${id}/multiple-urls/upload`,
   },
   groupSurvey: {
     list: "/api/survey/groupproject/list",

@@ -24,8 +24,21 @@ import {
 } from "../data/mockSurveyStore";
 import { formatSurveyListDate, parseUtcToIst } from "../../shared/utils/dateTime";
 
-/** Toggle when real survey APIs are ready. Keep false to use mock data. */
-const USE_SURVEY_MOCK_DATA = true;
+/** Set true to force mock survey data instead of live APIs. */
+const USE_SURVEY_MOCK_DATA = false;
+
+function toNullableNumber(value) {
+  if (value === "" || value == null) return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function resolveOptionLabel(options, value) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) return "";
+  const match = (options ?? []).find((option) => String(option.value) === normalized);
+  return String(match?.label ?? normalized).trim();
+}
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -153,8 +166,9 @@ export function mapSurveyToRow(project) {
   const cpi = project?.CPI ?? project?.cpi;
 
   return {
-    id: projectCode || String(project?.id ?? ""),
-    surveyId: projectCode || String(project?.id ?? ""),
+    id: project?.id != null && project?.id !== "" ? String(project.id) : "",
+    surveyId: projectCode || (project?.id != null ? String(project.id) : ""),
+    projectCode: projectCode || "",
     recordId: project?.id,
     projectName,
     clientCode: formatClientCodeDisplay(project?.client_code, clientName) || clientName || "—",
@@ -306,13 +320,99 @@ export function mapSurveyToProjectDetails(survey) {
 }
 
 /**
+ * URL / survey-matrix fields for PUT /api/projects/:id.
+ * @param {object} form Project URLs form shape
+ */
+export function buildProjectUrlApiFields(form = {}) {
+  const language = String(form.language ?? "").trim();
+
+  return {
+    description: String(form.discussion ?? "").trim(),
+    loi: toNullableNumber(form.loi),
+    ir: toNullableNumber(form.ir),
+    country: String(form.country ?? "").trim(),
+    cpi: toNullableNumber(form.cpiRate ?? form.cpi),
+    sample_size: toNullableNumber(form.sampleSize),
+    start_date: form.startDate || "",
+    end_date: form.endDate || "",
+    url_status: form.status || "Open",
+    live_link: String(form.liveLink ?? "").trim(),
+    test_link: String(form.testLink ?? "").trim(),
+    geo_location: Boolean(form.geoLocation),
+    url_protection: Boolean(form.urlProtection),
+    unique_ip: Boolean(form.uniqueIp),
+    pre_screen: Boolean(form.preScreen),
+    language: language.toLowerCase(),
+    termination_point: toNullableNumber(form.validateRewardPoints),
+    completion_point: toNullableNumber(form.completeRewardPoints),
+  };
+}
+
+/**
+ * Builds PUT /api/projects/:id body from the survey edit form.
+ * Matches the project fields in the projects update API contract.
+ * @param {object} form
+ * @param {{
+ *   clientOptions?: Array<{ value: string, label: string }>,
+ *   projectManagerOptions?: Array<{ value: string, label: string }>,
+ *   salesManagerOptions?: Array<{ value: string, label: string }>,
+ * }} [selectOptions]
+ * @param {object | null} [urlForm] Optional Project URLs form to merge
+ */
+export function buildUpdateProjectApiPayload(form, selectOptions = {}, urlForm = null) {
+  const {
+    clientOptions = [],
+    projectManagerOptions = [],
+    salesManagerOptions = [],
+  } = selectOptions;
+
+  const salesProjectId = String(form.salesProject ?? form.rfq ?? "").trim();
+
+  const payload = {
+    Project_Name: String(form.projectName ?? "").trim(),
+    Clients: resolveOptionLabel(clientOptions, form.client),
+    Project_Manager: resolveOptionLabel(projectManagerOptions, form.projectManager),
+    Sales_Manager: resolveOptionLabel(salesManagerOptions, form.salesManager),
+    RFQ: salesProjectId,
+    Project_Description: String(form.description ?? "").trim(),
+    Notes: String(form.notes ?? "").trim(),
+    Status: formValueToApiStatus(form.status),
+  };
+
+  if (urlForm) {
+    Object.assign(payload, buildProjectUrlApiFields(urlForm));
+  }
+
+  return payload;
+}
+
+/**
+ * Builds PUT /api/projects/:id body when updating from Project URLs tab.
+ * Sends current project identity fields plus URL/matrix fields.
+ * @param {object} project Mapped project details (`mapSurveyToProjectDetails`)
+ * @param {object} urlForm Project URLs form
+ */
+export function buildUpdateProjectPayloadFromDetails(project, urlForm) {
+  return {
+    Project_Name: String(project?.projectName ?? "").trim(),
+    Clients: String(project?.clientName ?? "").trim(),
+    Project_Manager: String(project?.projectManager ?? "").trim(),
+    Sales_Manager: String(project?.salesManager ?? "").trim(),
+    RFQ: String(project?.salesProject ?? project?.rfq ?? "").trim(),
+    Project_Description: String(project?.description ?? "").trim(),
+    Notes: String(project?.note ?? "").trim(),
+    Status: formValueToApiStatus(project?.projectStatus),
+    ...buildProjectUrlApiFields(urlForm),
+  };
+}
+
+/**
  * Builds POST /api/projects/add body from the survey create form.
  * @param {object} form
  * @param {{
  *   clientOptions?: Array<{ value: string, label: string }>,
  *   projectManagerOptions?: Array<{ value: string, label: string }>,
  *   salesManagerOptions?: Array<{ value: string, label: string }>,
- *   surveyGroupOptions?: Array<{ value: string, label: string }>,
  * }} [selectOptions]
  */
 export function buildCreateProjectPayload(form, selectOptions = {}) {
@@ -322,27 +422,16 @@ export function buildCreateProjectPayload(form, selectOptions = {}) {
     salesManagerOptions = [],
   } = selectOptions;
 
-  const resolveLabel = (options, value) => {
-    const normalized = String(value ?? "").trim();
-    if (!normalized) return "";
-    const match = options.find((option) => String(option.value) === normalized);
-    return String(match?.label ?? normalized).trim();
-  };
-
   const salesProjectId = String(form.salesProject ?? form.rfq ?? "").trim();
-  const statusValue =
-    String(form.status ?? "Active").toLowerCase() === "inactive"
-      ? "inactive"
-      : "active";
 
   return {
     Project_Name: String(form.projectName ?? "").trim(),
     Project_code: String(form.projectCode ?? "").trim(),
-    Clients: resolveLabel(clientOptions, form.client),
+    Clients: resolveOptionLabel(clientOptions, form.client),
     client_id: resolveNumericId(form.client),
-    Project_Manager: resolveLabel(projectManagerOptions, form.projectManager),
+    Project_Manager: resolveOptionLabel(projectManagerOptions, form.projectManager),
     project_manager_id: resolveNumericId(form.projectManager),
-    Sales_Manager: resolveLabel(salesManagerOptions, form.salesManager),
+    Sales_Manager: resolveOptionLabel(salesManagerOptions, form.salesManager),
     sales_manager_id: resolveNumericId(form.salesManager),
     sales_project_id: salesProjectId,
     RFQ: salesProjectId,
@@ -350,7 +439,7 @@ export function buildCreateProjectPayload(form, selectOptions = {}) {
     Project_Description: String(form.description ?? "").trim(),
     Project_Link_Type: form.projectLinkType || "Single Link",
     Notes: String(form.notes ?? "").trim(),
-    Status: statusValue,
+    Status: formValueToApiStatus(form.status),
   };
 }
 
@@ -509,9 +598,11 @@ export async function getRecord(id) {
 
 /**
  * @param {object} form
+ * @param {object} [selectOptions]
+ * @param {object | null} [urlForm]
  */
-export function buildUpdateSurveyPayload(form) {
-  return buildCreateSurveyPayload(form);
+export function buildUpdateSurveyPayload(form, selectOptions = {}, urlForm = null) {
+  return buildUpdateProjectApiPayload(form, selectOptions, urlForm);
 }
 
 /** GET /api/projects/list */
@@ -613,32 +704,62 @@ export async function createSurveyUnderGroup(groupProjectId, form) {
 }
 
 /**
- * PUT /api/survey/:id
+ * PUT /api/projects/:id
  * @param {string|number} surveyId
  * @param {object} form
+ * @param {object} [selectOptions]
+ * @param {object | null} [urlForm]
  */
-export async function updateSurvey(surveyId, form, selectOptions = {}) {
+export async function updateSurvey(surveyId, form, selectOptions = {}, urlForm = null) {
+  const payload = buildUpdateProjectApiPayload(form, selectOptions, urlForm);
+
   if (USE_SURVEY_MOCK_DATA) {
     await mockDelay(350);
-    const payload = {
-      ...buildUpdateSurveyPayload(form),
+    const record = updateMockSurvey(surveyId, {
       ...buildCreateProjectPayload(form, selectOptions),
-    };
-    const record = updateMockSurvey(surveyId, payload);
+      ...payload,
+    });
     if (!record) {
       throw new ApiError("Project not found.", null, 404);
     }
     return {
       success: true,
-      message: "Project updated successfully (mock).",
+      message: "Project updated successfully!",
       data: record,
     };
   }
 
   const normalizedId = normalizeSurveyId(surveyId);
-  const data = await apiRequest(API_ROUTES.survey.update(normalizedId), {
+  const data = await apiRequest(API_ROUTES.projects.update(normalizedId), {
     method: "PUT",
-    body: buildCreateProjectPayload(form, selectOptions),
+    body: payload,
+  });
+  return assertSuccess(data);
+}
+
+/**
+ * PUT /api/projects/:id — update from Project URLs tab (project fields + URL fields).
+ * @param {string|number} projectId
+ * @param {object} project Mapped project details
+ * @param {object} urlForm Project URLs form
+ */
+export async function updateProjectUrlsViaProjectApi(projectId, project, urlForm) {
+  const payload = buildUpdateProjectPayloadFromDetails(project, urlForm);
+
+  if (USE_SURVEY_MOCK_DATA) {
+    await mockDelay(350);
+    const record = updateMockSurvey(projectId, payload);
+    return {
+      success: true,
+      message: "Project updated successfully!",
+      data: record,
+    };
+  }
+
+  const normalizedId = normalizeSurveyId(projectId);
+  const data = await apiRequest(API_ROUTES.projects.update(normalizedId), {
+    method: "PUT",
+    body: payload,
   });
   return assertSuccess(data);
 }

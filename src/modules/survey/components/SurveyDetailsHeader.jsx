@@ -6,15 +6,52 @@ import { primaryBtnClass } from "./surveyDetailsShared";
 
 export const SURVEY_DETAIL_TABS = [
   { id: "project-details", label: "Project Information" },
-  { id: "project-urls", label: "Project URLs" },
-  { id: "supplier-mapping", label: "Supplier Mapping" },
-  { id: "project-report", label: "Project Reports" },
+  { id: "project-urls", label: "Project URL" },
+  // { id: "supplier-mapping", label: "Supplier Mapping" },
+  // { id: "project-report", label: "Project Reports" },
 ];
 
 export const SALES_PROJECT_DETAIL_TABS = [
   { id: "project-details", label: "Project Information" },
-  { id: "project-report", label: "Project Reports" },
+  // { id: "project-report", label: "Project Reports" },
 ];
+
+/**
+ * Build Project Details tabs for Single Link vs Multi Link.
+ * @param {{
+ *   isMultiLink?: boolean,
+ *   multiUrlEnabled?: boolean,
+ *   salesViewMode?: boolean,
+ * }} [options]
+ */
+export function getSurveyDetailTabs({
+  isMultiLink = false,
+  multiUrlEnabled = false,
+  salesViewMode = false,
+} = {}) {
+  if (salesViewMode) {
+    return SALES_PROJECT_DETAIL_TABS;
+  }
+
+  const tabs = [
+    { id: "project-details", label: "Project Information" },
+    { id: "project-urls", label: "Project URL" },
+  ];
+
+  if (isMultiLink) {
+    tabs.push({
+      id: "project-multi-url",
+      label: "Project Multi URL",
+      disabled: !multiUrlEnabled,
+    });
+  }
+
+  // Temporarily hidden per product flow:
+  // tabs.push({ id: "supplier-mapping", label: "Supplier Mapping" });
+  // tabs.push({ id: "project-report", label: "Project Reports" });
+
+  return tabs;
+}
 
 function SurveyDetailsHeader({
   activeTab,
@@ -45,17 +82,30 @@ function SurveyDetailsHeader({
         >
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
+            const isDisabled = Boolean(tab.disabled);
             return (
               <button
                 key={tab.id}
                 type="button"
                 role="tab"
                 aria-selected={isActive}
-                onClick={() => onTabChange(tab.id)}
+                aria-disabled={isDisabled}
+                disabled={isDisabled}
+                title={
+                  isDisabled
+                    ? "Save Project URL first to unlock Project Multi URL"
+                    : undefined
+                }
+                onClick={() => {
+                  if (isDisabled) return;
+                  onTabChange(tab.id);
+                }}
                 className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                  isActive
-                    ? "bg-[#10a950] text-white shadow-sm"
-                    : "admin-text-muted hover:bg-[var(--admin-permissions-row-hover)]"
+                  isDisabled
+                    ? "cursor-not-allowed opacity-45 admin-text-muted"
+                    : isActive
+                      ? "bg-[#10a950] text-white shadow-sm"
+                      : "admin-text-muted hover:bg-[var(--admin-permissions-row-hover)]"
                 }`}
               >
                 {tab.label}

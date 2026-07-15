@@ -750,7 +750,9 @@ function ModuleListingPage({
                   if (isIdColumn(col)) {
                     return (
                       <td key={col} className="px-4 py-3 align-middle whitespace-nowrap">
-                        <span className="admin-text">{row.id ?? "-"}</span>
+                        <span className="admin-text">
+                          {row.id ?? row[rowIdKey] ?? "-"}
+                        </span>
                       </td>
                     );
                   }

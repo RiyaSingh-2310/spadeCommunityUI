@@ -10,6 +10,7 @@ import {
   createEmptyProjectUrlForm,
   getSurveyGroupOptionsForLanguage,
   listProjectUrlsByProject,
+  mapApiUrlInfoToForm,
   mapProjectUrlToForm,
   PROJECT_URL_COUNTRY_OPTIONS,
   PROJECT_URL_PRESCREEN_LANGUAGES,
@@ -42,12 +43,15 @@ function InteractiveCheckbox({ label, checked, onChange, disabled }) {
   );
 }
 
-function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
+function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
   const { canWrite } = useModulePermission("survey");
   const inputClass = getAdminInputClass();
   const textareaClass = getAdminTextareaClass();
   const projectFk = project?.recordId ?? surveyId;
   const projectCode = project?.projectCode || project?.surveyId || "";
+  const isMultiLink = String(project?.projectLinkType ?? "")
+    .toLowerCase()
+    .includes("multi");
 
   const [form, setForm] = useState(() => createEmptyProjectUrlForm(projectFk));
   const [selectedUrlId, setSelectedUrlId] = useState("");
@@ -66,6 +70,15 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
     const load = async () => {
       setIsLoading(true);
       try {
+        const existingUrlInfo = Array.isArray(project?.urlInfo) ? project.urlInfo : [];
+        if (existingUrlInfo.length > 0) {
+          if (cancelled) return;
+          const mapped = mapApiUrlInfoToForm(existingUrlInfo[0], projectFk);
+          setSelectedUrlId(mapped.id ? String(mapped.id) : "");
+          setForm(mapped);
+          return;
+        }
+
         const response = await listProjectUrlsByProject(projectFk);
         if (cancelled) return;
         const rows = Array.isArray(response?.data) ? response.data : [];
@@ -73,7 +86,9 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
         setSelectedUrlId(selected?.id != null ? String(selected.id) : "");
         setForm(
           selected
-            ? mapProjectUrlToForm(selected)
+            ? selected.loi != null || selected.discussion != null || selected.liveLink != null
+              ? { ...createEmptyProjectUrlForm(projectFk), ...selected }
+              : mapProjectUrlToForm(selected)
             : createEmptyProjectUrlForm(projectFk)
         );
       } catch (error) {
@@ -87,7 +102,7 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
     return () => {
       cancelled = true;
     };
-  }, [projectFk]);
+  }, [projectFk, project]);
 
   useEffect(() => {
     let cancelled = false;
@@ -149,17 +164,20 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
     if (!canWrite) return;
     setIsSaving(true);
     try {
-      const data = await updateProjectUrls(projectFk, {
+      const payloadForm = {
         ...form,
         id: selectedUrlId || form.id,
         surveyGroupId: form.preScreenerId || form.surveyGroupId,
         preScreenerId: form.preScreenerId || form.surveyGroupId,
-      });
+        ...(isMultiLink ? { liveLink: "", testLink: "" } : {}),
+      };
+      const data = await updateProjectUrls(projectFk, payloadForm, { project });
       toastApiSuccess(data);
-      if (data?.data) {
-        setForm(mapProjectUrlToForm(data.data));
-        if (data.data.id != null) setSelectedUrlId(String(data.data.id));
-      }
+      onSaved?.({
+        projectId: projectFk,
+        projectUrlId: selectedUrlId || form.id || data?.data?.id || "",
+        response: data,
+      });
     } catch (error) {
       toastApiError(error);
     } finally {
@@ -314,30 +332,34 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode }) {
 
       <SectionDivider />
 
-      <TableCard title="Survey Links" isDarkMode={isDarkMode}>
-        <div className="grid gap-4 sm:grid-cols-1">
-          <FormField label="Live Link">
-            <input
-              className={inputClass}
-              value={form.liveLink}
-              onChange={(event) => setField("liveLink", event.target.value)}
-              placeholder="https://"
-              disabled={!canWrite}
-            />
-          </FormField>
-          <FormField label="Test Link">
-            <input
-              className={inputClass}
-              value={form.testLink}
-              onChange={(event) => setField("testLink", event.target.value)}
-              placeholder="https://"
-              disabled={!canWrite}
-            />
-          </FormField>
-        </div>
-      </TableCard>
+      {!isMultiLink ? (
+        <>
+          <TableCard title="Survey Links" isDarkMode={isDarkMode}>
+            <div className="grid gap-4 sm:grid-cols-1">
+              <FormField label="Live Link">
+                <input
+                  className={inputClass}
+                  value={form.liveLink}
+                  onChange={(event) => setField("liveLink", event.target.value)}
+                  placeholder="https://"
+                  disabled={!canWrite}
+                />
+              </FormField>
+              <FormField label="Test Link">
+                <input
+                  className={inputClass}
+                  value={form.testLink}
+                  onChange={(event) => setField("testLink", event.target.value)}
+                  placeholder="https://"
+                  disabled={!canWrite}
+                />
+              </FormField>
+            </div>
+          </TableCard>
 
-      <SectionDivider />
+          <SectionDivider />
+        </>
+      ) : null}
 
       <TableCard title="Project Filters / Security" isDarkMode={isDarkMode}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
