@@ -6,7 +6,7 @@ import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
-import { getRecords, updateSurveyStatus } from "../services/surveyApi";
+import { cloneSurvey, getRecords, updateSurveyStatus } from "../services/surveyApi";
 
 function SurveyPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -106,8 +106,16 @@ function SurveyPage({ isDarkMode }) {
           },
         });
       }}
-      onSurveyClone={() => {
-        // Future implementation: clone survey project
+      onSurveyClone={async (row) => {
+        const id = row.recordId;
+        if (id == null) return;
+        try {
+          const data = await cloneSurvey(id);
+          toastApiSuccess(data);
+          await fetchSurveys();
+        } catch (error) {
+          toastApiError(error);
+        }
       }}
       onStatusToggle={handleStatusToggle}
       permissionModule="survey"

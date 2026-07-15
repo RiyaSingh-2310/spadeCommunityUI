@@ -43,7 +43,7 @@ function AdminSidebar({
   isDrawerOpen = false,
   onCloseDrawer,
 }) {
-  const [groupToggleState, setGroupToggleState] = useState(null);
+  const [expandedGroupKey, setExpandedGroupKey] = useState(undefined);
   const [hoveredLabel, setHoveredLabel] = useState(null);
   const [flyoutTop, setFlyoutTop] = useState(0);
   const hideTimeoutRef = useRef(null);
@@ -109,15 +109,15 @@ function AdminSidebar({
     location.pathname
   );
 
-  const isGroupExpanded = (item) => {
-    if (groupToggleState?.key === item.key) {
-      return groupToggleState.open;
-    }
-    return activeGroupKey === item.key;
-  };
+  // undefined = follow active route group; null = all collapsed; string = that group only
+  const resolvedExpandedGroupKey =
+    expandedGroupKey === undefined ? activeGroupKey : expandedGroupKey;
+
+  const isGroupExpanded = (item) => resolvedExpandedGroupKey === item.key;
 
   useEffect(() => {
-    setGroupToggleState(null);
+    // After navigation, expand only the route-active parent menu.
+    setExpandedGroupKey(undefined);
   }, [location.pathname]);
 
   const clearHideTimeout = () => {
@@ -324,10 +324,10 @@ function AdminSidebar({
                         return;
                       }
                       if (item.type === "group") {
-                        setGroupToggleState((prev) => {
-                          const expanded =
-                            prev?.key === item.key ? prev.open : activeGroupKey === item.key;
-                          return { key: item.key, open: !expanded };
+                        setExpandedGroupKey((prev) => {
+                          const currentlyExpanded =
+                            prev === undefined ? activeGroupKey : prev;
+                          return currentlyExpanded === item.key ? null : item.key;
                         });
                       } else {
                         navigateAndClose(item.root);

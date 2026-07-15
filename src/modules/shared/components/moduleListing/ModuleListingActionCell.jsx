@@ -45,6 +45,7 @@ function ModuleListingActionCell({
   onViewLogs,
   onRewardLog,
   onResendEmail,
+  onDownload,
   surveyActionLabels,
   handleEdit,
   handleDeleteRequest,
@@ -62,7 +63,8 @@ function ModuleListingActionCell({
       showEdit ||
       showDelete ||
       (allowRead && onRewardLog) ||
-      (allowWrite && onResendEmail);
+      (allowWrite && onResendEmail) ||
+      (allowRead && onDownload);
 
     if (!hasCommunityActions) return null;
 
@@ -75,6 +77,7 @@ function ModuleListingActionCell({
         onDelete={showDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}
         onRewardLog={allowRead && onRewardLog ? () => onRewardLog(row, globalIdx) : undefined}
         onResendEmail={allowWrite && onResendEmail ? () => onResendEmail(row, globalIdx) : undefined}
+        onDownload={allowRead && onDownload ? () => onDownload(row, globalIdx) : undefined}
         showEdit={showEdit}
         showDelete={showDelete}
       />

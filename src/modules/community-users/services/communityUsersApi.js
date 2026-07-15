@@ -14,6 +14,7 @@ import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
 import {
   getCommunityUserById,
 } from "../data/communityUsersStore";
+import { downloadPanelistsData } from "../utils/downloadPanelistsData";
 import { normalizeRewardLogEntry } from "../utils/rewardLogUtils";
 
 const LIST_LOAD_ERROR_MESSAGE = "Unable to load panelists. Please try again later.";
@@ -128,17 +129,119 @@ function buildPanelistUpdatePayload(payload) {
   return body;
 }
 
-function toPanelistDetailRecord(panelist) {
+/** Maps GET /api/panelist/list record to listing row shape. */
+export function mapPanelistToListingRow(panelist) {
+  const phone =
+    panelist?.phone ??
+    panelist?.mobile_number ??
+    panelist?.mobileNumber ??
+    panelist?.mobile ??
+    panelist?.contact_no ??
+    "";
+
   return {
-    ...mapPanelistToListingRow(panelist),
-    ...mapPanelistToForm(panelist),
-    email: panelist?.email ?? panelist?.emailAddress ?? "",
-    isVerified: mapIsVerified(panelist?.is_verified),
-    balancePoint: panelist?.balance_point ?? panelist?.balancePoint ?? "",
-    questionnaire: mapYesNoFromApi(panelist?.questionnaire),
-    questionnaireUrl: panelist?.questionnaire_url ?? "",
+    id: panelist?.id,
+    name: panelist?.name ?? "",
+    emailAddress: panelist?.email ?? panelist?.emailAddress ?? "",
+    mobileNumber: phone !== "" ? phone : "—",
+    phone: phone !== "" ? phone : "—",
+    status: apiStatusToFormValue(panelist?.status),
+    prescreenCompleted: mapYesNoFromApi(panelist?.questionnaire),
+    emailVerified: mapIsVerified(panelist?.is_verified ?? panelist?.isVerified),
+    rewardPoints: panelist?.balance_point ?? panelist?.balancePoint ?? "—",
+    joiningDate: formatPanelistDate(panelist?.created_at ?? panelist?.createdAt),
+    ipAddress: panelist?.ip_address ?? panelist?.ipAddress ?? "—",
     createdAt: panelist?.created_at ?? panelist?.createdAt ?? "",
-    updatedAt: panelist?.updated_at ?? panelist?.updatedAt ?? "",
+    photo: panelist?.photo ?? panelist?.image ?? null,
+  };
+}
+
+function displayOrDash(value) {
+  if (value == null) return "—";
+  const text = String(value).trim();
+  return text !== "" ? text : "—";
+}
+
+/** Maps GET /api/panelist/:id `questionnaire_answers` rows to profiling table rows. */
+function mapQuestionnaireAnswers(answers) {
+  if (!Array.isArray(answers)) return [];
+
+  return answers
+    .map((entry, index) => {
+      if (!entry || typeof entry !== "object") return null;
+
+      // Prefer question_text (e.g. "What is your car color?") over grouping title.
+      const question = String(
+        entry.question_text ??
+          entry.questionText ??
+          entry.question ??
+          entry.question_title ??
+          entry.questionTitle ??
+          "",
+      ).trim();
+      const answerOpted = String(
+        entry.answer ?? entry.answerOpted ?? entry.answer_opted ?? "",
+      ).trim();
+
+      return {
+        id: entry.id ?? `${entry.question_id ?? "qa"}-${index + 1}`,
+        question: question || "—",
+        answerOpted: answerOpted || "—",
+      };
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Maps GET /api/panelist/:id `data` object to the details page record.
+ * API shape: { id, name, email, phone, photo, is_verified, balance_point,
+ *   status, created_at, updated_at, questionnaire, questionnaire_url,
+ *   questionnaire_answers, ... }
+ */
+function toPanelistDetailRecord(panelist) {
+  const listing = mapPanelistToListingRow(panelist);
+  const form = mapPanelistToForm(panelist);
+  const phone =
+    panelist?.phone ??
+    panelist?.mobile_number ??
+    panelist?.mobileNumber ??
+    panelist?.mobile ??
+    panelist?.contact_no ??
+    "";
+  const balancePoint = panelist?.balance_point ?? panelist?.balancePoint ?? "";
+  const createdAt = panelist?.created_at ?? panelist?.createdAt ?? "";
+  const updatedAt = panelist?.updated_at ?? panelist?.updatedAt ?? "";
+  const questionnaireUrl =
+    panelist?.questionnaire_url ?? panelist?.questionnaireUrl ?? "";
+  const photo = panelist?.photo ?? panelist?.image ?? null;
+  const profilingAnswers = mapQuestionnaireAnswers(
+    panelist?.questionnaire_answers ?? panelist?.questionnaireAnswers,
+  );
+
+  return {
+    ...listing,
+    ...form,
+    id: panelist?.id ?? listing.id,
+    name: String(panelist?.name ?? form.name ?? "").trim(),
+    email: panelist?.email ?? panelist?.emailAddress ?? form.email ?? "",
+    emailAddress: panelist?.email ?? panelist?.emailAddress ?? listing.emailAddress ?? "",
+    phone: displayOrDash(phone),
+    mobileNumber: displayOrDash(phone),
+    photo,
+    isVerified: mapIsVerified(panelist?.is_verified ?? panelist?.isVerified),
+    emailVerified: mapIsVerified(panelist?.is_verified ?? panelist?.isVerified),
+    balancePoint: displayOrDash(balancePoint),
+    rewardPoints: displayOrDash(balancePoint),
+    questionnaire: mapYesNoFromApi(panelist?.questionnaire),
+    prescreenCompleted: mapYesNoFromApi(panelist?.questionnaire),
+    questionnaireUrl: displayOrDash(questionnaireUrl),
+    profilingAnswers,
+    status: apiStatusToFormValue(panelist?.status),
+    createdAt,
+    updatedAt,
+    joiningDate: formatPanelistDate(createdAt),
+    updatedDate: formatPanelistDate(updatedAt),
+    deletedAt: panelist?.deleted_at ?? panelist?.deletedAt ?? null,
   };
 }
 
@@ -192,28 +295,6 @@ async function findPanelistInList(id) {
   } while (page <= totalPages);
 
   return null;
-}
-
-/** Maps GET /api/panelist/list record to listing row shape. */
-export function mapPanelistToListingRow(panelist) {
-  return {
-    id: panelist?.id,
-    name: panelist?.name ?? "",
-    emailAddress: panelist?.email ?? "",
-    mobileNumber:
-      panelist?.mobile_number ??
-      panelist?.mobileNumber ??
-      panelist?.mobile ??
-      panelist?.contact_no ??
-      "—",
-    status: apiStatusToFormValue(panelist?.status),
-    prescreenCompleted: mapYesNoFromApi(panelist?.questionnaire),
-    emailVerified: mapIsVerified(panelist?.is_verified),
-    rewardPoints: panelist?.balance_point ?? panelist?.balancePoint ?? "",
-    joiningDate: formatPanelistDate(panelist?.created_at ?? panelist?.createdAt),
-    ipAddress: panelist?.ip_address ?? panelist?.ipAddress ?? "—",
-    createdAt: panelist?.created_at ?? panelist?.createdAt ?? "",
-  };
 }
 
 /** GET /api/panelist/list */
@@ -283,14 +364,31 @@ export async function getRecord(id) {
   }
 }
 
-export async function getUserProfilingAnswers(userId, { page = 1, limit = 10, search } = {}) {
-  const user = getCommunityUserById(userId);
-  if (!user) {
-    return { items: [], total: 0, count: 0, user: null };
+export async function getUserProfilingAnswers(
+  userId,
+  { page = 1, limit = 10, search, answers } = {},
+) {
+  let user = null;
+  let profilingAnswers = Array.isArray(answers) ? answers : null;
+
+  if (!profilingAnswers) {
+    try {
+      user = await getRecord(userId);
+      profilingAnswers = user?.profilingAnswers ?? [];
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        return { items: [], total: 0, count: 0, user: null };
+      }
+      throw error;
+    }
+  }
+
+  if (!Array.isArray(profilingAnswers)) {
+    return { items: [], total: 0, count: 0, user };
   }
 
   const normalizedSearch = normalizeSearchQuery(search).toLowerCase();
-  const answers = (user.profilingAnswers ?? []).filter((entry) => {
+  const filtered = profilingAnswers.filter((entry) => {
     if (!normalizedSearch) return true;
     return (
       String(entry.question ?? "").toLowerCase().includes(normalizedSearch) ||
@@ -298,10 +396,10 @@ export async function getUserProfilingAnswers(userId, { page = 1, limit = 10, se
     );
   });
 
-  const total = answers.length;
+  const total = filtered.length;
   const start = (page - 1) * limit;
-  const items = answers.slice(start, start + limit).map((entry, index) => ({
-    id: `${userId}-qa-${start + index + 1}`,
+  const items = filtered.slice(start, start + limit).map((entry, index) => ({
+    id: entry.id ?? `${userId}-qa-${start + index + 1}`,
     question: entry.question,
     answerOpted: entry.answerOpted,
   }));
@@ -398,6 +496,25 @@ export async function resendEmail(id) {
     throw new Error("User not found.");
   }
   return { message: `Verification email resent to ${user.emailAddress}.` };
+}
+
+/**
+ * Mock panelist download (API-ready).
+ * Replace body with a real download endpoint when available.
+ * @param {object|object[]} panelistOrList
+ */
+export async function downloadPanelists(panelistOrList) {
+  await new Promise((resolve) => setTimeout(resolve, 180));
+  const result = downloadPanelistsData(panelistOrList);
+  const count = result.count;
+  return {
+    success: true,
+    message:
+      count === 1
+        ? "Panelist data downloaded successfully."
+        : `${count} panelist record(s) downloaded successfully.`,
+    data: result,
+  };
 }
 
 export { toListingRow } from "../data/communityUsersStore";

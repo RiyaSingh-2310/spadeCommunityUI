@@ -6,18 +6,17 @@ import {
 } from "./CommunityUsersFilterPanel";
 
 const FILTER_LABEL_CLASS = "admin-text text-sm font-semibold";
-const FILTER_SELECT_CLASS = `${getAdminInputClass()} h-11`;
-const FILTER_SELECT_WIDTH_CLASS = "w-full min-w-[11.25rem] sm:w-[11.25rem]";
+const FILTER_SELECT_CLASS = `${getAdminInputClass()} h-11 w-full`;
 
 function FilterField({ id, label, value, options, onChange }) {
   return (
-    <div className="flex shrink-0 flex-col gap-2">
+    <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:min-w-[11.25rem] sm:flex-1 lg:w-[11.25rem] lg:flex-none">
       <label htmlFor={id} className={FILTER_LABEL_CLASS}>
         {label}
       </label>
       <select
         id={id}
-        className={`${FILTER_SELECT_CLASS} ${FILTER_SELECT_WIDTH_CLASS}`}
+        className={FILTER_SELECT_CLASS}
         value={value}
         onChange={onChange}
         aria-label={label}
@@ -38,7 +37,7 @@ function CommunityUsersInlineFilters({ filters, onChange }) {
   };
 
   return (
-    <div className="flex w-full flex-wrap items-end gap-3 sm:flex-nowrap sm:gap-4 lg:w-auto">
+    <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3 lg:w-auto lg:gap-4">
       <FilterField
         id="community-users-status-filter"
         label="Status"

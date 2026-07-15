@@ -7,7 +7,7 @@ import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
-import { updateSurveyStatus } from "../services/surveyApi";
+import { cloneSurvey, updateSurveyStatus } from "../services/surveyApi";
 import {
   getGroupProjectSurveys,
   getRecord,
@@ -192,8 +192,16 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
           },
         });
       }}
-      onSurveyClone={() => {
-        // Future implementation: clone survey project
+      onSurveyClone={async (row) => {
+        const id = row?.recordId;
+        if (id == null) return;
+        try {
+          const data = await cloneSurvey(id);
+          toastApiSuccess(data);
+          await refreshProjects();
+        } catch (error) {
+          toastApiError(error);
+        }
       }}
       surveyActionLabels={{
         view: "Details",

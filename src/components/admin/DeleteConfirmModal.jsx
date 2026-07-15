@@ -36,7 +36,7 @@ function DeleteConfirmModal({
           {message}
         </p>
 
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="admin-modal-actions flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
             onClick={onCancel}

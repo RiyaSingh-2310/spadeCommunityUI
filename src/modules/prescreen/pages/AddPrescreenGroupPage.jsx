@@ -7,8 +7,7 @@ import TableCard from "../../../components/admin/TableCard";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   createPrescreenGroup,
-  getRecord,
-  mapPrescreenGroupToForm,
+  getRecordForForm,
   updatePrescreenGroup,
 } from "../../../services/questionnaire-group/questionnaireGroupApi";
 import { getQuestionnaireOptionsForLanguage } from "../../../services/question-library/questionLibraryApi";
@@ -174,9 +173,8 @@ function AddPrescreenGroupPage({ isDarkMode }) {
       setLoadFailed(false);
 
       try {
-        const record = await getRecord(id);
+        const mapped = await getRecordForForm(id);
         if (cancelled) return;
-        const mapped = mapPrescreenGroupToForm(record);
         const prescreenIds = (mapped.prescreenIds ?? []).map(String);
 
         if (mapped.language) {

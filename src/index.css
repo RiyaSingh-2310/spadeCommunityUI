@@ -1581,12 +1581,43 @@ input[type="number"],
   margin: auto;
 }
 
+.admin-toolbar-filters {
+  min-width: 0;
+}
+
+.admin-toolbar-filters > * {
+  min-width: 0;
+}
+
+@media (max-width: 639px) {
+  .admin-shell .admin-toolbar-filters select,
+  .admin-shell .admin-toolbar-filters .admin-input,
+  .admin-shell .admin-toolbar-filters button[type="button"]:not(.admin-icon-action):not(.admin-icon-btn) {
+    width: 100%;
+  }
+
+  .admin-modal-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .admin-modal-actions > button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 @media (max-width: 1023px) {
   .admin-shell .admin-page-title {
     overflow-wrap: anywhere;
   }
 
   .admin-shell .admin-form-grid-2 > * {
+    min-width: 0;
+  }
+
+  .admin-shell .admin-page-root > .flex,
+  .admin-shell .admin-form-root > .flex {
     min-width: 0;
   }
 }

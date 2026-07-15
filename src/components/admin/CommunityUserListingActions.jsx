@@ -1,4 +1,4 @@
-import { Eye, KeyRound, Mail, Pencil, Trash2 } from "lucide-react";
+import { Download, Eye, KeyRound, Mail, Pencil, Trash2 } from "lucide-react";
 
 function ActionIconButton({
   label,
@@ -27,11 +27,15 @@ function CommunityUserListingActions({
   onDelete,
   onRewardLog,
   onResendEmail,
+  onDownload,
   showEdit = true,
   showDelete = true,
   resendDisabled = false,
+  downloadDisabled = false,
 }) {
-  if (!onView && !onEdit && !onDelete && !onRewardLog && !onResendEmail) return null;
+  if (!onView && !onEdit && !onDelete && !onRewardLog && !onResendEmail && !onDownload) {
+    return null;
+  }
 
   return (
     <div className="flex flex-nowrap items-center justify-end gap-1 whitespace-nowrap">
@@ -62,6 +66,11 @@ function CommunityUserListingActions({
           disabled={resendDisabled}
         >
           <Mail size={16} strokeWidth={2} />
+        </ActionIconButton>
+      )}
+      {onDownload && (
+        <ActionIconButton label="Download" onClick={onDownload} disabled={downloadDisabled}>
+          <Download size={16} strokeWidth={2} />
         </ActionIconButton>
       )}
     </div>

@@ -117,6 +117,14 @@ export const API_ROUTES = {
     recontactSupplierDetails: (surveyId) =>
       `/api/survey/recontact/${encodeURIComponent(surveyId)}/supplier-details`,
   },
+  projects: {
+    list: "/api/projects/list",
+    create: "/api/projects/add",
+    byId: (id) => `/api/projects/${id}`,
+    update: (id) => `/api/projects/${id}`,
+    updateStatus: (id) => `/api/projects/${id}/status`,
+    delete: (id) => `/api/projects/${id}`,
+  },
   groupSurvey: {
     list: "/api/survey/groupproject/list",
     create: "/api/survey/groupproject/add",

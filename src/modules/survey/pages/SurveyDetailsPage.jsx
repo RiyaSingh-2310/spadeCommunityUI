@@ -11,6 +11,7 @@ import {
 } from "../services/surveyApi";
 import ProjectDetailsTab from "../components/ProjectDetailsTab";
 import ProjectReportTab from "../components/ProjectReportTab";
+import ProjectUrlsTab from "../components/ProjectUrlsTab";
 import SupplierMappingTab from "../components/SupplierMappingTab";
 import SurveyDetailsHeader, {
   SALES_PROJECT_DETAIL_TABS,
@@ -211,6 +212,9 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
       <div role="tabpanel" aria-label={tabLabels[activeTab]}>
         {activeTab === "project-details" && (
           <ProjectDetailsTab project={project} isDarkMode={isDarkMode} />
+        )}
+        {!salesViewMode && activeTab === "project-urls" && (
+          <ProjectUrlsTab surveyId={id} project={project} isDarkMode={isDarkMode} />
         )}
         {!salesViewMode && activeTab === "supplier-mapping" && (
           <SupplierMappingTab surveyId={id} isDarkMode={isDarkMode} />

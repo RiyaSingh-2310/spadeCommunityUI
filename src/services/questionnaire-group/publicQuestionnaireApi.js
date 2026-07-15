@@ -43,6 +43,22 @@ function formatLanguageForUi(language) {
 }
 
 function mapPublicQuestionOptions(options) {
+  if (options == null || options === "") return [];
+
+  if (typeof options === "string") {
+    const trimmed = options.trim();
+    if (!trimmed) return [];
+    try {
+      return mapPublicQuestionOptions(JSON.parse(trimmed));
+    } catch {
+      return trimmed
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => ({ label: line, value: line }));
+    }
+  }
+
   if (!Array.isArray(options)) return [];
 
   return options

@@ -70,7 +70,7 @@ function normalizeQuestionLibraryIds(ids) {
   if (!Array.isArray(ids)) return [];
   return ids
     .map((id) => Number(id))
-    .filter((id) => Number.isFinite(id));
+    .filter((id) => Number.isFinite(id) && id > 0);
 }
 
 function resolveQuestionLibraryIds(payload) {
@@ -108,19 +108,23 @@ function buildQuestionnaireGroupCreateBody(payload) {
   };
 }
 
-/** PUT /api/questionnaire-group/:id — surveyTitle + questionIds. */
+/** PUT /api/questionnaire-group/:id — surveyTitle + questionIds (+ optional language). */
 function buildQuestionnaireGroupUpdateBody(payload) {
-  return {
+  const body = {
     surveyTitle: resolveGroupTitle(payload),
     questionIds: resolveQuestionLibraryIds(payload),
   };
+
+  if (payload.language != null && String(payload.language).trim()) {
+    body.language = normalizeQuestionnaireGroupLanguage(payload.language);
+  }
+
+  return body;
 }
 
 function getQuestionItemsFromRecord(record) {
-  if (Array.isArray(record?.questions) && record.questions.length) {
-    return record.questions;
-  }
-  return [];
+  if (!Array.isArray(record?.questions)) return [];
+  return record.questions.filter((item) => item != null);
 }
 
 function extractQuestionLibraryIdsFromRecord(record) {
@@ -142,7 +146,7 @@ function extractQuestionLibraryIdsFromRecord(record) {
       .map((item) => item?.id)
       .filter((item) => item != null)
       .map((item) => Number(item))
-      .filter((item) => Number.isFinite(item));
+      .filter((item) => Number.isFinite(item) && item > 0);
   }
 
   return [];
@@ -249,7 +253,23 @@ function resolveQuestionnaireGroupWebsiteUrl(record) {
 }
 
 function normalizeGroupQuestionOptions(options) {
+  if (options == null || options === "") return [];
+
+  if (typeof options === "string") {
+    const trimmed = options.trim();
+    if (!trimmed) return [];
+    try {
+      return normalizeGroupQuestionOptions(JSON.parse(trimmed));
+    } catch {
+      return trimmed
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+    }
+  }
+
   if (!Array.isArray(options)) return [];
+
   return options
     .map((option) => {
       if (option == null) return "";
@@ -265,24 +285,59 @@ function normalizeGroupQuestionOptions(options) {
 function mapGroupQuestionItem(item) {
   if (!item || item.id == null) return null;
 
+  const numericId = Number(item.id);
+  if (!Number.isFinite(numericId) || numericId <= 0) return null;
+
   return {
-    id: item.id,
-    questionTitle: String(item.question_title ?? item.title ?? "").trim(),
+    id: numericId,
+    questionTitle: String(
+      item.question_title ?? item.questionTitle ?? item.title ?? ""
+    ).trim(),
+    questionType: String(item.question_type ?? item.questionType ?? "").trim(),
     rightAnswer: item.right_answer ?? item.rightAnswer ?? "",
     options: normalizeGroupQuestionOptions(item.options),
   };
 }
 
+/**
+ * Prefer GET /api/questionnaire-group/:id `questionIds` order; fall back to `questions`.
+ * Handles empty arrays and questions with options: null / [].
+ */
 function mapGroupQuestionsFromRecord(record) {
-  return getQuestionItemsFromRecord(record)
-    .map((item) => mapGroupQuestionItem(item))
-    .filter(Boolean);
+  const questionItems = getQuestionItemsFromRecord(record);
+  const byId = new Map();
+
+  questionItems.forEach((item) => {
+    const numericId = Number(item?.id);
+    if (!Number.isFinite(numericId) || numericId <= 0) return;
+    byId.set(numericId, item);
+  });
+
+  const orderedIds = extractQuestionLibraryIdsFromRecord(record);
+  if (orderedIds.length > 0) {
+    return orderedIds
+      .map((id) => {
+        const item = byId.get(id);
+        if (item) return mapGroupQuestionItem(item);
+        return {
+          id,
+          questionTitle: "",
+          questionType: "",
+          rightAnswer: "",
+          options: [],
+        };
+      })
+      .filter(Boolean);
+  }
+
+  return questionItems.map((item) => mapGroupQuestionItem(item)).filter(Boolean);
 }
 
 export function mapPrescreenGroupToDetail(record) {
   const createdRaw = record?.createdAt ?? record?.created_at ?? "";
   const updatedRaw = record?.updatedAt ?? record?.updated_at ?? "";
   const groupTitle = resolveGroupTitleFromRecord(record);
+  const questionIds = extractQuestionLibraryIdsFromRecord(record);
   const questions = mapGroupQuestionsFromRecord(record);
 
   return {
@@ -292,7 +347,8 @@ export function mapPrescreenGroupToDetail(record) {
     language: formatQuestionnaireGroupLanguageForUi(record?.language),
     status: apiStatusToFormValue(record?.status),
     websiteUrl: resolveQuestionnaireGroupWebsiteUrl(record),
-    prescreenIds: questions.map((item) => item.id),
+    questionIds,
+    prescreenIds: questionIds,
     questions,
     createdAt: createdRaw,
     createdDate: formatLocaleDateTime(createdRaw),
@@ -323,15 +379,11 @@ export function mapPrescreenGroupToRow(record) {
 export function mapPrescreenGroupToForm(record) {
   const questionLibraryIds = extractQuestionLibraryIdsFromRecord(record);
   const questions = mapGroupQuestionsFromRecord(record);
-  const questionItems = getQuestionItemsFromRecord(record);
-  const selectedItem =
-    questionItems.find((item) => String(item?.id) === String(questionLibraryIds[0])) ??
-    questionItems[0];
+  const selectedQuestion =
+    questions.find((item) => String(item?.id) === String(questionLibraryIds[0])) ??
+    questions[0];
   const selectedQuestionnaireLabel = String(
-    selectedItem?.question_title ??
-      selectedItem?.title ??
-      record?.selected_question_title ??
-      ""
+    selectedQuestion?.questionTitle ?? record?.selected_question_title ?? ""
   ).trim();
   const groupTitle = resolveGroupTitleFromRecord(record);
 
@@ -344,7 +396,7 @@ export function mapPrescreenGroupToForm(record) {
     prescreenIds: questionLibraryIds.map(String),
     linkedQuestions: questions.map((item) => ({
       id: String(item.id),
-      questionTitle: item.questionTitle,
+      questionTitle: item.questionTitle || `Question #${item.id}`,
     })),
   };
 }
@@ -373,14 +425,18 @@ export async function getRecords({ page = 1, limit = 10, search } = {}) {
   };
 }
 
-/** GET /api/questionnaire-group/:id */
+/**
+ * GET /api/questionnaire-group/:id
+ * Expects: { success, data: { id, surveyTitle, language, website_url, status,
+ *   createdAt, updatedAt, questionIds, questions } }
+ */
 export async function getRecord(id) {
   const normalizedId = normalizeQuestionnaireGroupId(id);
   const data = await apiRequest(API_ROUTES.questionnaireGroup.byId(normalizedId));
   assertSuccess(data);
 
   const record = extractQuestionnaireGroupRecord(data);
-  if (!record) {
+  if (!record || record.id == null) {
     throw new ApiError("Questionnaire group not found", null);
   }
 
@@ -391,6 +447,12 @@ export async function getRecord(id) {
 export async function getRecordDetail(id) {
   const record = await getRecord(id);
   return mapPrescreenGroupToDetail(record);
+}
+
+/** GET /api/questionnaire-group/:id — mapped for the add/edit form. */
+export async function getRecordForForm(id) {
+  const record = await getRecord(id);
+  return mapPrescreenGroupToForm(record);
 }
 
 /** POST /api/questionnaire-group/add */

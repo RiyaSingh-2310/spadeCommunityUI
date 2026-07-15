@@ -9,6 +9,7 @@ import TableLoadingSkeleton from "../../../components/admin/TableLoadingSkeleton
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError } from "../../../services/toast/apiToast";
+import CommunityUserExpandableDetails from "../components/CommunityUserExpandableDetails";
 import { getRecord, getUserProfilingAnswers } from "../services/communityUsersApi";
 
 const TABLE_HEAD =
@@ -51,8 +52,12 @@ function CommunityUserDetailsPage({ isDarkMode }) {
   }, [id]);
 
   const fetchAnswers = useCallback(
-    async (params) => getUserProfilingAnswers(id, params),
-    [id]
+    async (params) =>
+      getUserProfilingAnswers(id, {
+        ...params,
+        answers: user?.profilingAnswers,
+      }),
+    [id, user?.profilingAnswers]
   );
 
   const {
@@ -68,6 +73,7 @@ function CommunityUserDetailsPage({ isDarkMode }) {
     fetchFn: fetchAnswers,
     initialPageSize: DEFAULT_PAGE_SIZE,
     enabled: Boolean(user),
+    preserveRowOrder: true,
   });
 
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize) || 1);
@@ -117,9 +123,13 @@ function CommunityUserDetailsPage({ isDarkMode }) {
       />
 
       <div className="admin-text space-y-1">
-        <p className="text-lg font-semibold">{user.name}</p>
+        <p className="text-lg font-semibold">{user.name || "—"}</p>
         <p className="admin-text-muted text-sm">{user.emailAddress ?? user.email ?? "—"}</p>
       </div>
+
+      <TableCard isDarkMode={isDarkMode}>
+        <CommunityUserExpandableDetails row={user} variant="detail" />
+      </TableCard>
 
       <DebouncedSearchInput
         value={query}

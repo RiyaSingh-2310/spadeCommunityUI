@@ -77,6 +77,7 @@ export function hasNativeReadOnlyListingActions({
   onListProjects,
   onViewLogs,
   onRewardLog,
+  onDownload,
 }) {
   const mode = getModuleListingReadMode(permissionModule);
 
@@ -109,7 +110,7 @@ export function hasNativeReadOnlyListingActions({
   }
 
   if (mode === "community-user-read") {
-    return Boolean(onView || onRewardLog);
+    return Boolean(onView || onRewardLog || onDownload);
   }
 
   if (actionVariant === "view-edit" && (onFindUser || onUserSurveyData || onSurveyClone)) {
@@ -159,6 +160,7 @@ export function shouldShowListingActionColumn({
   onAddLog,
   onViewLogs,
   onRewardLog,
+  onDownload,
   hasActionColumn = true,
 }) {
   if (!hasActionColumn || !allowRead) return false;
@@ -166,7 +168,7 @@ export function shouldShowListingActionColumn({
   if (actionVariant === "community-user") {
     const showEdit = allowWrite && Boolean(onEdit || editPath);
     const showDelete = allowWrite && showDeleteAction && Boolean(onDelete);
-    return Boolean(onView || onRewardLog || showEdit || showDelete);
+    return Boolean(onView || onRewardLog || onDownload || showEdit || showDelete);
   }
 
   if (actionVariant === "user-management") {
@@ -195,6 +197,7 @@ export function shouldShowListingActionColumn({
         onReject ||
         onListProjects ||
         onRewardLog ||
+        onDownload ||
         actionVariant === "community-user" ||
         actionVariant === "pdf-download" ||
         actionVariant === "reward-pending" ||
@@ -218,5 +221,6 @@ export function shouldShowListingActionColumn({
     onListProjects,
     onViewLogs,
     onRewardLog,
+    onDownload,
   });
 }

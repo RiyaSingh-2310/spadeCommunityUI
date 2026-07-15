@@ -102,7 +102,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
       mergeSelectOption(
         clientOptions,
         loadedRecord?.client_id ?? loadedRecord?.client_code,
-        loadedRecord?.client_name
+        loadedRecord?.Clients ?? loadedRecord?.client_name
       ),
     [clientOptions, loadedRecord]
   );
@@ -112,7 +112,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
       mergeSelectOption(
         projectManagerOptions,
         loadedRecord?.project_manager_id,
-        loadedRecord?.project_manager_name
+        loadedRecord?.Project_Manager ?? loadedRecord?.project_manager_name
       ),
     [projectManagerOptions, loadedRecord]
   );
@@ -122,7 +122,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
       mergeSelectOption(
         salesManagerOptions,
         loadedRecord?.sales_manager_id,
-        loadedRecord?.sales_manager_name
+        loadedRecord?.Sales_Manager ?? loadedRecord?.sales_manager_name
       ),
     [salesManagerOptions, loadedRecord]
   );
@@ -268,13 +268,22 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
 
     applyResolvedSelectIds(setForm, setInitialSnapshot, {
       client: !form.client
-        ? resolveSelectIdByLabel(clientOptions, loadedRecord?.client_name)
+        ? resolveSelectIdByLabel(
+            clientOptions,
+            loadedRecord?.Clients ?? loadedRecord?.client_name
+          )
         : "",
       projectManager: !form.projectManager
-        ? resolveSelectIdByLabel(projectManagerOptions, loadedRecord?.project_manager_name)
+        ? resolveSelectIdByLabel(
+            projectManagerOptions,
+            loadedRecord?.Project_Manager ?? loadedRecord?.project_manager_name
+          )
         : "",
       salesManager: !form.salesManager
-        ? resolveSelectIdByLabel(salesManagerOptions, loadedRecord?.sales_manager_name)
+        ? resolveSelectIdByLabel(
+            salesManagerOptions,
+            loadedRecord?.Sales_Manager ?? loadedRecord?.sales_manager_name
+          )
         : "",
       salesProject: !form.salesProject
         ? resolveSelectIdByLabel(
@@ -285,7 +294,8 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
       surveyGroup: !form.surveyGroup
         ? resolveSelectIdByLabel(
             mergedSurveyGroupOptions,
-            loadedRecord?.prescreen_survey_title ??
+            loadedRecord?.urlInfo?.[0]?.PreScreenName ??
+              loadedRecord?.prescreen_survey_title ??
               loadedRecord?.survey_group_name ??
               loadedRecord?.survey_group_title
           )
@@ -370,7 +380,12 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
           await loadSurveyPartners(surveyRecordId);
         }
       } else {
-        const data = await createSurvey(form);
+        const data = await createSurvey(form, {
+          clientOptions: mergedClientOptions,
+          projectManagerOptions: mergedProjectManagerOptions,
+          salesManagerOptions: mergedSalesManagerOptions,
+          surveyGroupOptions: mergedSurveyGroupOptions,
+        });
         toastApiSuccess(data);
       }
 

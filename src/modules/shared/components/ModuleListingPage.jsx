@@ -88,6 +88,7 @@ function ModuleListingPage({
   onViewLogs,
   onRewardLog,
   onResendEmail,
+  onDownload,
   surveyActionLabels,
   onApprove,
   onReject,
@@ -250,6 +251,7 @@ function ModuleListingPage({
     onListProjects,
     onViewLogs,
     onRewardLog,
+    onDownload,
   });
 
   const userMgmtActions = userManagement
@@ -420,6 +422,8 @@ function ModuleListingPage({
       onListProjects,
       onAddLog,
       onViewLogs,
+      onRewardLog,
+      onDownload,
       hasActionColumn,
     });
     if (!showActionColumn && hasActionColumn) {
@@ -448,6 +452,8 @@ function ModuleListingPage({
     onListProjects,
     onAddLog,
     onViewLogs,
+    onRewardLog,
+    onDownload,
     hasActionColumn,
   ]);
 
@@ -597,7 +603,7 @@ function ModuleListingPage({
 
       {/* {summaryCards?.length > 0 ? <AdminSummaryCards cards={summaryCards} /> : null} */}
 
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         {renderToolbar ? (
           <div className="w-full min-w-0">
             {renderToolbar({
@@ -609,17 +615,17 @@ function ModuleListingPage({
             })}
           </div>
         ) : toolbarFilters ? (
-          <div className="flex min-w-0 w-full flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex min-w-0 w-full flex-col gap-3 md:flex-row md:flex-wrap md:items-end md:justify-between">
             <DebouncedSearchInput
               value={query}
               onChange={handleQueryChange}
               onDebouncedChange={onSearch}
               placeholder={searchPlaceholder}
               isDarkMode={isDarkMode}
-              className="min-w-0 w-full shrink-0 sm:flex-1"
-              maxWidthClass="sm:max-w-none lg:max-w-[340px]"
+              className="min-w-0 w-full shrink-0 md:min-w-[12rem] md:flex-1"
+              maxWidthClass="md:max-w-none lg:max-w-[340px]"
             />
-            <div className="flex shrink-0 flex-wrap items-end justify-end gap-3 sm:flex-nowrap sm:gap-4">
+            <div className="admin-toolbar-filters flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-end md:w-auto">
               {toolbarFilters}
             </div>
           </div>
@@ -630,18 +636,18 @@ function ModuleListingPage({
             onDebouncedChange={onSearch}
             placeholder={searchPlaceholder}
             isDarkMode={isDarkMode}
-            className="min-w-0 w-full sm:flex-1"
-            maxWidthClass="sm:max-w-none lg:max-w-[340px]"
+            className="min-w-0 w-full lg:flex-1"
+            maxWidthClass="lg:max-w-[340px]"
           />
         )}
         {(toolbarEnd || showSecondaryAction || showAddButton) && (
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2.5">
+          <div className="flex w-full shrink-0 flex-wrap items-center justify-stretch gap-2.5 sm:justify-end lg:w-auto">
             {toolbarEnd}
             {showSecondaryAction && (
               <button
                 type="button"
                 onClick={onSecondaryActionClick}
-                className="admin-btn-cancel h-10 rounded-xl px-4 text-sm font-semibold transition"
+                className="admin-btn-cancel h-10 w-full rounded-xl px-4 text-sm font-semibold transition sm:w-auto"
               >
                 {secondaryActionLabel}
               </button>
@@ -650,7 +656,7 @@ function ModuleListingPage({
               <button
                 type="button"
                 onClick={onActionClick}
-                className="admin-btn-primary shrink-0"
+                className="admin-btn-primary w-full shrink-0 sm:w-auto"
               >
                 {actionLabel}
               </button>
@@ -909,6 +915,7 @@ function ModuleListingPage({
                         onViewLogs={onViewLogs}
                         onRewardLog={onRewardLog}
                         onResendEmail={onResendEmail}
+                        onDownload={onDownload}
                         surveyActionLabels={surveyActionLabels}
                         handleEdit={handleEdit}
                         handleDeleteRequest={handleDeleteRequest}

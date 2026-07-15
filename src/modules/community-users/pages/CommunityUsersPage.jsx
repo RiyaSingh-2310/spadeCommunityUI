@@ -12,6 +12,7 @@ import CommunityUserExpandableDetails from "../components/CommunityUserExpandabl
 import CommunityUsersToolbar from "../components/CommunityUsersToolbar";
 import {
   deleteRecord,
+  downloadPanelists,
   getRecords,
   resendEmail,
   updateStatus,
@@ -41,8 +42,10 @@ function CommunityUsersPage({ isDarkMode }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkResendOpen, setBulkResendOpen] = useState(false);
+  const [bulkDownloadOpen, setBulkDownloadOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
   const fetchUsers = useCallback(
@@ -183,6 +186,49 @@ function CommunityUsersPage({ isDarkMode }) {
     }
   }, [selectedRowIds, isResending]);
 
+  const handleBulkDownloadRequest = useCallback(() => {
+    if (selectedRowIds.size === 0) return;
+    setBulkDownloadOpen(true);
+  }, [selectedRowIds]);
+
+  const handleBulkDownloadCancel = useCallback(() => {
+    if (isDownloading) return;
+    setBulkDownloadOpen(false);
+  }, [isDownloading]);
+
+  const handleBulkDownloadConfirm = useCallback(async () => {
+    const selectedRows = users.filter((user) => selectedRowIds.has(String(user.id)));
+    if (selectedRows.length === 0 || isDownloading) return;
+
+    setIsDownloading(true);
+    try {
+      const data = await downloadPanelists(selectedRows);
+      setBulkDownloadOpen(false);
+      toastApiSuccess(data);
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [users, selectedRowIds, isDownloading]);
+
+  const handleRowDownload = useCallback(
+    async (row) => {
+      if (!row?.id || isDownloading) return;
+
+      setIsDownloading(true);
+      try {
+        const data = await downloadPanelists(row);
+        toastApiSuccess(data);
+      } catch (error) {
+        toastApiError(error);
+      } finally {
+        setIsDownloading(false);
+      }
+    },
+    [isDownloading]
+  );
+
   const handleResendEmail = useCallback(
     async (row) => {
       if (!row?.id || isResending) return;
@@ -242,6 +288,7 @@ function CommunityUsersPage({ isDarkMode }) {
           navigate(`/community-users/${encodeURIComponent(String(row.id))}/reward-log`)
         }
         onResendEmail={handleResendEmail}
+        onDownload={handleRowDownload}
         onStatusToggle={handleStatusToggle}
         onSearch={handleSearch}
         totalRecords={totalRecords}
@@ -271,10 +318,12 @@ function CommunityUsersPage({ isDarkMode }) {
             someVisibleSelected={someVisibleSelected}
             onSelectAllChange={handleBulkSelectChange}
             onBulkDeleteRequest={handleBulkDeleteRequest}
+            onBulkDownloadRequest={handleBulkDownloadRequest}
             onBulkResendRequest={handleBulkResendRequest}
             selectedCount={selectedRowIds.size}
-            disabled={isLoading || isDeleting}
+            disabled={isLoading || isDeleting || isDownloading}
             isResending={isResending}
+            isDownloading={isDownloading}
           />
         )}
         renderExpandedContent={(row) => <CommunityUserExpandableDetails row={row} />}
@@ -294,6 +343,18 @@ function CommunityUsersPage({ isDarkMode }) {
         isDeleting={isDeleting}
         title="Delete Selected"
         message="Are you sure you want to delete selected records?"
+      />
+
+      <DeleteConfirmModal
+        isOpen={bulkDownloadOpen}
+        onCancel={handleBulkDownloadCancel}
+        onConfirm={handleBulkDownloadConfirm}
+        isDeleting={isDownloading}
+        title="Download Panelist Data"
+        message="Are you sure you want to download the selected panelist data?"
+        confirmLabel="Download"
+        confirmingLabel="Downloading..."
+        confirmClassName="admin-btn-primary flex h-10 items-center justify-center gap-2 px-4 text-sm font-semibold disabled:cursor-not-allowed"
       />
 
       <DeleteConfirmModal
