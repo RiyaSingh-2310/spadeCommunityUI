@@ -1085,6 +1085,12 @@ input[type="number"],
   color: var(--drp-subtle);
 }
 
+.admin-date-range-picker__day--today .admin-date-range-picker__day-label {
+  box-shadow: inset 0 0 0 1.5px var(--drp-primary);
+  color: var(--drp-primary);
+  font-weight: 600;
+}
+
 .admin-date-range-picker__day--in-range::before,
 .admin-date-range-picker__day--range-start::before,
 .admin-date-range-picker__day--range-end::before {

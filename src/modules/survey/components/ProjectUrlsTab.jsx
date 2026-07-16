@@ -1,13 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
+import AdminDatePicker from "../../../components/admin/AdminDatePicker";
+import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import FormField from "../../../components/admin/FormField";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
+import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import { getAdminInputClass, getAdminTextareaClass } from "../../shared/utils/formStyles";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   createEmptyProjectUrlForm,
+  deleteProjectUrl,
   getSurveyGroupOptionsForLanguage,
   listProjectUrlsByProject,
   mapApiUrlInfoToForm,
@@ -22,7 +26,10 @@ import {
   DetailGrid,
   SectionDivider,
   primaryBtnClass,
+  secondaryBtnClass,
 } from "./surveyDetailsShared";
+
+const PROJECT_URL_LIST_COLUMNS = ["ID", "URL", "Action"];
 
 function InteractiveCheckbox({ label, checked, onChange, disabled }) {
   return (
@@ -43,6 +50,31 @@ function InteractiveCheckbox({ label, checked, onChange, disabled }) {
   );
 }
 
+function normalizeUrlRecord(row, projectFk) {
+  if (!row) return createEmptyProjectUrlForm(projectFk);
+  if (row.liveLink != null || row.discussion != null || row.loi != null) {
+    return { ...createEmptyProjectUrlForm(projectFk), ...row };
+  }
+  if (row.Live_Link != null || row.description != null || row["LOI(Minute)"] != null) {
+    return mapApiUrlInfoToForm(row, projectFk);
+  }
+  return mapProjectUrlToForm(row);
+}
+
+function toListRow(record) {
+  const id = record?.id != null && record.id !== "" ? String(record.id) : "";
+  const url =
+    String(record?.liveLink ?? "").trim() ||
+    String(record?.testLink ?? "").trim() ||
+    String(record?.discussion ?? "").trim() ||
+    "—";
+  return {
+    id,
+    url,
+    record,
+  };
+}
+
 function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
   const { canWrite } = useModulePermission("survey");
   const inputClass = getAdminInputClass();
@@ -53,58 +85,73 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
     .toLowerCase()
     .includes("multi");
 
+  const [view, setView] = useState("list");
+  const [urlRecords, setUrlRecords] = useState([]);
   const [form, setForm] = useState(() => createEmptyProjectUrlForm(projectFk));
   const [selectedUrlId, setSelectedUrlId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [preScreenerOptions, setPreScreenerOptions] = useState([]);
   const [isLoadingPreScreeners, setIsLoadingPreScreeners] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const setField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  // Always land on the listing when opening Project URL / switching projects.
+  useEffect(() => {
+    setView("list");
+    setSelectedUrlId("");
+    setForm(createEmptyProjectUrlForm(projectFk));
+    setPendingDelete(null);
+  }, [projectFk]);
+
+  const loadUrlRecords = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await listProjectUrlsByProject(projectFk);
+      const rows = Array.isArray(response?.data) ? response.data : [];
+      const mapped = rows
+        .map((row) => normalizeUrlRecord(row, projectFk))
+        .filter(
+          (row) =>
+            Boolean(row.id) ||
+            Boolean(String(row.liveLink ?? "").trim()) ||
+            Boolean(String(row.testLink ?? "").trim()) ||
+            Boolean(String(row.discussion ?? "").trim()) ||
+            Boolean(String(row.loi ?? "").trim()) ||
+            Boolean(String(row.country ?? "").trim())
+        );
+      setUrlRecords(mapped);
+      return mapped;
+    } catch (error) {
+      toastApiError(error);
+      setUrlRecords([]);
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, [projectFk]);
+
   useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
-      setIsLoading(true);
-      try {
-        const existingUrlInfo = Array.isArray(project?.urlInfo) ? project.urlInfo : [];
-        if (existingUrlInfo.length > 0) {
-          if (cancelled) return;
-          const mapped = mapApiUrlInfoToForm(existingUrlInfo[0], projectFk);
-          setSelectedUrlId(mapped.id ? String(mapped.id) : "");
-          setForm(mapped);
-          return;
-        }
-
-        const response = await listProjectUrlsByProject(projectFk);
-        if (cancelled) return;
-        const rows = Array.isArray(response?.data) ? response.data : [];
-        const selected = rows[0] ?? null;
-        setSelectedUrlId(selected?.id != null ? String(selected.id) : "");
-        setForm(
-          selected
-            ? selected.loi != null || selected.discussion != null || selected.liveLink != null
-              ? { ...createEmptyProjectUrlForm(projectFk), ...selected }
-              : mapProjectUrlToForm(selected)
-            : createEmptyProjectUrlForm(projectFk)
-        );
-      } catch (error) {
-        if (!cancelled) toastApiError(error);
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
+      if (cancelled) return;
+      await loadUrlRecords();
     };
 
     load();
     return () => {
       cancelled = true;
     };
-  }, [projectFk, project]);
+  }, [loadUrlRecords]);
 
   useEffect(() => {
+    if (view !== "form") return undefined;
+
     let cancelled = false;
 
     const loadPreScreeners = async () => {
@@ -141,7 +188,12 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
     return () => {
       cancelled = true;
     };
-  }, [form.language]);
+  }, [form.language, view]);
+
+  const listRows = useMemo(
+    () => urlRecords.map((record) => toListRow(record)),
+    [urlRecords]
+  );
 
   const preScreenerPlaceholder = useMemo(() => {
     if (!form.language) return "Select language in Survey Matrix first";
@@ -159,6 +211,26 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
     }));
   };
 
+  const openAddForm = () => {
+    setSelectedUrlId("");
+    setForm(createEmptyProjectUrlForm(projectFk));
+    setView("form");
+  };
+
+  const openEditForm = (row) => {
+    const record = row?.record ?? urlRecords.find((item) => String(item.id) === String(row?.id));
+    const nextForm = normalizeUrlRecord(record ?? row, projectFk);
+    setSelectedUrlId(nextForm.id ? String(nextForm.id) : "");
+    setForm(nextForm);
+    setView("form");
+  };
+
+  const closeForm = () => {
+    setView("list");
+    setSelectedUrlId("");
+    setForm(createEmptyProjectUrlForm(projectFk));
+  };
+
   const handleSave = async (event) => {
     event.preventDefault();
     if (!canWrite) return;
@@ -167,17 +239,30 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
       const payloadForm = {
         ...form,
         id: selectedUrlId || form.id,
+        projectId: form.projectId || String(projectFk ?? ""),
         surveyGroupId: form.preScreenerId || form.surveyGroupId,
         preScreenerId: form.preScreenerId || form.surveyGroupId,
         ...(isMultiLink ? { liveLink: "", testLink: "" } : {}),
       };
+
       const data = await updateProjectUrls(projectFk, payloadForm, { project });
+
       toastApiSuccess(data);
+      const savedId =
+        data?.data?.id != null
+          ? String(data.data.id)
+          : selectedUrlId || form.id || "";
+
       onSaved?.({
         projectId: projectFk,
-        projectUrlId: selectedUrlId || form.id || data?.data?.id || "",
+        projectUrlId: savedId,
         response: data,
       });
+
+      await loadUrlRecords();
+      setView("list");
+      setSelectedUrlId("");
+      setForm(createEmptyProjectUrlForm(projectFk));
     } catch (error) {
       toastApiError(error);
     } finally {
@@ -185,17 +270,77 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
     }
   };
 
-  if (isLoading) {
+  const handleDeleteRequest = (row) => {
+    setPendingDelete(row);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!pendingDelete?.id) return;
+    setIsDeleting(true);
+    try {
+      const data = await deleteProjectUrl(pendingDelete.id);
+      toastApiSuccess(data);
+      setPendingDelete(null);
+      await loadUrlRecords();
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  if (view === "list") {
     return (
-      <div className="admin-text flex items-center gap-2 text-sm">
-        <Loader2 size={16} className="animate-spin" />
-        Loading project URLs...
-      </div>
+      <>
+        <ModuleListingPage
+          isDarkMode={isDarkMode}
+          hidePageHeader
+          title="Project URL"
+          searchPlaceholder="Search Project URL..."
+          actionLabel="+ Add Project URL"
+          onActionClick={openAddForm}
+          columns={PROJECT_URL_LIST_COLUMNS}
+          rows={listRows}
+          rowIdKey="id"
+          actionVariant="edit-delete"
+          showDeleteAction
+          onEdit={openEditForm}
+          onDelete={handleDeleteRequest}
+          permissionModule="survey"
+          isLoading={isLoading}
+          emptyMessage="No Project URL records found"
+          showPagination
+          nowrapAllCells
+        />
+        <DeleteConfirmModal
+          isOpen={Boolean(pendingDelete)}
+          onCancel={() => {
+            if (isDeleting) return;
+            setPendingDelete(null);
+          }}
+          onConfirm={handleDeleteConfirm}
+          isDeleting={isDeleting}
+        />
+      </>
     );
   }
 
   return (
     <form className="space-y-0" onSubmit={handleSave} noValidate>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h3 className="admin-text text-base font-semibold">
+          {selectedUrlId ? "Edit Project URL" : "Add Project URL"}
+        </h3>
+        <button
+          type="button"
+          onClick={closeForm}
+          className={secondaryBtnClass}
+          disabled={isSaving}
+        >
+          Back to List
+        </button>
+      </div>
+
       <TableCard title="Basic Information" isDarkMode={isDarkMode}>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Project ID">
@@ -231,7 +376,7 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
 
       <TableCard title="Survey Matrix" isDarkMode={isDarkMode}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <FormField label="LOI">
+          <FormField label="LOI (Minutes)">
             <input
               className={inputClass}
               type="number"
@@ -242,7 +387,7 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
               disabled={!canWrite}
             />
           </FormField>
-          <FormField label="IR">
+          <FormField label="IR (%)">
             <input
               className={inputClass}
               type="number"
@@ -275,21 +420,21 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
             />
           </FormField>
           <FormField label="Start Date">
-            <input
-              className={inputClass}
-              type="date"
+            <AdminDatePicker
               value={form.startDate}
-              onChange={(event) => setField("startDate", event.target.value)}
+              onChange={(value) => setField("startDate", value)}
+              placeholder="Select start date"
               disabled={!canWrite}
+              aria-label="Start date"
             />
           </FormField>
           <FormField label="End Date">
-            <input
-              className={inputClass}
-              type="date"
+            <AdminDatePicker
               value={form.endDate}
-              onChange={(event) => setField("endDate", event.target.value)}
+              onChange={(value) => setField("endDate", value)}
+              placeholder="Select end date"
               disabled={!canWrite}
+              aria-label="End date"
             />
           </FormField>
           <FormField label="Country">
@@ -528,6 +673,14 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
           >
             {isSaving && <Loader2 size={16} className="animate-spin" />}
             {isSaving ? "Saving..." : "Save Project URLs"}
+          </button>
+          <button
+            type="button"
+            onClick={closeForm}
+            disabled={isSaving}
+            className={secondaryBtnClass}
+          >
+            Cancel
           </button>
         </div>
       )}

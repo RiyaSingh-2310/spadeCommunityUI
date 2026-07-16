@@ -238,10 +238,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
       savedProjectUrlId ||
       `url-${project?.recordId ?? id}`;
     setSavedProjectUrlId(String(resolvedUrlId));
-
-    if (isMultiLinkProject(mapped ?? project) || isMultiLink) {
-      setActiveTab("project-multi-url");
-    }
+    // Stay on Project URL listing after save; Multi URL tab unlocks when enabled.
   };
 
   const handleTabChange = (tabId) => {
@@ -286,6 +283,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         )}
         {!salesViewMode && activeTab === "project-urls" && (
           <ProjectUrlsTab
+            key={`project-urls-${id}`}
             surveyId={id}
             project={project}
             isDarkMode={isDarkMode}

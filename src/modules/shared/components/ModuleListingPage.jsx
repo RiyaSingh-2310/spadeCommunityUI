@@ -53,6 +53,8 @@ function ModuleListingPage({
   title,
   subtitle,
   breadcrumbs,
+  /** When true, skips AdminPageHeader (e.g. embedded tab listings). */
+  hidePageHeader = false,
   // summaryCards,
   searchPlaceholder = "Search records...",
   actionLabel = "Add",
@@ -593,13 +595,15 @@ function ModuleListingPage({
   };
 
   return (
-    <div className="admin-page-root min-w-0 space-y-6">
-      <AdminPageHeader
-        title={title}
-        subtitle={subtitle}
-        breadcrumbs={breadcrumbs}
-        isDarkMode={isDarkMode}
-      />
+    <div className={`min-w-0 space-y-6 ${hidePageHeader ? "" : "admin-page-root"}`}>
+      {!hidePageHeader ? (
+        <AdminPageHeader
+          title={title}
+          subtitle={subtitle}
+          breadcrumbs={breadcrumbs}
+          isDarkMode={isDarkMode}
+        />
+      ) : null}
 
       {/* {summaryCards?.length > 0 ? <AdminSummaryCards cards={summaryCards} /> : null} */}
 
@@ -976,14 +980,14 @@ function ModuleListingPage({
                       </td>
                     );
                   }
-                  if (key === "websiteUrl") {
+                  if (key === "websiteUrl" || key === "url") {
                     const urlText = displayValue === "-" ? "" : String(displayValue).trim();
                     return (
                       <td
                         key={col}
                         className="max-w-[min(320px,42vw)] px-4 py-3 align-middle"
                       >
-                        {urlText ? (
+                        {urlText && /^https?:\/\//i.test(urlText) ? (
                           <a
                             href={urlText}
                             target="_blank"
@@ -993,13 +997,18 @@ function ModuleListingPage({
                           >
                             <span className="min-w-0 truncate">{urlText}</span>
                             <ExternalLink
-                              size={13}
+                              size={14}
                               className="shrink-0 opacity-70"
                               aria-hidden
                             />
                           </a>
                         ) : (
-                          <span className="admin-text">—</span>
+                          <span
+                            className="admin-text block truncate"
+                            title={urlText || undefined}
+                          >
+                            {urlText || "—"}
+                          </span>
                         )}
                       </td>
                     );
