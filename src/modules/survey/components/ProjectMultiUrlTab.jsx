@@ -46,7 +46,13 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
   const [rows, setRows] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+
+  const refreshRows = async () => {
+    const response = await listProjectMultiUrls(projectId, projectUrlId);
+    setRows(Array.isArray(response?.data) ? response.data : []);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -93,12 +99,23 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
       toastApiSuccess(data);
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      const refreshed = await listProjectMultiUrls(projectId, projectUrlId);
-      setRows(Array.isArray(refreshed?.data) ? refreshed.data : []);
+      await refreshRows();
     } catch (error) {
       toastApiError(error);
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    if (isDownloadingTemplate) return;
+    setIsDownloadingTemplate(true);
+    try {
+      await downloadProjectMultiUrlCsvTemplate();
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsDownloadingTemplate(false);
     }
   };
 
@@ -188,10 +205,15 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
             <button
               type="button"
               className={`${secondaryBtnClass} inline-flex items-center justify-center gap-2`}
-              onClick={downloadProjectMultiUrlCsvTemplate}
+              onClick={handleDownloadTemplate}
+              disabled={isDownloadingTemplate || isUploading}
             >
-              <Download size={16} />
-              Download CSV Template
+              {isDownloadingTemplate ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
+              {isDownloadingTemplate ? "Downloading..." : "Download CSV Template"}
             </button>
             <button
               type="submit"

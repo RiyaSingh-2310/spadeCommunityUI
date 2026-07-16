@@ -648,27 +648,32 @@ export function buildCreateProjectUrlApiPayload(form = {}) {
   });
 }
 
-/** GET all Project URL configs for a project. Prefers GET /api/projects/:id `urlInfo`. */
+/** GET all Project URL configs for a project. Uses GET /api/projects/:id/url/list. */
 export async function listProjectUrlsByProject(projectId) {
   if (!USE_PROJECT_URLS_MOCK) {
+    const normalizedId = normalizeProjectId(projectId);
+
     try {
-      const record = await getRecord(projectId);
-      const urlInfo = normalizeUrlInfoList(record);
-      const rows =
-        urlInfo.length > 0
-          ? urlInfo.map((row) => mapApiUrlInfoToForm(row, projectId, record))
-          : [];
-      const details = mapSurveyToProjectDetails(record);
+      const listData = await apiRequest(API_ROUTES.projects.urlList(normalizedId));
+      assertSuccess(listData);
+      const rawRows = Array.isArray(listData?.data) ? listData.data : [];
       return {
         success: true,
-        data: rows,
-        project: details,
+        data: rawRows.map((row) => mapApiUrlInfoToForm(row, projectId, null)),
       };
-    } catch (error) {
-      if (error instanceof ApiError && error.status) {
-        throw error;
+    } catch (listError) {
+      // Fallback: project details payload may still include urlInfo.
+      try {
+        const record = await getRecord(projectId);
+        const urlInfo = normalizeUrlInfoList(record);
+        return {
+          success: true,
+          data: urlInfo.map((row) => mapApiUrlInfoToForm(row, projectId, record)),
+          project: mapSurveyToProjectDetails(record),
+        };
+      } catch {
+        throw listError;
       }
-      // Fall through to mock if the record shape is unexpected.
     }
   }
 
@@ -808,14 +813,22 @@ export async function createProjectUrl(projectId, form = {}) {
   return assertSuccess(data);
 }
 
-/** Delete a Project URL config (mock). */
+/** DELETE /api/projects/url/:urlId */
 export async function deleteProjectUrl(urlId) {
-  await delay(200);
-  const removed = deleteMockProjectUrl(urlId);
-  return {
-    success: removed,
-    message: removed ? "Project URL deleted successfully." : "Project URL not found.",
-  };
+  if (USE_PROJECT_URLS_MOCK) {
+    await delay(200);
+    const removed = deleteMockProjectUrl(urlId);
+    return {
+      success: removed,
+      message: removed ? "Project URL deleted successfully." : "Project URL not found.",
+    };
+  }
+
+  const normalizedUrlId = normalizeUrlId(urlId);
+  const data = await apiRequest(API_ROUTES.projects.deleteUrl(normalizedUrlId), {
+    method: "DELETE",
+  });
+  return assertSuccess(data);
 }
 
 export async function getProjectUrlById(urlId) {

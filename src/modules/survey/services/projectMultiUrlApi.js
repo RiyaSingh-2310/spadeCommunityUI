@@ -1,29 +1,45 @@
 /**
- * Project Multi URL API layer (project_multiple_Url).
- * Upload: project_id + project_url_id + CSV file.
+ * Project Multi URL API layer.
+ * List:   GET    /api/projects/:id/multiple-url/list
+ * Create: POST   /api/projects/:id/multiple-url
+ * Update: PUT    /api/projects/multiple-url/:urlId
+ * Delete: DELETE /api/projects/multiple-url/:urlId
+ * Upload: POST   /api/projects/:id/multiple-url/csv-upload
+ * Template: GET  /api/projects/multiple-url/csv-template
  */
-import { API_ROUTES } from "../../../config/api";
+import { API_ROUTES, API_DEBUG, buildApiUrl } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
-import { delay } from "../data/mockSurveyStore";
+import { getAuthToken } from "../../../services/auth/authStorage";
 import {
-  createMockMultiUrlsFromLiveLinks,
-  listMockMultiUrlsByProject,
-  parseLiveLinksFromCsvText,
+  mapMultiUrlRecordToRow,
   PROJECT_MULTI_URL_COLUMNS,
   PROJECT_MULTI_URL_CSV_TEMPLATE,
 } from "../data/mockProjectMultiUrlData";
 
 export { PROJECT_MULTI_URL_COLUMNS, PROJECT_MULTI_URL_CSV_TEMPLATE };
 
-/** Prefer mock until the multi-url endpoints are live. */
-const USE_PROJECT_MULTI_URL_MOCK = true;
-
 function assertSuccess(data) {
   if (data?.success !== true) {
     throw new ApiError(data?.message ?? "", data);
   }
   return data;
+}
+
+function normalizeProjectId(id) {
+  const normalizedId = String(id ?? "").trim();
+  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
+    throw new ApiError("Project ID is required.", null);
+  }
+  return encodeURIComponent(normalizedId);
+}
+
+function normalizeMultiUrlId(urlId) {
+  const normalizedId = String(urlId ?? "").trim();
+  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
+    throw new ApiError("Multi URL ID is required.", null);
+  }
+  return encodeURIComponent(normalizedId);
 }
 
 function extractRows(data) {
@@ -34,30 +50,85 @@ function extractRows(data) {
   return [];
 }
 
-/** GET multi URL rows for a project (optional project URL filter). */
+function mapRows(rawRows) {
+  return (Array.isArray(rawRows) ? rawRows : []).map((row) =>
+    mapMultiUrlRecordToRow(row)
+  );
+}
+
+/**
+ * Builds POST /api/projects/:id/multiple-url body.
+ * @param {object} form
+ */
+export function buildCreateMultiUrlApiPayload(form = {}) {
+  const vendorUser =
+    String(form.Venderid_Userid ?? form.venderidUserid ?? "").trim() ||
+    [form.vendorId, form.userId].filter(Boolean).join("/") ||
+    "";
+
+  return {
+    Live_Link: String(form.Live_Link ?? form.liveLink ?? "").trim(),
+    VenderURL: String(form.VenderURL ?? form.vendorUrl ?? "").trim(),
+    Venderid_Userid: vendorUser,
+    UserType: String(form.UserType ?? form.userType ?? "").trim(),
+    Status: String(form.Status ?? form.status ?? "active").trim() || "active",
+  };
+}
+
+/** GET /api/projects/:id/multiple-url/list */
 export async function listProjectMultiUrls(projectId, projectUrlId = "") {
-  if (USE_PROJECT_MULTI_URL_MOCK) {
-    await delay();
-    return {
-      success: true,
-      data: listMockMultiUrlsByProject(projectId, projectUrlId),
-    };
+  const normalizedId = normalizeProjectId(projectId);
+  const data = await apiRequest(API_ROUTES.projects.multiUrlList(normalizedId));
+  assertSuccess(data);
+
+  let rows = mapRows(extractRows(data));
+  const filterUrlId = String(projectUrlId ?? "").trim();
+  if (filterUrlId) {
+    rows = rows.filter(
+      (row) => !row.projectUrlId || String(row.projectUrlId) === filterUrlId
+    );
   }
 
-  const query = new URLSearchParams();
-  if (projectUrlId) query.set("project_url_id", String(projectUrlId));
-  const qs = query.toString();
-  const path = `${API_ROUTES.projects.multiUrls(projectId)}${qs ? `?${qs}` : ""}`;
-  const data = await apiRequest(path);
-  assertSuccess(data);
   return {
     ...data,
-    data: extractRows(data),
+    data: rows,
   };
+}
+
+/** POST /api/projects/:id/multiple-url */
+export async function createProjectMultiUrl(projectId, form = {}) {
+  const normalizedId = normalizeProjectId(projectId);
+  const payload = buildCreateMultiUrlApiPayload(form);
+  const data = await apiRequest(API_ROUTES.projects.createMultiUrl(normalizedId), {
+    method: "POST",
+    body: payload,
+  });
+  return assertSuccess(data);
+}
+
+/** PUT /api/projects/multiple-url/:urlId */
+export async function updateProjectMultiUrl(urlId, form = {}) {
+  const normalizedUrlId = normalizeMultiUrlId(urlId);
+  const payload = buildCreateMultiUrlApiPayload(form);
+  const data = await apiRequest(API_ROUTES.projects.updateMultiUrl(normalizedUrlId), {
+    method: "PUT",
+    body: payload,
+  });
+  return assertSuccess(data);
+}
+
+/** DELETE /api/projects/multiple-url/:urlId */
+export async function deleteProjectMultiUrl(urlId) {
+  const normalizedUrlId = normalizeMultiUrlId(urlId);
+  const data = await apiRequest(API_ROUTES.projects.deleteMultiUrl(normalizedUrlId), {
+    method: "DELETE",
+  });
+  return assertSuccess(data);
 }
 
 /**
  * Upload CSV for project multi URLs.
+ * POST /api/projects/:id/multiple-url/csv-upload (multipart: file + project_url_id)
  * @param {{ projectId: string|number, projectUrlId: string|number, file: File }} params
  */
 export async function uploadProjectMultiUrlCsv({ projectId, projectUrlId, file }) {
@@ -71,46 +142,87 @@ export async function uploadProjectMultiUrlCsv({ projectId, projectUrlId, file }
     throw new ApiError("Project URL ID is required. Save Project URL first.");
   }
 
-  if (USE_PROJECT_MULTI_URL_MOCK) {
-    await delay(350);
-    const text = await file.text();
-    const liveLinks = parseLiveLinksFromCsvText(text);
-    if (liveLinks.length === 0) {
-      throw new ApiError("No Live_Link rows found in the CSV.");
-    }
-    const created = createMockMultiUrlsFromLiveLinks({
-      projectId,
-      projectUrlId,
-      liveLinks,
-    });
-    return {
-      success: true,
-      message: `Uploaded ${created.length} multi URL record(s) successfully.`,
-      data: created,
-    };
+  const name = String(file.name ?? "").toLowerCase();
+  const isCsv =
+    name.endsWith(".csv") ||
+    file.type === "text/csv" ||
+    file.type === "application/vnd.ms-excel";
+  if (!isCsv) {
+    throw new ApiError("Only CSV files are allowed.");
   }
 
   const body = new FormData();
-  body.append("project_id", String(projectId));
   body.append("project_url_id", String(projectUrlId));
   body.append("file", file);
 
-  const data = await apiRequest(API_ROUTES.projects.uploadMultiUrls(projectId), {
-    method: "POST",
-    body,
-  });
+  const data = await apiRequest(
+    API_ROUTES.projects.uploadMultiUrls(normalizeProjectId(projectId)),
+    {
+      method: "POST",
+      body,
+    }
+  );
   return assertSuccess(data);
 }
 
-/** Download the required CSV template for multi URL upload. */
-export function downloadProjectMultiUrlCsvTemplate() {
-  const blob = new Blob([PROJECT_MULTI_URL_CSV_TEMPLATE], {
+/**
+ * Download CSV template from GET /api/projects/multiple-url/csv-template.
+ * Falls back to the local template string if the API fails to return a file body.
+ */
+export async function downloadProjectMultiUrlCsvTemplate() {
+  const path = API_ROUTES.projects.multiUrlCsvTemplate;
+  const url = buildApiUrl(path);
+  const token = getAuthToken();
+
+  if (!token) {
+    throw new ApiError("Please sign in again to download the CSV template.", null, 401);
+  }
+
+  if (API_DEBUG) {
+    console.log("[API] Request URL:", url);
+    console.log("[API] Method: GET (csv-template)");
+  }
+
+  let response;
+  try {
+    response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch {
+    throw new ApiError("Unable to reach the server. Please try again.");
+  }
+
+  if (!response.ok) {
+    let message = "Failed to download CSV template.";
+    try {
+      const errorBody = await response.json();
+      if (errorBody?.message) message = String(errorBody.message);
+    } catch {
+      // ignore non-JSON error bodies
+    }
+    throw new ApiError(message, null, response.status);
+  }
+
+  const text = await response.text();
+  const csvContent =
+    text && text.trim()
+      ? text
+      : PROJECT_MULTI_URL_CSV_TEMPLATE;
+
+  const blob = new Blob([csvContent], {
     type: "text/csv;charset=utf-8;",
   });
-  const url = URL.createObjectURL(blob);
+  const objectUrl = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "project_multi_url_template.csv";
+  anchor.href = objectUrl;
+  anchor.download = "multi_url_template.csv";
+  document.body.appendChild(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+  anchor.remove();
+  URL.revokeObjectURL(objectUrl);
+
+  return { success: true, message: "CSV template downloaded successfully." };
 }

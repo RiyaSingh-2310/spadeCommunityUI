@@ -8,9 +8,8 @@ let nextId = 1;
 /** @type {Array<object>} */
 let multiUrlRecords = [];
 
-export const PROJECT_MULTI_URL_CSV_TEMPLATE = `Live_Link
-https://example.com/survey/live/sample-1
-https://example.com/survey/live/sample-2
+export const PROJECT_MULTI_URL_CSV_TEMPLATE = `Live_Link,VenderURL,Venderid_Userid,UserType,Status
+https://spade.com/startsurvey?projectid=sp1234,www.adsurver.com?projectid=1234,XXXX/XYG,adsurver,active
 `;
 
 export const PROJECT_MULTI_URL_COLUMNS = [
@@ -28,6 +27,10 @@ export const PROJECT_MULTI_URL_COLUMNS = [
 function splitVendorUserId(value) {
   const text = String(value ?? "").trim();
   if (!text) return { vendorId: "", userId: "" };
+  if (text.includes("/")) {
+    const [vendorId, ...rest] = text.split("/");
+    return { vendorId: vendorId ?? "", userId: rest.join("/") };
+  }
   if (text.includes("_")) {
     const [vendorId, ...rest] = text.split("_");
     return { vendorId: vendorId ?? "", userId: rest.join("_") };
