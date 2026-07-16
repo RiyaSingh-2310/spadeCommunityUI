@@ -27,10 +27,10 @@ function resolveProjectUrlId(project, overrideId = "") {
   const primary = urlInfo[0];
   if (!primary || typeof primary !== "object") return "";
   const value =
-    primary.id ??
     primary.url_id ??
-    primary.project_url_id ??
     primary.Url_Id ??
+    primary.project_url_id ??
+    primary.id ??
     "";
   return value != null && value !== "" ? String(value) : "";
 }
@@ -215,7 +215,6 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
         </form>
       </TableCard>
 
-      {/* Temporarily hidden — Project Multi-URL Records
       <SectionDivider />
 
       {isLoading ? (
@@ -236,7 +235,6 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
           isDarkMode={isDarkMode}
         />
       )}
-      */}
     </div>
   );
 }

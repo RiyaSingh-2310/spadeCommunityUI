@@ -394,9 +394,6 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
         "validateRewardPoints",
         "Validate_Point",
         "ValidationPoint",
-        "TerminationPoint",
-        "termination_point",
-        "term_point",
       ]) ??
         pickUrlInfoField(projectRecord, [
           "ValidatePoint",
@@ -404,9 +401,6 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
           "validateRewardPoints",
           "Validate_Point",
           "ValidationPoint",
-          "TerminationPoint",
-          "termination_point",
-          "term_point",
         ])
     ),
     redirectComplete: pickRedirectField(
@@ -544,6 +538,22 @@ export async function getProjectUrlFormForEdit(projectId, urlId, fallbackForm = 
         : null;
   }
 
+  try {
+    const response = await getProjectUrlById(normalizedUrlId);
+    const raw = response?.data;
+    if (raw) {
+      const record = await getRecord(projectId);
+      const mapped = mapApiUrlInfoToForm(raw, projectId, record);
+      return normalizeProjectUrlFormForState(
+        mergeProjectUrlForms(mapped, fallbackForm)
+      );
+    }
+  } catch (error) {
+    if (!(error instanceof ApiError && error.status === 404)) {
+      throw error;
+    }
+  }
+
   const record = await getRecord(projectId);
   const urlInfo = normalizeUrlInfoList(record);
   const raw = urlInfo.find((row) => resolveUrlRecordId(row) === normalizedUrlId);
@@ -607,11 +617,14 @@ function buildProjectUrlUpdatePayload(form) {
  * @param {object} form
  */
 export function buildCreateProjectUrlApiPayload(form = {}) {
+  const preScreenerId = String(form.preScreenerId || form.surveyGroupId || "").trim();
+
   return compactApiPayload({
     description: String(form.discussion ?? "").trim(),
     LOI: toApiNumber(form.loi),
     IR: toApiNumber(form.ir),
     country: String(form.country ?? "").trim(),
+    Language: String(form.language ?? "").trim(),
     CPI: toApiNumber(form.cpiRate ?? form.cpi),
     SampleSize: toApiNumber(form.sampleSize),
     Start_Date: form.startDate || "",
@@ -624,6 +637,7 @@ export function buildCreateProjectUrlApiPayload(form = {}) {
     UniqueIP: toApiFlag(form.uniqueIp),
     FraudDetection: toApiFlag(form.fraudDetection),
     PreScreen: toApiFlag(form.preScreen),
+    PreScreenid: form.preScreen && preScreenerId ? preScreenerId : undefined,
     CompleteURL: String(form.redirectComplete ?? "").trim(),
     TerminateURL: String(form.redirectTerminate ?? "").trim(),
     OverQuotaURL: String(form.redirectOverQuota ?? "").trim(),
@@ -805,11 +819,18 @@ export async function deleteProjectUrl(urlId) {
 }
 
 export async function getProjectUrlById(urlId) {
-  await delay();
-  return {
-    success: true,
-    data: getMockProjectUrlById(urlId),
-  };
+  const normalizedUrlId = normalizeUrlId(urlId);
+
+  if (USE_PROJECT_URLS_MOCK) {
+    await delay();
+    return {
+      success: true,
+      data: getMockProjectUrlById(normalizedUrlId),
+    };
+  }
+
+  const data = await apiRequest(API_ROUTES.projects.urlById(normalizedUrlId));
+  return assertSuccess(data);
 }
 
 /** Filtered pre-screener options for Country + Language (mock). */

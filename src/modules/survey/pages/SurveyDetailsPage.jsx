@@ -10,7 +10,7 @@ import {
   updateSurveyStatus,
 } from "../services/surveyApi";
 import ProjectDetailsTab from "../components/ProjectDetailsTab";
-// import ProjectMultiUrlTab from "../components/ProjectMultiUrlTab";
+import ProjectMultiUrlTab from "../components/ProjectMultiUrlTab";
 // import ProjectReportTab from "../components/ProjectReportTab";
 import ProjectUrlsTab from "../components/ProjectUrlsTab";
 // import SupplierMappingTab from "../components/SupplierMappingTab";
@@ -344,11 +344,6 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
       `url-${project?.recordId ?? id}`;
     setSavedProjectUrlId(String(resolvedUrlId));
 
-    if (payload?.keepEditing) {
-      return;
-    }
-
-    // Stay on Project URL listing after create save; Multi URL tab unlocks when enabled.
     syncSearch({
       tab: SURVEY_DETAIL_TAB_IDS.PROJECT_URLS,
       urlView: PROJECT_URL_VIEW_IDS.LIST,
@@ -412,7 +407,6 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
             onSaved={handleProjectUrlSaved}
           />
         )}
-        {/* Temporarily hidden — Project Multi URL tab
         {!salesViewMode &&
           activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_MULTI_URL &&
           multiUrlEnabled && (
@@ -422,7 +416,6 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
               isDarkMode={isDarkMode}
             />
           )}
-        */}
         {/* {!salesViewMode && activeTab === "supplier-mapping" && (
           <SupplierMappingTab surveyId={id} isDarkMode={isDarkMode} />
         )} */}

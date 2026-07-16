@@ -396,7 +396,11 @@ function ProjectUrlsTab({
   const handleSave = async (event) => {
     event.preventDefault();
     if (!canWrite) return;
-    if (!validateSubmit() || !isProjectUrlFormValid(form)) return;
+    if (!validateSubmit() || !isProjectUrlFormValid(form)) {
+      const firstError = Object.values(getProjectUrlFormErrors(form)).find(Boolean);
+      toastApiError(firstError || "Please fix the validation errors before saving.");
+      return;
+    }
     if (isEdit && !isDirty) return;
 
     setIsSaving(true);
@@ -428,7 +432,7 @@ function ProjectUrlsTab({
         ...(isMultiLink ? { liveLink: "", testLink: "" } : {}),
       };
 
-      const isCreate = !resolvedUrlId;
+      const isCreate = urlView === PROJECT_URL_VIEW_IDS.ADD;
       const data = isCreate
         ? await createProjectUrl(projectFk, payloadForm)
         : await updateProjectUrls(projectFk, payloadForm, {
@@ -442,34 +446,23 @@ function ProjectUrlsTab({
           ? String(data.data.id)
           : resolvedUrlId || selectedUrlId || form.id || "";
 
-      await loadUrlRecords();
+      try {
+        await loadUrlRecords();
+      } catch (refreshError) {
+        toastApiError(refreshError);
+      }
 
-      if (isCreate) {
-        onSaved?.({
+      try {
+        await onSaved?.({
           projectId: projectFk,
           projectUrlId: savedId,
           response: data,
         });
-        navigateToList();
-        return;
+      } catch (parentError) {
+        toastApiError(parentError);
       }
 
-      const refreshed = await getProjectUrlFormForEdit(projectFk, savedId, payloadForm);
-      if (refreshed) {
-        const normalized = normalizeProjectUrlFormForState(refreshed);
-        setForm(normalized);
-        setInitialSnapshot(cloneProjectUrlForm(normalized));
-        loadedEditKeyRef.current = `${projectFk}:${savedId}`;
-        editFormReadyRef.current = true;
-        resetValidation();
-      }
-
-      onSaved?.({
-        projectId: projectFk,
-        projectUrlId: savedId,
-        response: data,
-        keepEditing: true,
-      });
+      navigateToList();
     } catch (error) {
       toastApiError(error);
     } finally {

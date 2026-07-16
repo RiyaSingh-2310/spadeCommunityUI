@@ -38,14 +38,13 @@ export function getSurveyDetailTabs({
     { id: "project-urls", label: "Project URL" },
   ];
 
-  // Temporarily hidden — Project Multi URL tab
-  // if (isMultiLink) {
-  //   tabs.push({
-  //     id: "project-multi-url",
-  //     label: "Project Multi URL",
-  //     disabled: !multiUrlEnabled,
-  //   });
-  // }
+  if (isMultiLink) {
+    tabs.push({
+      id: "project-multi-url",
+      label: "Multi URL",
+      disabled: !multiUrlEnabled,
+    });
+  }
 
   // Temporarily hidden per product flow:
   // tabs.push({ id: "supplier-mapping", label: "Supplier Mapping" });
