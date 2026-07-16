@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import PermissionDenied from "../../../components/admin/PermissionDenied";
 import { useModulePermission } from "../../permissions/useModulePermission";
@@ -10,7 +10,7 @@ import {
   updateSurveyStatus,
 } from "../services/surveyApi";
 import ProjectDetailsTab from "../components/ProjectDetailsTab";
-import ProjectMultiUrlTab from "../components/ProjectMultiUrlTab";
+// import ProjectMultiUrlTab from "../components/ProjectMultiUrlTab";
 // import ProjectReportTab from "../components/ProjectReportTab";
 import ProjectUrlsTab from "../components/ProjectUrlsTab";
 // import SupplierMappingTab from "../components/SupplierMappingTab";
@@ -23,6 +23,13 @@ import {
   getGroupProjectsPath,
   getGroupSurveyBreadcrumbs,
 } from "../utils/groupSurveyNavigation";
+import {
+  getSurveyDetailsBasePath,
+  getSurveyDetailsBreadcrumbs,
+  parseSurveyDetailsSearch,
+  PROJECT_URL_VIEW_IDS,
+  SURVEY_DETAIL_TAB_IDS,
+} from "../utils/surveyDetailsNavigation";
 
 function isMultiLinkProject(project) {
   return String(project?.projectLinkType ?? "")
@@ -38,6 +45,7 @@ function hasSavedProjectUrl(project) {
 function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
   const navigate = useNavigate();
   const { id, groupId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isGroupView = Boolean(groupId);
   const { canRead: canReadSurvey } = useModulePermission("survey");
   const { canRead: canReadGroupSurvey } = useModulePermission("group_survey");
@@ -46,12 +54,16 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
   const [project, setProject] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
-  const [activeTab, setActiveTab] = useState("project-details");
   const [projectStatus, setProjectStatus] = useState("");
   const [draftStatus, setDraftStatus] = useState("");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [projectUrlSaved, setProjectUrlSaved] = useState(false);
   const [savedProjectUrlId, setSavedProjectUrlId] = useState("");
+
+  const parsedSearch = useMemo(
+    () => parseSurveyDetailsSearch(searchParams),
+    [searchParams]
+  );
 
   const isMultiLink = isMultiLinkProject(project);
   const multiUrlEnabled =
@@ -65,6 +77,62 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         salesViewMode,
       }),
     [isMultiLink, multiUrlEnabled, salesViewMode]
+  );
+
+  const activeTab = useMemo(() => {
+    const requested = parsedSearch.tab;
+    const match = visibleTabs.find((tab) => tab.id === requested && !tab.disabled);
+    return match?.id ?? visibleTabs[0]?.id ?? SURVEY_DETAIL_TAB_IDS.PROJECT_DETAILS;
+  }, [parsedSearch.tab, visibleTabs]);
+
+  const urlView =
+    activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_URLS
+      ? parsedSearch.urlView
+      : PROJECT_URL_VIEW_IDS.LIST;
+  const urlId =
+    activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_URLS ? parsedSearch.urlId : "";
+
+  const detailsBasePath = useMemo(
+    () =>
+      getSurveyDetailsBasePath({
+        id,
+        groupId,
+        salesViewMode,
+      }),
+    [id, groupId, salesViewMode]
+  );
+
+  const syncSearch = useCallback(
+    (
+      { tab, urlView: nextUrlView, urlId: nextUrlId } = {},
+      { replace = false } = {}
+    ) => {
+      const nextTab = tab ?? activeTab;
+      const params = new URLSearchParams();
+
+      if (nextTab && nextTab !== SURVEY_DETAIL_TAB_IDS.PROJECT_DETAILS) {
+        params.set("tab", nextTab);
+      }
+
+      if (nextTab === SURVEY_DETAIL_TAB_IDS.PROJECT_URLS) {
+        const view = nextUrlView ?? PROJECT_URL_VIEW_IDS.LIST;
+        if (
+          view === PROJECT_URL_VIEW_IDS.ADD ||
+          view === PROJECT_URL_VIEW_IDS.EDIT
+        ) {
+          params.set("urlView", view);
+          if (view === PROJECT_URL_VIEW_IDS.EDIT && nextUrlId) {
+            params.set("urlId", String(nextUrlId));
+          }
+        }
+      }
+
+      const next = params.toString();
+      const current = searchParams.toString();
+      if (next === current) return;
+      setSearchParams(params, { replace });
+    },
+    [activeTab, searchParams, setSearchParams]
   );
 
   const loadSurvey = useCallback(
@@ -101,7 +169,6 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
             setSavedProjectUrlId(String(nextId));
           }
         }
-        if (!silent) setActiveTab("project-details");
         return mapped;
       } catch (error) {
         toastApiError(error);
@@ -123,12 +190,19 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
     load();
   }, [loadSurvey]);
 
+  // Keep invalid / disabled tab selections in sync with the URL.
   useEffect(() => {
-    const active = visibleTabs.find((tab) => tab.id === activeTab);
-    if (!active || active.disabled) {
-      setActiveTab(visibleTabs[0]?.id ?? "project-details");
-    }
-  }, [activeTab, visibleTabs]);
+    if (!id || isLoading) return;
+    if (parsedSearch.tab === activeTab) return;
+    syncSearch(
+      {
+        tab: activeTab,
+        urlView: PROJECT_URL_VIEW_IDS.LIST,
+        urlId: "",
+      },
+      { replace: true }
+    );
+  }, [id, isLoading, parsedSearch.tab, activeTab, syncSearch]);
 
   if (!canRead) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
@@ -150,20 +224,38 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
       ? "Group Survey"
       : "Projects";
 
+  const currentTabLabel = tabLabels[activeTab] ?? "Project Information";
+
   const breadcrumbs = isGroupView
-    ? getGroupSurveyBreadcrumbs(groupId, {
-        currentLabel: tabLabels[activeTab] ?? "Project Details",
-      })
-    : [
-        { label: listLabel, to: listPath },
-        { label: tabLabels[activeTab] ?? "Project Details" },
-      ];
+    ? (() => {
+        const base = getGroupSurveyBreadcrumbs(groupId, {
+          currentLabel: undefined,
+        });
+        const detailCrumbs = getSurveyDetailsBreadcrumbs({
+          listPath: getGroupProjectsPath(groupId),
+          listLabel: "View Projects",
+          detailsPath: detailsBasePath,
+          tab: activeTab,
+          tabLabel: currentTabLabel,
+          urlView,
+        });
+        // Replace the first crumb from detail helper (View Projects) — already in base.
+        return [...base, ...detailCrumbs.slice(1)];
+      })()
+    : getSurveyDetailsBreadcrumbs({
+        listPath,
+        listLabel,
+        detailsPath: detailsBasePath,
+        tab: activeTab,
+        tabLabel: currentTabLabel,
+        urlView,
+      });
 
   const loadingBreadcrumbs = isGroupView
-    ? getGroupSurveyBreadcrumbs(groupId, { currentLabel: "Project Details" })
+    ? getGroupSurveyBreadcrumbs(groupId, { currentLabel: "Project Information" })
     : [
         { label: listLabel, to: listPath },
-        { label: "Project Details" },
+        { label: "Project Information" },
       ];
 
   if (isLoading) {
@@ -239,12 +331,29 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
       `url-${project?.recordId ?? id}`;
     setSavedProjectUrlId(String(resolvedUrlId));
     // Stay on Project URL listing after save; Multi URL tab unlocks when enabled.
+    syncSearch({
+      tab: SURVEY_DETAIL_TAB_IDS.PROJECT_URLS,
+      urlView: PROJECT_URL_VIEW_IDS.LIST,
+      urlId: "",
+    });
   };
 
   const handleTabChange = (tabId) => {
     const target = visibleTabs.find((tab) => tab.id === tabId);
     if (!target || target.disabled) return;
-    setActiveTab(tabId);
+    syncSearch({
+      tab: tabId,
+      urlView: PROJECT_URL_VIEW_IDS.LIST,
+      urlId: "",
+    });
+  };
+
+  const handleProjectUrlViewChange = ({ urlView: nextView, urlId: nextUrlId } = {}) => {
+    syncSearch({
+      tab: SURVEY_DETAIL_TAB_IDS.PROJECT_URLS,
+      urlView: nextView ?? PROJECT_URL_VIEW_IDS.LIST,
+      urlId: nextUrlId ?? "",
+    });
   };
 
   return (
@@ -278,25 +387,32 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
       />
 
       <div role="tabpanel" aria-label={tabLabels[activeTab]}>
-        {activeTab === "project-details" && (
+        {activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_DETAILS && (
           <ProjectDetailsTab project={project} isDarkMode={isDarkMode} />
         )}
-        {!salesViewMode && activeTab === "project-urls" && (
+        {!salesViewMode && activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_URLS && (
           <ProjectUrlsTab
             key={`project-urls-${id}`}
             surveyId={id}
             project={project}
             isDarkMode={isDarkMode}
+            urlView={urlView}
+            urlId={urlId}
+            onViewChange={handleProjectUrlViewChange}
             onSaved={handleProjectUrlSaved}
           />
         )}
-        {!salesViewMode && activeTab === "project-multi-url" && multiUrlEnabled && (
-          <ProjectMultiUrlTab
-            project={project}
-            projectUrlId={savedProjectUrlId}
-            isDarkMode={isDarkMode}
-          />
-        )}
+        {/* Temporarily hidden — Project Multi URL tab
+        {!salesViewMode &&
+          activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_MULTI_URL &&
+          multiUrlEnabled && (
+            <ProjectMultiUrlTab
+              project={project}
+              projectUrlId={savedProjectUrlId}
+              isDarkMode={isDarkMode}
+            />
+          )}
+        */}
         {/* {!salesViewMode && activeTab === "supplier-mapping" && (
           <SupplierMappingTab surveyId={id} isDarkMode={isDarkMode} />
         )} */}

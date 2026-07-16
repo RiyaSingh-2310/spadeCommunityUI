@@ -4,7 +4,7 @@
  * Easy to swap for real API integration later.
  */
 
-export const PROJECT_URL_STATUS_OPTIONS = ["Open", "Active", "Closed"];
+export const PROJECT_URL_STATUS_OPTIONS = ["Open", "Closed", "On Hold"];
 
 export const PROJECT_URL_COUNTRY_OPTIONS = [
   "United States",

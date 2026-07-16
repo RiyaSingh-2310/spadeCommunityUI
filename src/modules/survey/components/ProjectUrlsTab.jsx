@@ -2,16 +2,21 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import AdminDatePicker from "../../../components/admin/AdminDatePicker";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
+import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
+import NumericInput from "../../../components/admin/NumericInput";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import { getAdminInputClass, getAdminTextareaClass } from "../../shared/utils/formStyles";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   createEmptyProjectUrlForm,
+  createProjectUrl,
   deleteProjectUrl,
+  getProjectUrlFormForEdit,
   getSurveyGroupOptionsForLanguage,
   listProjectUrlsByProject,
   mapApiUrlInfoToForm,
@@ -22,8 +27,18 @@ import {
   updateProjectUrls,
 } from "../services/projectUrlsApi";
 import {
-  DetailField,
-  DetailGrid,
+  areProjectUrlFormsEqual,
+  cloneProjectUrlForm,
+  getProjectUrlFormErrors,
+  isProjectUrlFormValid,
+  PROJECT_URL_CPI_MAX_DECIMALS,
+  PROJECT_URL_FORM_FIELDS,
+  PROJECT_URL_NUMERIC_MAX_DIGITS,
+  sanitizeProjectUrlDecimal,
+  sanitizeProjectUrlInteger,
+} from "../utils/projectUrlFormValidation";
+import { PROJECT_URL_VIEW_IDS } from "../utils/surveyDetailsNavigation";
+import {
   SectionDivider,
   primaryBtnClass,
   secondaryBtnClass,
@@ -52,13 +67,14 @@ function InteractiveCheckbox({ label, checked, onChange, disabled }) {
 
 function normalizeUrlRecord(row, projectFk) {
   if (!row) return createEmptyProjectUrlForm(projectFk);
-  if (row.liveLink != null || row.discussion != null || row.loi != null) {
-    return { ...createEmptyProjectUrlForm(projectFk), ...row };
-  }
   if (row.Live_Link != null || row.description != null || row["LOI(Minute)"] != null) {
     return mapApiUrlInfoToForm(row, projectFk);
   }
-  return mapProjectUrlToForm(row);
+  return mapProjectUrlToForm({
+    ...createEmptyProjectUrlForm(projectFk),
+    ...row,
+    projectId: row.projectId ?? projectFk,
+  });
 }
 
 function toListRow(record) {
@@ -75,7 +91,19 @@ function toListRow(record) {
   };
 }
 
-function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
+function trimOnBlur(value) {
+  return String(value ?? "").trim();
+}
+
+function ProjectUrlsTab({
+  surveyId,
+  project,
+  isDarkMode,
+  onSaved,
+  urlView = PROJECT_URL_VIEW_IDS.LIST,
+  urlId = "",
+  onViewChange,
+}) {
   const { canWrite } = useModulePermission("survey");
   const inputClass = getAdminInputClass();
   const textareaClass = getAdminTextareaClass();
@@ -85,9 +113,14 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
     .toLowerCase()
     .includes("multi");
 
-  const [view, setView] = useState("list");
+  const view =
+    urlView === PROJECT_URL_VIEW_IDS.ADD || urlView === PROJECT_URL_VIEW_IDS.EDIT
+      ? "form"
+      : "list";
+
   const [urlRecords, setUrlRecords] = useState([]);
   const [form, setForm] = useState(() => createEmptyProjectUrlForm(projectFk));
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
   const [selectedUrlId, setSelectedUrlId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -95,18 +128,108 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
   const [isLoadingPreScreeners, setIsLoadingPreScreeners] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isLoadingEditForm, setIsLoadingEditForm] = useState(false);
+
+  const isEdit =
+    urlView === PROJECT_URL_VIEW_IDS.EDIT ||
+    Boolean(String(selectedUrlId || form.id || "").trim());
+
+  const errors = useMemo(() => getProjectUrlFormErrors(form), [form]);
+  const { showError, touch, validateSubmit, resetValidation, isValid } =
+    useFormValidation({
+      errors,
+      fields: PROJECT_URL_FORM_FIELDS,
+    });
 
   const setField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Always land on the listing when opening Project URL / switching projects.
-  useEffect(() => {
-    setView("list");
+  const navigateToList = useCallback(() => {
+    onViewChange?.({
+      urlView: PROJECT_URL_VIEW_IDS.LIST,
+      urlId: "",
+    });
+  }, [onViewChange]);
+
+  const resetFormState = useCallback(() => {
     setSelectedUrlId("");
     setForm(createEmptyProjectUrlForm(projectFk));
+    setInitialSnapshot(null);
     setPendingDelete(null);
-  }, [projectFk]);
+    resetValidation();
+  }, [projectFk, resetValidation]);
+
+  const initAddForm = useCallback(() => {
+    const nextForm = createEmptyProjectUrlForm(projectFk);
+    setSelectedUrlId("");
+    setForm(nextForm);
+    setInitialSnapshot(cloneProjectUrlForm(nextForm));
+    resetValidation();
+  }, [projectFk, resetValidation]);
+
+  // Reset local form state when switching projects.
+  useEffect(() => {
+    if (urlView === PROJECT_URL_VIEW_IDS.ADD) {
+      initAddForm();
+      return;
+    }
+    if (urlView === PROJECT_URL_VIEW_IDS.LIST) {
+      resetFormState();
+    }
+  }, [projectFk]); // eslint-disable-line react-hooks/exhaustive-deps -- only on project switch
+
+  // Initialize add/list form when the routed view changes.
+  useEffect(() => {
+    if (urlView === PROJECT_URL_VIEW_IDS.ADD) {
+      initAddForm();
+      return;
+    }
+    if (urlView === PROJECT_URL_VIEW_IDS.LIST) {
+      resetFormState();
+    }
+  }, [urlView, initAddForm, resetFormState]);
+
+  useEffect(() => {
+    if (urlView !== PROJECT_URL_VIEW_IDS.EDIT) {
+      setIsLoadingEditForm(false);
+      return undefined;
+    }
+    if (!urlId) {
+      navigateToList();
+      return undefined;
+    }
+
+    let cancelled = false;
+    setIsLoadingEditForm(true);
+
+    const loadEditForm = async () => {
+      try {
+        const nextForm = await getProjectUrlFormForEdit(projectFk, urlId);
+        if (cancelled) return;
+        if (!nextForm) {
+          navigateToList();
+          return;
+        }
+        setSelectedUrlId(nextForm.id ? String(nextForm.id) : String(urlId));
+        setForm(nextForm);
+        setInitialSnapshot(cloneProjectUrlForm(nextForm));
+        resetValidation();
+      } catch (error) {
+        if (!cancelled) {
+          toastApiError(error);
+          navigateToList();
+        }
+      } finally {
+        if (!cancelled) setIsLoadingEditForm(false);
+      }
+    };
+
+    loadEditForm();
+    return () => {
+      cancelled = true;
+    };
+  }, [urlView, urlId, projectFk, navigateToList, resetValidation]);
 
   const loadUrlRecords = useCallback(async () => {
     setIsLoading(true);
@@ -167,15 +290,19 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
         const options = response?.data ?? [];
         setPreScreenerOptions(options);
 
+        // Keep previously selected group on edit; only normalize when still present.
         setForm((prev) => {
           if (!prev.preScreenerId && !prev.surveyGroupId) return prev;
           const selectedId = String(prev.preScreenerId || prev.surveyGroupId);
           const stillValid = options.some(
             (option) => String(option.value) === selectedId
           );
-          return stillValid
-            ? { ...prev, preScreenerId: selectedId, surveyGroupId: selectedId }
-            : { ...prev, preScreenerId: "", surveyGroupId: "" };
+          if (!stillValid) return prev;
+          return {
+            ...prev,
+            preScreenerId: selectedId,
+            surveyGroupId: selectedId,
+          };
         });
       } catch {
         if (!cancelled) setPreScreenerOptions([]);
@@ -195,11 +322,22 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
     [urlRecords]
   );
 
+  const isDirty = useMemo(() => {
+    if (!isEdit || !initialSnapshot) return false;
+    return !areProjectUrlFormsEqual(form, initialSnapshot);
+  }, [isEdit, initialSnapshot, form]);
+
+  const canSubmit =
+    canWrite &&
+    isValid &&
+    !isSaving &&
+    (!isEdit || isDirty);
+
   const preScreenerPlaceholder = useMemo(() => {
     if (!form.language) return "Select language in Survey Matrix first";
     if (isLoadingPreScreeners) return "Loading pre-screener groups...";
     if (preScreenerOptions.length === 0) return "No pre-screener groups found";
-    return "Select Pre-Screener Group";
+    return "Select Pre-Screen Group";
   }, [form.language, isLoadingPreScreeners, preScreenerOptions.length]);
 
   const handleLanguageChange = (language) => {
@@ -209,35 +347,49 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
       preScreenerId: "",
       surveyGroupId: "",
     }));
+    touch("preScreenerId");
   };
 
   const openAddForm = () => {
-    setSelectedUrlId("");
-    setForm(createEmptyProjectUrlForm(projectFk));
-    setView("form");
+    onViewChange?.({
+      urlView: PROJECT_URL_VIEW_IDS.ADD,
+      urlId: "",
+    });
   };
 
   const openEditForm = (row) => {
-    const record = row?.record ?? urlRecords.find((item) => String(item.id) === String(row?.id));
+    const record =
+      row?.record ?? urlRecords.find((item) => String(item.id) === String(row?.id));
     const nextForm = normalizeUrlRecord(record ?? row, projectFk);
-    setSelectedUrlId(nextForm.id ? String(nextForm.id) : "");
-    setForm(nextForm);
-    setView("form");
+    const nextId = nextForm.id ? String(nextForm.id) : "";
+    onViewChange?.({
+      urlView: PROJECT_URL_VIEW_IDS.EDIT,
+      urlId: nextId,
+    });
   };
 
   const closeForm = () => {
-    setView("list");
-    setSelectedUrlId("");
-    setForm(createEmptyProjectUrlForm(projectFk));
+    navigateToList();
   };
 
   const handleSave = async (event) => {
     event.preventDefault();
     if (!canWrite) return;
+    if (!validateSubmit() || !isProjectUrlFormValid(form)) return;
+    if (isEdit && !isDirty) return;
+
     setIsSaving(true);
     try {
       const payloadForm = {
         ...form,
+        discussion: trimOnBlur(form.discussion),
+        liveLink: trimOnBlur(form.liveLink),
+        testLink: trimOnBlur(form.testLink),
+        redirectComplete: trimOnBlur(form.redirectComplete),
+        redirectTerminate: trimOnBlur(form.redirectTerminate),
+        redirectOverQuota: trimOnBlur(form.redirectOverQuota),
+        redirectQualityTerm: trimOnBlur(form.redirectQualityTerm),
+        redirectSurveyClose: trimOnBlur(form.redirectSurveyClose),
         id: selectedUrlId || form.id,
         projectId: form.projectId || String(projectFk ?? ""),
         surveyGroupId: form.preScreenerId || form.surveyGroupId,
@@ -245,7 +397,10 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
         ...(isMultiLink ? { liveLink: "", testLink: "" } : {}),
       };
 
-      const data = await updateProjectUrls(projectFk, payloadForm, { project });
+      const isCreate = !String(payloadForm.id ?? "").trim();
+      const data = isCreate
+        ? await createProjectUrl(projectFk, payloadForm)
+        : await updateProjectUrls(projectFk, payloadForm, { project });
 
       toastApiSuccess(data);
       const savedId =
@@ -260,9 +415,7 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
       });
 
       await loadUrlRecords();
-      setView("list");
-      setSelectedUrlId("");
-      setForm(createEmptyProjectUrlForm(projectFk));
+      navigateToList();
     } catch (error) {
       toastApiError(error);
     } finally {
@@ -288,6 +441,15 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
       setIsDeleting(false);
     }
   };
+
+  if (view === "form" && isEdit && isLoadingEditForm) {
+    return (
+      <div className="admin-text flex items-center gap-2 py-8 text-sm">
+        <Loader2 size={16} className="animate-spin" />
+        Loading Project URL...
+      </div>
+    );
+  }
 
   if (view === "list") {
     return (
@@ -329,7 +491,7 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
     <form className="space-y-0" onSubmit={handleSave} noValidate>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h3 className="admin-text text-base font-semibold">
-          {selectedUrlId ? "Edit Project URL" : "Add Project URL"}
+          {isEdit ? "Edit Project URL" : "Add Project URL"}
         </h3>
         <button
           type="button"
@@ -364,6 +526,7 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
               className={textareaClass}
               value={form.discussion}
               onChange={(event) => setField("discussion", event.target.value)}
+              onBlur={(event) => setField("discussion", trimOnBlur(event.target.value))}
               placeholder="Enter description"
               rows={3}
               disabled={!canWrite}
@@ -376,62 +539,105 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
 
       <TableCard title="Survey Matrix" isDarkMode={isDarkMode}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <FormField label="LOI (Minutes)">
-            <input
+          <FormField
+            label="LOI (Minutes)"
+            required
+            error={showError("loi") ? errors.loi : ""}
+          >
+            <DecimalInput
               className={inputClass}
-              type="number"
-              step="0.1"
               value={form.loi}
-              onChange={(event) => setField("loi", event.target.value)}
+              onChange={(value) =>
+                setField("loi", sanitizeProjectUrlDecimal(value))
+              }
+              onBlur={() => touch("loi")}
               placeholder="e.g. 15"
+              decimalPlaces={PROJECT_URL_CPI_MAX_DECIMALS}
               disabled={!canWrite}
+              aria-invalid={Boolean(showError("loi") && errors.loi)}
             />
           </FormField>
-          <FormField label="IR (%)">
-            <input
+          <FormField
+            label="IR (%)"
+            required
+            error={showError("ir") ? errors.ir : ""}
+          >
+            <DecimalInput
               className={inputClass}
-              type="number"
-              step="0.1"
               value={form.ir}
-              onChange={(event) => setField("ir", event.target.value)}
+              onChange={(value) =>
+                setField("ir", sanitizeProjectUrlDecimal(value))
+              }
+              onBlur={() => touch("ir")}
               placeholder="e.g. 32"
+              decimalPlaces={PROJECT_URL_CPI_MAX_DECIMALS}
               disabled={!canWrite}
+              aria-invalid={Boolean(showError("ir") && errors.ir)}
             />
           </FormField>
-          <FormField label="CPI">
-            <input
+          <FormField
+            label="CPI"
+            required
+            error={showError("cpiRate") ? errors.cpiRate : ""}
+          >
+            <DecimalInput
               className={inputClass}
-              type="number"
-              step="0.01"
               value={form.cpiRate}
-              onChange={(event) => setField("cpiRate", event.target.value)}
-              placeholder="e.g. 2.5"
+              onChange={(value) =>
+                setField("cpiRate", sanitizeProjectUrlDecimal(value))
+              }
+              onBlur={() => touch("cpiRate")}
+              placeholder="e.g. 10.25"
+              decimalPlaces={PROJECT_URL_CPI_MAX_DECIMALS}
               disabled={!canWrite}
+              aria-invalid={Boolean(showError("cpiRate") && errors.cpiRate)}
             />
           </FormField>
-          <FormField label="Sample Size">
-            <input
+          <FormField
+            label="Sample Size"
+            required
+            error={showError("sampleSize") ? errors.sampleSize : ""}
+          >
+            <NumericInput
               className={inputClass}
-              type="number"
               value={form.sampleSize}
-              onChange={(event) => setField("sampleSize", event.target.value)}
+              onChange={(value) =>
+                setField("sampleSize", sanitizeProjectUrlInteger(value))
+              }
+              onBlur={() => touch("sampleSize")}
               placeholder="e.g. 500"
+              maxLength={PROJECT_URL_NUMERIC_MAX_DIGITS}
               disabled={!canWrite}
+              aria-invalid={Boolean(showError("sampleSize") && errors.sampleSize)}
             />
           </FormField>
-          <FormField label="Start Date">
+          <FormField
+            label="Start Date"
+            required
+            error={showError("startDate") ? errors.startDate : ""}
+          >
             <AdminDatePicker
               value={form.startDate}
-              onChange={(value) => setField("startDate", value)}
+              onChange={(value) => {
+                setField("startDate", value);
+                touch("startDate");
+              }}
               placeholder="Select start date"
               disabled={!canWrite}
               aria-label="Start date"
             />
           </FormField>
-          <FormField label="End Date">
+          <FormField
+            label="End Date"
+            required
+            error={showError("endDate") ? errors.endDate : ""}
+          >
             <AdminDatePicker
               value={form.endDate}
-              onChange={(value) => setField("endDate", value)}
+              onChange={(value) => {
+                setField("endDate", value);
+                touch("endDate");
+              }}
               placeholder="Select end date"
               disabled={!canWrite}
               aria-label="End date"
@@ -468,7 +674,7 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
               onChange={(value) => setField("status", value || "Open")}
               options={PROJECT_URL_STATUS_OPTIONS}
               searchable={false}
-              aria-label="Survey matrix status"
+              aria-label="Project status"
               disabled={!canWrite}
             />
           </FormField>
@@ -486,6 +692,9 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
                   className={inputClass}
                   value={form.liveLink}
                   onChange={(event) => setField("liveLink", event.target.value)}
+                  onBlur={(event) =>
+                    setField("liveLink", trimOnBlur(event.target.value))
+                  }
                   placeholder="https://"
                   disabled={!canWrite}
                 />
@@ -495,6 +704,9 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
                   className={inputClass}
                   value={form.testLink}
                   onChange={(event) => setField("testLink", event.target.value)}
+                  onBlur={(event) =>
+                    setField("testLink", trimOnBlur(event.target.value))
+                  }
                   placeholder="https://"
                   disabled={!canWrite}
                 />
@@ -533,7 +745,7 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
             disabled={!canWrite}
           />
           <InteractiveCheckbox
-            label="PreScreen"
+            label="Pre-Screen"
             checked={form.preScreen}
             onChange={(checked) =>
               setForm((prev) => ({
@@ -550,21 +762,26 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
 
         {form.preScreen ? (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <FormField label="Pre-Screener Group">
+            <FormField
+              label="Pre-Screen Group"
+              required
+              error={showError("preScreenerId") ? errors.preScreenerId : ""}
+            >
               <SearchableSelect
                 inputClass={inputClass}
                 value={form.preScreenerId || form.surveyGroupId}
-                onChange={(value) =>
+                onChange={(value) => {
                   setForm((prev) => ({
                     ...prev,
                     preScreenerId: value,
                     surveyGroupId: value,
-                  }))
-                }
+                  }));
+                  touch("preScreenerId");
+                }}
                 options={preScreenerOptions}
                 placeholder={preScreenerPlaceholder}
-                searchPlaceholder="Search pre-screener group..."
-                aria-label="Pre-Screener Group"
+                searchPlaceholder="Search pre-screen group..."
+                aria-label="Pre-Screen Group"
                 disabled={!canWrite || !form.language || isLoadingPreScreeners}
               />
             </FormField>
@@ -576,47 +793,66 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
 
       <TableCard title="Redirect URLs" isDarkMode={isDarkMode}>
         <div className="grid gap-4 sm:grid-cols-1">
-          <FormField label="Complete Status">
+          <FormField label="Complete URL">
             <input
               className={inputClass}
               value={form.redirectComplete}
               onChange={(event) => setField("redirectComplete", event.target.value)}
+              onBlur={(event) =>
+                setField("redirectComplete", trimOnBlur(event.target.value))
+              }
               placeholder="https://"
               disabled={!canWrite}
             />
           </FormField>
-          <FormField label="Terminate Status">
+          <FormField label="Terminated URL">
             <input
               className={inputClass}
               value={form.redirectTerminate}
               onChange={(event) => setField("redirectTerminate", event.target.value)}
+              onBlur={(event) =>
+                setField("redirectTerminate", trimOnBlur(event.target.value))
+              }
               placeholder="https://"
               disabled={!canWrite}
             />
           </FormField>
-          <FormField label="Over Quota Status">
+          <FormField label="Over Quota URL">
             <input
               className={inputClass}
               value={form.redirectOverQuota}
               onChange={(event) => setField("redirectOverQuota", event.target.value)}
+              onBlur={(event) =>
+                setField("redirectOverQuota", trimOnBlur(event.target.value))
+              }
               placeholder="https://"
               disabled={!canWrite}
             />
           </FormField>
-          <FormField label="Quality Term Status">
+          <FormField label="Quality Term URL">
             <input
               className={inputClass}
               value={form.redirectQualityTerm}
-              onChange={(event) => setField("redirectQualityTerm", event.target.value)}
+              onChange={(event) =>
+                setField("redirectQualityTerm", event.target.value)
+              }
+              onBlur={(event) =>
+                setField("redirectQualityTerm", trimOnBlur(event.target.value))
+              }
               placeholder="https://"
               disabled={!canWrite}
             />
           </FormField>
-          <FormField label="Survey Close Status">
+          <FormField label="Survey Closed URL">
             <input
               className={inputClass}
               value={form.redirectSurveyClose}
-              onChange={(event) => setField("redirectSurveyClose", event.target.value)}
+              onChange={(event) =>
+                setField("redirectSurveyClose", event.target.value)
+              }
+              onBlur={(event) =>
+                setField("redirectSurveyClose", trimOnBlur(event.target.value))
+              }
               placeholder="https://"
               disabled={!canWrite}
             />
@@ -628,51 +864,61 @@ function ProjectUrlsTab({ surveyId, project, isDarkMode, onSaved }) {
 
       <TableCard title="Reward Information" isDarkMode={isDarkMode}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="Complete Reward Points">
-            <input
+          <FormField
+            label="Reward Point"
+            required
+            error={
+              showError("completeRewardPoints") ? errors.completeRewardPoints : ""
+            }
+          >
+            <NumericInput
               className={inputClass}
-              type="number"
               value={form.completeRewardPoints}
-              onChange={(event) => setField("completeRewardPoints", event.target.value)}
+              onChange={(value) =>
+                setField("completeRewardPoints", sanitizeProjectUrlInteger(value))
+              }
+              onBlur={() => touch("completeRewardPoints")}
               placeholder="e.g. 50"
+              maxLength={PROJECT_URL_NUMERIC_MAX_DIGITS}
               disabled={!canWrite}
+              aria-invalid={Boolean(
+                showError("completeRewardPoints") && errors.completeRewardPoints
+              )}
             />
           </FormField>
-          <FormField label="Validate Reward Points">
-            <input
+          <FormField
+            label="Validate Reward Points"
+            error={
+              showError("validateRewardPoints") ? errors.validateRewardPoints : ""
+            }
+          >
+            <NumericInput
               className={inputClass}
-              type="number"
               value={form.validateRewardPoints}
-              onChange={(event) => setField("validateRewardPoints", event.target.value)}
+              onChange={(value) =>
+                setField("validateRewardPoints", sanitizeProjectUrlInteger(value))
+              }
+              onBlur={() => touch("validateRewardPoints")}
               placeholder="e.g. 10"
+              maxLength={PROJECT_URL_NUMERIC_MAX_DIGITS}
               disabled={!canWrite}
+              aria-invalid={Boolean(
+                showError("validateRewardPoints") && errors.validateRewardPoints
+              )}
             />
           </FormField>
         </div>
-      </TableCard>
-
-      <SectionDivider />
-
-      <TableCard title="Audit Fields" isDarkMode={isDarkMode}>
-        <DetailGrid columns={3}>
-          <DetailField label="Added By" value={form.addedBy} />
-          <DetailField label="Added On" value={form.addedOn} />
-          <DetailField label="Updated By" value={form.updatedBy} />
-          <DetailField label="Updated On" value={form.updatedOn} />
-          <DetailField label="Deleted By" value={form.deletedBy} />
-          <DetailField label="Deleted On" value={form.deletedOn} />
-        </DetailGrid>
       </TableCard>
 
       {canWrite && (
         <div className="flex flex-wrap items-center gap-3 pt-6">
           <button
             type="submit"
-            disabled={isSaving}
+            disabled={!canSubmit}
             className={`${primaryBtnClass} flex min-w-[120px] items-center justify-center gap-2`}
           >
             {isSaving && <Loader2 size={16} className="animate-spin" />}
-            {isSaving ? "Saving..." : "Save Project URLs"}
+            {isSaving ? "Saving..." : "Save Project"}
           </button>
           <button
             type="button"

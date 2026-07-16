@@ -157,7 +157,7 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
           </div>
 
           <div className="grid gap-4 md:grid-cols-[1fr_auto_auto_auto] md:items-end">
-            <FormField label="CSV File">
+            <FormField label="Upload URL">
               <input
                 className={inputClass}
                 value={selectedFile?.name ?? ""}
@@ -215,6 +215,7 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
         </form>
       </TableCard>
 
+      {/* Temporarily hidden — Project Multi-URL Records
       <SectionDivider />
 
       {isLoading ? (
@@ -235,6 +236,7 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
           isDarkMode={isDarkMode}
         />
       )}
+      */}
     </div>
   );
 }

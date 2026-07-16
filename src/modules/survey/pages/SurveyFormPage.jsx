@@ -251,7 +251,10 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
   const breadcrumbs = isEdit
     ? [
         { label: "Projects", to: "/survey" },
-        { label: "Project Details", to: `/survey/view/${encodeURIComponent(id)}` },
+        {
+          label: "Project Information",
+          to: `/survey/view/${encodeURIComponent(id)}`,
+        },
         { label: "Edit Project" },
       ]
     : [

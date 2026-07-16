@@ -157,8 +157,11 @@ export function mapSurveyToRow(project) {
   const projectCode = project?.Project_code ?? project?.survey_id ?? "";
   const projectName = project?.Project_Name ?? project?.project_name ?? "";
   const clientName = project?.Clients ?? project?.client_name ?? "";
-  const startDate = project?.Start_Date ?? project?.start_date;
-  const endDate = project?.End_Date ?? project?.end_date;
+  const primaryUrl = getPrimaryUrlInfo(project);
+  const startDate = pickField(project, ["Start_Date", "start_date", "Start Date", "startDate"])
+    ?? pickField(primaryUrl, ["Start_Date", "start_date", "Start Date", "startDate"]);
+  const endDate = pickField(project, ["End_Date", "end_date", "End Date", "endDate"])
+    ?? pickField(primaryUrl, ["End_Date", "end_date", "End Date", "endDate"]);
   const status = project?.Status ?? project?.status;
   const loi = project?.LOI ?? project?.loi;
   const ir = project?.IR ?? project?.ir;
