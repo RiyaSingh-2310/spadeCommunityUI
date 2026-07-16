@@ -161,9 +161,10 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
           setProjectUrlSaved(true);
           const urlInfo = Array.isArray(mapped.urlInfo) ? mapped.urlInfo : [];
           const nextId =
-            urlInfo[0]?.id ??
             urlInfo[0]?.url_id ??
+            urlInfo[0]?.Url_Id ??
             urlInfo[0]?.project_url_id ??
+            urlInfo[0]?.id ??
             "";
           if (nextId != null && nextId !== "") {
             setSavedProjectUrlId(String(nextId));
@@ -203,6 +204,17 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
       { replace: true }
     );
   }, [id, isLoading, parsedSearch.tab, activeTab, syncSearch]);
+
+  const handleProjectUrlViewChange = useCallback(
+    ({ urlView: nextView, urlId: nextUrlId } = {}) => {
+      syncSearch({
+        tab: SURVEY_DETAIL_TAB_IDS.PROJECT_URLS,
+        urlView: nextView ?? PROJECT_URL_VIEW_IDS.LIST,
+        urlId: nextUrlId ?? "",
+      });
+    },
+    [syncSearch]
+  );
 
   if (!canRead) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
@@ -320,9 +332,10 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
     const mapped = await loadSurvey({ silent: true });
     const urlInfo = Array.isArray(mapped?.urlInfo) ? mapped.urlInfo : [];
     const fromReload =
-      urlInfo[0]?.id ??
       urlInfo[0]?.url_id ??
+      urlInfo[0]?.Url_Id ??
       urlInfo[0]?.project_url_id ??
+      urlInfo[0]?.id ??
       "";
     const resolvedUrlId =
       payload?.projectUrlId ||
@@ -330,7 +343,12 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
       savedProjectUrlId ||
       `url-${project?.recordId ?? id}`;
     setSavedProjectUrlId(String(resolvedUrlId));
-    // Stay on Project URL listing after save; Multi URL tab unlocks when enabled.
+
+    if (payload?.keepEditing) {
+      return;
+    }
+
+    // Stay on Project URL listing after create save; Multi URL tab unlocks when enabled.
     syncSearch({
       tab: SURVEY_DETAIL_TAB_IDS.PROJECT_URLS,
       urlView: PROJECT_URL_VIEW_IDS.LIST,
@@ -345,14 +363,6 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
       tab: tabId,
       urlView: PROJECT_URL_VIEW_IDS.LIST,
       urlId: "",
-    });
-  };
-
-  const handleProjectUrlViewChange = ({ urlView: nextView, urlId: nextUrlId } = {}) => {
-    syncSearch({
-      tab: SURVEY_DETAIL_TAB_IDS.PROJECT_URLS,
-      urlView: nextView ?? PROJECT_URL_VIEW_IDS.LIST,
-      urlId: nextUrlId ?? "",
     });
   };
 

@@ -317,7 +317,12 @@ export function mapSurveyToProjectDetails(survey) {
     deletedAt: survey.deleted_at ?? survey.Deleted_At
       ? formatSurveyListDate(survey.deleted_at ?? survey.Deleted_At)
       : "—",
-    urlInfo: Array.isArray(survey.urlInfo) ? survey.urlInfo : [],
+    urlInfo: (() => {
+      const info = survey.urlInfo;
+      if (Array.isArray(info)) return info;
+      if (info && typeof info === "object") return [info];
+      return [];
+    })(),
     multipleUrls: Array.isArray(survey.multipleUrls) ? survey.multipleUrls : [],
   };
 }

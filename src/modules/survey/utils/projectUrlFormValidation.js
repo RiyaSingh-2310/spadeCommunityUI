@@ -87,10 +87,11 @@ function getIntegerFieldError(value, label, { required = true } = {}) {
   return "";
 }
 
-function getDecimalFieldError(value, label) {
-  const required = getRequiredError(value, label);
-  if (required) return required;
+function getDecimalFieldError(value, label, { required = true } = {}) {
+  const requiredError = required ? getRequiredError(value, label) : "";
+  if (requiredError) return requiredError;
   const trimmed = String(value ?? "").trim();
+  if (!trimmed) return "";
   if (trimmed.endsWith(".")) return `${label} is incomplete`;
   if (/[eE]/.test(trimmed)) {
     return `${label} must be a number with up to 2 decimal places`;
@@ -120,11 +121,11 @@ export function getProjectUrlFormErrors(form) {
     preScreenerId: form.preScreen
       ? getRequiredError(preScreenerId, "Pre-Screen Group")
       : "",
-    completeRewardPoints: getIntegerFieldError(
+    completeRewardPoints: getDecimalFieldError(
       form.completeRewardPoints,
       "Reward Point"
     ),
-    validateRewardPoints: getIntegerFieldError(
+    validateRewardPoints: getDecimalFieldError(
       form.validateRewardPoints,
       "Validate Reward Point",
       { required: false }
@@ -139,6 +140,47 @@ export function isProjectUrlFormValid(form) {
   return isFormValid(getProjectUrlFormErrors(form));
 }
 
+const NUMERIC_COMPARE_FIELDS = new Set([
+  "loi",
+  "ir",
+  "cpiRate",
+  "sampleSize",
+  "completeRewardPoints",
+  "validateRewardPoints",
+]);
+
+function normalizeComparableValue(key, value) {
+  if (typeof value === "boolean") return value;
+  if (NUMERIC_COMPARE_FIELDS.has(key)) {
+    const trimmed = String(value ?? "").trim();
+    if (!trimmed) return "";
+    const num = Number(trimmed);
+    return Number.isFinite(num) ? String(num) : trimmed;
+  }
+  return String(value ?? "").trim();
+}
+
+/**
+ * Normalizes loaded/saved form values for stable dirty-state comparisons.
+ * @param {object} form
+ */
+export function normalizeProjectUrlFormForState(form) {
+  if (!form || typeof form !== "object") return {};
+
+  const normalized = { ...form };
+  for (const key of DIRTY_COMPARE_KEYS) {
+    if (typeof normalized[key] === "boolean") continue;
+    normalized[key] = normalizeComparableValue(key, normalized[key]);
+  }
+
+  const groupId = String(normalized.preScreenerId || normalized.surveyGroupId || "").trim();
+  normalized.preScreenerId = groupId;
+  normalized.surveyGroupId = groupId;
+
+  return normalized;
+}
+
+
 /**
  * @param {object} current
  * @param {object} original
@@ -146,14 +188,15 @@ export function isProjectUrlFormValid(form) {
 export function areProjectUrlFormsEqual(current, original) {
   if (!current || !original) return current === original;
 
+  const left = normalizeProjectUrlFormForState(current);
+  const right = normalizeProjectUrlFormForState(original);
+
   for (const key of DIRTY_COMPARE_KEYS) {
-    const left = current[key];
-    const right = original[key];
-    if (typeof left === "boolean" || typeof right === "boolean") {
-      if (Boolean(left) !== Boolean(right)) return false;
+    if (typeof left[key] === "boolean" || typeof right[key] === "boolean") {
+      if (Boolean(left[key]) !== Boolean(right[key])) return false;
       continue;
     }
-    if (String(left ?? "").trim() !== String(right ?? "").trim()) {
+    if (normalizeComparableValue(key, left[key]) !== normalizeComparableValue(key, right[key])) {
       return false;
     }
   }
@@ -162,7 +205,7 @@ export function areProjectUrlFormsEqual(current, original) {
 }
 
 export function cloneProjectUrlForm(form) {
-  return { ...form };
+  return normalizeProjectUrlFormForState({ ...form });
 }
 
 export function normalizeProjectUrlStatus(status) {

@@ -1,7 +1,7 @@
 /**
  * Project URLs service layer (API-ready shape).
  * Create: POST /api/projects/:id/url
- * Update: PUT /api/projects/:id (project fields + URL fields).
+ * Update: PUT /api/projects/url/:urlId
  */
 import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
@@ -26,17 +26,54 @@ import { parseUtcToIst } from "../../shared/utils/dateTime";
 import {
   getRecord,
   mapSurveyToProjectDetails,
-  updateProjectUrlsViaProjectApi,
 } from "./surveyApi";
-import { normalizeProjectUrlStatus } from "../utils/projectUrlFormValidation";
+import { normalizeProjectUrlStatus, normalizeProjectUrlFormForState } from "../utils/projectUrlFormValidation";
 
-function pickUrlInfoField(urlInfo, keys) {
-  if (!urlInfo || typeof urlInfo !== "object") return undefined;
+function normalizeUrlInfoList(record) {
+  const info = record?.urlInfo;
+  if (Array.isArray(info)) return info;
+  if (info && typeof info === "object") return [info];
+  return [];
+}
+
+function pickUrlInfoField(source, keys) {
+  if (!source || typeof source !== "object") return undefined;
   for (const key of keys) {
-    const value = urlInfo[key];
+    const value = source[key];
     if (value !== undefined && value !== null && value !== "") return value;
   }
   return undefined;
+}
+
+function pickRedirectField(urlInfo, projectRecord, formKeys, projectKeys) {
+  return (
+    pickUrlInfoField(urlInfo, formKeys) ??
+    pickUrlInfoField(projectRecord, projectKeys) ??
+    ""
+  );
+}
+
+/**
+ * Fills empty target fields from a fallback form without overwriting populated values.
+ * @param {object} target
+ * @param {object | null | undefined} fallback
+ */
+export function mergeProjectUrlForms(target, fallback) {
+  if (!target || !fallback || typeof fallback !== "object") return target;
+  const merged = { ...target };
+  for (const key of Object.keys(merged)) {
+    if (typeof merged[key] === "boolean") continue;
+    const current = merged[key];
+    const fallbackValue = fallback[key];
+    if (
+      (current === "" || current == null) &&
+      fallbackValue !== "" &&
+      fallbackValue != null
+    ) {
+      merged[key] = fallbackValue;
+    }
+  }
+  return merged;
 }
 
 function toFormDateValue(value) {
@@ -52,10 +89,34 @@ function toFormNumberValue(value) {
   return String(value);
 }
 
+/**
+ * Resolves the Project URL record id used by PUT /api/projects/url/:urlId.
+ * Prefer url-specific keys over generic `id`, which may be the project id.
+ */
+export function resolveProjectUrlRecordId(urlInfo) {
+  if (!urlInfo || typeof urlInfo !== "object") return "";
+
+  const candidates = [
+    urlInfo.url_id,
+    urlInfo.Url_Id,
+    urlInfo.URL_Id,
+    urlInfo.project_url_id,
+    urlInfo.Project_Url_Id,
+    urlInfo.projectUrlId,
+    urlInfo.id,
+  ];
+
+  for (const value of candidates) {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      return String(value).trim();
+    }
+  }
+
+  return "";
+}
+
 function resolveUrlRecordId(urlInfo) {
-  const id =
-    urlInfo?.id ?? urlInfo?.url_id ?? urlInfo?.project_url_id ?? urlInfo?.Url_Id ?? "";
-  return id != null && id !== "" ? String(id) : "";
+  return resolveProjectUrlRecordId(urlInfo);
 }
 
 export {
@@ -83,14 +144,29 @@ function normalizeProjectId(id) {
   return encodeURIComponent(normalizedId);
 }
 
+function normalizeUrlId(urlId) {
+  const normalizedId = String(urlId ?? "").trim();
+  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
+    throw new ApiError("Project URL ID is required.", null);
+  }
+  return encodeURIComponent(normalizedId);
+}
+
 function toApiNumber(value) {
-  if (value === "" || value == null) return null;
+  if (value === "" || value == null) return undefined;
   const num = Number(value);
-  return Number.isFinite(num) ? num : null;
+  return Number.isFinite(num) ? num : undefined;
 }
 
 function toApiFlag(value) {
   return value ? 1 : 0;
+}
+
+/** Removes undefined keys so the API receives only populated fields. */
+function compactApiPayload(payload) {
+  return Object.fromEntries(
+    Object.entries(payload).filter(([, value]) => value !== undefined)
+  );
 }
 
 export function createEmptyProjectUrlForm(projectId = "") {
@@ -184,13 +260,15 @@ export function mapProjectUrlToForm(record) {
 }
 
 /** Maps GET /api/projects/:id `urlInfo[]` row into the Project URLs form. */
-export function mapApiUrlInfoToForm(urlInfo, projectId = "") {
+export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = null) {
   if (!urlInfo || typeof urlInfo !== "object") {
     return createEmptyProjectUrlForm(projectId);
   }
 
   const rawLanguage = String(
-    pickUrlInfoField(urlInfo, ["Language", "language"]) ?? ""
+    pickUrlInfoField(urlInfo, ["Language", "language"]) ??
+      pickUrlInfoField(projectRecord, ["Language", "language"]) ??
+      ""
   ).trim();
   const matchedLanguage =
     PRESCREEN_LANGUAGES.find(
@@ -198,11 +276,17 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "") {
     ) || rawLanguage;
 
   const rawStatus = String(
-    pickUrlInfoField(urlInfo, ["Status", "url_status", "status"]) ?? ""
+    pickUrlInfoField(urlInfo, ["Status", "url_status", "status"]) ??
+      pickUrlInfoField(projectRecord, ["Status", "url_status", "status"]) ??
+      ""
   ).trim();
   const status = normalizeProjectUrlStatus(rawStatus);
 
-  const rawCountry = String(pickUrlInfoField(urlInfo, ["country", "Country"]) ?? "").trim();
+  const rawCountry = String(
+    pickUrlInfoField(urlInfo, ["country", "Country"]) ??
+      pickUrlInfoField(projectRecord, ["country", "Country", "project_country"]) ??
+      ""
+  ).trim();
   const matchedCountry =
     PROJECT_URL_COUNTRY_OPTIONS.find(
       (country) => country.toLowerCase() === rawCountry.toLowerCase()
@@ -223,95 +307,217 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "") {
 
   return mapProjectUrlToForm({
     id: resolveUrlRecordId(urlInfo),
-    projectId: urlInfo.project_id ?? projectId,
-    discussion: pickUrlInfoField(urlInfo, ["description", "Description"]) ?? "",
-    loi: pickUrlInfoField(urlInfo, ["LOI(Minute)", "LOI", "loi"]),
-    ir: pickUrlInfoField(urlInfo, ["IR(%)", "IR", "ir"]),
+    projectId: urlInfo.project_id ?? projectRecord?.id ?? projectId,
+    discussion:
+      pickUrlInfoField(urlInfo, ["description", "Description"]) ??
+      pickUrlInfoField(projectRecord, ["description", "Description"]) ??
+      "",
+    loi:
+      pickUrlInfoField(urlInfo, ["LOI(Minute)", "LOI", "loi"]) ??
+      pickUrlInfoField(projectRecord, ["LOI(Minute)", "LOI", "loi"]),
+    ir:
+      pickUrlInfoField(urlInfo, ["IR(%)", "IR", "ir"]) ??
+      pickUrlInfoField(projectRecord, ["IR(%)", "IR", "ir"]),
     country: matchedCountry,
     language: matchedLanguage,
-    cpiRate: pickUrlInfoField(urlInfo, ["CPI", "cpi", "cpiRate"]),
-    sampleSize: pickUrlInfoField(urlInfo, ["SampleSize", "sample_size", "sampleSize"]),
+    cpiRate:
+      pickUrlInfoField(urlInfo, ["CPI", "cpi", "cpiRate"]) ??
+      pickUrlInfoField(projectRecord, ["CPI", "cpi", "cpiRate"]),
+    sampleSize:
+      pickUrlInfoField(urlInfo, ["SampleSize", "sample_size", "sampleSize"]) ??
+      pickUrlInfoField(projectRecord, ["SampleSize", "sample_size", "sampleSize"]),
     startDate: toFormDateValue(
-      pickUrlInfoField(urlInfo, ["Start_Date", "start_date", "Start Date", "startDate"])
+      pickUrlInfoField(urlInfo, ["Start_Date", "start_date", "Start Date", "startDate"]) ??
+        pickUrlInfoField(projectRecord, ["Start_Date", "start_date", "Start Date", "startDate"])
     ),
     endDate: toFormDateValue(
-      pickUrlInfoField(urlInfo, ["End_Date", "end_date", "End Date", "endDate"])
+      pickUrlInfoField(urlInfo, ["End_Date", "end_date", "End Date", "endDate"]) ??
+        pickUrlInfoField(projectRecord, ["End_Date", "end_date", "End Date", "endDate"])
     ),
     status,
-    testLink: pickUrlInfoField(urlInfo, ["Test_Link", "test_link", "testLink"]) ?? "",
-    liveLink: pickUrlInfoField(urlInfo, ["Live_Link", "live_link", "liveLink"]) ?? "",
+    testLink:
+      pickUrlInfoField(urlInfo, ["Test_Link", "test_link", "testLink"]) ??
+      pickUrlInfoField(projectRecord, ["Test_Link", "test_link", "testLink"]) ??
+      "",
+    liveLink:
+      pickUrlInfoField(urlInfo, ["Live_Link", "live_link", "liveLink"]) ??
+      pickUrlInfoField(projectRecord, ["Live_Link", "live_link", "liveLink"]) ??
+      "",
     geoLocation: Boolean(
-      Number(pickUrlInfoField(urlInfo, ["GeoLocation", "geo_location", "geoLocation"]) ?? 0)
+      Number(
+        pickUrlInfoField(urlInfo, ["GeoLocation", "geo_location", "geoLocation"]) ??
+          pickUrlInfoField(projectRecord, ["GeoLocation", "geo_location", "geoLocation"]) ??
+          0
+      )
     ),
     urlProtection: Boolean(
-      Number(pickUrlInfoField(urlInfo, ["UrlProtection", "url_protection", "urlProtection"]) ?? 0)
+      Number(
+        pickUrlInfoField(urlInfo, ["UrlProtection", "url_protection", "urlProtection"]) ??
+          pickUrlInfoField(projectRecord, ["UrlProtection", "url_protection", "urlProtection"]) ??
+          0
+      )
     ),
     uniqueIp: Boolean(
-      Number(pickUrlInfoField(urlInfo, ["UniqueIP", "unique_ip", "uniqueIp"]) ?? 0)
+      Number(
+        pickUrlInfoField(urlInfo, ["UniqueIP", "unique_ip", "uniqueIp"]) ??
+          pickUrlInfoField(projectRecord, ["UniqueIP", "unique_ip", "uniqueIp"]) ??
+          0
+      )
     ),
     fraudDetection: Boolean(
       Number(
-        pickUrlInfoField(urlInfo, ["FraudDetection", "fraud_detection", "fraudDetection"]) ?? 0
+        pickUrlInfoField(urlInfo, ["FraudDetection", "fraud_detection", "fraudDetection"]) ??
+          pickUrlInfoField(projectRecord, ["FraudDetection", "fraud_detection", "fraudDetection"]) ??
+          0
       )
     ),
     preScreen: Boolean(Number(preScreenFlag ?? 0)) || Boolean(preScreenerId),
     preScreenerId: preScreenerId != null ? String(preScreenerId) : "",
     completeRewardPoints: toFormNumberValue(
-      pickUrlInfoField(urlInfo, ["CompletionPoint", "completion_point", "completeRewardPoints"])
+      pickUrlInfoField(urlInfo, [
+        "CompletionPoint",
+        "completion_point",
+        "completeRewardPoints",
+        "comp_point",
+      ]) ??
+        pickUrlInfoField(projectRecord, [
+          "CompletionPoint",
+          "completion_point",
+          "completeRewardPoints",
+          "comp_point",
+        ])
     ),
     validateRewardPoints: toFormNumberValue(
       pickUrlInfoField(urlInfo, [
         "ValidatePoint",
         "validate_point",
         "validateRewardPoints",
+        "Validate_Point",
+        "ValidationPoint",
         "TerminationPoint",
         "termination_point",
-      ])
+        "term_point",
+      ]) ??
+        pickUrlInfoField(projectRecord, [
+          "ValidatePoint",
+          "validate_point",
+          "validateRewardPoints",
+          "Validate_Point",
+          "ValidationPoint",
+          "TerminationPoint",
+          "termination_point",
+          "term_point",
+        ])
     ),
-    redirectComplete:
-      pickUrlInfoField(urlInfo, [
+    redirectComplete: pickRedirectField(
+      urlInfo,
+      projectRecord,
+      [
         "CompleteURL",
         "Complete URL",
+        "Complete_Url",
         "complete_url",
         "completeUrl",
         "redirectComplete",
-      ]) ?? "",
-    redirectTerminate:
-      pickUrlInfoField(urlInfo, [
+        "redirect_complete",
+      ],
+      [
+        "CompleteURL",
+        "Complete URL",
+        "Complete_Url",
+        "complete_url",
+        "completeUrl",
+        "redirect_complete",
+      ]
+    ),
+    redirectTerminate: pickRedirectField(
+      urlInfo,
+      projectRecord,
+      [
         "TerminateURL",
         "Terminated URL",
+        "Terminate_Url",
         "terminate_url",
         "terminateUrl",
         "redirectTerminate",
-      ]) ?? "",
-    redirectOverQuota:
-      pickUrlInfoField(urlInfo, [
+        "redirect_terminate",
+      ],
+      [
+        "TerminateURL",
+        "Terminated URL",
+        "Terminate_Url",
+        "terminate_url",
+        "terminateUrl",
+        "redirect_terminate",
+      ]
+    ),
+    redirectOverQuota: pickRedirectField(
+      urlInfo,
+      projectRecord,
+      [
         "OverQuotaURL",
         "Over Quota URL",
+        "Over_Quota_Url",
         "over_quota_url",
         "overQuotaUrl",
         "redirectOverQuota",
-      ]) ?? "",
-    redirectQualityTerm:
-      pickUrlInfoField(urlInfo, [
+        "redirect_over_quota",
+      ],
+      [
+        "OverQuotaURL",
+        "Over Quota URL",
+        "Over_Quota_Url",
+        "over_quota_url",
+        "overQuotaUrl",
+        "redirect_over_quota",
+      ]
+    ),
+    redirectQualityTerm: pickRedirectField(
+      urlInfo,
+      projectRecord,
+      [
         "QualityTermURL",
         "Quality Term URL",
+        "Quality_Term_Url",
         "quality_term_url",
         "qualityTermUrl",
         "redirectQualityTerm",
-      ]) ?? "",
-    redirectSurveyClose:
-      pickUrlInfoField(urlInfo, [
+        "redirect_quality_term",
+      ],
+      [
+        "QualityTermURL",
+        "Quality Term URL",
+        "Quality_Term_Url",
+        "quality_term_url",
+        "qualityTermUrl",
+        "redirect_quality_term",
+      ]
+    ),
+    redirectSurveyClose: pickRedirectField(
+      urlInfo,
+      projectRecord,
+      [
         "SurveyCloseURL",
         "Survey Closed URL",
+        "Survey_Close_Url",
         "survey_close_url",
         "surveyCloseUrl",
         "redirectSurveyClose",
-      ]) ?? "",
-    addedBy: urlInfo.action_by || "—",
-    addedOn: urlInfo.created_at || "—",
-    updatedBy: urlInfo.action_by || "—",
-    updatedOn: urlInfo.updated_at || "—",
+        "redirect_survey_close",
+      ],
+      [
+        "SurveyCloseURL",
+        "Survey Closed URL",
+        "Survey_Close_Url",
+        "survey_close_url",
+        "surveyCloseUrl",
+        "redirect_survey_close",
+      ]
+    ),
+    addedBy: urlInfo.action_by || projectRecord?.action_by || "—",
+    addedOn: urlInfo.created_at || projectRecord?.created_at || "—",
+    updatedBy: urlInfo.action_by || projectRecord?.updated_by || "—",
+    updatedOn: urlInfo.updated_at || projectRecord?.updated_at || "—",
   });
 }
 
@@ -319,21 +525,41 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "") {
  * Loads a single Project URL form for edit from GET /api/projects/:id `urlInfo`.
  * @param {string|number} projectId
  * @param {string|number} urlId
+ * @param {object | null} [fallbackForm] Optional cached list row
  */
-export async function getProjectUrlFormForEdit(projectId, urlId) {
+export async function getProjectUrlFormForEdit(projectId, urlId, fallbackForm = null) {
   const normalizedUrlId = String(urlId ?? "").trim();
   if (!normalizedUrlId) return null;
 
   if (USE_PROJECT_URLS_MOCK) {
     await delay();
     const record = getMockProjectUrlById(normalizedUrlId);
-    return record ? mapProjectUrlToForm(record) : null;
+    const mapped = record ? mapProjectUrlToForm(record) : null;
+    return mapped
+      ? normalizeProjectUrlFormForState(
+          mergeProjectUrlForms(mapped, fallbackForm)
+        )
+      : fallbackForm
+        ? normalizeProjectUrlFormForState(mapProjectUrlToForm(fallbackForm))
+        : null;
   }
 
   const record = await getRecord(projectId);
-  const urlInfo = Array.isArray(record?.urlInfo) ? record.urlInfo : [];
+  const urlInfo = normalizeUrlInfoList(record);
   const raw = urlInfo.find((row) => resolveUrlRecordId(row) === normalizedUrlId);
-  return raw ? mapApiUrlInfoToForm(raw, projectId) : null;
+  if (!raw && !fallbackForm) return null;
+
+  const mapped = raw
+    ? mapApiUrlInfoToForm(raw, projectId, record)
+    : mapProjectUrlToForm({
+        ...createEmptyProjectUrlForm(projectId),
+        ...fallbackForm,
+        id: normalizedUrlId,
+      });
+
+  return normalizeProjectUrlFormForState(
+    mergeProjectUrlForms(mapped, fallbackForm)
+  );
 }
 
 function buildProjectUrlUpdatePayload(form) {
@@ -381,7 +607,7 @@ function buildProjectUrlUpdatePayload(form) {
  * @param {object} form
  */
 export function buildCreateProjectUrlApiPayload(form = {}) {
-  return {
+  return compactApiPayload({
     description: String(form.discussion ?? "").trim(),
     LOI: toApiNumber(form.loi),
     IR: toApiNumber(form.ir),
@@ -405,7 +631,7 @@ export function buildCreateProjectUrlApiPayload(form = {}) {
     SurveyCloseURL: String(form.redirectSurveyClose ?? "").trim(),
     CompletionPoint: toApiNumber(form.completeRewardPoints),
     ValidatePoint: toApiNumber(form.validateRewardPoints),
-  };
+  });
 }
 
 /** GET all Project URL configs for a project. Prefers GET /api/projects/:id `urlInfo`. */
@@ -413,10 +639,10 @@ export async function listProjectUrlsByProject(projectId) {
   if (!USE_PROJECT_URLS_MOCK) {
     try {
       const record = await getRecord(projectId);
-      const urlInfo = Array.isArray(record?.urlInfo) ? record.urlInfo : [];
+      const urlInfo = normalizeUrlInfoList(record);
       const rows =
         urlInfo.length > 0
-          ? urlInfo.map((row) => mapApiUrlInfoToForm(row, projectId))
+          ? urlInfo.map((row) => mapApiUrlInfoToForm(row, projectId, record))
           : [];
       const details = mapSurveyToProjectDetails(record);
       return {
@@ -468,23 +694,59 @@ export async function updateProjectUrlById(urlId, form) {
 }
 
 /**
- * PUT /api/projects/:id — persists Project URLs as part of the project update contract.
- * @param {string|number} projectId
+ * Builds PUT /api/projects/url/:urlId body from the Project URL form.
+ * Uses the same field contract as create.
  * @param {object} form
- * @param {{ project?: object }} [options] Mapped project details for identity fields
  */
-export async function updateProjectUrls(projectId, form, options = {}) {
-  if (!USE_PROJECT_URLS_MOCK) {
-    let project = options.project;
-    if (!project) {
-      const record = await getRecord(projectId);
-      project = mapSurveyToProjectDetails(record) ?? {};
-    }
-    return updateProjectUrlsViaProjectApi(projectId, project, form);
+export function buildUpdateProjectUrlApiPayload(form = {}) {
+  return buildCreateProjectUrlApiPayload(form);
+}
+
+/**
+ * PUT /api/projects/url/:urlId — update an existing Project URL config.
+ * @param {string|number} urlId
+ * @param {object} form
+ */
+export async function updateProjectUrl(urlId, form = {}) {
+  const payload = buildUpdateProjectUrlApiPayload({
+    ...createEmptyProjectUrlForm(form.projectId),
+    ...form,
+    status: form.status || "Open",
+  });
+
+  if (USE_PROJECT_URLS_MOCK) {
+    return updateProjectUrlById(urlId, form);
   }
 
-  if (form?.id) {
-    return updateProjectUrlById(form.id, form);
+  const normalizedUrlId = normalizeUrlId(urlId);
+  const data = await apiRequest(API_ROUTES.projects.updateUrl(normalizedUrlId), {
+    method: "PUT",
+    body: payload,
+  });
+  return assertSuccess(data);
+}
+
+/**
+ * Persists Project URL changes (create or update).
+ * @param {string|number} projectId
+ * @param {object} form
+ * @param {{ project?: object }} [options] Legacy options (unused for live API)
+ */
+export async function updateProjectUrls(projectId, form, options = {}) {
+  const urlId = String(form?.id ?? options?.urlId ?? "").trim();
+  if (!USE_PROJECT_URLS_MOCK) {
+    if (!urlId) {
+      throw new ApiError("Project URL ID is required for update.", null);
+    }
+    return updateProjectUrl(urlId, {
+      ...form,
+      id: urlId,
+      projectId: form.projectId || projectId,
+    });
+  }
+
+  if (urlId) {
+    return updateProjectUrlById(urlId, form);
   }
   await delay(350);
   const payload = buildProjectUrlUpdatePayload(form);

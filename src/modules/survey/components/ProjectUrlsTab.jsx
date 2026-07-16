@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import AdminDatePicker from "../../../components/admin/AdminDatePicker";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
@@ -31,6 +31,7 @@ import {
   cloneProjectUrlForm,
   getProjectUrlFormErrors,
   isProjectUrlFormValid,
+  normalizeProjectUrlFormForState,
   PROJECT_URL_CPI_MAX_DECIMALS,
   PROJECT_URL_FORM_FIELDS,
   PROJECT_URL_NUMERIC_MAX_DIGITS,
@@ -129,10 +130,11 @@ function ProjectUrlsTab({
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLoadingEditForm, setIsLoadingEditForm] = useState(false);
+  const loadedEditKeyRef = useRef("");
+  const editFormReadyRef = useRef(false);
+  const navigateToListRef = useRef(() => {});
 
-  const isEdit =
-    urlView === PROJECT_URL_VIEW_IDS.EDIT ||
-    Boolean(String(selectedUrlId || form.id || "").trim());
+  const isEdit = urlView === PROJECT_URL_VIEW_IDS.EDIT;
 
   const errors = useMemo(() => getProjectUrlFormErrors(form), [form]);
   const { showError, touch, validateSubmit, resetValidation, isValid } =
@@ -152,16 +154,22 @@ function ProjectUrlsTab({
     });
   }, [onViewChange]);
 
+  navigateToListRef.current = navigateToList;
+
   const resetFormState = useCallback(() => {
     setSelectedUrlId("");
     setForm(createEmptyProjectUrlForm(projectFk));
     setInitialSnapshot(null);
     setPendingDelete(null);
+    loadedEditKeyRef.current = "";
+    editFormReadyRef.current = false;
     resetValidation();
   }, [projectFk, resetValidation]);
 
   const initAddForm = useCallback(() => {
-    const nextForm = createEmptyProjectUrlForm(projectFk);
+    const nextForm = normalizeProjectUrlFormForState(
+      createEmptyProjectUrlForm(projectFk)
+    );
     setSelectedUrlId("");
     setForm(nextForm);
     setInitialSnapshot(cloneProjectUrlForm(nextForm));
@@ -192,11 +200,18 @@ function ProjectUrlsTab({
 
   useEffect(() => {
     if (urlView !== PROJECT_URL_VIEW_IDS.EDIT) {
+      loadedEditKeyRef.current = "";
+      editFormReadyRef.current = false;
       setIsLoadingEditForm(false);
       return undefined;
     }
     if (!urlId) {
-      navigateToList();
+      navigateToListRef.current();
+      return undefined;
+    }
+
+    const editKey = `${projectFk}:${urlId}`;
+    if (loadedEditKeyRef.current === editKey && editFormReadyRef.current) {
       return undefined;
     }
 
@@ -205,20 +220,26 @@ function ProjectUrlsTab({
 
     const loadEditForm = async () => {
       try {
-        const nextForm = await getProjectUrlFormForEdit(projectFk, urlId);
+        const cached = urlRecords.find(
+          (item) => String(item.id) === String(urlId)
+        );
+        const nextForm = await getProjectUrlFormForEdit(projectFk, urlId, cached);
         if (cancelled) return;
         if (!nextForm) {
-          navigateToList();
+          navigateToListRef.current();
           return;
         }
-        setSelectedUrlId(nextForm.id ? String(nextForm.id) : String(urlId));
-        setForm(nextForm);
-        setInitialSnapshot(cloneProjectUrlForm(nextForm));
+        const normalized = normalizeProjectUrlFormForState(nextForm);
+        setSelectedUrlId(normalized.id ? String(normalized.id) : String(urlId));
+        setForm(normalized);
+        setInitialSnapshot(cloneProjectUrlForm(normalized));
+        loadedEditKeyRef.current = editKey;
+        editFormReadyRef.current = true;
         resetValidation();
       } catch (error) {
         if (!cancelled) {
           toastApiError(error);
-          navigateToList();
+          navigateToListRef.current();
         }
       } finally {
         if (!cancelled) setIsLoadingEditForm(false);
@@ -229,7 +250,8 @@ function ProjectUrlsTab({
     return () => {
       cancelled = true;
     };
-  }, [urlView, urlId, projectFk, navigateToList, resetValidation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload only when edit target changes
+  }, [urlView, urlId, projectFk]);
 
   const loadUrlRecords = useCallback(async () => {
     setIsLoading(true);
@@ -273,7 +295,7 @@ function ProjectUrlsTab({
   }, [loadUrlRecords]);
 
   useEffect(() => {
-    if (view !== "form") return undefined;
+    if (view !== "form" || isLoadingEditForm) return undefined;
 
     let cancelled = false;
 
@@ -315,7 +337,7 @@ function ProjectUrlsTab({
     return () => {
       cancelled = true;
     };
-  }, [form.language, view]);
+  }, [form.language, view, isLoadingEditForm]);
 
   const listRows = useMemo(
     () => urlRecords.map((record) => toListRow(record)),
@@ -329,9 +351,8 @@ function ProjectUrlsTab({
 
   const canSubmit =
     canWrite &&
-    isValid &&
     !isSaving &&
-    (!isEdit || isDirty);
+    (isEdit ? isDirty : isValid);
 
   const preScreenerPlaceholder = useMemo(() => {
     if (!form.language) return "Select language in Survey Matrix first";
@@ -361,7 +382,7 @@ function ProjectUrlsTab({
     const record =
       row?.record ?? urlRecords.find((item) => String(item.id) === String(row?.id));
     const nextForm = normalizeUrlRecord(record ?? row, projectFk);
-    const nextId = nextForm.id ? String(nextForm.id) : "";
+    const nextId = String(nextForm.id || row?.id || "").trim();
     onViewChange?.({
       urlView: PROJECT_URL_VIEW_IDS.EDIT,
       urlId: nextId,
@@ -380,6 +401,10 @@ function ProjectUrlsTab({
 
     setIsSaving(true);
     try {
+      const resolvedUrlId = String(
+        selectedUrlId || form.id || urlId || ""
+      ).trim();
+
       const payloadForm = {
         ...form,
         discussion: trimOnBlur(form.discussion),
@@ -390,32 +415,61 @@ function ProjectUrlsTab({
         redirectOverQuota: trimOnBlur(form.redirectOverQuota),
         redirectQualityTerm: trimOnBlur(form.redirectQualityTerm),
         redirectSurveyClose: trimOnBlur(form.redirectSurveyClose),
-        id: selectedUrlId || form.id,
+        loi: trimOnBlur(form.loi),
+        ir: trimOnBlur(form.ir),
+        cpiRate: trimOnBlur(form.cpiRate),
+        sampleSize: trimOnBlur(form.sampleSize),
+        completeRewardPoints: trimOnBlur(form.completeRewardPoints),
+        validateRewardPoints: trimOnBlur(form.validateRewardPoints),
+        id: resolvedUrlId,
         projectId: form.projectId || String(projectFk ?? ""),
         surveyGroupId: form.preScreenerId || form.surveyGroupId,
         preScreenerId: form.preScreenerId || form.surveyGroupId,
         ...(isMultiLink ? { liveLink: "", testLink: "" } : {}),
       };
 
-      const isCreate = !String(payloadForm.id ?? "").trim();
+      const isCreate = !resolvedUrlId;
       const data = isCreate
         ? await createProjectUrl(projectFk, payloadForm)
-        : await updateProjectUrls(projectFk, payloadForm, { project });
+        : await updateProjectUrls(projectFk, payloadForm, {
+            project,
+            urlId: resolvedUrlId,
+          });
 
       toastApiSuccess(data);
       const savedId =
         data?.data?.id != null
           ? String(data.data.id)
-          : selectedUrlId || form.id || "";
+          : resolvedUrlId || selectedUrlId || form.id || "";
+
+      await loadUrlRecords();
+
+      if (isCreate) {
+        onSaved?.({
+          projectId: projectFk,
+          projectUrlId: savedId,
+          response: data,
+        });
+        navigateToList();
+        return;
+      }
+
+      const refreshed = await getProjectUrlFormForEdit(projectFk, savedId, payloadForm);
+      if (refreshed) {
+        const normalized = normalizeProjectUrlFormForState(refreshed);
+        setForm(normalized);
+        setInitialSnapshot(cloneProjectUrlForm(normalized));
+        loadedEditKeyRef.current = `${projectFk}:${savedId}`;
+        editFormReadyRef.current = true;
+        resetValidation();
+      }
 
       onSaved?.({
         projectId: projectFk,
         projectUrlId: savedId,
         response: data,
+        keepEditing: true,
       });
-
-      await loadUrlRecords();
-      navigateToList();
     } catch (error) {
       toastApiError(error);
     } finally {
@@ -871,15 +925,15 @@ function ProjectUrlsTab({
               showError("completeRewardPoints") ? errors.completeRewardPoints : ""
             }
           >
-            <NumericInput
+            <DecimalInput
               className={inputClass}
               value={form.completeRewardPoints}
               onChange={(value) =>
-                setField("completeRewardPoints", sanitizeProjectUrlInteger(value))
+                setField("completeRewardPoints", sanitizeProjectUrlDecimal(value))
               }
               onBlur={() => touch("completeRewardPoints")}
-              placeholder="e.g. 50"
-              maxLength={PROJECT_URL_NUMERIC_MAX_DIGITS}
+              placeholder="e.g. 2.5"
+              decimalPlaces={PROJECT_URL_CPI_MAX_DECIMALS}
               disabled={!canWrite}
               aria-invalid={Boolean(
                 showError("completeRewardPoints") && errors.completeRewardPoints
@@ -892,15 +946,15 @@ function ProjectUrlsTab({
               showError("validateRewardPoints") ? errors.validateRewardPoints : ""
             }
           >
-            <NumericInput
+            <DecimalInput
               className={inputClass}
               value={form.validateRewardPoints}
               onChange={(value) =>
-                setField("validateRewardPoints", sanitizeProjectUrlInteger(value))
+                setField("validateRewardPoints", sanitizeProjectUrlDecimal(value))
               }
               onBlur={() => touch("validateRewardPoints")}
-              placeholder="e.g. 10"
-              maxLength={PROJECT_URL_NUMERIC_MAX_DIGITS}
+              placeholder="e.g. 0.5"
+              decimalPlaces={PROJECT_URL_CPI_MAX_DECIMALS}
               disabled={!canWrite}
               aria-invalid={Boolean(
                 showError("validateRewardPoints") && errors.validateRewardPoints
