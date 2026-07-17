@@ -335,14 +335,14 @@ function AddSalesManagerPage({ isDarkMode }) {
             </div>
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">
-                Retype New Password
+                Confirm New Password
                 {!isEdit && <span className="text-[var(--admin-danger-text)]"> *</span>}
               </label>
               <div className="relative">
                 <input
                   type={showConfirm ? "text" : "password"}
                   className={`${inputClass} pr-10`}
-                  placeholder="Retype New Password"
+                  placeholder="Confirm New Password"
                   value={form.confirmPassword}
                   maxLength={PASSWORD_FIELD_MAX_LENGTH}
                   onChange={(e) =>
