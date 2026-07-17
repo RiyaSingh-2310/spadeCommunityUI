@@ -12,7 +12,10 @@ import {
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   getRequiredError,
+  getRequiredMaxLengthError,
   isFormValid,
+  limitTextInput,
+  NAME_FIELD_MAX_LENGTH,
 } from "../../shared/utils/validation";
 import { toastApiError } from "../../../services/toast/apiToast";
 import {
@@ -169,7 +172,7 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
   const errors = useMemo(
     () => ({
       language: getRequiredError(form.language, "Language"),
-      questionTitle: getRequiredError(form.questionTitle, "Survey Title"),
+      questionTitle: getRequiredMaxLengthError(form.questionTitle, "Survey Title"),
       questions:
         form.questions.length === 0
           ? "Add at least one question"
@@ -418,9 +421,13 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
                 className={inputClass}
                 placeholder="Enter Survey Title"
                 value={form.questionTitle}
+                maxLength={NAME_FIELD_MAX_LENGTH}
                 disabled={readOnly}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, questionTitle: event.target.value }))
+                  setForm((prev) => ({
+                    ...prev,
+                    questionTitle: limitTextInput(event.target.value, NAME_FIELD_MAX_LENGTH),
+                  }))
                 }
                 onBlur={() => touch("questionTitle")}
               />

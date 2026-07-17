@@ -471,12 +471,21 @@ body {
 }
 
 .admin-shell .admin-input:focus,
-.admin-shell input:not([type="checkbox"]):not([type="radio"]):not([type="search"]):focus,
+.admin-shell .admin-input:focus-within,
+.admin-shell input:not([type="checkbox"]):not([type="radio"]):not([type="search"]):not(.admin-number-input):focus,
 .admin-shell textarea:focus,
 .admin-shell select:focus {
   border-color: var(--admin-primary-color);
   box-shadow: 0 0 0 3px var(--admin-input-focus-ring);
   outline: none;
+}
+
+/* Nested phone digits inherit focus from the wrapper only (no inner ring). */
+.admin-shell .admin-phone-input .admin-number-input,
+.admin-shell .admin-phone-input .admin-number-input:focus {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 .admin-input:-webkit-autofill,
@@ -859,6 +868,7 @@ input[type="number"],
   background-color: #ffffff;
   padding-top: 0.5625rem;
   padding-bottom: 0.5625rem;
+  cursor: pointer;
   transition:
     background-color 0.12s ease,
     color 0.12s ease;
@@ -1220,6 +1230,7 @@ input[type="number"],
   background-color: var(--admin-header-search-bg);
   border: 1px solid var(--admin-header-surface-border);
   color: var(--admin-foreground);
+  cursor: pointer;
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,
@@ -1257,6 +1268,10 @@ input[type="number"],
 
 .admin-notification-unread {
   background-color: var(--admin-notification-unread-bg);
+}
+
+.admin-icon-btn {
+  cursor: pointer;
 }
 
 .admin-icon-btn:hover {
@@ -1626,4 +1641,112 @@ input[type="number"],
   .admin-shell .admin-form-root > .flex {
     min-width: 0;
   }
+}
+
+/* =============================================================================
+   Global interactive cursor styles (Admin UI + shared controls)
+   Pointer on clickable controls; text cursor on text fields; not-allowed when disabled.
+   :where() keeps specificity at 0 so Tailwind cursor-* utilities (grab, default, etc.) win.
+   ============================================================================= */
+
+:where(
+  button:not(:disabled):not([disabled]):not([aria-disabled="true"]),
+  a[href],
+  summary,
+  label:not(.cursor-not-allowed),
+  select:not(:disabled):not([disabled]),
+  [role="button"]:not([aria-disabled="true"]):not([disabled]),
+  [role="tab"]:not([aria-disabled="true"]):not([disabled]),
+  [role="menuitem"]:not([aria-disabled="true"]):not([disabled]),
+  [role="option"]:not([aria-disabled="true"]):not([disabled]),
+  [role="checkbox"]:not([aria-disabled="true"]):not([disabled]),
+  [role="radio"]:not([aria-disabled="true"]):not([disabled]),
+  [role="switch"]:not([aria-disabled="true"]):not([disabled]),
+  [role="combobox"]:not([aria-disabled="true"]):not([disabled]),
+  [role="listbox"]:not([aria-disabled="true"]):not([disabled]),
+  [role="link"]:not([aria-disabled="true"]),
+  [role="treeitem"]:not([aria-disabled="true"]),
+  input[type="button"]:not(:disabled):not([disabled]),
+  input[type="submit"]:not(:disabled):not([disabled]),
+  input[type="reset"]:not(:disabled):not([disabled]),
+  input[type="checkbox"]:not(:disabled):not([disabled]),
+  input[type="radio"]:not(:disabled):not([disabled]),
+  input[type="file"]:not(:disabled):not([disabled]),
+  input[type="color"]:not(:disabled):not([disabled]),
+  input[type="range"]:not(:disabled):not([disabled]),
+  input[type="image"]:not(:disabled):not([disabled])
+) {
+  cursor: pointer;
+}
+
+/* Text-entry fields keep the text (I-beam) cursor */
+:where(
+  input:not([type]):not(:disabled):not([disabled]),
+  input[type="text"]:not(:disabled):not([disabled]),
+  input[type="search"]:not(:disabled):not([disabled]),
+  input[type="email"]:not(:disabled):not([disabled]),
+  input[type="password"]:not(:disabled):not([disabled]),
+  input[type="tel"]:not(:disabled):not([disabled]),
+  input[type="url"]:not(:disabled):not([disabled]),
+  input[type="number"]:not(:disabled):not([disabled]),
+  input[type="date"]:not(:disabled):not([disabled]),
+  input[type="time"]:not(:disabled):not([disabled]),
+  input[type="datetime-local"]:not(:disabled):not([disabled]),
+  input[type="month"]:not(:disabled):not([disabled]),
+  input[type="week"]:not(:disabled):not([disabled]),
+  textarea:not(:disabled):not([disabled]),
+  [contenteditable="true"]
+) {
+  cursor: text;
+}
+
+/* Read-only text fields: default arrow */
+:where(
+  input:read-only:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+  textarea:read-only
+) {
+  cursor: default;
+}
+
+/* Disabled / unavailable controls (Tailwind disabled:cursor-* still overrides) */
+:disabled,
+[disabled],
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* Admin shell: reinforce shared component classes */
+:where(
+  .admin-shell .admin-icon-action,
+  .admin-shell .admin-btn-primary,
+  .admin-shell .admin-btn-cancel,
+  .admin-shell .admin-checkbox,
+  .admin-shell .admin-table-status-select-trigger,
+  .admin-shell .admin-portal-dropdown-option,
+  .admin-shell .admin-date-range-picker__clear,
+  .admin-shell .admin-date-range-trigger,
+  .admin-shell .toast-item__close,
+  .admin-shell .admin-table-sort-trigger,
+  .admin-shell th.sortable,
+  .admin-shell th[aria-sort],
+  .admin-shell nav a,
+  .admin-shell [role="tablist"] [role="tab"]:not([aria-disabled="true"]):not([disabled]),
+  .admin-shell .admin-pagination button:not(:disabled):not([disabled]),
+  .admin-shell .admin-pagination a[href]
+) {
+  cursor: pointer;
+}
+
+:where(
+  .admin-shell .admin-btn-primary:disabled,
+  .admin-shell .admin-btn-cancel:disabled,
+  .admin-shell .admin-icon-action:disabled,
+  .admin-shell .admin-checkbox:disabled,
+  .admin-shell .admin-table-status-select-trigger:disabled,
+  .admin-shell .admin-date-range-picker__clear:disabled,
+  .admin-shell [role="tab"][aria-disabled="true"],
+  .admin-shell [role="tab"][disabled],
+  .admin-shell .admin-pagination button:disabled
+) {
+  cursor: not-allowed;
 }

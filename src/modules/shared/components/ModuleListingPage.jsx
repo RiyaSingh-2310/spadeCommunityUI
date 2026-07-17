@@ -572,7 +572,7 @@ function ModuleListingPage({
       <button
         type="button"
         onClick={() => onColumnSort?.(columnLabel)}
-        className={`admin-table-sort-trigger inline-flex items-center gap-1.5 transition hover:text-[var(--admin-foreground)] ${
+        className={`admin-table-sort-trigger inline-flex cursor-pointer items-center gap-1.5 transition hover:text-[var(--admin-foreground)] ${
           isActive ? "text-[var(--admin-primary-color)]" : ""
         }`}
         aria-label={`Sort by ${columnLabel}`}

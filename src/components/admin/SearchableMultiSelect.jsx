@@ -126,7 +126,7 @@ function SearchableMultiSelect({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label={ariaLabel}
-        className={`${triggerClass} flex min-h-11 items-center justify-between gap-2 py-2 text-left disabled:cursor-not-allowed disabled:opacity-60`}
+        className={`${triggerClass} flex min-h-11 cursor-pointer items-center justify-between gap-2 py-2 text-left disabled:cursor-not-allowed disabled:opacity-60`}
       >
         <span
           className={`min-w-0 flex-1 truncate ${

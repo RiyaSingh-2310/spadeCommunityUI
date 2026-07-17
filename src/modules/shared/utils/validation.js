@@ -7,10 +7,10 @@ export const DEFAULT_PASSWORD_MIN_LENGTH = 8;
 
 /** Legacy shared max length retained for non-form fields. */
 export const USER_FIELD_MAX_LENGTH = 30;
-export const NAME_FIELD_MAX_LENGTH = 70;
-export const CONTACT_PERSON_MAX_LENGTH = 70;
-export const EMAIL_FIELD_MAX_LENGTH = 150;
-export const PASSWORD_FIELD_MAX_LENGTH = 60;
+export const NAME_FIELD_MAX_LENGTH = 60;
+export const CONTACT_PERSON_MAX_LENGTH = 60;
+export const EMAIL_FIELD_MAX_LENGTH = 60;
+export const PASSWORD_FIELD_MAX_LENGTH = 30;
 
 const NAME_REGEX = /^[A-Za-z ]+$/;
 
@@ -23,6 +23,17 @@ function getFieldMaxLengthError(value, maxLength, label) {
     return `${label} must be at most ${maxLength} characters`;
   }
   return "";
+}
+
+/** Required text field with a shared max length (titles/names without letter-only rules). */
+export function getRequiredMaxLengthError(
+  value,
+  label,
+  maxLength = NAME_FIELD_MAX_LENGTH
+) {
+  const required = getRequiredError(value, label);
+  if (required) return required;
+  return getFieldMaxLengthError(value, maxLength, label);
 }
 
 export function getUserNameError(

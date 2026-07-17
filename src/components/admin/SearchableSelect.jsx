@@ -114,7 +114,7 @@ function SearchableSelect({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label={ariaLabel}
-        className={`${triggerClass} flex items-center justify-between gap-2 text-left disabled:cursor-not-allowed disabled:opacity-60`}
+        className={`${triggerClass} flex cursor-pointer items-center justify-between gap-2 text-left disabled:cursor-not-allowed disabled:opacity-60`}
       >
         <span
           className={`min-w-0 flex-1 truncate ${

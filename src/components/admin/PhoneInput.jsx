@@ -4,6 +4,7 @@ import {
   getPhoneCountryByCode,
 } from "../../modules/shared/data/phoneCountries";
 import {
+  CONTACT_NUMBER_DIGIT_LENGTH,
   formatPhoneValue,
   parsePhoneValue,
   sanitizePhoneDigits,
@@ -58,24 +59,24 @@ function PhoneInput({
   const isDisabled = disabled || !hasCountry;
 
   const handleNationalChange = (raw) => {
-    const digits = sanitizePhoneDigits(raw);
-    const maxLen = getPhoneCountryByCode(countryCode).nationalLength;
-    const trimmed = digits.slice(0, maxLen);
-    onChange?.(trimmed ? formatPhoneValue(countryCode, trimmed) : "");
+    const digits = sanitizePhoneDigits(raw).slice(0, CONTACT_NUMBER_DIGIT_LENGTH);
+    onChange?.(digits ? formatPhoneValue(countryCode, digits) : "");
   };
 
   const handlePaste = (event) => {
     event.preventDefault();
     const pasted = event.clipboardData.getData("text");
     const parsed = parsePhoneValue(pasted, countryCode);
-    onChange?.(
-      parsed.nationalNumber ? formatPhoneValue(countryCode, parsed.nationalNumber) : ""
+    const digits = sanitizePhoneDigits(parsed.nationalNumber).slice(
+      0,
+      CONTACT_NUMBER_DIGIT_LENGTH
     );
+    onChange?.(digits ? formatPhoneValue(countryCode, digits) : "");
   };
 
   return (
     <div
-      className={`flex items-center ${inputClassName} ${
+      className={`admin-phone-input flex items-center ${inputClassName} ${
         isDisabled ? "cursor-not-allowed opacity-60" : ""
       }`}
     >
@@ -93,6 +94,7 @@ function PhoneInput({
         disabled={isDisabled}
         placeholder={hasCountry ? placeholder : "Select a country first"}
         value={nationalNumber}
+        maxLength={CONTACT_NUMBER_DIGIT_LENGTH}
         onChange={(e) => handleNationalChange(e.target.value)}
         onPaste={handlePaste}
         onBlur={onBlur}
@@ -101,7 +103,7 @@ function PhoneInput({
             e.preventDefault();
           }
         }}
-        className="admin-number-input admin-text min-w-0 flex-1 border-0 bg-transparent p-0 text-sm outline-none placeholder:text-[var(--admin-subtle-foreground)] disabled:cursor-not-allowed"
+        className="admin-number-input admin-text min-w-0 flex-1 border-0 bg-transparent p-0 text-sm outline-none shadow-none ring-0 placeholder:text-[var(--admin-subtle-foreground)] focus:border-0 focus:outline-none focus:ring-0 focus:shadow-none disabled:cursor-not-allowed"
       />
     </div>
   );

@@ -13,7 +13,7 @@ import {
 import { getRecords as getProjectManagers } from "../../../services/projectManagers/projectManagersApi";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
-import { isFormValid } from "../../shared/utils/validation";
+import { isFormValid, limitTextInput, NAME_FIELD_MAX_LENGTH } from "../../shared/utils/validation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   CURRENCY_OPTIONS,
@@ -165,7 +165,10 @@ function AddRecontactSurveyForm({
               className={inputClass}
               placeholder="Enter Project Name"
               value={form.projectName}
-              onChange={(e) => setField("projectName", e.target.value)}
+              maxLength={NAME_FIELD_MAX_LENGTH}
+              onChange={(e) =>
+                setField("projectName", limitTextInput(e.target.value, NAME_FIELD_MAX_LENGTH))
+              }
               onBlur={() => touch("projectName")}
               disabled={fieldDisabled(readOnly, isSubmitting)}
             />

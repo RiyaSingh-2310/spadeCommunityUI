@@ -9,7 +9,7 @@ import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
-import { getRequiredError, isFormValidForFields } from "../../shared/utils/validation";
+import { getRequiredError, getRequiredMaxLengthError, isFormValidForFields, limitTextInput, NAME_FIELD_MAX_LENGTH } from "../../shared/utils/validation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { mapClientsToSelectOptions } from "../hooks/useSurveyFormSelectOptions";
 import { getRecords as getClients } from "../../../services/clients/clientsApi";
@@ -57,7 +57,7 @@ function AddGroupSurveyPage({ isDarkMode }) {
 
   const errors = useMemo(
     () => ({
-      projectName: getRequiredError(form.projectName, "Project Name"),
+      projectName: getRequiredMaxLengthError(form.projectName, "Project Name"),
       clientId: getRequiredError(form.clientId, "Client"),
     }),
     [form]
@@ -120,7 +120,10 @@ function AddGroupSurveyPage({ isDarkMode }) {
                 className={inputClass}
                 placeholder="Enter Project Name"
                 value={form.projectName}
-                onChange={(e) => setField("projectName", e.target.value)}
+                maxLength={NAME_FIELD_MAX_LENGTH}
+                onChange={(e) =>
+                  setField("projectName", limitTextInput(e.target.value, NAME_FIELD_MAX_LENGTH))
+                }
                 onBlur={() => touch("projectName")}
                 disabled={fieldDisabled(readOnly, isSubmitting)}
               />

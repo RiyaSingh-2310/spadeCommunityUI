@@ -1,4 +1,8 @@
-import { getRequiredError, isFormValid } from "../../shared/utils/validation";
+import {
+  getRequiredError,
+  getRequiredMaxLengthError,
+  isFormValid,
+} from "../../shared/utils/validation";
 import { isProjectCodeTaken } from "../data/mockSurveyStore";
 
 /**
@@ -17,7 +21,7 @@ export function getSurveyFormErrors(form, options = {}) {
 
   return {
     client: getRequiredError(form.client, "Client"),
-    projectName: getRequiredError(form.projectName, "Project Name"),
+    projectName: getRequiredMaxLengthError(form.projectName, "Project Name"),
     projectCode: projectCodeError,
     projectManager: getRequiredError(form.projectManager, "Project Manager"),
     projectLinkType: getRequiredError(form.projectLinkType, "Project Link Type"),

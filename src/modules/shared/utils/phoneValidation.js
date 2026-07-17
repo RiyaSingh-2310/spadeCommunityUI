@@ -4,6 +4,9 @@ import {
   getPhoneCountryByCode,
 } from "../data/phoneCountries";
 
+/** Contact Number national length across Admin forms. */
+export const CONTACT_NUMBER_DIGIT_LENGTH = 10;
+
 /** Digits-only national number (no country code). */
 export function sanitizePhoneDigits(raw) {
   return String(raw ?? "").replace(/\D/g, "");
@@ -65,44 +68,25 @@ export function validateNationalPhoneNumber(countryCode, nationalNumber) {
   const digits = sanitizePhoneDigits(nationalNumber);
 
   if (!digits) {
-    return { valid: false, message: "Phone number is required" };
+    return { valid: false, message: "Contact Number is required" };
   }
 
-  if (country.code === "IN") {
-    if (digits.length !== 10) {
-      return { valid: false, message: "Indian phone numbers must be exactly 10 digits" };
-    }
-    if (!/^[6-9]/.test(digits)) {
-      return { valid: false, message: "Indian mobile numbers must start with 6, 7, 8, or 9" };
-    }
-    return { valid: true, message: "" };
-  }
-
-  if (country.code === "US" || country.code === "CA") {
-    if (digits.length !== 10) {
-      return {
-        valid: false,
-        message: `${country.name} phone numbers must be exactly 10 digits`,
-      };
-    }
-    if (digits.startsWith("0") || digits.startsWith("1")) {
-      return { valid: false, message: "Enter a valid area code and phone number" };
-    }
-    return { valid: true, message: "" };
-  }
-
-  if (country.code === "GB") {
-    if (digits.length !== 10) {
-      return { valid: false, message: "UK phone numbers must be exactly 10 digits" };
-    }
-    return { valid: true, message: "" };
-  }
-
-  if (digits.length !== country.nationalLength) {
+  if (digits.length !== CONTACT_NUMBER_DIGIT_LENGTH) {
     return {
       valid: false,
-      message: `${country.name} phone numbers must be exactly ${country.nationalLength} digits`,
+      message: `Contact Number must be exactly ${CONTACT_NUMBER_DIGIT_LENGTH} digits`,
     };
+  }
+
+  if (country.code === "IN" && !/^[6-9]/.test(digits)) {
+    return { valid: false, message: "Indian mobile numbers must start with 6, 7, 8, or 9" };
+  }
+
+  if (
+    (country.code === "US" || country.code === "CA") &&
+    (digits.startsWith("0") || digits.startsWith("1"))
+  ) {
+    return { valid: false, message: "Enter a valid area code and phone number" };
   }
 
   return { valid: true, message: "" };
@@ -114,7 +98,7 @@ export function validateNationalPhoneNumber(countryCode, nationalNumber) {
  */
 export function getPhoneError(
   fullValue,
-  { required = true, label = "Phone number", defaultCountryCode = "IN" } = {}
+  { required = true, label = "Contact Number", defaultCountryCode = "IN" } = {}
 ) {
   const trimmed = String(fullValue ?? "").trim();
   if (!trimmed) {
@@ -126,6 +110,9 @@ export function getPhoneError(
   const result = validateNationalPhoneNumber(country.code, parsed.nationalNumber);
 
   if (!result.valid) {
+    if (result.message.startsWith("Contact Number")) {
+      return result.message.replace(/^Contact Number/, label);
+    }
     return result.message;
   }
 

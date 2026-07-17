@@ -17,6 +17,7 @@ import {
   getAdminInputClass,
   getAdminTextareaClass,
 } from "../../shared/utils/formStyles";
+import { limitTextInput, NAME_FIELD_MAX_LENGTH } from "../../shared/utils/validation";
 import {
   needsQuestionOptions,
   normalizeQuestionTypeLabel,
@@ -298,7 +299,10 @@ function AddPrescreenPage({ isDarkMode }) {
                 className={inputClass}
                 placeholder="Enter Question Title"
                 value={form.questionTitle}
-                onChange={(e) => setField("questionTitle", e.target.value)}
+                maxLength={NAME_FIELD_MAX_LENGTH}
+                onChange={(e) =>
+                  setField("questionTitle", limitTextInput(e.target.value, NAME_FIELD_MAX_LENGTH))
+                }
               />
             </FormField>
           </div>

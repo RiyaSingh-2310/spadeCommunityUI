@@ -38,7 +38,7 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
   }, []);
 
   const iconButtonClass =
-    "admin-icon-btn admin-text-subtle rounded-xl p-2.5 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-header-search-border)]";
+    "admin-icon-btn admin-text-subtle cursor-pointer rounded-xl p-2.5 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-header-search-border)]";
 
   const avatarProps = {
     imageUrl: admin?.imageUrl,
@@ -84,7 +84,7 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
         className={
           isMobile
             ? `${iconButtonClass} !p-2`
-            : "admin-header-surface flex items-center gap-2 rounded-full border px-2.5 py-1.5 transition-all duration-200 focus:outline-none"
+            : "admin-header-surface flex cursor-pointer items-center gap-2 rounded-full border px-2.5 py-1.5 transition-all duration-200 focus:outline-none"
         }
         aria-label="Open profile menu"
         aria-expanded={isDropdownOpen}
@@ -120,7 +120,7 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
                 setIsDropdownOpen(false);
                 navigate("/settings?tab=profile");
               }}
-              className="admin-icon-btn admin-text-muted flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition"
+              className="admin-icon-btn admin-text-muted flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left transition"
             >
               <User size={16} />
               Profile
@@ -131,7 +131,7 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
                 setIsDropdownOpen(false);
                 navigate("/settings?tab=system");
               }}
-              className="admin-icon-btn admin-text-muted flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition"
+              className="admin-icon-btn admin-text-muted flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left transition"
             >
               <Settings size={16} />
               Settings
@@ -146,7 +146,7 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
                 clearAuthSession();
                 navigate("/auth");
               }}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left font-medium text-[var(--admin-danger-text)] transition hover:opacity-90"
+              className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left font-medium text-[var(--admin-danger-text)] transition hover:opacity-90"
             >
               <LogOut size={16} />
               Sign Out

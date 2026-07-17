@@ -104,8 +104,8 @@ function SurveyDetailsHeader({
                   isDisabled
                     ? "cursor-not-allowed opacity-45 admin-text-muted"
                     : isActive
-                      ? "bg-[#10a950] text-white shadow-sm"
-                      : "admin-text-muted hover:bg-[var(--admin-permissions-row-hover)]"
+                      ? "cursor-pointer bg-[#10a950] text-white shadow-sm"
+                      : "admin-text-muted cursor-pointer hover:bg-[var(--admin-permissions-row-hover)]"
                 }`}
               >
                 {tab.label}

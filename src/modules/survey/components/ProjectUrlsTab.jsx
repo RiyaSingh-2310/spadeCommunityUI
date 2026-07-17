@@ -45,7 +45,7 @@ import {
   secondaryBtnClass,
 } from "./surveyDetailsShared";
 
-const PROJECT_URL_LIST_COLUMNS = ["ID", "URL", "Action"];
+const PROJECT_URL_LIST_COLUMNS = ["ID", "Description", "Status", "Action"];
 
 function InteractiveCheckbox({ label, checked, onChange, disabled }) {
   return (
@@ -80,14 +80,12 @@ function normalizeUrlRecord(row, projectFk) {
 
 function toListRow(record) {
   const id = record?.id != null && record.id !== "" ? String(record.id) : "";
-  const url =
-    String(record?.liveLink ?? "").trim() ||
-    String(record?.testLink ?? "").trim() ||
-    String(record?.discussion ?? "").trim() ||
-    "—";
+  const description = String(record?.discussion ?? "").trim() || "—";
+  const status = String(record?.status ?? "").trim() || "Open";
   return {
     id,
-    url,
+    description,
+    status,
     record,
   };
 }
@@ -475,10 +473,22 @@ function ProjectUrlsTab({
   };
 
   const handleDeleteConfirm = async () => {
-    if (!pendingDelete?.id) return;
+    const urlRecordId = String(
+      pendingDelete?.id ||
+        pendingDelete?.record?.id ||
+        pendingDelete?.url_id ||
+        pendingDelete?.record?.url_id ||
+        ""
+    ).trim();
+
+    if (!urlRecordId) {
+      toastApiError("Project URL ID is required for delete.");
+      return;
+    }
+
     setIsDeleting(true);
     try {
-      const data = await deleteProjectUrl(pendingDelete.id);
+      const data = await deleteProjectUrl(urlRecordId);
       toastApiSuccess(data);
       setPendingDelete(null);
       await loadUrlRecords();
@@ -513,6 +523,7 @@ function ProjectUrlsTab({
           rowIdKey="id"
           actionVariant="edit-delete"
           showDeleteAction
+          statusAsText
           onEdit={openEditForm}
           onDelete={handleDeleteRequest}
           permissionModule="survey"

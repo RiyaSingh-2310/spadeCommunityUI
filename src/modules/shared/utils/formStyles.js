@@ -19,15 +19,15 @@ export function getAdminTextareaClass(extraClass = "") {
 /** Theme-aware secondary/cancel button (uses .admin-btn-cancel in index.css). */
 export function getAdminCancelButtonClass(size = "form") {
   if (size === "modal") {
-    return "admin-btn-cancel h-10 rounded-xl px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
+    return "admin-btn-cancel h-10 cursor-pointer rounded-xl px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
   }
-  return "admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
+  return "admin-btn-cancel h-11 cursor-pointer rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
 }
 
 export function getFormActions(navigate, cancelPath, canSubmit) {
   return {
     submitClass:
-      "admin-btn-primary h-11 px-5 disabled:cursor-not-allowed disabled:opacity-50",
+      "admin-btn-primary h-11 cursor-pointer px-5 disabled:cursor-not-allowed disabled:opacity-50",
     cancelClass: getAdminCancelButtonClass(),
     navigate,
     cancelPath,

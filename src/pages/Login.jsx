@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
-import { AUTH_EMAIL_REGEX } from "../modules/shared/utils/validation";
+import { AUTH_EMAIL_REGEX, EMAIL_FIELD_MAX_LENGTH, limitTextInput, PASSWORD_FIELD_MAX_LENGTH } from "../modules/shared/utils/validation";
 import { loginAdmin } from "../services/auth/authApi";
 import { LOGIN_ROLES } from "../services/auth/loginRole";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
@@ -155,7 +155,10 @@ function Login({ isDarkMode, onToggleTheme }) {
                   spellCheck={false}
                   placeholder="Enter your email"
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  maxLength={EMAIL_FIELD_MAX_LENGTH}
+                  onChange={(event) =>
+                    setEmail(limitTextInput(event.target.value, EMAIL_FIELD_MAX_LENGTH))
+                  }
                   onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
                   className={`kh-input h-full w-full bg-transparent pl-2.5 text-[15px] outline-none ${
                     isDarkMode
@@ -208,7 +211,10 @@ function Login({ isDarkMode, onToggleTheme }) {
                   spellCheck={false}
                   placeholder="Enter your password"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  maxLength={PASSWORD_FIELD_MAX_LENGTH}
+                  onChange={(event) =>
+                    setPassword(limitTextInput(event.target.value, PASSWORD_FIELD_MAX_LENGTH))
+                  }
                   onBlur={() =>
                     setTouched((prev) => ({ ...prev, password: true }))
                   }

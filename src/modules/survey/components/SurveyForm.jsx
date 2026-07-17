@@ -4,6 +4,7 @@ import FormRadioGroup from "../../../components/admin/FormRadioGroup";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
+import { NAME_FIELD_MAX_LENGTH, limitTextInput } from "../../shared/utils/validation";
 import { PROJECT_LINK_TYPES, PROJECT_STATUS_OPTIONS } from "../data/surveyFormData";
 
 function SurveyForm({
@@ -76,7 +77,10 @@ function SurveyForm({
               className={`${inputClass} ${readOnlyProjectName ? "opacity-70" : ""}`}
               placeholder="Enter Project Name"
               value={form.projectName}
-              onChange={(e) => setField("projectName", e.target.value)}
+              maxLength={NAME_FIELD_MAX_LENGTH}
+              onChange={(e) =>
+                setField("projectName", limitTextInput(e.target.value, NAME_FIELD_MAX_LENGTH))
+              }
               onBlur={() => touch("projectName")}
               disabled={disabled || readOnlyProjectName}
               readOnly={readOnlyProjectName}

@@ -415,7 +415,7 @@ function AdminSidebar({
                     return !prev;
                   });
                 }}
-                className="flex h-14 w-full items-center gap-3 p-4 text-[var(--admin-muted-foreground)] transition-all duration-200 hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-foreground)]"
+                className="flex h-14 w-full cursor-pointer items-center gap-3 p-4 text-[var(--admin-muted-foreground)] transition-all duration-200 hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-foreground)]"
               >
                 {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
                 {!isCollapsed && <span className="admin-sidebar-label">Collapse</span>}

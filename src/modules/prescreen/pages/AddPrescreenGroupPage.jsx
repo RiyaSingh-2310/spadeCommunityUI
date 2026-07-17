@@ -18,7 +18,10 @@ import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/util
 import { STATUS_UI_ACTIVE } from "../../shared/utils/statusLabels";
 import {
   getRequiredError,
+  getRequiredMaxLengthError,
   isFormValidForFields,
+  limitTextInput,
+  NAME_FIELD_MAX_LENGTH,
 } from "../../shared/utils/validation";
 
 const PRESCREEN_GROUP_FORM_FIELDS = ["language", "surveyTitle", "prescreenIds"];
@@ -150,7 +153,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
   const errors = useMemo(
     () => ({
       language: getRequiredError(form.language, "Language"),
-      surveyTitle: getRequiredError(form.surveyTitle, "Survey Group Title"),
+      surveyTitle: getRequiredMaxLengthError(form.surveyTitle, "Survey Group Title"),
       prescreenIds:
         form.prescreenIds.length > 0 ? "" : "Select at least one questionnaire",
     }),
@@ -410,7 +413,10 @@ function AddPrescreenGroupPage({ isDarkMode }) {
                 className={inputClass}
                 placeholder="Enter Survey Group Title"
                 value={form.surveyTitle}
-                onChange={(e) => setField("surveyTitle", e.target.value)}
+                maxLength={NAME_FIELD_MAX_LENGTH}
+                onChange={(e) =>
+                  setField("surveyTitle", limitTextInput(e.target.value, NAME_FIELD_MAX_LENGTH))
+                }
                 onBlur={() => touch("surveyTitle")}
                 disabled={controlDisabled}
               />

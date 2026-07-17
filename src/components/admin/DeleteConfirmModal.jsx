@@ -10,7 +10,7 @@ function DeleteConfirmModal({
   message = "Are you sure you want to delete this record?",
   confirmLabel = "Delete",
   confirmingLabel = "Deleting...",
-  confirmClassName = "flex h-10 items-center justify-center gap-2 rounded-xl bg-[var(--admin-danger-text)] px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60",
+  confirmClassName = "flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[var(--admin-danger-text)] px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60",
 }) {
   if (!isOpen) return null;
 
@@ -18,7 +18,7 @@ function DeleteConfirmModal({
     <div className="admin-modal-overlay fixed inset-0 z-[250] flex items-center justify-center p-4">
       <button
         type="button"
-        className="admin-header-overlay absolute inset-0"
+        className="admin-header-overlay absolute inset-0 cursor-pointer"
         aria-label="Close delete confirmation"
         onClick={onCancel}
         disabled={isDeleting}

@@ -2,6 +2,7 @@ import {
   getDateRangeError,
   getOptionalUrlError,
   getRequiredError,
+  getRequiredMaxLengthError,
   isFormValid,
 } from "../../shared/utils/validation";
 
@@ -37,7 +38,7 @@ export function getRecontactSurveyFormErrors(form) {
 
   const errors = {
     client: getRequiredError(form.client, "Client"),
-    projectName: getRequiredError(form.projectName, "Project Name"),
+    projectName: getRequiredMaxLengthError(form.projectName, "Project Name"),
     loi: getPositiveNumberError(form.loi, "LOI"),
     projectManager: getRequiredError(form.projectManager, "Project Manager"),
     ir: getPositiveNumberError(form.ir, "IR"),

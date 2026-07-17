@@ -28,11 +28,11 @@ function AdminPagination({
   const showPageSizeSelector = Boolean(onPageSizeChange);
 
   const btnBase =
-    "inline-flex h-9 min-w-[2.75rem] items-center justify-center rounded-full px-4 text-sm font-semibold transition-colors duration-150";
+    "inline-flex h-9 min-w-[2.75rem] cursor-pointer items-center justify-center rounded-full px-4 text-sm font-semibold transition-colors duration-150";
   const inactive =
     "border border-[var(--admin-input-border)] bg-[var(--admin-surface-bg)] text-[var(--admin-muted-foreground)] hover:bg-[var(--admin-table-row-hover)] hover:text-[var(--admin-foreground)]";
   const active =
-    "min-w-[2.75rem] rounded-full bg-[var(--admin-primary-color)] px-4 text-sm font-semibold text-white shadow-[var(--admin-pagination-active-shadow)] inline-flex h-9 items-center justify-center";
+    "min-w-[2.75rem] cursor-pointer rounded-full bg-[var(--admin-primary-color)] px-4 text-sm font-semibold text-white shadow-[var(--admin-pagination-active-shadow)] inline-flex h-9 items-center justify-center";
   const disabled =
     "cursor-not-allowed opacity-45 border border-[var(--admin-input-border)] bg-[var(--admin-surface-bg)] text-[var(--admin-subtle-foreground)]";
 

@@ -815,16 +815,19 @@ export async function createProjectUrl(projectId, form = {}) {
 
 /** DELETE /api/projects/url/:urlId */
 export async function deleteProjectUrl(urlId) {
+  const normalizedUrlId = normalizeUrlId(urlId);
+
   if (USE_PROJECT_URLS_MOCK) {
     await delay(200);
-    const removed = deleteMockProjectUrl(urlId);
+    const removed = deleteMockProjectUrl(normalizedUrlId);
     return {
       success: removed,
-      message: removed ? "Project URL deleted successfully." : "Project URL not found.",
+      message: removed
+        ? "Project URL deleted successfully!"
+        : "Project URL not found.",
     };
   }
 
-  const normalizedUrlId = normalizeUrlId(urlId);
   const data = await apiRequest(API_ROUTES.projects.deleteUrl(normalizedUrlId), {
     method: "DELETE",
   });

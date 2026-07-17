@@ -106,17 +106,6 @@ function PrescreenPage({ isDarkMode }) {
         isDarkMode={isDarkMode}
         title="Question Library"
         searchPlaceholder="Search questions..."
-        toolbarEnd={
-          canReadSurveyGroups ? (
-            <button
-              type="button"
-              onClick={() => navigate("/prescreen/group")}
-              className="admin-btn-cancel h-10 rounded-xl px-4 text-sm font-semibold transition"
-            >
-              Survey Groups
-            </button>
-          ) : null
-        }
         actionLabel="Add Question"
         onActionClick={canWriteQuestions ? () => navigate("/prescreen/add") : undefined}
         columns={LIST_COLUMNS}

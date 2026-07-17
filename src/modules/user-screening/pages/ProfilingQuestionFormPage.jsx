@@ -13,7 +13,10 @@ import {
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   getRequiredError,
+  getRequiredMaxLengthError,
   isFormValid,
+  limitTextInput,
+  NAME_FIELD_MAX_LENGTH,
 } from "../../shared/utils/validation";
 import { toastApiError } from "../../../services/toast/apiToast";
 import {
@@ -198,7 +201,7 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
 
     return {
       language: getRequiredError(form.language, "Language"),
-      questionTitle: getRequiredError(form.questionTitle, "Survey Title"),
+      questionTitle: getRequiredMaxLengthError(form.questionTitle, "Survey Title"),
       questionText: getRequiredError(form.questionText, "Question Text"),
       questionType: getRequiredError(form.questionType, "Question Type"),
       optionsText:
@@ -351,8 +354,12 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
               className={`${inputClass} w-full`}
               placeholder="Enter Survey Title"
               value={form.questionTitle}
+              maxLength={NAME_FIELD_MAX_LENGTH}
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, questionTitle: event.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  questionTitle: limitTextInput(event.target.value, NAME_FIELD_MAX_LENGTH),
+                }))
               }
               onBlur={() => touchField("questionTitle")}
             />

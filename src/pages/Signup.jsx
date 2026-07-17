@@ -1,5 +1,10 @@
 import { Link } from "react-router-dom";
 import heroLogo from "../assets/hero.png";
+import {
+  EMAIL_FIELD_MAX_LENGTH,
+  NAME_FIELD_MAX_LENGTH,
+  PASSWORD_FIELD_MAX_LENGTH,
+} from "../modules/shared/utils/validation";
 
 function Signup() {
   return (
@@ -29,6 +34,7 @@ function Signup() {
                 <input
                   type="text"
                   placeholder="Enter your full name"
+                  maxLength={NAME_FIELD_MAX_LENGTH}
                   className="h-[50px] w-full rounded-[14px] border border-[#d9dee7] bg-[#f2f5f9] px-4 text-[15px] text-[#151a23] outline-none"
                 />
               </div>
@@ -39,6 +45,7 @@ function Signup() {
                 <input
                   type="email"
                   placeholder="Enter your email"
+                  maxLength={EMAIL_FIELD_MAX_LENGTH}
                   className="h-[50px] w-full rounded-[14px] border border-[#d9dee7] bg-[#f2f5f9] px-4 text-[15px] text-[#151a23] outline-none"
                 />
               </div>
@@ -52,6 +59,7 @@ function Signup() {
                 <input
                   type="password"
                   placeholder="Create a password"
+                  maxLength={PASSWORD_FIELD_MAX_LENGTH}
                   className="h-[50px] w-full rounded-[14px] border border-[#d9dee7] bg-[#f2f5f9] px-4 text-[15px] text-[#151a23] outline-none"
                 />
               </div>
@@ -62,6 +70,7 @@ function Signup() {
                 <input
                   type="password"
                   placeholder="Confirm your password"
+                  maxLength={PASSWORD_FIELD_MAX_LENGTH}
                   className="h-[50px] w-full rounded-[14px] border border-[#d9dee7] bg-[#f2f5f9] px-4 text-[15px] text-[#151a23] outline-none"
                 />
               </div>

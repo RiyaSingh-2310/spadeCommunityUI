@@ -23,10 +23,12 @@ import {
 import { useAdminFormAccess } from "../../permissions/FormAccessContext";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
+  EMAIL_FIELD_MAX_LENGTH,
   getEmailError,
   getRequiredError,
   getRichTextError,
   isFormValidForFields,
+  limitTextInput,
 } from "../../shared/utils/validation";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import {
@@ -338,7 +340,16 @@ function AddRfqPage({ isDarkMode }) {
         className={`${inputClass}${readOnly ? " cursor-not-allowed opacity-70" : ""}`}
         placeholder={placeholder}
         value={form[key]}
-        onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
+        maxLength={key === "email" ? EMAIL_FIELD_MAX_LENGTH : undefined}
+        onChange={(e) =>
+          setForm((p) => ({
+            ...p,
+            [key]:
+              key === "email"
+                ? limitTextInput(e.target.value, EMAIL_FIELD_MAX_LENGTH)
+                : e.target.value,
+          }))
+        }
         onBlur={() => touch(key)}
         disabled={controlDisabled || readOnly}
         readOnly={readOnly}
