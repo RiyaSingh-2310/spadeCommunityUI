@@ -5,10 +5,8 @@ import { getRecords as getUserRecords } from "../../../services/users/usersApi";
 import { getRecords as getClientRecords } from "../../../services/clients/clientsApi";
 import { getRecords as getPartnerRecords } from "../../../services/partners/partnersApi";
 import { getRecords as getProjectManagerRecords } from "../../../services/projectManagers/projectManagersApi";
-import { getRecords as getSalesManagerRecords } from "../../../services/sales/salesManagersApi";
 import { getRecords as getRfqRecords } from "../../../services/sales/salesProjectsApi";
 import { getRecords as getSurveyRecords } from "../../../modules/survey/services/surveyApi";
-import { getRecords as getGroupSurveyRecords } from "../../../modules/survey/services/groupSurveyApi";
 import {
   buildMonthlySeries,
   fetchWithFallback,
@@ -46,42 +44,49 @@ export function useDashboardData({ enabled = true } = {}) {
     const loadDashboard = async () => {
       if (!isSales) setDashboard((prev) => ({ ...prev, loading: true }));
       try {
-        const [
-          userData,
-          clientData,
-          partnerData,
-          pmData,
-          smData,
-          rfqData,
-          surveyData,
-          groupSurveyData,
-          invoiceData,
-          rewardData,
-          logData,
-        ] = await Promise.all([
-          getUserRecords({ page: 1, limit: 500 }),
-          getClientRecords({ page: 1, limit: 500 }),
-          getPartnerRecords({ page: 1, limit: 500 }),
-          getProjectManagerRecords({ page: 1, limit: 500 }),
-          getSalesManagerRecords({ page: 1, limit: 500 }),
-          getRfqRecords({ page: 1, limit: 5 }),
-          getSurveyRecords({ page: 1, limit: 500 }),
-          getGroupSurveyRecords({ page: 1, limit: 500 }),
-          fetchWithFallback(["/api/invoice/list", "/api/invoices/list"]),
-          fetchWithFallback(["/api/reward/list", "/api/rewards/list", "/api/reward-points/list"]),
-          fetchWithFallback(["/api/log-activity/list", "/api/log/activity/list", "/api/activity/list"]),
-        ]);
+        if (isSales) {
+          const [rfqData, surveyData] = await Promise.all([
+            getRfqRecords({ page: 1, limit: 5 }),
+            getSurveyRecords({ page: 1, limit: 500 }),
+          ]);
+
+          if (cancelled) return;
+          setDashboard({
+            ...EMPTY_DASHBOARD,
+            loading: false,
+            rfqs: rfqData.items ?? [],
+            surveys: surveyData.items ?? [],
+          });
+          return;
+        }
+
+        const [userData, clientData, partnerData, pmData, rfqData, surveyData, invoiceData, rewardData, logData] =
+          await Promise.all([
+            getUserRecords({ page: 1, limit: 500 }),
+            getClientRecords({ page: 1, limit: 500 }),
+            getPartnerRecords({ page: 1, limit: 500 }),
+            getProjectManagerRecords({ page: 1, limit: 500 }),
+            getRfqRecords({ page: 1, limit: 5 }),
+            getSurveyRecords({ page: 1, limit: 500 }),
+            fetchWithFallback(["/api/invoice/list", "/api/invoices/list"]),
+            fetchWithFallback(["/api/reward/list", "/api/rewards/list", "/api/reward-points/list"]),
+            fetchWithFallback([
+              "/api/log-activity/list",
+              "/api/log/activity/list",
+              "/api/activity/list",
+            ]),
+          ]);
+
         if (cancelled) return;
         setDashboard({
+          ...EMPTY_DASHBOARD,
           loading: false,
           users: userData.items ?? [],
           clients: clientData.items ?? [],
           partners: partnerData.items ?? [],
           projectManagers: pmData.items ?? [],
-          salesManagers: smData.items ?? [],
           rfqs: rfqData.items ?? [],
           surveys: surveyData.items ?? [],
-          groupSurveys: groupSurveyData.items ?? [],
           invoices: invoiceData.items ?? [],
           rewards: rewardData.items ?? [],
           logs: logData.items ?? [],

@@ -26,6 +26,7 @@ import {
   getRequiredError,
   getUrlError,
   getUserNameError,
+  preventBlockedNameKeys,
   isFormValid,
   isFormValidForFields,
   limitTextInput,
@@ -291,6 +292,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
                           ? CONTACT_PERSON_MAX_LENGTH
                           : undefined
                   }
+                  onKeyDown={key === "name" ? preventBlockedNameKeys : undefined}
                   onChange={(e) =>
                     setField(
                       key,

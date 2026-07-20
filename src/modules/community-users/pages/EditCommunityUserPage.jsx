@@ -19,6 +19,7 @@ import {
   getOptionalConfirmPasswordError,
   getOptionalPasswordError,
   getUserNameError,
+  preventBlockedNameKeys,
   isFormValid,
   limitTextInput,
 } from "../../shared/utils/validation";
@@ -211,6 +212,7 @@ function EditCommunityUserPage({ isDarkMode }) {
               onChange={(event) =>
                 setField("name", limitTextInput(event.target.value, NAME_FIELD_MAX_LENGTH))
               }
+              onKeyDown={preventBlockedNameKeys}
               onBlur={() => touch("name")}
               disabled={fieldDisabled(readOnly, isSubmitting)}
             />

@@ -26,6 +26,7 @@ import {
   getEmailError,
   getPasswordError,
   getUserNameError,
+  preventBlockedNameKeys,
   limitTextInput,
   isFormValidForFields,
 } from "../../shared/utils/validation";
@@ -265,6 +266,7 @@ function AddProjectManagerPage({ isDarkMode }) {
                     name: limitTextInput(e.target.value, NAME_FIELD_MAX_LENGTH),
                   }))
                 }
+                onKeyDown={preventBlockedNameKeys}
                 onBlur={() => touch("name")}
                 disabled={fieldDisabled()}
               />

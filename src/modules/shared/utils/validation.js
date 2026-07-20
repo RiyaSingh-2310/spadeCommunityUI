@@ -14,6 +14,43 @@ export const PASSWORD_FIELD_MAX_LENGTH = 30;
 
 const NAME_REGEX = /^[A-Za-z ]+$/;
 
+/**
+ * Keyboard-level input guard for admin "Name" fields.
+ * Allows only A-Z, a-z, and spaces (plus standard control/navigation keys).
+ */
+export function preventBlockedNameKeys(event) {
+  const key = event.key;
+
+  // Allow shortcuts (copy/paste/select/undo) without interfering.
+  if (event.ctrlKey || event.metaKey) return;
+
+  // Allow navigation/editing keys.
+  if (
+    key === "Backspace" ||
+    key === "Delete" ||
+    key === "Tab" ||
+    key === "Enter" ||
+    key === "Escape" ||
+    key === "ArrowLeft" ||
+    key === "ArrowRight" ||
+    key === "ArrowUp" ||
+    key === "ArrowDown" ||
+    key === "Home" ||
+    key === "End"
+  ) {
+    return;
+  }
+
+  // Allow space.
+  if (key === " " || key === "Spacebar" || key === "Space") return;
+
+  // Allow single letters only.
+  if (typeof key === "string" && /^[A-Za-z]$/.test(key)) return;
+
+  // Block anything else (digits, symbols, etc).
+  event.preventDefault();
+}
+
 export function limitTextInput(value, maxLength = USER_FIELD_MAX_LENGTH) {
   return String(value ?? "").slice(0, maxLength);
 }
@@ -44,7 +81,7 @@ export function getUserNameError(
   if (required) return required;
   const trimmed = String(value ?? "").trim();
   if (!NAME_REGEX.test(trimmed)) {
-    return `${label} can only contain letters and spaces`;
+    return "Name can only contain letters and spaces.";
   }
   return getFieldMaxLengthError(value, maxLength, label);
 }

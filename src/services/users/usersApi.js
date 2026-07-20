@@ -248,19 +248,27 @@ export async function createUser(payload) {
  *   permission_type?: string,
  *   status: string,
  *   permissions?: object
+ *   password?: string,
+ *   confirmPassword?: string,
+ *   imageFile?: File | null,
  * }} payload
  */
 export async function updateRecord(id, payload) {
-  const body = {
-    name: payload.name.trim(),
-    permission_type: payload.permission_type ?? "user",
-    status: payload.status,
-    ...buildPermissionsPayload(payload.permissions),
-    ...(payload.password ? { password: payload.password } : {}),
-    ...(payload.confirmPassword
-      ? { confirm_password: payload.confirmPassword }
-      : {}),
-  };
+  const body = new FormData();
+  body.append("name", payload.name.trim());
+  body.append("permission_type", payload.permission_type ?? "user");
+  body.append("status", payload.status);
+
+  const permissionPayload = buildPermissionsPayload(payload.permissions);
+  body.append("permissions", JSON.stringify(permissionPayload.permissions));
+
+  if (payload.password?.trim()) body.append("password", payload.password);
+  if (payload.confirmPassword?.trim())
+    body.append("confirm_password", payload.confirmPassword);
+
+  if (payload.imageFile instanceof File) {
+    body.append("image", payload.imageFile);
+  }
 
   const data = await apiRequest(API_ROUTES.admin.update(id), {
     method: "PUT",

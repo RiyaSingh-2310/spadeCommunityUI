@@ -152,14 +152,15 @@ export async function getRecord(id) {
 }
 
 function buildTemplatePayload(payload) {
-  const title = String(payload.emailTitle ?? payload.title ?? "").trim();
-  const body = String(payload.content ?? payload.description ?? payload.body ?? "").trim();
-
   return {
-    title,
-    body,
-    email_title: title,
-    description: body,
+    template_key: String(
+      payload.templateKey ?? payload.template_key ?? payload.slug ?? ""
+    ).trim(),
+    title: String(payload.emailTitle ?? payload.title ?? "").trim(),
+    subject: String(payload.subject ?? "").trim(),
+    body: String(
+      payload.body ?? payload.content ?? payload.description ?? ""
+    ).trim(),
   };
 }
 

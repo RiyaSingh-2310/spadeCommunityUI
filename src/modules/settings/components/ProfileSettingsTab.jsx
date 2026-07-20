@@ -19,6 +19,7 @@ import {
   getPasswordError,
   getRequiredError,
   getUserNameError,
+  preventBlockedNameKeys,
   isFormValidForFields,
   limitTextInput,
 } from "../../shared/utils/validation";
@@ -40,7 +41,6 @@ function ProfileSettingsTab({ isDarkMode }) {
   const [form, setForm] = useState({
     name: sessionUser?.displayName ?? sessionUser?.name ?? "",
     email: sessionUser?.email ?? "",
-    phone: "",
   });
   const [profileMeta, setProfileMeta] = useState({
     status: "Active",
@@ -99,14 +99,12 @@ function ProfileSettingsTab({ isDarkMode }) {
 
         const snapshot = {
           name: loadedForm.name.trim(),
-          phone: String(loadedForm.phone ?? "").trim(),
           imageUrl: loadedForm.imageUrl ?? "",
         };
 
         setForm({
           name: loadedForm.name,
           email: loadedForm.email,
-          phone: loadedForm.phone,
         });
         setProfileMeta({
           status: loadedForm.status,
@@ -233,7 +231,6 @@ function ProfileSettingsTab({ isDarkMode }) {
     try {
       const data = await updateProfile(userId, {
         name: form.name,
-        phone: form.phone,
         status: profileMeta.status,
         permission_type: profileMeta.permission_type,
         permissions: profileMeta.permissions,
@@ -243,13 +240,11 @@ function ProfileSettingsTab({ isDarkMode }) {
       const refreshed = await fetchProfile(userId);
       const snapshot = {
         name: refreshed.form.name.trim(),
-        phone: String(refreshed.form.phone ?? "").trim(),
         imageUrl: refreshed.form.imageUrl ?? "",
       };
       setForm({
         name: refreshed.form.name,
         email: refreshed.form.email,
-        phone: refreshed.form.phone,
       });
       setExistingImage(refreshed.form.imageUrl ?? "");
       setInitialSnapshot(snapshot);
@@ -391,6 +386,7 @@ function ProfileSettingsTab({ isDarkMode }) {
                   }))
                 }
                 onBlur={() => touchProfile("name")}
+                onKeyDown={preventBlockedNameKeys}
                 autoComplete="name"
                 maxLength={NAME_FIELD_MAX_LENGTH}
               />
@@ -403,16 +399,6 @@ function ProfileSettingsTab({ isDarkMode }) {
                 disabled
                 readOnly
                 autoComplete="email"
-              />
-            </FormField>
-
-            <FormField label="Phone Number" className="md:col-span-2">
-              <input
-                className={inputClass}
-                value={form.phone}
-                disabled
-                readOnly
-                autoComplete="tel"
               />
             </FormField>
           </div>

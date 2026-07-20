@@ -37,6 +37,7 @@ import {
   getOptionalPasswordError,
   getPasswordError,
   getUserNameError,
+  preventBlockedNameKeys,
   limitTextInput,
   isFormValid,
 } from "../../modules/shared/utils/validation";
@@ -172,6 +173,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
           permissions: form.permissions,
           password: form.password.trim(),
           confirmPassword: form.confirmPassword.trim(),
+          imageFile,
         });
 
         navigate("/users", {
@@ -268,6 +270,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                   onChange={(e) =>
                     setForm({ ...form, name: limitTextInput(e.target.value, NAME_FIELD_MAX_LENGTH) })
                   }
+                  onKeyDown={preventBlockedNameKeys}
                   onBlur={() => touch("name")}
                   disabled={fieldDisabled(readOnly, isSubmitting)}
                 />

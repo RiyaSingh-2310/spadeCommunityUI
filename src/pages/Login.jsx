@@ -6,6 +6,10 @@ import { AUTH_EMAIL_REGEX, EMAIL_FIELD_MAX_LENGTH, limitTextInput, PASSWORD_FIEL
 import { loginAdmin } from "../services/auth/authApi";
 import { LOGIN_ROLES } from "../services/auth/loginRole";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
+import { getAdminUser } from "../services/auth/authStorage";
+import { canReadModule } from "../modules/permissions/permissionsUtils";
+import { getEffectivePermissions, isSuperAdminUser } from "../modules/permissions/getEffectivePermissions";
+import { getSidebarNavItemsForRole } from "../config/roleSidebarNav";
 import { saveAuthSession } from "../services/auth/authStorage";
 
 const LOGIN_ROLE_UI = {
@@ -87,7 +91,34 @@ function Login({ isDarkMode, onToggleTheme }) {
 
       toastApiSuccess(response);
 
-      navigate("/", { replace: true });
+      // Redirect to the first module the user has permission to view/write.
+      const sessionAdmin = getAdminUser();
+      const permissions = getEffectivePermissions(sessionAdmin);
+      const superAdmin = isSuperAdminUser(sessionAdmin);
+      const navItems = getSidebarNavItemsForRole(loginRole);
+
+      const canRead = (moduleKey) => canReadModule(permissions, moduleKey, { isSuperAdmin: superAdmin });
+      const isItemAccessible = (permissionKeys) =>
+        !permissionKeys || permissionKeys.length === 0
+          ? true
+          : permissionKeys.some((key) => canRead(key));
+
+      const findFirstPath = (items) => {
+        for (const item of items ?? []) {
+          if (!item) continue;
+          if (item.type === "link") {
+            if (isItemAccessible(item.permissionKeys)) return item.root;
+          }
+          if (item.type === "group" && Array.isArray(item.children)) {
+            const nested = findFirstPath(item.children);
+            if (nested) return nested;
+          }
+        }
+        return null;
+      };
+
+      const nextPath = findFirstPath(navItems) ?? "/";
+      navigate(nextPath, { replace: true });
     } catch (error) {
       toastApiError(error);
     } finally {

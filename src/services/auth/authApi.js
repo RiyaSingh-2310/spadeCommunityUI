@@ -80,7 +80,7 @@ export async function loginAdmin(credentials) {
 
   if (!mapped.success || !mapped.token) {
     throw new ApiError(
-      mapped.message || "Login failed. Please try again.",
+      "Invalid Credentials",
       data,
       200
     );

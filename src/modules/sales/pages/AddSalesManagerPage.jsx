@@ -25,6 +25,7 @@ import {
   getOptionalPasswordError,
   getPasswordError,
   getUserNameError,
+  preventBlockedNameKeys,
   limitTextInput,
   isFormValidForFields,
 } from "../../shared/utils/validation";
@@ -266,6 +267,7 @@ function AddSalesManagerPage({ isDarkMode }) {
                     name: limitTextInput(e.target.value, NAME_FIELD_MAX_LENGTH),
                   }))
                 }
+                onKeyDown={preventBlockedNameKeys}
                 onBlur={() => touch("name")}
                 disabled={fieldDisabled()}
               />

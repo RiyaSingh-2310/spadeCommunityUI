@@ -28,6 +28,7 @@ import {
   getRichTextError,
   getUrlError,
   getUserNameError,
+  preventBlockedNameKeys,
   isFormValid,
   isFormValidForFields,
   limitTextInput,
@@ -341,6 +342,7 @@ function AddPartnerPage({ isDarkMode }) {
                                 : e.target.value
                         )
                       }
+                      onKeyDown={key === "name" ? preventBlockedNameKeys : undefined}
                       onBlur={() => touch(key)}
                       disabled={fieldDisabled(readOnlyField)}
                       readOnly={readOnlyField}
