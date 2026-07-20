@@ -35,6 +35,7 @@ import {
   PROJECT_URL_CPI_MAX_DECIMALS,
   PROJECT_URL_FORM_FIELDS,
   PROJECT_URL_NUMERIC_MAX_DIGITS,
+  PROJECT_URL_REDIRECT_FIELDS,
   sanitizeProjectUrlDecimal,
   sanitizeProjectUrlInteger,
 } from "../utils/projectUrlFormValidation";
@@ -851,70 +852,27 @@ function ProjectUrlsTab({
 
       <TableCard title="Redirect URLs" isDarkMode={isDarkMode}>
         <div className="grid gap-4 sm:grid-cols-1">
-          <FormField label="Complete URL">
-            <input
-              className={inputClass}
-              value={form.redirectComplete}
-              onChange={(event) => setField("redirectComplete", event.target.value)}
-              onBlur={(event) =>
-                setField("redirectComplete", trimOnBlur(event.target.value))
-              }
-              placeholder="https://"
-              disabled={!canWrite}
-            />
-          </FormField>
-          <FormField label="Terminated URL">
-            <input
-              className={inputClass}
-              value={form.redirectTerminate}
-              onChange={(event) => setField("redirectTerminate", event.target.value)}
-              onBlur={(event) =>
-                setField("redirectTerminate", trimOnBlur(event.target.value))
-              }
-              placeholder="https://"
-              disabled={!canWrite}
-            />
-          </FormField>
-          <FormField label="Over Quota URL">
-            <input
-              className={inputClass}
-              value={form.redirectOverQuota}
-              onChange={(event) => setField("redirectOverQuota", event.target.value)}
-              onBlur={(event) =>
-                setField("redirectOverQuota", trimOnBlur(event.target.value))
-              }
-              placeholder="https://"
-              disabled={!canWrite}
-            />
-          </FormField>
-          <FormField label="Quality Term URL">
-            <input
-              className={inputClass}
-              value={form.redirectQualityTerm}
-              onChange={(event) =>
-                setField("redirectQualityTerm", event.target.value)
-              }
-              onBlur={(event) =>
-                setField("redirectQualityTerm", trimOnBlur(event.target.value))
-              }
-              placeholder="https://"
-              disabled={!canWrite}
-            />
-          </FormField>
-          <FormField label="Survey Closed URL">
-            <input
-              className={inputClass}
-              value={form.redirectSurveyClose}
-              onChange={(event) =>
-                setField("redirectSurveyClose", event.target.value)
-              }
-              onBlur={(event) =>
-                setField("redirectSurveyClose", trimOnBlur(event.target.value))
-              }
-              placeholder="https://"
-              disabled={!canWrite}
-            />
-          </FormField>
+          {PROJECT_URL_REDIRECT_FIELDS.map(({ key, label, example }) => (
+            <FormField
+              key={key}
+              label={label}
+              hint={`Example: ${example}`}
+              error={showError(key) ? errors[key] : ""}
+            >
+              <input
+                className={inputClass}
+                value={form[key]}
+                onChange={(event) => setField(key, event.target.value)}
+                onBlur={(event) => {
+                  setField(key, trimOnBlur(event.target.value));
+                  touch(key);
+                }}
+                placeholder="https://"
+                disabled={!canWrite}
+                aria-invalid={Boolean(showError(key) && errors[key])}
+              />
+            </FormField>
+          ))}
         </div>
       </TableCard>
 

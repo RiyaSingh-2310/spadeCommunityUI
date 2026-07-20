@@ -83,6 +83,19 @@ function SurveyPage({ isDarkMode }) {
       actionVariant="view-edit"
       showDeleteAction={false}
       editPath="/survey"
+      onEdit={(row) => {
+        const id = row.recordId;
+        if (id == null) return;
+        navigate(
+          {
+            pathname: `/survey/edit/${encodeURIComponent(id)}`,
+            search: "?from=list",
+          },
+          {
+            state: { from: "list" },
+          }
+        );
+      }}
       onView={(row) => {
         const id = row.recordId;
         if (id == null) return;

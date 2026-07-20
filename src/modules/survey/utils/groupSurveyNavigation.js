@@ -14,10 +14,31 @@ export function getGroupProjectUserSurveyDataPath(groupId, surveyId) {
   return `/survey/group/${encodeURIComponent(groupId)}/projects/${encodeURIComponent(surveyId)}/user-survey-data`;
 }
 
-export function getGroupProjectEditPath(surveyId, groupId) {
+export function getGroupProjectEditPath(surveyId, groupId, options = {}) {
+  const { from = "list", fromTab } = options;
+  const state = {
+    returnTo: getGroupProjectsPath(groupId),
+    from,
+    groupId,
+  };
+  if (fromTab) {
+    state.fromTab = fromTab;
+  }
+
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (groupId != null && String(groupId).trim() !== "") {
+    params.set("groupId", String(groupId));
+  }
+  if (from !== "list" && fromTab) {
+    params.set("fromTab", fromTab);
+  }
+  const qs = params.toString();
+
   return {
     pathname: `/survey/edit/${encodeURIComponent(surveyId)}`,
-    state: { returnTo: getGroupProjectsPath(groupId) },
+    search: qs ? `?${qs}` : "",
+    state,
   };
 }
 

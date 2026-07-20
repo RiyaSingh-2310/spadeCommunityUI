@@ -1,4 +1,4 @@
-function FormField({ label, error, required, children, className = "" }) {
+function FormField({ label, error, hint, required, children, className = "" }) {
   return (
     <div className={className}>
       {label && (
@@ -8,6 +8,9 @@ function FormField({ label, error, required, children, className = "" }) {
         </label>
       )}
       {children}
+      {hint && (
+        <p className="admin-text-muted mt-1 text-xs">{hint}</p>
+      )}
       {error && (
         <p className="mt-1 text-xs text-[var(--admin-danger-text)]" role="alert">
           {error}

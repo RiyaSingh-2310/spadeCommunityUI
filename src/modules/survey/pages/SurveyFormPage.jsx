@@ -29,6 +29,11 @@ import {
   applyResolvedSelectIds,
   resolveSelectIdByLabel,
 } from "../../shared/utils/formPopulation";
+import {
+  getSurveyDetailsPath,
+  getSurveyEditBreadcrumbs,
+  SURVEY_DETAIL_TAB_IDS,
+} from "../utils/surveyDetailsNavigation";
 
 function SurveyFormPage({ isDarkMode, mode = "create" }) {
   const navigate = useNavigate();
@@ -248,15 +253,19 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
   };
 
   const title = isEdit ? "Edit Project" : "Create Project";
+  const editSearchParams = new URLSearchParams(location.search);
+  const from = location.state?.from || editSearchParams.get("from") || "";
+  const fromTab =
+    location.state?.fromTab || editSearchParams.get("fromTab") || "";
+  const groupId =
+    location.state?.groupId || editSearchParams.get("groupId") || undefined;
   const breadcrumbs = isEdit
-    ? [
-        { label: "Projects", to: "/survey" },
-        {
-          label: "Project Information",
-          to: `/survey/view/${encodeURIComponent(id)}`,
-        },
-        { label: "Edit Project" },
-      ]
+    ? getSurveyEditBreadcrumbs({
+        id,
+        from,
+        fromTab,
+        groupId,
+      })
     : [
         { label: "Projects", to: "/survey" },
         { label: "Create Project" },
@@ -324,6 +333,18 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
           projectManagerOptions={mergedProjectManagerOptions}
           salesManagerOptions={mergedSalesManagerOptions}
           salesProjectOptions={mergedSalesProjectOptions}
+          onOpenProjectUrls={
+            isEdit
+              ? () =>
+                  navigate(
+                    getSurveyDetailsPath({
+                      id,
+                      groupId,
+                      tab: SURVEY_DETAIL_TAB_IDS.PROJECT_URLS,
+                    })
+                  )
+              : undefined
+          }
         />
 
         <div className="admin-form-actions flex flex-wrap items-center gap-3">

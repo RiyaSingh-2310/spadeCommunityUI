@@ -3,7 +3,7 @@ import FormField from "../../../components/admin/FormField";
 import FormRadioGroup from "../../../components/admin/FormRadioGroup";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
-import { getAdminInputClass } from "../../shared/utils/formStyles";
+import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { NAME_FIELD_MAX_LENGTH, limitTextInput } from "../../shared/utils/validation";
 import { PROJECT_LINK_TYPES, PROJECT_STATUS_OPTIONS } from "../data/surveyFormData";
 
@@ -25,6 +25,7 @@ function SurveyForm({
   salesProjectOptions = [],
   /** @deprecated Use salesProjectOptions */
   rfqOptions = [],
+  onOpenProjectUrls,
 }) {
   const inputClass = getAdminInputClass();
   const selectClass = `${inputClass} appearance-none`;
@@ -36,7 +37,21 @@ function SurveyForm({
 
   return (
     <div className="space-y-5">
-      <TableCard title="Project Information" isDarkMode={isDarkMode}>
+      <TableCard
+        title="Project Information"
+        isDarkMode={isDarkMode}
+        // headerAction={
+        //   onOpenProjectUrls ? (
+        //     <button
+        //       type="button"
+        //       onClick={onOpenProjectUrls}
+        //       className={getAdminCancelButtonClass("modal")}
+        //     >
+        //       Project URLs
+        //     </button>
+        //   ) : undefined
+        // }
+      >
         <div className="grid gap-4 md:grid-cols-2">
           {groupProject ? (
             <FormField label="Group Project">

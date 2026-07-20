@@ -17,9 +17,49 @@ export const PROJECT_URL_FORM_FIELDS = [
   "startDate",
   "endDate",
   "preScreenerId",
+  "redirectComplete",
+  "redirectTerminate",
+  "redirectOverQuota",
+  "redirectQualityTerm",
+  "redirectSurveyClose",
   "completeRewardPoints",
   "validateRewardPoints",
 ];
+
+export const PROJECT_URL_REDIRECT_FIELDS = [
+  {
+    key: "redirectComplete",
+    label: "Complete URL",
+    path: "/redirect/complete",
+    example: "https://spade-community.com/redirect/complete?uid=[identifier]",
+  },
+  {
+    key: "redirectTerminate",
+    label: "Terminated URL",
+    path: "/redirect/terminate",
+    example: "https://spade-community.com/redirect/terminate?uid=[identifier]",
+  },
+  {
+    key: "redirectOverQuota",
+    label: "Over Quota URL",
+    path: "/redirect/overquota",
+    example: "https://spade-community.com/redirect/overquota?uid=[identifier]",
+  },
+  {
+    key: "redirectQualityTerm",
+    label: "Quality Term URL",
+    path: "/redirect/qualityterm",
+    example: "https://spade-community.com/redirect/qualityterm?uid=[identifier]",
+  },
+  {
+    key: "redirectSurveyClose",
+    label: "Survey Closed URL",
+    path: "/redirect/surveyclose",
+    example: "https://spade-community.com/redirect/surveyclose?uid=[identifier]",
+  },
+];
+
+const REDIRECT_UID_VALUE = "[identifier]";
 
 const DIRTY_COMPARE_KEYS = [
   "discussion",
@@ -107,10 +147,47 @@ function getDecimalFieldError(value, label, { required = true } = {}) {
 }
 
 /**
+ * Validates redirect URLs: domain may vary, but path + uid=[identifier] must match.
+ * Empty values are allowed (optional fields).
+ * @param {string} value
+ * @param {{ path: string, label: string, example: string }} options
+ */
+export function getProjectRedirectUrlError(value, { path, label, example }) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) return "";
+
+  let parsed;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return `${label} must follow the required format. Example: ${example}`;
+  }
+
+  const pathname = parsed.pathname.replace(/\/+$/, "") || "/";
+  const requiredPath = path.replace(/\/+$/, "") || "/";
+  if (pathname !== requiredPath) {
+    return `${label} must follow the required format. Example: ${example}`;
+  }
+
+  if (parsed.searchParams.get("uid") !== REDIRECT_UID_VALUE) {
+    return `${label} must follow the required format. Example: ${example}`;
+  }
+
+  return "";
+}
+
+/**
  * @param {object} form
  */
 export function getProjectUrlFormErrors(form) {
   const preScreenerId = form.preScreenerId || form.surveyGroupId;
+  const redirectErrors = Object.fromEntries(
+    PROJECT_URL_REDIRECT_FIELDS.map(({ key, label, path, example }) => [
+      key,
+      getProjectRedirectUrlError(form[key], { path, label, example }),
+    ])
+  );
+
   return {
     loi: getDecimalFieldError(form.loi, "LOI (Minutes)"),
     ir: getDecimalFieldError(form.ir, "IR (%)"),
@@ -121,6 +198,7 @@ export function getProjectUrlFormErrors(form) {
     preScreenerId: form.preScreen
       ? getRequiredError(preScreenerId, "Pre-Screen Group")
       : "",
+    ...redirectErrors,
     completeRewardPoints: getDecimalFieldError(
       form.completeRewardPoints,
       "Reward Point"

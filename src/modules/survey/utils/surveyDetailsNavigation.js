@@ -14,6 +14,27 @@ export const PROJECT_URL_VIEW_IDS = {
   EDIT: "edit",
 };
 
+export const SURVEY_DETAIL_TAB_LABELS = {
+  [SURVEY_DETAIL_TAB_IDS.PROJECT_DETAILS]: "Project Information",
+  [SURVEY_DETAIL_TAB_IDS.PROJECT_URLS]: "Project URL",
+  [SURVEY_DETAIL_TAB_IDS.PROJECT_MULTI_URL]: "Multi URL",
+};
+
+/**
+ * @param {string} [tab]
+ * @returns {string}
+ */
+export function getSurveyDetailTabLabel(tab) {
+  const key = String(tab ?? "").trim();
+  if (SURVEY_DETAIL_TAB_LABELS[key]) return SURVEY_DETAIL_TAB_LABELS[key];
+  if (!key) return SURVEY_DETAIL_TAB_LABELS[SURVEY_DETAIL_TAB_IDS.PROJECT_DETAILS];
+  return key
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 /**
  * @param {{ id: string|number, groupId?: string|number, salesViewMode?: boolean }} options
  */
@@ -145,4 +166,43 @@ export function getSurveyDetailsBreadcrumbs({
  */
 export function getSurveyDetailsPathFromBase(basePath, options = {}) {
   return `${basePath}${buildSurveyDetailsSearch(options)}`;
+}
+
+/**
+ * Breadcrumbs for the Edit Project page based on where the user navigated from.
+ * @param {{
+ *   id: string|number,
+ *   from?: string,
+ *   fromTab?: string,
+ *   groupId?: string|number,
+ *   listPath?: string,
+ *   listLabel?: string,
+ * }} options
+ */
+export function getSurveyEditBreadcrumbs({
+  id,
+  from,
+  fromTab,
+  groupId,
+  listPath = "/survey",
+  listLabel = "Projects",
+} = {}) {
+  if (from === "list") {
+    return [
+      { label: listLabel, to: listPath },
+      { label: "Edit Project" },
+    ];
+  }
+
+  const tab = String(fromTab || "").trim() || SURVEY_DETAIL_TAB_IDS.PROJECT_DETAILS;
+  const tabLabel = getSurveyDetailTabLabel(tab);
+
+  return [
+    { label: listLabel, to: listPath },
+    {
+      label: tabLabel,
+      to: getSurveyDetailsPath({ id, groupId, tab }),
+    },
+    { label: "Edit Project" },
+  ];
 }

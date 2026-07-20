@@ -383,11 +383,28 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         readOnly={salesViewMode}
         onEditSurvey={() => {
           if (isGroupView) {
-            const editTarget = getGroupProjectEditPath(id, groupId);
-            navigate(editTarget.pathname, { state: editTarget.state });
+            const editTarget = getGroupProjectEditPath(id, groupId, {
+              from: "details",
+              fromTab: activeTab,
+            });
+            navigate(
+              {
+                pathname: editTarget.pathname,
+                search: editTarget.search,
+              },
+              { state: editTarget.state }
+            );
             return;
           }
-          navigate(`/survey/edit/${encodeURIComponent(id)}`);
+          navigate(
+            {
+              pathname: `/survey/edit/${encodeURIComponent(id)}`,
+              search: `?from=details&fromTab=${encodeURIComponent(activeTab)}`,
+            },
+            {
+              state: { from: "details", fromTab: activeTab },
+            }
+          );
         }}
       />
 

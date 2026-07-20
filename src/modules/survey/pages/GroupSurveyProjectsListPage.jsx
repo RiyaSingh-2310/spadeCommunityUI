@@ -170,7 +170,13 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
         const recordId = row?.recordId;
         if (recordId == null) return;
         const editTarget = getGroupProjectEditPath(recordId, groupId);
-        navigate(editTarget.pathname, { state: editTarget.state });
+        navigate(
+          {
+            pathname: editTarget.pathname,
+            search: editTarget.search,
+          },
+          { state: editTarget.state }
+        );
       }}
       onFindUser={(row) => {
         const recordId = row?.recordId;
