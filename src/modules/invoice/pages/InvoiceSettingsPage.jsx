@@ -211,7 +211,7 @@ function InvoiceSettingsPage({ isDarkMode }) {
         </TableCard>
 
         <TableCard title="Invoice Content" isDarkMode={isDarkMode}>
-          <div className="flex max-w-3xl flex-col gap-5">
+          <div className="flex w-full flex-col gap-5">
             <FormField
               label="Address"
               required
