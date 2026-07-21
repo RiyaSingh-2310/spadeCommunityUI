@@ -157,6 +157,7 @@ export const API_ROUTES = {
   },
   panelist: {
     list: "/api/panelist/list",
+    logout: "/api/panelist/logout",
     byId: (id) => `/api/panelist/${id}`,
     updateStatus: (id) => `/api/panelist/${id}/status`,
   },

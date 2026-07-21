@@ -7,6 +7,8 @@ import {
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
 import { LOGIN_ROLES } from "./loginRole";
+import { toastApiSuccess } from "../toast/apiToast";
+import { clearAuthSession } from "./authStorage";
 import { mapAuthFlowResponse } from "./mapAuthFlowResponse";
 import { mapLoginResponse } from "./mapLoginResponse";
 
@@ -31,6 +33,23 @@ function logAuthError(scope, error) {
     return;
   }
   console.error(`[${scope}] Unexpected error:`, error);
+}
+
+function logLogoutRouteHint(status, logoutPath, logoutUrl) {
+  if (!API_DEBUG || status !== 404) return;
+
+  console.error(
+    `[Logout] 404 Not Found for POST ${logoutPath}.`,
+    "Verify the backend exposes this route and has been restarted after pulling latest code.",
+    { url: logoutUrl, apiBaseUrl: API_BASE_URL }
+  );
+}
+
+/**
+ * Admin panel sign-out uses POST /api/admin/logout (same JWT blacklist flow as panelist logout).
+ */
+function resolveLogoutRoute() {
+  return API_ROUTES.admin.logout;
 }
 
 /**
@@ -111,20 +130,49 @@ export async function loginAdmin(credentials) {
 }
 
 /**
- * POST /api/admin/logout — clears server-side token before local session clear.
+ * POST /api/admin/logout — blacklists the current Bearer token on the server.
  */
 export async function logoutAdmin() {
+  const logoutPath = resolveLogoutRoute();
+  const logoutUrl = buildApiUrl(logoutPath);
+
+  logAuthDebug("Logout", "API base URL", API_BASE_URL);
+  logAuthDebug("Logout", "Request URL", logoutUrl);
+  logAuthDebug("Logout", "Method", "POST");
+
   try {
-    const data = await apiRequest(API_ROUTES.admin.logout, {
+    const data = await apiRequest(logoutPath, {
       method: "POST",
-      body: {},
+      skipSessionExpiryOn401: true,
     });
-    return assertAuthFlowSuccess(data, "Logout successful!");
+    logAuthDebug("Logout", "Response data", data);
+    return assertAuthFlowSuccess(data, "Logged out successfully!");
   } catch (error) {
     logAuthError("Logout", error);
+    if (error instanceof ApiError) {
+      logLogoutRouteHint(error.status, logoutPath, logoutUrl);
+    }
     // Allow local sign-out even if the API call fails (expired token, network, etc).
     return { success: false, message: error?.message ?? "Logout request failed." };
   }
+}
+
+/**
+ * Calls logout API, clears local auth state, shows success toast, and redirects to login.
+ * @param {(path: string) => void} navigate
+ */
+export async function performLogout(navigate) {
+  const result = await logoutAdmin();
+  clearAuthSession();
+  if (result.success) {
+    toastApiSuccess(result);
+  } else if (API_DEBUG) {
+    console.warn(
+      "[Logout] Server logout did not succeed; local session was cleared and user redirected to login.",
+      result.message
+    );
+  }
+  navigate("/auth");
 }
 
 /**

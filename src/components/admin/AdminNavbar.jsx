@@ -5,10 +5,9 @@ import heroLogo from "../../assets/SpadeCommunitylogoWhite.png";
 import Avatar from "../shared/Avatar";
 import {
   AUTH_SESSION_CHANGED_EVENT,
-  clearAuthSession,
   getAdminUser,
 } from "../../services/auth/authStorage";
-import { logoutAdmin } from "../../services/auth/authApi";
+import { performLogout } from "../../services/auth/authApi";
 import HeaderSearch from "./HeaderSearch";
 import NotificationDrawer from "./NotificationDrawer";
 
@@ -145,13 +144,7 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
               type="button"
               onClick={async () => {
                 setIsDropdownOpen(false);
-                try {
-                  await logoutAdmin();
-                } catch {
-                  // Local sign-out proceeds even if the API call fails.
-                }
-                clearAuthSession();
-                navigate("/auth");
+                await performLogout(navigate);
               }}
               className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left font-medium text-[var(--admin-danger-text)] transition hover:opacity-90"
             >

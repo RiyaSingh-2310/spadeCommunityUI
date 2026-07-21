@@ -126,6 +126,8 @@ export async function apiRequest(path, options = {}) {
     auth = true,
     /** When auth is false, still send VITE_API_LOGIN_BEARER_TOKEN (forgot-password flow). */
     loginBearer = false,
+    /** Skip forced session-expired redirect on 401 (intentional logout). */
+    skipSessionExpiryOn401 = false,
     headers: extraHeaders = {},
   } = options;
 
@@ -190,6 +192,14 @@ export async function apiRequest(path, options = {}) {
     const status = response.status;
 
     if (status === 401 && auth) {
+      if (skipSessionExpiryOn401) {
+        throw new ApiError(
+          extractErrorMessage(response, data, rawText) || SESSION_EXPIRED_MESSAGE,
+          data,
+          401
+        );
+      }
+
       if (attempt < maxAttempts) {
         if (API_DEBUG) {
           console.warn(
