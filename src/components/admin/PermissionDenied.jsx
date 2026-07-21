@@ -1,5 +1,6 @@
 import { ShieldOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { resolveAuthenticatedLandingPath } from "../../modules/permissions/resolveAuthenticatedLandingPath";
 
 function PermissionDenied({ isDarkMode, message }) {
   const navigate = useNavigate();
@@ -22,10 +23,10 @@ function PermissionDenied({ isDarkMode, message }) {
       </div>
       <button
         type="button"
-        onClick={() => navigate("/")}
+        onClick={() => navigate(resolveAuthenticatedLandingPath())}
         className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white hover:bg-[#0f9b49]"
       >
-        Go to Dashboard
+        Go to Home
       </button>
     </div>
   );

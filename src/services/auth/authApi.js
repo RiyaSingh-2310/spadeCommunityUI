@@ -6,6 +6,7 @@ import {
 } from "../../config/api";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
+import { LOGIN_ROLES } from "./loginRole";
 import { mapAuthFlowResponse } from "./mapAuthFlowResponse";
 import { mapLoginResponse } from "./mapLoginResponse";
 
@@ -47,25 +48,37 @@ function assertAuthFlowSuccess(data, fallbackMessage) {
   };
 }
 
+function resolveLoginRoute(loginRole) {
+  if (loginRole === LOGIN_ROLES.SALES) return API_ROUTES.salesManagers.login;
+  if (loginRole === LOGIN_ROLES.MANAGER) return API_ROUTES.projectManagers.login;
+  return API_ROUTES.admin.login;
+}
+
 /**
- * POST /api/admin/login
- * @param {{ email: string, password: string }} credentials
+ * Role-aware login:
+ * - Admin → POST /api/admin/login
+ * - Sales Manager → POST /api/salesmanager/login
+ * - Project Manager → POST /api/projectmanager/login
+ * @param {{ email: string, password: string, loginRole?: string }} credentials
  */
 export async function loginAdmin(credentials) {
   const payload = {
     email: credentials.email.trim(),
     password: credentials.password,
   };
+  const loginRole = credentials.loginRole ?? LOGIN_ROLES.ADMIN;
+  const loginPath = resolveLoginRoute(loginRole);
 
-  const url = buildApiUrl(API_ROUTES.admin.login);
+  const url = buildApiUrl(loginPath);
 
   logAuthDebug("Login", "API base URL", API_BASE_URL);
   logAuthDebug("Login", "Request URL", url);
+  logAuthDebug("Login", "Login role", loginRole);
   logAuthDebug("Login", "Request payload", { email: payload.email, password: "***" });
 
   let data;
   try {
-    data = await apiRequest(API_ROUTES.admin.login, {
+    data = await apiRequest(loginPath, {
       method: "POST",
       auth: false,
       body: payload,
@@ -73,17 +86,13 @@ export async function loginAdmin(credentials) {
     logAuthDebug("Login", "Response data", data);
   } catch (error) {
     logAuthError("Login", error);
-    throw error;
+    throw new ApiError("Invalid Credentials", error?.data ?? null, error?.status ?? 401);
   }
 
   const mapped = mapLoginResponse(data);
 
   if (!mapped.success || !mapped.token) {
-    throw new ApiError(
-      "Invalid Credentials",
-      data,
-      200
-    );
+    throw new ApiError("Invalid Credentials", data, 200);
   }
 
   const status = mapped.admin?.status ?? data?.data?.admin?.status;
@@ -99,6 +108,23 @@ export async function loginAdmin(credentials) {
     admin: mapped.admin,
     data: data?.data ?? { token: mapped.token, admin: mapped.admin },
   };
+}
+
+/**
+ * POST /api/admin/logout — clears server-side token before local session clear.
+ */
+export async function logoutAdmin() {
+  try {
+    const data = await apiRequest(API_ROUTES.admin.logout, {
+      method: "POST",
+      body: {},
+    });
+    return assertAuthFlowSuccess(data, "Logout successful!");
+  } catch (error) {
+    logAuthError("Logout", error);
+    // Allow local sign-out even if the API call fails (expired token, network, etc).
+    return { success: false, message: error?.message ?? "Logout request failed." };
+  }
 }
 
 /**

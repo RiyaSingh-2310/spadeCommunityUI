@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { PermissionsProvider, usePermissions } from "../../modules/permissions/PermissionsContext";
 import { FormAccessProvider, isFormRoute } from "../../modules/permissions/FormAccessContext";
 import { getRoutePermissionAccess } from "../../modules/permissions/routePermissions";
+import { resolveAuthenticatedLandingPath } from "../../modules/permissions/resolveAuthenticatedLandingPath";
 import {
   ADMIN_MOBILE_MEDIA_QUERY,
   useMediaQuery,
@@ -22,6 +23,11 @@ function AdminLayoutContent({ isDarkMode, onToggleTheme }) {
   const { moduleKey, requiresWrite } = getRoutePermissionAccess(location.pathname);
   const hasAccess =
     !moduleKey || (requiresWrite ? canWrite(moduleKey) : canRead(moduleKey));
+
+  const isDashboardRoute = location.pathname === "/" || location.pathname === "";
+  const landingPath = !hasAccess && isDashboardRoute ? resolveAuthenticatedLandingPath() : null;
+  const shouldRedirectFromDashboard =
+    Boolean(landingPath) && landingPath !== "/" && landingPath !== location.pathname;
 
   useEffect(() => {
     setIsMobileDrawerOpen(false);
@@ -96,7 +102,9 @@ function AdminLayoutContent({ isDarkMode, onToggleTheme }) {
         >
           <div className="admin-page-root min-w-0">
             <ScrollToTopOnNavigate />
-            {hasAccess ? (
+            {shouldRedirectFromDashboard ? (
+              <Navigate to={landingPath} replace />
+            ) : hasAccess ? (
               <PageErrorBoundary isDarkMode={isDarkMode}>
                 {isFormRoute(location.pathname) ? (
                   <FormAccessProvider isDarkMode={isDarkMode}>

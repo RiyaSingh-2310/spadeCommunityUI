@@ -1,5 +1,6 @@
 import { API_ROUTES } from "../../config/api";
 import { formatCountryLabel } from "../countries/countriesApi";
+import { getDefaultPhoneCountryCode } from "../../modules/shared/data/phoneCountries";
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
 import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import { apiRequest } from "../api/client";
@@ -8,12 +9,40 @@ import {
   apiStatusToFormValue,
   formValueToApiStatus,
 } from "../../modules/shared/utils/statusLabels";
+import {
+  formatPhoneValue,
+  parsePhoneValue,
+  sanitizePhoneDigits,
+} from "../../modules/shared/utils/phoneValidation";
 
 function assertSuccess(data, fallbackMessage) {
   if (data?.success !== true) {
     throw new ApiError(data?.message || fallbackMessage, data);
   }
   return data;
+}
+
+/**
+ * Format stored national digits for PhoneInput display.
+ * @param {string} contactNo
+ * @param {string} [countryLabel]
+ */
+export function formatClientContactForForm(contactNo, countryLabel) {
+  const digits = sanitizePhoneDigits(contactNo);
+  if (!digits) return "";
+  const countryCode = getDefaultPhoneCountryCode(countryLabel);
+  return formatPhoneValue(countryCode, digits);
+}
+
+/**
+ * Backend `isMobilePhone()` expects national digits (e.g. "1234567897"), not "+93 1234567897".
+ * @param {string} contactNumber Full phone from PhoneInput
+ * @param {string} [countryLabel]
+ */
+export function resolveClientContactNo(contactNumber, countryLabel) {
+  const fallback = getDefaultPhoneCountryCode(countryLabel);
+  const parsed = parsePhoneValue(contactNumber, fallback);
+  return sanitizePhoneDigits(parsed.nationalNumber);
 }
 
 /**
@@ -30,7 +59,7 @@ export async function createClient(payload) {
     name: payload.name.trim(),
     email: payload.email.trim(),
     country: payload.country.trim(),
-    contact_no: payload.contact_no?.trim() ?? "",
+    contact_no: resolveClientContactNo(payload.contact_no, payload.country),
   };
 
   const data = await apiRequest(API_ROUTES.clients.create, {
@@ -56,7 +85,7 @@ export async function updateClient(id, payload) {
     body: {
       name: payload.name.trim(),
       country: payload.country.trim(),
-      contact_no: payload.contact_no?.trim() ?? "",
+      contact_no: resolveClientContactNo(payload.contact_no, payload.country),
     },
   });
 
@@ -84,7 +113,7 @@ export async function updateClientStatus(id, { name, status, country, contactNum
     body: {
       name: String(name ?? "").trim(),
       country: String(country ?? "").trim(),
-      contact_no: String(contactNumber ?? "").trim(),
+      contact_no: resolveClientContactNo(contactNumber, country),
       status: formValueToApiStatus(status),
     },
   });
@@ -185,12 +214,16 @@ export async function getRecord(id) {
  * @param {object} client
  */
 export function mapClientToForm(client) {
+  const country = client?.country ?? "";
   return {
     name: client?.client_name ?? client?.name ?? "",
     email: client?.client_email ?? client?.email ?? "",
-    country: client?.country ?? "",
+    country,
     contactPerson: client?.contact_person ?? client?.contactPerson ?? "",
-    contactNumber: client?.contact_no ?? client?.contactNumber ?? "",
+    contactNumber: formatClientContactForForm(
+      client?.contact_no ?? client?.contactNumber ?? "",
+      country
+    ),
     website: client?.website ?? client?.website_url ?? "",
     apiBaseUrl: client?.api_base_url ?? client?.apiBaseUrl ?? "",
     apiSecretKey: client?.api_secret_key ?? client?.apiSecretKey ?? "",

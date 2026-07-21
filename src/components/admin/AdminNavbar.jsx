@@ -8,6 +8,7 @@ import {
   clearAuthSession,
   getAdminUser,
 } from "../../services/auth/authStorage";
+import { logoutAdmin } from "../../services/auth/authApi";
 import HeaderSearch from "./HeaderSearch";
 import NotificationDrawer from "./NotificationDrawer";
 
@@ -142,7 +143,13 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
             />
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
+                setIsDropdownOpen(false);
+                try {
+                  await logoutAdmin();
+                } catch {
+                  // Local sign-out proceeds even if the API call fails.
+                }
                 clearAuthSession();
                 navigate("/auth");
               }}

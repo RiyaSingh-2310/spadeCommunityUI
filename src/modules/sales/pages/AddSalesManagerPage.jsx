@@ -19,7 +19,7 @@ import {
   EMAIL_FIELD_MAX_LENGTH,
   NAME_FIELD_MAX_LENGTH,
   PASSWORD_FIELD_MAX_LENGTH,
-  getAuthEmailError,
+  getEmailError,
   getConfirmPasswordError,
   getOptionalConfirmPasswordError,
   getOptionalPasswordError,
@@ -69,7 +69,7 @@ function AddSalesManagerPage({ isDarkMode }) {
   const errors = useMemo(
     () => ({
       name: getUserNameError(form.name),
-      email: isEdit ? "" : getAuthEmailError(form.email, { label: "Email Address" }),
+      email: isEdit ? "" : getEmailError(form.email, { label: "Email Address" }),
       password: isEdit
         ? getOptionalPasswordError(form.password, SALES_MANAGER_PASSWORD_MIN_LENGTH)
         : getPasswordError(form.password, SALES_MANAGER_PASSWORD_MIN_LENGTH),

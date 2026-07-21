@@ -264,8 +264,17 @@ function UserPermissionsTable({
                       key={`${node.id}__child__${child.label}`}
                       className="admin-permissions-table__row border-t align-middle transition-colors"
                     >
-                      <td className="px-4 py-2.5 pl-10 whitespace-nowrap">
-                        {renderModuleLabel(child.label)}
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        {/* Indent under parent: chevron column spacer + nest padding */}
+                        <div className="flex items-center gap-2 pl-2 sm:pl-3">
+                          <span
+                            className="inline-flex h-6 w-6 shrink-0"
+                            aria-hidden="true"
+                          />
+                          <span className="pl-2 sm:pl-3">
+                            {renderModuleLabel(child.label)}
+                          </span>
+                        </div>
                       </td>
                       <PermissionCheckboxes
                         label={child.label}

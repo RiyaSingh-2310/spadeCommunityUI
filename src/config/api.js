@@ -4,6 +4,7 @@ const DEFAULT_API_BASE_URL = "http://localhost:5050/api";
 export const API_ROUTES = {
   admin: {
     login: "/api/admin/login",
+    logout: "/api/admin/logout",
     forgotPassword: "/api/admin/forgot-password",
     verifyOtp: "/api/admin/verify-otp",
     resetPassword: "/api/admin/reset-password",
@@ -34,6 +35,7 @@ export const API_ROUTES = {
   projectManagers: {
     list: "/api/projectmanager/list",
     create: "/api/projectmanager/add",
+    login: "/api/projectmanager/login",
     byId: (id) => `/api/projectmanager/${id}`,
     update: (id) => `/api/projectmanager/${id}`,
     updateStatus: (id) => `/api/projectmanager/${id}/status`,
@@ -52,6 +54,7 @@ export const API_ROUTES = {
   salesManagers: {
     list: "/api/salesmanager/list",
     create: "/api/salesmanager",
+    login: "/api/salesmanager/login",
     byId: (id) => `/api/salesmanager/${id}`,
     update: (id) => `/api/salesmanager/${id}`,
     updateStatus: (id) => `/api/salesmanager/status/${id}`,

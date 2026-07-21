@@ -30,7 +30,17 @@ export function mapLoginResponse(raw) {
     nested?.refreshToken ?? nested?.refresh_token ?? raw.refreshToken ?? ""
   ).trim();
 
-  const adminSource = nested?.admin ?? raw.admin ?? null;
+  const adminSource =
+    nested?.admin ??
+    nested?.salesManager ??
+    nested?.projectManager ??
+    nested?.manager ??
+    nested?.user ??
+    raw.admin ??
+    raw.salesManager ??
+    raw.projectManager ??
+    raw.user ??
+    null;
   const sessionAdmin =
     adminSource && typeof adminSource === "object"
       ? prepareAdminSessionUser(adminSource, nested, raw)

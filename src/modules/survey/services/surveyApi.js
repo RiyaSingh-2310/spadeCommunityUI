@@ -157,8 +157,17 @@ export function mapSurveyToRow(project) {
   const projectCode = project?.Project_code ?? project?.survey_id ?? "";
   const projectName = project?.Project_Name ?? project?.project_name ?? "";
   const clientName = project?.Clients ?? project?.client_name ?? "";
-  const createdAt = project?.created_at ?? project?.Created_At;
-  const updatedAt = project?.updated_at ?? project?.Updated_At;
+  const urlInfo = getPrimaryUrlInfo(project);
+  const startDate = pickField(
+    urlInfo,
+    ["Start_Date", "start_date", "startDate"],
+    project?.Start_Date ?? project?.start_date ?? project?.startDate
+  );
+  const endDate = pickField(
+    urlInfo,
+    ["End_Date", "end_date", "endDate"],
+    project?.End_Date ?? project?.end_date ?? project?.endDate
+  );
   const status = project?.Status ?? project?.status;
   const loi = project?.LOI ?? project?.loi;
   const ir = project?.IR ?? project?.ir;
@@ -175,8 +184,8 @@ export function mapSurveyToRow(project) {
     clientName,
     projectManagerName: project?.Project_Manager ?? project?.project_manager_name ?? "",
     partnerNames: project?.partner_names ?? "",
-    startDate: formatSurveyListDate(createdAt),
-    endDate: formatSurveyListDate(updatedAt),
+    startDate: formatSurveyListDate(startDate),
+    endDate: formatSurveyListDate(endDate),
     loi: loi != null && loi !== "" ? String(loi) : "—",
     ir: ir != null && ir !== "" ? String(ir) : "—",
     sampleSize: sampleSize != null && sampleSize !== "" ? String(sampleSize) : "—",

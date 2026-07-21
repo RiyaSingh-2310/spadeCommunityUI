@@ -4,6 +4,7 @@ import {
   AUTH_SESSION_CHANGED_EVENT,
   isAuthenticated,
 } from "../../services/auth/authStorage";
+import { resolveAuthenticatedLandingPath } from "../../modules/permissions/resolveAuthenticatedLandingPath";
 
 function GuestOnly() {
   const [authed, setAuthed] = useState(() => isAuthenticated());
@@ -15,7 +16,8 @@ function GuestOnly() {
   }, []);
 
   if (authed) {
-    return <Navigate to="/" replace />;
+    // Must match post-login routing — never hardcode Dashboard ("/").
+    return <Navigate to={resolveAuthenticatedLandingPath()} replace />;
   }
 
   return <Outlet />;
