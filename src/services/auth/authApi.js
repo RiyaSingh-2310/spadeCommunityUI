@@ -97,9 +97,12 @@ export async function loginAdmin(credentials) {
 
   let data;
   try {
+    // Sales Manager login may send optional login bearer when VITE_API_LOGIN_BEARER_TOKEN is set
+    // (matches backend curl). Admin / Project Manager login stay unchanged.
     data = await apiRequest(loginPath, {
       method: "POST",
       auth: false,
+      loginBearer: loginRole === LOGIN_ROLES.SALES,
       body: payload,
     });
     logAuthDebug("Login", "Response data", data);
@@ -114,7 +117,10 @@ export async function loginAdmin(credentials) {
     throw new ApiError("Invalid Credentials", data, 200);
   }
 
-  const status = mapped.admin?.status ?? data?.data?.admin?.status;
+  const status =
+    mapped.admin?.status ??
+    data?.data?.admin?.status ??
+    data?.data?.status;
   if (status && String(status).toLowerCase() !== "active") {
     throw new ApiError("Your account is inactive. Please contact support.", data);
   }
