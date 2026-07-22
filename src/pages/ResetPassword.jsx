@@ -1,24 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
-import AuthSecondaryAction from "../components/auth/AuthSecondaryAction";
 import { resetPassword } from "../services/auth/authApi";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 import { PASSWORD_FIELD_MAX_LENGTH } from "../modules/shared/utils/validation";
-
-const getPasswordStrength = (password) => {
-  if (!password) {
-    return { score: 0, label: "Weak" };
-  }
-  let score = 0;
-  if (password.length >= 8) score += 1;
-  if (/[A-Z]/.test(password)) score += 1;
-  if (/[0-9]/.test(password)) score += 1;
-  if (/[^A-Za-z0-9]/.test(password)) score += 1;
-  const labels = ["Weak", "Weak", "Fair", "Good", "Strong"];
-  return { score, label: labels[score] };
-};
 
 function ResetPassword({ isDarkMode, onToggleTheme }) {
   const navigate = useNavigate();
@@ -42,7 +28,6 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
     }
   }, [email, otp, navigate]);
 
-  const strength = useMemo(() => getPasswordStrength(password), [password]);
   const passwordsMatch =
     password.trim().length > 0 && password === confirmPassword;
 
@@ -82,6 +67,8 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
       const response = await resetPassword({
         email: email.trim(),
         otp: String(otp).trim(),
+        password,
+        confirmPassword,
         newPassword: password,
       });
       toastApiSuccess(response);
@@ -174,31 +161,6 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
             <p className="mt-1.5 text-xs text-[#de3d3d]">
               New Password cannot start or end with spaces.
             </p>
-          )}
-          {!!password && (
-            <div className="mt-2">
-              <div className="flex gap-1">
-                {[1, 2, 3, 4].map((step) => (
-                  <span
-                    key={step}
-                    className={`h-1.5 flex-1 rounded-full ${
-                      strength.score >= step
-                        ? "bg-[#18a354]"
-                        : isDarkMode
-                          ? "bg-[#334155]"
-                          : "bg-[#d8e0ea]"
-                    }`}
-                  />
-                ))}
-              </div>
-              <p
-                className={`mt-1 text-xs ${
-                  isDarkMode ? "text-[#94a3b8]" : "text-[#7b8799]"
-                }`}
-              >
-                Password strength: {strength.label}
-              </p>
-            </div>
           )}
         </div>
 

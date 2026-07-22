@@ -231,19 +231,40 @@ export async function verifyOtp(payload) {
 
 /**
  * POST /api/admin/reset-password
- * @param {{ email: string, otp: string, newPassword: string }} payload
+ * Encrypts new password and confirm password before send.
+ * @param {{
+ *   email: string,
+ *   otp: string,
+ *   newPassword?: string,
+ *   password?: string,
+ *   confirmPassword?: string,
+ * }} payload
  */
 export async function resetPassword(payload) {
+  const plainPassword = String(
+    payload.password ?? payload.newPassword ?? ""
+  );
+  const plainConfirmPassword = String(
+    payload.confirmPassword ?? payload.confirm_password ?? plainPassword
+  );
+  const encryptedPassword = encryptValue(plainPassword);
+  const encryptedConfirmPassword = encryptValue(plainConfirmPassword);
+
   const body = {
     email: String(payload.email ?? "").trim(),
     otp: String(payload.otp ?? "").trim(),
-    newPassword: String(payload.newPassword ?? ""),
+    password: encryptedPassword,
+    confirm_password: encryptedConfirmPassword,
+    // Backend currently decrypts `newPassword`; keep it in sync with password.
+    newPassword: encryptedPassword,
   };
 
   logAuthDebug("Reset Password", "Request URL", buildApiUrl(API_ROUTES.admin.resetPassword));
   logAuthDebug("Reset Password", "Payload", {
     email: body.email,
     otp: body.otp,
+    password: "***",
+    confirm_password: "***",
     newPassword: "***",
   });
 

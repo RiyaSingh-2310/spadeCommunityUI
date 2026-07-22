@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
-import { AUTH_EMAIL_REGEX, EMAIL_FIELD_MAX_LENGTH, limitTextInput, PASSWORD_FIELD_MAX_LENGTH } from "../modules/shared/utils/validation";
+import { isValidEmail, EMAIL_FIELD_MAX_LENGTH, EMAIL_VALIDATION_MESSAGE, limitTextInput, PASSWORD_FIELD_MAX_LENGTH } from "../modules/shared/utils/validation";
 import { loginAdmin } from "../services/auth/authApi";
 import { LOGIN_ROLES } from "../services/auth/loginRole";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
@@ -51,7 +51,7 @@ function Login({ isDarkMode, onToggleTheme }) {
   const roleUi = LOGIN_ROLE_UI[loginRole];
 
   const hasEmailFormat = useMemo(
-    () => AUTH_EMAIL_REGEX.test(email.trim()),
+    () => isValidEmail(email),
     [email]
   );
 
@@ -64,10 +64,10 @@ function Login({ isDarkMode, onToggleTheme }) {
     event.preventDefault();
     const hasEmail = email.trim().length > 0;
     const hasPassword = password.trim().length > 0;
-    const isEmailValid = AUTH_EMAIL_REGEX.test(email.trim());
+    const emailValid = isValidEmail(email);
 
     setTouched({ email: true, password: true });
-    if (!hasEmail || !hasPassword || !isEmailValid) {
+    if (!hasEmail || !hasPassword || !emailValid) {
       return;
     }
 
@@ -177,7 +177,7 @@ function Login({ isDarkMode, onToggleTheme }) {
               )}
               {showEmailFormatError && (
                 <p className="mt-1.5 text-xs text-[#de3d3d]">
-                  Please enter a valid email address
+                  {EMAIL_VALIDATION_MESSAGE}
                 </p>
               )}
             </div>
