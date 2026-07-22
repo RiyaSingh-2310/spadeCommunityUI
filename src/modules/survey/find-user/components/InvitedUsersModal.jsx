@@ -191,7 +191,11 @@ function InvitedUsersModal({ isOpen, onClose, isDarkMode, surveyId }) {
           className="shrink-0 border-t px-5 py-4"
           style={{ borderColor: "var(--admin-header-surface-border)" }}
         >
-          <button type="button" onClick={onClose} className={getAdminCancelButtonClass("modal")}>
+          <button
+            type="button"
+            onClick={onClose}
+            className={getAdminCancelButtonClass("modal")}
+          >
             Close
           </button>
         </div>

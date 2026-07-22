@@ -15,6 +15,7 @@ import {
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
 import { formatLocaleDateTime } from "../../modules/shared/utils/dateTime";
+import { encryptValue } from "../../modules/shared/utils/encryption";
 
 function isApiSuccess(data) {
   if (!data || typeof data !== "object") return false;
@@ -184,11 +185,13 @@ function buildPartnerSurveyPayload(form) {
 function buildPartnerApiFields(form) {
   const apiBaseUrl = String(form.apiBaseUrl ?? "").trim();
   const apiSecretKey = String(form.apiSecretKey ?? "").trim();
-  const apiBody = String(form.apiBody ?? "").trim();
+  const apiBody = String(form.apiBody ?? form.apiHeaderKey ?? "").trim();
+  const apiHeaderKey = String(form.apiHeaderKey ?? "").trim();
 
   const fields = {};
   if (apiBaseUrl) fields.api_base_url = apiBaseUrl;
-  if (apiSecretKey) fields.api_secret_key = apiSecretKey;
+  if (apiHeaderKey) fields.api_header_key = apiHeaderKey;
+  if (apiSecretKey) fields.api_secret_key = encryptValue(apiSecretKey);
   if (apiBody) fields.api_body = apiBody;
 
   return fields;

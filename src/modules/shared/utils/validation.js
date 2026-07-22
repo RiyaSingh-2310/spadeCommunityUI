@@ -1,6 +1,6 @@
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-/** Matches backend auth identifiers (e.g. test@123). */
-export const AUTH_EMAIL_REGEX = /^[^\s@]+@[^\s@]+$/;
+/** @deprecated Prefer `isValidEmail()` — format checks now live there. */
+export const AUTH_EMAIL_REGEX = EMAIL_REGEX;
 export const URL_REGEX = /^https?:\/\/[^\s/$.?#].[^\s]*$/i;
 
 export const DEFAULT_PASSWORD_MIN_LENGTH = 8;
@@ -11,6 +11,55 @@ export const NAME_FIELD_MAX_LENGTH = 60;
 export const CONTACT_PERSON_MAX_LENGTH = 60;
 export const EMAIL_FIELD_MAX_LENGTH = 60;
 export const PASSWORD_FIELD_MAX_LENGTH = 30;
+
+export const EMAIL_VALIDATION_MESSAGE = "Please enter a valid email address";
+
+/**
+ * Strict email format validation shared across the app.
+ * Rejects incomplete domains, consecutive dots, trailing dots in the local part,
+ * commas, slashes, and other malformed addresses.
+ *
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function isValidEmail(value) {
+  const email = String(value ?? "").trim();
+  if (!email) return false;
+
+  const atIndex = email.indexOf("@");
+  if (atIndex <= 0 || atIndex !== email.lastIndexOf("@")) return false;
+
+  const local = email.slice(0, atIndex);
+  const domain = email.slice(atIndex + 1);
+  if (!local || !domain) return false;
+
+  if (local.startsWith(".") || local.endsWith(".") || local.includes("..")) {
+    return false;
+  }
+  if (domain.startsWith(".") || domain.endsWith(".") || domain.includes("..")) {
+    return false;
+  }
+
+  // Local part: common RFC-inspired characters (no spaces, commas, or slashes).
+  if (!/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(local)) return false;
+
+  // Domain: letters, digits, hyphens, and dots only.
+  if (!/^[A-Za-z0-9.-]+$/.test(domain)) return false;
+
+  const labels = domain.split(".");
+  if (labels.length < 2) return false;
+
+  for (const label of labels) {
+    if (!label || label.startsWith("-") || label.endsWith("-")) return false;
+    if (!/^[A-Za-z0-9-]+$/.test(label)) return false;
+  }
+
+  // TLD must be at least 2 alphabetic characters (rejects "username@example").
+  const tld = labels[labels.length - 1];
+  if (!/^[A-Za-z]{2,}$/.test(tld)) return false;
+
+  return true;
+}
 
 const NAME_REGEX = /^[A-Za-z ]+$/;
 
@@ -121,31 +170,18 @@ export function getEmailError(
   }
   const maxError = getFieldMaxLengthError(trimmed, maxLength, label);
   if (maxError) return maxError;
-  if (!EMAIL_REGEX.test(trimmed)) {
-    return "Please enter a valid email address";
+  if (!isValidEmail(trimmed)) {
+    return EMAIL_VALIDATION_MESSAGE;
   }
   return "";
 }
 
-/** Lenient email validation for login / forgot-password flows. */
+/** Same rules as `getEmailError` — used by login / forgot-password flows. */
 export function getAuthEmailError(
   value,
   { required = true, label = "Email", maxLength = EMAIL_FIELD_MAX_LENGTH } = {}
 ) {
-  const raw = String(value ?? "");
-  const trimmed = raw.trim();
-  if (!trimmed) {
-    return required ? `${label} is required` : "";
-  }
-  if (/\s/.test(raw)) {
-    return `${label} cannot contain spaces`;
-  }
-  const maxError = getFieldMaxLengthError(trimmed, maxLength, label);
-  if (maxError) return maxError;
-  if (!AUTH_EMAIL_REGEX.test(trimmed)) {
-    return "Please enter a valid email address";
-  }
-  return "";
+  return getEmailError(value, { required, label, maxLength });
 }
 
 export const URL_VALIDATION_MESSAGE =

@@ -184,6 +184,10 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
           name: form.name,
           country: form.country,
           contact_no: form.contactNumber,
+          website: form.website,
+          apiBaseUrl: form.apiBaseUrl,
+          apiHeaderKey: form.apiHeaderKey,
+          apiSecretKey: form.apiSecretKey,
         });
 
         navigate("/clients", {
@@ -201,6 +205,10 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
         email: form.email,
         country: form.country,
         contact_no: form.contactNumber,
+        website: form.website,
+        apiBaseUrl: form.apiBaseUrl,
+        apiHeaderKey: form.apiHeaderKey,
+        apiSecretKey: form.apiSecretKey,
       });
 
       navigate("/clients", {

@@ -5,7 +5,7 @@ import { searchFindUsers } from "../services/findUserApi";
 
 /**
  * @param {string} surveyId
- * @param {{ questionId: string, answer: string }[]} activeFilters
+ * @param {{ questionId: string, answers: string[] }[]} activeFilters
  * @param {number} searchVersion increments on each search
  */
 export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {

@@ -2,7 +2,7 @@
  * @typedef {Object} FindUserFilterRow
  * @property {string} id
  * @property {string} questionId
- * @property {string} answer
+ * @property {string[]} answers
  */
 
 /**

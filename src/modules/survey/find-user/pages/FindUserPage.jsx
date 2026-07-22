@@ -7,17 +7,9 @@ import FindUserTable from "../components/FindUserTable";
 import FindUserToolbar from "../components/FindUserToolbar";
 import InvitedUsersModal from "../components/InvitedUsersModal";
 import { useInfiniteUsers } from "../hooks/useInfiniteUsers";
-import {
-  extractProjectCode,
-  extractProjectLanguage,
-  extractProjectName,
-  getFindUserQuestions,
-  inviteFindUsers,
-} from "../services/findUserApi";
+import { inviteFindUsers } from "../services/findUserApi";
 import { getRecords as getEmailTemplates } from "../../../user-email-templates/services/userEmailTemplatesApi";
-import { getRecord } from "../../services/surveyApi";
 import { normalizeStatusKey } from "../../../shared/utils/statusLabels";
-import { ApiError } from "../../../../services/api/ApiError";
 import { toastApiError, toastApiSuccess } from "../../../../services/toast/apiToast";
 import { getGroupSurveyBreadcrumbs } from "../../utils/groupSurveyNavigation";
 
@@ -25,7 +17,7 @@ function createFilterRow() {
   return {
     id: `filter-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     questionId: "",
-    answer: "",
+    answers: [],
   };
 }
 
@@ -37,12 +29,9 @@ function FindUserPage({ isDarkMode }) {
   const { id: surveyId, groupId } = useParams();
   const location = useLocation();
   const isGroupView = Boolean(groupId);
+  const surveyName =
+    location.state?.surveyName || "Lifestyle Evolution India";
 
-  const [projectName, setProjectName] = useState(
-    () => location.state?.surveyName || ""
-  );
-  const [projectCode, setProjectCode] = useState("");
-  const [projectLanguage, setProjectLanguage] = useState("");
   const [filterRows, setFilterRows] = useState([createFilterRow()]);
   const [activeFilters, setActiveFilters] = useState([]);
   const [searchVersion, setSearchVersion] = useState(0);
@@ -53,56 +42,6 @@ function FindUserPage({ isDarkMode }) {
   const [selectAll, setSelectAll] = useState(false);
   const [showInvitedModal, setShowInvitedModal] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
-  const [questions, setQuestions] = useState([]);
-  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadProjectAndQuestions() {
-      if (!surveyId) return;
-
-      setIsLoadingQuestions(true);
-      try {
-        const project = await getRecord(surveyId);
-        if (cancelled) return;
-
-        const name = extractProjectName(project);
-        const code = extractProjectCode(project);
-        const language = extractProjectLanguage(project);
-
-        if (name) setProjectName(name);
-        setProjectCode(code);
-        setProjectLanguage(language);
-
-        if (!language) {
-          setQuestions([]);
-          toastApiError(
-            new ApiError(
-              "Project language is not set. Add a language in Project URLs first.",
-              null
-            )
-          );
-          return;
-        }
-
-        const nextQuestions = await getFindUserQuestions(language);
-        if (cancelled) return;
-        setQuestions(nextQuestions);
-      } catch (err) {
-        if (cancelled) return;
-        setQuestions([]);
-        toastApiError(err);
-      } finally {
-        if (!cancelled) setIsLoadingQuestions(false);
-      }
-    }
-
-    loadProjectAndQuestions();
-    return () => {
-      cancelled = true;
-    };
-  }, [surveyId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -159,13 +98,20 @@ function FindUserPage({ isDarkMode }) {
 
   const handleSearch = () => {
     const valid = filterRows
-      .filter((r) => r.questionId && r.answer)
-      .map((r) => ({ questionId: r.questionId, answer: r.answer }));
+      .filter(
+        (row) =>
+          row.questionId && Array.isArray(row.answers) && row.answers.length > 0
+      )
+      .map((row) => ({
+        questionId: row.questionId,
+        answers: row.answers,
+      }));
+
     setActiveFilters(valid);
     setSelectedIds(new Set());
     setSelectAll(false);
     reset();
-    setSearchVersion((v) => v + 1);
+    setSearchVersion((version) => version + 1);
   };
 
   const handleRemoveFilter = (rowId) => {
@@ -181,11 +127,8 @@ function FindUserPage({ isDarkMode }) {
 
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(normalizedId)) {
-        next.delete(normalizedId);
-      } else {
-        next.add(normalizedId);
-      }
+      if (next.has(normalizedId)) next.delete(normalizedId);
+      else next.add(normalizedId);
       return next;
     });
     setSelectAll(false);
@@ -195,7 +138,7 @@ function FindUserPage({ isDarkMode }) {
     setSelectAll(checked);
     if (checked) {
       setSelectedIds(
-        new Set(users.map((u) => getUserSelectionId(u)).filter(Boolean))
+        new Set(users.map((user) => getUserSelectionId(user)).filter(Boolean))
       );
     } else {
       setSelectedIds(new Set());
@@ -205,14 +148,13 @@ function FindUserPage({ isDarkMode }) {
   const allVisibleSelected = useMemo(
     () =>
       users.length > 0 &&
-      users.every((u) => selectedIds.has(getUserSelectionId(u))),
+      users.every((user) => selectedIds.has(getUserSelectionId(user))),
     [users, selectedIds]
   );
 
   const effectiveSelectAll = selectAll || allVisibleSelected;
-  const hasSelectedUsers = selectedIds.size > 0;
-  const hasEmailTemplate = Boolean(String(emailTemplate ?? "").trim());
-  const inviteEnabled = hasSelectedUsers && hasEmailTemplate && !isInviting;
+  const inviteEnabled =
+    selectedIds.size > 0 && Boolean(emailTemplate) && !isInviting;
 
   const handleInvite = async () => {
     if (!inviteEnabled) return;
@@ -233,21 +175,11 @@ function FindUserPage({ isDarkMode }) {
     }
   };
 
-  const headerSubtitle = [
-    projectName ? `Survey Name - ${projectName}` : null,
-    projectCode ? `Code - ${projectCode}` : null,
-    projectLanguage
-      ? `Language - ${projectLanguage.charAt(0).toUpperCase()}${projectLanguage.slice(1)}`
-      : null,
-  ]
-    .filter(Boolean)
-    .join("  |  ");
-
   return (
     <div className="space-y-6">
       <AdminPageHeader
         title="Find User"
-        subtitle={headerSubtitle || "Find and invite users for this project"}
+        subtitle={`Survey Name - ${surveyName}`}
         breadcrumbs={
           isGroupView
             ? getGroupSurveyBreadcrumbs(groupId, { currentLabel: "Find User" })
@@ -263,12 +195,12 @@ function FindUserPage({ isDarkMode }) {
         <FindUserFilters
           filters={filterRows}
           onFiltersChange={setFilterRows}
-          onAddFilter={() => setFilterRows((prev) => [...prev, createFilterRow()])}
+          onAddFilter={() =>
+            setFilterRows((prev) => [...prev, createFilterRow()])
+          }
           onRemoveFilter={handleRemoveFilter}
           onSearch={handleSearch}
           isSearching={isLoading && users.length === 0}
-          questions={questions}
-          isLoadingQuestions={isLoadingQuestions}
         />
       </TableCard>
 

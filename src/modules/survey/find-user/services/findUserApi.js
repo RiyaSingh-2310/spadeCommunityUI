@@ -16,14 +16,6 @@ function assertSuccess(data) {
   return data;
 }
 
-function extractQuestionList(data) {
-  if (!data || typeof data !== "object") return [];
-  if (Array.isArray(data.data)) return data.data;
-  if (Array.isArray(data.questions)) return data.questions;
-  if (Array.isArray(data.items)) return data.items;
-  return [];
-}
-
 function extractSearchList(data) {
   if (!data || typeof data !== "object") return [];
   if (Array.isArray(data.data)) return data.data;
@@ -38,7 +30,9 @@ function mapYesNo(value) {
   if (value === false || value === 0 || value === "0") return "No";
   const normalized = String(value ?? "").trim().toLowerCase();
   if (["yes", "y", "true", "completed"].includes(normalized)) return "Yes";
-  if (["no", "n", "false", "pending", "incomplete"].includes(normalized)) return "No";
+  if (["no", "n", "false", "pending", "incomplete"].includes(normalized)) {
+    return "No";
+  }
   const raw = String(value ?? "").trim();
   return raw || "—";
 }
@@ -60,52 +54,7 @@ function formatInviteStatus(value) {
 }
 
 /**
- * Normalizes question options from the API.
- * @param {unknown} options
- * @returns {string[] | null}
- */
-export function normalizeQuestionOptions(options) {
-  let parsed = options;
-
-  if (typeof parsed === "string") {
-    const trimmed = parsed.trim();
-    if (!trimmed) return null;
-    try {
-      parsed = JSON.parse(trimmed);
-    } catch {
-      return null;
-    }
-  }
-
-  if (!Array.isArray(parsed) || parsed.length === 0) return null;
-  return parsed
-    .map((opt) => String(opt ?? "").trim())
-    .filter(Boolean);
-}
-
-/**
- * @param {object} record
- */
-function mapFindUserQuestion(record) {
-  if (!record || typeof record !== "object") return null;
-  const id = record.id ?? record.question_id ?? record.questionId;
-  if (id == null || id === "") return null;
-
-  return {
-    id: String(id),
-    question_title: String(
-      record.question_title ?? record.questionTitle ?? record.label ?? ""
-    ).trim(),
-    question_text: String(
-      record.question_text ?? record.questionText ?? ""
-    ).trim(),
-    options: normalizeQuestionOptions(record.options),
-    raw: record,
-  };
-}
-
-/**
- * Maps find-user search API rows into the Find User table shape.
+ * Maps find-user search/invited API rows into the Find User table shape.
  * @param {object} record
  */
 function mapFindUserSearchRecord(record) {
@@ -120,7 +69,11 @@ function mapFindUserSearchRecord(record) {
   if (id == null || id === "") return null;
 
   const panelistId =
-    record.panelist_id ?? record.panelistId ?? record.user_id ?? record.userId ?? id;
+    record.panelist_id ??
+    record.panelistId ??
+    record.user_id ??
+    record.userId ??
+    id;
 
   const mobile =
     record.mobile ??
@@ -144,17 +97,7 @@ function mapFindUserSearchRecord(record) {
     record.balancePoint ??
     record.reward_points ??
     0;
-
   const earnedPointsNum = Number(earnedPointsRaw);
-  const earnedPoints = Number.isFinite(earnedPointsNum)
-    ? Math.round(earnedPointsNum * 100) / 100
-    : 0;
-  const inviteStatus = formatInviteStatus(
-    record.inviteStatus ??
-      record.invite_status ??
-      record.invitation_status ??
-      "Not Invited"
-  );
 
   return {
     id: String(id),
@@ -173,141 +116,51 @@ function mapFindUserSearchRecord(record) {
     joiningDate: joiningRaw
       ? formatSurveyListDate(joiningRaw) || displayOrDash(joiningRaw)
       : "—",
-    inviteStatus,
-    earnedPoints,
+    inviteStatus: formatInviteStatus(
+      record.inviteStatus ??
+        record.invite_status ??
+        record.invitation_status ??
+        "Not Invited"
+    ),
+    earnedPoints: Number.isFinite(earnedPointsNum)
+      ? Math.round(earnedPointsNum * 100) / 100
+      : 0,
     message: String(record.message ?? record.invite_message ?? "").trim(),
     status: apiStatusToFormValue(record.status),
   };
 }
 
 /**
- * Reads the selected project language for Find User question filtering.
- * Prefers primary urlInfo language, then project-level language fields.
- * @param {object | null | undefined} project
- * @returns {string} lowercase language slug (e.g. "english")
+ * Builds search filters for POST /api/find-user/:id/search.
+ * Multiple answers for one question become `answer: string[]`.
+ * @param {{ questionId: string, answers?: string[], answer?: string|string[] }[]} filters
  */
-export function extractProjectLanguage(project) {
-  if (!project || typeof project !== "object") return "";
+export function buildFindUserSearchFilters(filters = []) {
+  return (Array.isArray(filters) ? filters : [])
+    .map((filter) => {
+      const rawQuestionId = filter?.questionId ?? filter?.question_id;
+      const numericId = Number(rawQuestionId);
+      const questionId = Number.isFinite(numericId) ? numericId : rawQuestionId;
 
-  const urlInfos = Array.isArray(project.urlInfo)
-    ? project.urlInfo
-    : project.urlInfo && typeof project.urlInfo === "object"
-      ? [project.urlInfo]
-      : [];
+      const rawAnswers = filter?.answers ?? filter?.answer;
+      const answers = (Array.isArray(rawAnswers) ? rawAnswers : [rawAnswers])
+        .map((answer) => String(answer ?? "").trim())
+        .filter(Boolean);
 
-  for (const info of urlInfos) {
-    if (!info || typeof info !== "object") continue;
-    const fromUrl =
-      info.Language ??
-      info.language ??
-      info.project_language ??
-      info.projectLanguage;
-    if (fromUrl != null && String(fromUrl).trim() !== "") {
-      return String(fromUrl).trim().toLowerCase();
-    }
-  }
+      if (questionId == null || questionId === "" || answers.length === 0) {
+        return null;
+      }
 
-  const raw =
-    project.Language ??
-    project.language ??
-    project.project_language ??
-    project.projectLanguage ??
-    "";
-
-  return String(raw).trim().toLowerCase();
-}
-
-/**
- * @param {object | null | undefined} project
- * @returns {string}
- */
-export function extractProjectName(project) {
-  if (!project || typeof project !== "object") return "";
-  return String(
-    project.Project_Name ??
-      project.project_name ??
-      project.projectName ??
-      project.name ??
-      ""
-  ).trim();
-}
-
-/**
- * @param {object | null | undefined} project
- * @returns {string}
- */
-export function extractProjectCode(project) {
-  if (!project || typeof project !== "object") return "";
-  return String(
-    project.Project_code ??
-      project.project_code ??
-      project.survey_id ??
-      project.surveyId ??
-      ""
-  ).trim();
-}
-
-/**
- * GET /api/find-user/questions?language={language}
- * @param {string} language
- * @returns {Promise<Array<{
- *   id: string,
- *   question_title: string,
- *   question_text: string,
- *   options: string[] | null,
- *   raw: object,
- * }>>}
- */
-export async function getFindUserQuestions(language) {
-  const normalizedLanguage = String(language ?? "").trim().toLowerCase();
-  if (!normalizedLanguage) {
-    throw new ApiError("Project language is required.", null);
-  }
-
-  const data = await apiRequest(
-    appendListQuery(API_ROUTES.findUser.questions, {
-      extra: { language: normalizedLanguage },
+      return {
+        question_id: questionId,
+        answer: answers.length === 1 ? answers[0] : answers,
+      };
     })
-  );
-  assertSuccess(data);
-
-  return extractQuestionList(data)
-    .map(mapFindUserQuestion)
     .filter(Boolean);
 }
 
 /**
- * GET /api/find-user/questions/{question_id}/answers
- * @param {string|number} questionId
- * @returns {Promise<string[]>}
- */
-export async function getFindUserQuestionAnswers(questionId) {
-  const normalizedId = String(questionId ?? "").trim();
-  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
-    throw new ApiError("Question id is required.", null);
-  }
-
-  const data = await apiRequest(API_ROUTES.findUser.questionAnswers(normalizedId));
-  assertSuccess(data);
-
-  const record =
-    data?.data && typeof data.data === "object" && !Array.isArray(data.data)
-      ? data.data
-      : data;
-
-  const options = record?.options;
-  return normalizeQuestionOptions(options) ?? [];
-}
-
-/**
  * POST /api/find-user/{project_id}/search
- * @param {{
- *   surveyId: string,
- *   filters: { questionId: string, answer: string }[],
- *   page?: number,
- *   pageSize?: number,
- *   limit?: number,
- * }} params
  */
 export async function searchFindUsers({
   surveyId,
@@ -323,18 +176,7 @@ export async function searchFindUsers({
 
   const safePage = Math.max(1, Number(page) || 1);
   const safeLimit = Math.max(1, Number(pageSize ?? limit) || 10);
-
-  const payloadFilters = (Array.isArray(filters) ? filters : [])
-    .map((filter) => {
-      const rawQuestionId = filter?.questionId ?? filter?.question_id;
-      const numericId = Number(rawQuestionId);
-      const questionId = Number.isFinite(numericId) ? numericId : rawQuestionId;
-      const answer = String(filter?.answer ?? "").trim();
-
-      if (questionId == null || questionId === "" || !answer) return null;
-      return { question_id: questionId, answer };
-    })
-    .filter(Boolean);
+  const payloadFilters = buildFindUserSearchFilters(filters);
 
   const data = await apiRequest(API_ROUTES.findUser.search(projectId), {
     method: "POST",
@@ -377,13 +219,12 @@ export async function searchFindUsers({
 
 /**
  * POST /api/find-user/{project_id}/invite
- * @param {{
- *   surveyId: string,
- *   userIds: Array<string|number>,
- *   emailTemplateId: string|number,
- * }} params
  */
-export async function inviteFindUsers({ surveyId, userIds = [], emailTemplateId }) {
+export async function inviteFindUsers({
+  surveyId,
+  userIds = [],
+  emailTemplateId,
+}) {
   const projectId = String(surveyId ?? "").trim();
   if (!projectId || projectId === "undefined" || projectId === "null") {
     throw new ApiError("Project id is required.", null);
@@ -418,12 +259,6 @@ export async function inviteFindUsers({ surveyId, userIds = [], emailTemplateId 
 
 /**
  * GET /api/find-user/{project_id}/invited?page=&limit=
- * @param {{
- *   surveyId: string,
- *   page?: number,
- *   pageSize?: number,
- *   limit?: number,
- * }} params
  */
 export async function getInvitedFindUsers({
   surveyId,
