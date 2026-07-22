@@ -137,6 +137,7 @@ export async function createProjectManager(payload) {
   body.append("name", payload.name.trim());
   body.append("email", payload.email.trim());
   body.append("password", encryptValue(payload.password));
+  body.append("confirm_password", encryptValue(payload.confirmPassword));
 
   if (payload.profileImage instanceof File) {
     body.append("profile_image", payload.profileImage);
