@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_PAGE_SIZE } from "../../../shared/utils/pagination";
+import { toastApiError } from "../../../../services/toast/apiToast";
 import { searchFindUsers } from "../services/findUserApi";
 
 /**
@@ -33,8 +34,15 @@ export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {
 
       setUsers(result.items ?? []);
       setTotalItems(result.total ?? 0);
-      setTotalPages(result.totalPages ?? 1);
+      setTotalPages(result.totalPages ?? 0);
       setHasSearched(true);
+    } catch (err) {
+      if (requestId !== requestIdRef.current) return;
+      setUsers([]);
+      setTotalItems(0);
+      setTotalPages(0);
+      setHasSearched(true);
+      toastApiError(err);
     } finally {
       if (requestId === requestIdRef.current) {
         setIsLoading(false);

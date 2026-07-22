@@ -20,9 +20,11 @@
  */
 
 /**
- * @typedef {Object} QuestionOption
+ * @typedef {Object} FindUserQuestion
  * @property {string} id
- * @property {string} label
+ * @property {string} question_title
+ * @property {string} [question_text]
+ * @property {string[] | null} options
  */
 
 export {};

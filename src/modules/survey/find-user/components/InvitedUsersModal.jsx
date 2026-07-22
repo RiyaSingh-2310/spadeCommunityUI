@@ -1,23 +1,78 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import AdminPagination from "../../../../components/admin/AdminPagination";
 import TableCard from "../../../../components/admin/TableCard";
+import TableLoadingSkeleton from "../../../../components/admin/TableLoadingSkeleton";
 import { getAdminCancelButtonClass } from "../../../shared/utils/formStyles";
 import { ADMIN_TABLE_INNER_CLASS } from "../../../shared/utils/tableHelpers";
-import { DEFAULT_PAGE_SIZE, paginateItems } from "../../../shared/utils/pagination";
-import { INVITED_USERS_DEMO } from "../utils/demoData";
+import { DEFAULT_PAGE_SIZE } from "../../../shared/utils/pagination";
+import { formatStatusLabel } from "../../../shared/utils/statusLabels";
+import { toastApiError } from "../../../../services/toast/apiToast";
+import { getInvitedFindUsers } from "../services/findUserApi";
 
 const TABLE_HEAD =
   "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
 
-function InvitedUsersModal({ isOpen, onClose, isDarkMode }) {
+const COLUMNS = [
+  "S.No",
+  "Name",
+  "Email",
+  "Invite Status",
+  "Earned Points",
+  "Status",
+];
+
+function InvitedUsersModal({ isOpen, onClose, isDarkMode, surveyId }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [users, setUsers] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const pagination = useMemo(
-    () => paginateItems(INVITED_USERS_DEMO, currentPage, pageSize),
-    [currentPage, pageSize]
-  );
+  useEffect(() => {
+    if (!isOpen) {
+      setCurrentPage(1);
+      setUsers([]);
+      setTotalItems(0);
+      setTotalPages(0);
+      setIsLoading(false);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !surveyId) return undefined;
+
+    let cancelled = false;
+
+    async function loadInvitedUsers() {
+      setIsLoading(true);
+      try {
+        const result = await getInvitedFindUsers({
+          surveyId,
+          page: currentPage,
+          pageSize,
+        });
+        if (cancelled) return;
+        setUsers(result.items ?? []);
+        setTotalItems(result.total ?? 0);
+        setTotalPages(result.totalPages ?? 0);
+      } catch (err) {
+        if (cancelled) return;
+        setUsers([]);
+        setTotalItems(0);
+        setTotalPages(0);
+        toastApiError(err);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+
+    loadInvitedUsers();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, surveyId, currentPage, pageSize]);
 
   const handlePageSizeChange = (nextSize) => {
     setPageSize(nextSize);
@@ -35,7 +90,7 @@ function InvitedUsersModal({ isOpen, onClose, isDarkMode }) {
         onClick={onClose}
       />
       <div
-        className="admin-header-surface relative z-10 flex max-h-[min(90vh,720px)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border shadow-2xl"
+        className="admin-header-surface relative z-10 flex max-h-[min(90vh,720px)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="invited-users-title"
@@ -61,42 +116,72 @@ function InvitedUsersModal({ isOpen, onClose, isDarkMode }) {
           <TableCard
             isDarkMode={isDarkMode}
             footer={
-              <AdminPagination
-                isDarkMode={isDarkMode}
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                totalItems={pagination.totalItems}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-                onPageSizeChange={handlePageSizeChange}
-              />
+              totalItems > 0 ? (
+                <AdminPagination
+                  isDarkMode={isDarkMode}
+                  currentPage={currentPage}
+                  totalPages={Math.max(1, totalPages)}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={handlePageSizeChange}
+                />
+              ) : null
             }
           >
             <table className={ADMIN_TABLE_INNER_CLASS}>
               <thead>
                 <tr>
-                  {["S.No", "Name", "Email", "Invite Status", "Earned Points"].map(
-                    (col) => (
-                      <th key={col} className={TABLE_HEAD}>
-                        {col}
-                      </th>
-                    )
-                  )}
+                  {COLUMNS.map((col) => (
+                    <th key={col} className={TABLE_HEAD}>
+                      {col}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {pagination.items.map((row, idx) => {
-                  const globalIdx = (pagination.currentPage - 1) * pageSize + idx;
-                  return (
-                    <tr key={row.id} className="align-middle">
-                      <td className="admin-text">{globalIdx + 1}</td>
-                      <td className="admin-text">{row.name}</td>
-                      <td className="admin-text">{row.email}</td>
-                      <td className="admin-text">{row.inviteStatus}</td>
-                      <td className="admin-text">{row.earnedPoints}</td>
-                    </tr>
-                  );
-                })}
+                {isLoading ? (
+                  <TableLoadingSkeleton columns={COLUMNS} />
+                ) : users.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={COLUMNS.length}
+                      className="admin-text-muted px-4 py-16 text-center text-sm"
+                    >
+                      No invited users found.
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((row, idx) => {
+                    const globalIdx = (currentPage - 1) * pageSize + idx;
+                    return (
+                      <tr key={row.id} className="align-middle">
+                        <td className="admin-text whitespace-nowrap">
+                          {globalIdx + 1}
+                        </td>
+                        <td className="admin-text whitespace-nowrap">{row.name}</td>
+                        <td className="admin-text whitespace-nowrap">{row.email}</td>
+                        <td className="admin-text whitespace-nowrap">
+                          {row.inviteStatus}
+                        </td>
+                        <td className="admin-text whitespace-nowrap">
+                          {row.earnedPoints}
+                        </td>
+                        <td className="admin-text whitespace-nowrap">
+                          <span
+                            className={`inline-flex rounded-lg px-2 py-0.5 text-xs font-semibold ${
+                              formatStatusLabel(row.status) === "Active"
+                                ? "bg-[var(--admin-success-text)]/15 text-[var(--admin-success-text)]"
+                                : "bg-[var(--admin-warning-text)]/15 text-[var(--admin-warning-text)]"
+                            }`}
+                          >
+                            {formatStatusLabel(row.status)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </TableCard>

@@ -38,8 +38,11 @@ function FindUserTable({
   onPageSizeChange,
 }) {
   const allSelected =
-    users.length > 0 && users.every((u) => selectedIds.has(u.id));
-  const someSelected = users.some((u) => selectedIds.has(u.id));
+    users.length > 0 &&
+    users.every((u) => selectedIds.has(u.panelistId || u.id));
+  const someSelected = users.some((u) =>
+    selectedIds.has(u.panelistId || u.id)
+  );
 
   const rowOffset = (currentPage - 1) * pageSize;
 
@@ -98,15 +101,17 @@ function FindUserTable({
                 </td>
               </tr>
             ) : (
-              users.map((user, idx) => (
-                <tr key={user.id} className="align-middle">
+              users.map((user, idx) => {
+                const rowId = user.panelistId || user.id;
+                return (
+                <tr key={rowId} className="align-middle">
                   <td className="admin-text whitespace-nowrap">{rowOffset + idx + 1}</td>
                   <td>
                     <input
                       type="checkbox"
                       className="admin-checkbox"
-                      checked={selectedIds.has(user.id)}
-                      onChange={() => onToggleRow(user.id)}
+                      checked={selectedIds.has(rowId)}
+                      onChange={() => onToggleRow(rowId)}
                       aria-label={`Select ${user.name}`}
                     />
                   </td>
@@ -134,7 +139,8 @@ function FindUserTable({
                     </span>
                   </td>
                 </tr>
-              ))
+              );
+              })
             )}
           </tbody>
       </table>
