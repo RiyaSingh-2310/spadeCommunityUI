@@ -14,6 +14,7 @@ import {
   parsePhoneValue,
   sanitizePhoneDigits,
 } from "../../modules/shared/utils/phoneValidation";
+import { encryptValue } from "../../modules/shared/utils/encryption";
 
 function assertSuccess(data, fallbackMessage) {
   if (data?.success !== true) {
@@ -46,12 +47,46 @@ export function resolveClientContactNo(contactNumber, countryLabel) {
 }
 
 /**
+ * Optional API integration fields — included only when the user entered a value.
+ * API Secret Key is encrypted before send.
+ * @param {{
+ *   apiBaseUrl?: string,
+ *   apiHeaderKey?: string,
+ *   apiSecretKey?: string,
+ *   website?: string,
+ * }} payload
+ */
+function buildClientOptionalApiFields(payload) {
+  const fields = {};
+
+  const website = String(payload.website ?? "").trim();
+  const apiBaseUrl = String(payload.apiBaseUrl ?? "").trim();
+  const apiHeaderKey = String(payload.apiHeaderKey ?? "").trim();
+  const apiSecretKey = String(payload.apiSecretKey ?? "").trim();
+
+  if (website) fields.website_url = website;
+  if (apiBaseUrl) fields.api_base_url = apiBaseUrl;
+  if (apiHeaderKey) {
+    // UI label is "API Header Key"; backend client table stores it as `api_body`.
+    fields.api_header_key = apiHeaderKey;
+    fields.api_body = apiHeaderKey;
+  }
+  if (apiSecretKey) fields.api_secret_key = encryptValue(apiSecretKey);
+
+  return fields;
+}
+
+/**
  * POST /api/clients/add
  * @param {{
  *   name: string,
  *   email: string,
  *   country: string,
- *   contact_no: string
+ *   contact_no: string,
+ *   website?: string,
+ *   apiBaseUrl?: string,
+ *   apiHeaderKey?: string,
+ *   apiSecretKey?: string,
  * }} payload
  */
 export async function createClient(payload) {
@@ -60,6 +95,7 @@ export async function createClient(payload) {
     email: payload.email.trim(),
     country: payload.country.trim(),
     contact_no: resolveClientContactNo(payload.contact_no, payload.country),
+    ...buildClientOptionalApiFields(payload),
   };
 
   const data = await apiRequest(API_ROUTES.clients.create, {
@@ -76,7 +112,11 @@ export async function createClient(payload) {
  * @param {{
  *   name: string,
  *   country: string,
- *   contact_no: string
+ *   contact_no: string,
+ *   website?: string,
+ *   apiBaseUrl?: string,
+ *   apiHeaderKey?: string,
+ *   apiSecretKey?: string,
  * }} payload
  */
 export async function updateClient(id, payload) {
@@ -86,6 +126,7 @@ export async function updateClient(id, payload) {
       name: payload.name.trim(),
       country: payload.country.trim(),
       contact_no: resolveClientContactNo(payload.contact_no, payload.country),
+      ...buildClientOptionalApiFields(payload),
     },
   });
 
@@ -228,7 +269,12 @@ export function mapClientToForm(client) {
     apiBaseUrl: client?.api_base_url ?? client?.apiBaseUrl ?? "",
     apiSecretKey: client?.api_secret_key ?? client?.apiSecretKey ?? "",
     passwordType: client?.password_type ?? client?.passwordType ?? "",
-    apiHeaderKey: client?.api_header_key ?? client?.apiHeaderKey ?? "",
+    apiHeaderKey:
+      client?.api_header_key ??
+      client?.apiHeaderKey ??
+      client?.api_body ??
+      client?.apiBody ??
+      "",
     status: apiStatusToFormValue(client?.status),
   };
 }

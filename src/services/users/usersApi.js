@@ -13,6 +13,7 @@ import {
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
 import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import { resolveProfileImageUrl } from "../../modules/shared/utils/userAvatar";
+import { encryptValue } from "../../modules/shared/utils/encryption";
 
 function isApiSuccess(data) {
   if (!data || typeof data !== "object") return false;
@@ -211,11 +212,7 @@ export async function createUser(payload) {
   const body = new FormData();
   body.append("name", payload.name.trim());
   body.append("email", payload.email.trim());
-  body.append("password", payload.password);
-  body.append(
-    "confirm_password",
-    String(payload.confirmPassword ?? payload.password ?? "")
-  );
+  body.append("password", encryptValue(payload.password));
 
   const contactNo = payload.contact_no?.trim() ?? "";
   if (contactNo) {
@@ -262,9 +259,9 @@ export async function updateRecord(id, payload) {
   const permissionPayload = buildPermissionsPayload(payload.permissions);
   body.append("permissions", JSON.stringify(permissionPayload.permissions));
 
-  if (payload.password?.trim()) body.append("password", payload.password);
-  if (payload.confirmPassword?.trim())
-    body.append("confirm_password", payload.confirmPassword);
+  if (payload.password?.trim()) {
+    body.append("password", encryptValue(payload.password));
+  }
 
   if (payload.imageFile instanceof File) {
     body.append("image", payload.imageFile);

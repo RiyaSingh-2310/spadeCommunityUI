@@ -4,6 +4,7 @@ import {
   API_ROUTES,
   buildApiUrl,
 } from "../../config/api";
+import { encryptValue } from "../../modules/shared/utils/encryption";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
 import { LOGIN_ROLES } from "./loginRole";
@@ -83,7 +84,7 @@ function resolveLoginRoute(loginRole) {
 export async function loginAdmin(credentials) {
   const payload = {
     email: credentials.email.trim(),
-    password: credentials.password,
+    password: encryptValue(credentials.password),
   };
   const loginRole = credentials.loginRole ?? LOGIN_ROLES.ADMIN;
   const loginPath = resolveLoginRoute(loginRole);

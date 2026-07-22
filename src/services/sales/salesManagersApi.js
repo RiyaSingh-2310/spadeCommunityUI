@@ -6,6 +6,7 @@ import {
   apiStatusToFormValue,
   formValueToApiStatus,
 } from "../../modules/shared/utils/statusLabels";
+import { encryptValue } from "../../modules/shared/utils/encryption";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
 
@@ -131,11 +132,7 @@ export async function createSalesManager(payload) {
   const body = new FormData();
   body.append("name", payload.name.trim());
   body.append("email", payload.email.trim());
-  body.append("password", payload.password);
-  body.append(
-    "confirm_password",
-    String(payload.confirmPassword ?? payload.password ?? "")
-  );
+  body.append("password", encryptValue(payload.password));
 
   if (payload.profileImage instanceof File) {
     body.append("profile_image", payload.profileImage);
@@ -180,7 +177,7 @@ export async function updateSalesManager(id, payload) {
   const normalizedId = normalizeSalesManagerId(id);
   const hasFile = payload.profileImage instanceof File;
   const password = String(payload.password ?? "").trim();
-  const confirmPassword = String(payload.confirmPassword ?? "").trim();
+  const encryptedPassword = password ? encryptValue(password) : "";
 
   if (hasFile) {
     const body = new FormData();
@@ -188,8 +185,7 @@ export async function updateSalesManager(id, payload) {
     body.append("email", payload.email.trim());
     body.append("status", formValueToApiStatus(payload.status));
     body.append("profile_image", payload.profileImage);
-    if (password) body.append("password", password);
-    if (confirmPassword) body.append("confirm_password", confirmPassword);
+    if (encryptedPassword) body.append("password", encryptedPassword);
 
     const data = await apiRequest(API_ROUTES.salesManagers.update(normalizedId), {
       method: "PUT",
@@ -205,8 +201,7 @@ export async function updateSalesManager(id, payload) {
       name: payload.name.trim(),
       email: payload.email.trim(),
       status: formValueToApiStatus(payload.status),
-      ...(password ? { password } : {}),
-      ...(confirmPassword ? { confirm_password: confirmPassword } : {}),
+      ...(encryptedPassword ? { password: encryptedPassword } : {}),
     },
   });
 
