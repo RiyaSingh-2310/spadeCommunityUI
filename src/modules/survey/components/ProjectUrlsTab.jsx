@@ -188,6 +188,10 @@ function ProjectUrlsTab({
 
   // Initialize add/list form when the routed view changes.
   useEffect(() => {
+    if (!canWrite && urlView === PROJECT_URL_VIEW_IDS.ADD) {
+      navigateToList();
+      return;
+    }
     if (urlView === PROJECT_URL_VIEW_IDS.ADD) {
       initAddForm();
       return;
@@ -195,7 +199,7 @@ function ProjectUrlsTab({
     if (urlView === PROJECT_URL_VIEW_IDS.LIST) {
       resetFormState();
     }
-  }, [urlView, initAddForm, resetFormState]);
+  }, [urlView, initAddForm, resetFormState, canWrite, navigateToList]);
 
   useEffect(() => {
     if (urlView !== PROJECT_URL_VIEW_IDS.EDIT) {
@@ -517,31 +521,34 @@ function ProjectUrlsTab({
           hidePageHeader
           title="Project URL"
           searchPlaceholder="Search Project URL..."
-          actionLabel="+ Add Project URL"
-          onActionClick={openAddForm}
+          actionLabel={canWrite ? "+ Add Project URL" : undefined}
+          onActionClick={canWrite ? openAddForm : undefined}
           columns={PROJECT_URL_LIST_COLUMNS}
           rows={listRows}
           rowIdKey="id"
-          actionVariant="edit-delete"
-          showDeleteAction
+          actionVariant={canWrite ? "edit-delete" : "view-edit"}
+          showDeleteAction={canWrite}
           statusAsText
-          onEdit={openEditForm}
-          onDelete={handleDeleteRequest}
+          onEdit={canWrite ? openEditForm : undefined}
+          onDelete={canWrite ? handleDeleteRequest : undefined}
+          onView={!canWrite ? openEditForm : undefined}
           permissionModule="survey"
           isLoading={isLoading}
           emptyMessage="No Project URL records found"
           showPagination
           nowrapAllCells
         />
-        <DeleteConfirmModal
-          isOpen={Boolean(pendingDelete)}
-          onCancel={() => {
-            if (isDeleting) return;
-            setPendingDelete(null);
-          }}
-          onConfirm={handleDeleteConfirm}
-          isDeleting={isDeleting}
-        />
+        {canWrite ? (
+          <DeleteConfirmModal
+            isOpen={Boolean(pendingDelete)}
+            onCancel={() => {
+              if (isDeleting) return;
+              setPendingDelete(null);
+            }}
+            onConfirm={handleDeleteConfirm}
+            isDeleting={isDeleting}
+          />
+        ) : null}
       </>
     );
   }

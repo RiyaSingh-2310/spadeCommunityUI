@@ -74,9 +74,8 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
       getSurveyDetailTabs({
         isMultiLink,
         multiUrlEnabled,
-        salesViewMode,
       }),
-    [isMultiLink, multiUrlEnabled, salesViewMode]
+    [isMultiLink, multiUrlEnabled]
   );
 
   const activeTab = useMemo(() => {
@@ -412,7 +411,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         {activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_DETAILS && (
           <ProjectDetailsTab project={project} isDarkMode={isDarkMode} />
         )}
-        {!salesViewMode && activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_URLS && (
+        {activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_URLS && (
           <ProjectUrlsTab
             key={`project-urls-${id}`}
             surveyId={id}
@@ -421,11 +420,10 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
             urlView={urlView}
             urlId={urlId}
             onViewChange={handleProjectUrlViewChange}
-            onSaved={handleProjectUrlSaved}
+            onSaved={salesViewMode ? undefined : handleProjectUrlSaved}
           />
         )}
-        {!salesViewMode &&
-          activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_MULTI_URL &&
+        {activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_MULTI_URL &&
           multiUrlEnabled && (
             <ProjectMultiUrlTab
               project={project}
@@ -433,7 +431,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
               isDarkMode={isDarkMode}
             />
           )}
-        {/* {!salesViewMode && activeTab === "supplier-mapping" && (
+        {/* {activeTab === "supplier-mapping" && (
           <SupplierMappingTab surveyId={id} isDarkMode={isDarkMode} />
         )} */}
         {/* {activeTab === "project-report" && (

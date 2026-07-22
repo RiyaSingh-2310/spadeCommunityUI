@@ -11,28 +11,18 @@ export const SURVEY_DETAIL_TABS = [
   // { id: "project-report", label: "Project Reports" },
 ];
 
-export const SALES_PROJECT_DETAIL_TABS = [
-  { id: "project-details", label: "Project Information" },
-  // { id: "project-report", label: "Project Reports" },
-];
-
 /**
  * Build Project Details tabs for Single Link vs Multi Link.
+ * Same tab set for Admin and Sales Manager (Sales uses read-only mode separately).
  * @param {{
  *   isMultiLink?: boolean,
  *   multiUrlEnabled?: boolean,
- *   salesViewMode?: boolean,
  * }} [options]
  */
 export function getSurveyDetailTabs({
   isMultiLink = false,
   multiUrlEnabled = false,
-  salesViewMode = false,
 } = {}) {
-  if (salesViewMode) {
-    return SALES_PROJECT_DETAIL_TABS;
-  }
-
   const tabs = [
     { id: "project-details", label: "Project Information" },
     { id: "project-urls", label: "Project URL" },

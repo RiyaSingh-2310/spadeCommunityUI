@@ -216,3 +216,13 @@ export async function updateProjectManager(id, payload) {
 
   return assertSuccess(data);
 }
+
+/** DELETE /api/projectmanager/:id */
+export async function deleteProjectManager(id) {
+  const normalizedId = normalizeProjectManagerId(id);
+  const data = await apiRequest(API_ROUTES.projectManagers.delete(normalizedId), {
+    method: "DELETE",
+  });
+
+  return assertSuccess(data);
+}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
@@ -8,6 +9,7 @@ import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
+  deleteProjectManager,
   getRecords,
   updateProjectManagerStatus,
 } from "../../../services/projectManagers/projectManagersApi";
@@ -35,6 +37,33 @@ function ProjectManagersPage({ isDarkMode }) {
   });
 
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteRequest = (row) => {
+    setDeleteTarget(row);
+  };
+
+  const handleDeleteCancel = () => {
+    if (isDeleting) return;
+    setDeleteTarget(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget?.id) return;
+
+    setIsDeleting(true);
+    try {
+      const data = await deleteProjectManager(deleteTarget.id);
+      setDeleteTarget(null);
+      toastApiSuccess(data);
+      await fetchProjectManagers();
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleStatusToggle = async (row) => {
     if (!row?.id || statusUpdatingId != null) return;
@@ -56,34 +85,44 @@ function ProjectManagersPage({ isDarkMode }) {
   };
 
   return (
-    <ModuleListingPage
-      isDarkMode={isDarkMode}
-      title="Project Managers"
-      searchPlaceholder="Search project managers..."
-      actionLabel="Add Project Manager"
-      onActionClick={() => navigate("/project-managers/add")}
-      columns={LIST_COLUMNS}
-      rows={sortedRows}
-      sortableColumns={sortableColumns}
-      columnSort={columnSort}
-      onColumnSort={onColumnSort}
-      rowIdKey="id"
-      editPath="/project-managers"
-      permissionModule="project_managers"
-      isLoading={isLoading}
-      emptyMessage="No project managers found"
-      onStatusToggle={handleStatusToggle}
-      onSearch={handleSearch}
-      totalRecords={totalRecords}
-      serverPaginated
-      serverSearch
-      paginationPage={currentPage}
-      onPaginationPageChange={handlePageChange}
-      paginationPageSize={pageSize}
-      onPaginationPageSizeChange={handlePageSizeChange}
-      showPagination
-      nowrapAllCells
-    />
+    <div className="space-y-4">
+      <ModuleListingPage
+        isDarkMode={isDarkMode}
+        title="Project Managers"
+        searchPlaceholder="Search project managers..."
+        actionLabel="Add Project Manager"
+        onActionClick={() => navigate("/project-managers/add")}
+        columns={LIST_COLUMNS}
+        rows={sortedRows}
+        sortableColumns={sortableColumns}
+        columnSort={columnSort}
+        onColumnSort={onColumnSort}
+        rowIdKey="id"
+        editPath="/project-managers"
+        permissionModule="project_managers"
+        isLoading={isLoading}
+        emptyMessage="No project managers found"
+        onDelete={handleDeleteRequest}
+        onStatusToggle={handleStatusToggle}
+        onSearch={handleSearch}
+        totalRecords={totalRecords}
+        serverPaginated
+        serverSearch
+        paginationPage={currentPage}
+        onPaginationPageChange={handlePageChange}
+        paginationPageSize={pageSize}
+        onPaginationPageSizeChange={handlePageSizeChange}
+        showPagination
+        nowrapAllCells
+      />
+
+      <DeleteConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        onCancel={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+      />
+    </div>
   );
 }
 

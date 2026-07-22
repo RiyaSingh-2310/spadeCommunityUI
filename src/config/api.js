@@ -39,6 +39,7 @@ export const API_ROUTES = {
     byId: (id) => `/api/projectmanager/${id}`,
     update: (id) => `/api/projectmanager/${id}`,
     updateStatus: (id) => `/api/projectmanager/${id}/status`,
+    delete: (id) => `/api/projectmanager/${id}`,
   },
   salesProjects: {
     list: "/api/sales/project/list",
