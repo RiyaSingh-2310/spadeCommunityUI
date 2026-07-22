@@ -168,6 +168,14 @@ export const API_ROUTES = {
     byId: (id) => `/api/email-templates/${id}`,
     updateStatus: (id) => `/api/email-templates/${id}/status`,
   },
+  findUser: {
+    search: (projectId) =>
+      `/api/find-user/${encodeURIComponent(String(projectId ?? "").trim())}/search`,
+    invite: (projectId) =>
+      `/api/find-user/${encodeURIComponent(String(projectId ?? "").trim())}/invite`,
+    invited: (projectId) =>
+      `/api/find-user/${encodeURIComponent(String(projectId ?? "").trim())}/invited`,
+  },
   invoice: {
     settings: "/api/invoice/settings",
   },
