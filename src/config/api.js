@@ -169,6 +169,7 @@ export const API_ROUTES = {
     updateStatus: (id) => `/api/email-templates/${id}/status`,
   },
   findUser: {
+    questions: "/api/find-user/questions",
     search: (projectId) =>
       `/api/find-user/${encodeURIComponent(String(projectId ?? "").trim())}/search`,
     invite: (projectId) =>

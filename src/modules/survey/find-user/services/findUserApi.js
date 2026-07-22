@@ -16,6 +16,93 @@ function assertSuccess(data) {
   return data;
 }
 
+function extractQuestionList(data) {
+  if (!data || typeof data !== "object") return [];
+  if (Array.isArray(data.data)) return data.data;
+  if (Array.isArray(data.questions)) return data.questions;
+  if (Array.isArray(data.items)) return data.items;
+  return [];
+}
+
+/**
+ * Normalizes question options from the Find User questions API.
+ * @param {unknown} options
+ * @returns {string[]}
+ */
+export function normalizeFindUserQuestionOptions(options) {
+  let parsed = options;
+
+  if (typeof parsed === "string") {
+    const trimmed = parsed.trim();
+    if (!trimmed) return [];
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      return [];
+    }
+  }
+
+  if (!Array.isArray(parsed) || parsed.length === 0) return [];
+
+  return parsed
+    .map((opt) => {
+      if (typeof opt === "string" || typeof opt === "number") {
+        return String(opt).trim();
+      }
+      if (!opt || typeof opt !== "object") return "";
+      return String(
+        opt.label ??
+          opt.value ??
+          opt.option_text ??
+          opt.optionText ??
+          ""
+      ).trim();
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Maps GET /api/find-user/questions item.
+ * @param {object} record
+ */
+function mapFindUserQuestion(record) {
+  if (!record || typeof record !== "object") return null;
+  const id = record.id ?? record.question_id ?? record.questionId;
+  if (id == null || id === "") return null;
+
+  const questionTitle = String(
+    record.question_title ?? record.questionTitle ?? record.label ?? ""
+  ).trim();
+
+  return {
+    id: String(id),
+    question_title: questionTitle,
+    question_type: String(
+      record.question_type ?? record.questionType ?? ""
+    ).trim(),
+    options: normalizeFindUserQuestionOptions(record.options),
+    raw: record,
+  };
+}
+
+/**
+ * GET /api/find-user/questions
+ * @returns {Promise<Array<{
+ *   id: string,
+ *   question_title: string,
+ *   question_type: string,
+ *   options: string[],
+ * }>>}
+ */
+export async function getFindUserQuestions() {
+  const data = await apiRequest(API_ROUTES.findUser.questions);
+  assertSuccess(data);
+
+  return extractQuestionList(data)
+    .map(mapFindUserQuestion)
+    .filter(Boolean);
+}
+
 function extractSearchList(data) {
   if (!data || typeof data !== "object") return [];
   if (Array.isArray(data.data)) return data.data;
