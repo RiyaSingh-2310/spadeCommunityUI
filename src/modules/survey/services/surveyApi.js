@@ -826,17 +826,206 @@ export async function deleteSurvey(surveyId) {
   return assertSuccess(data);
 }
 
-/** Clone survey (mock). Wired for list Survey Clone action. */
-export async function cloneSurvey(surveyId) {
-  await mockDelay(350);
-  const record = cloneMockSurvey(surveyId);
-  if (!record) {
-    throw new ApiError("Survey not found.", null, 404);
+const CLONE_OMIT_KEYS = new Set([
+  "id",
+  "url_id",
+  "Url_Id",
+  "URL_Id",
+  "project_url_id",
+  "Project_Url_Id",
+  "projectUrlId",
+  "project_id",
+  "created_at",
+  "updated_at",
+  "deleted_at",
+  "deleted_by",
+  "action_by",
+  "updated_by",
+  "Project_code",
+  "project_code",
+]);
+
+function stripCloneIdentifiers(record) {
+  if (!record || typeof record !== "object") return null;
+  const next = {};
+  Object.entries(record).forEach(([key, value]) => {
+    if (CLONE_OMIT_KEYS.has(key)) return;
+    next[key] = value;
+  });
+  return next;
+}
+
+function normalizeCloneUrlInfoList(record) {
+  const info = record?.urlInfo;
+  if (Array.isArray(info)) return info.filter((row) => row && typeof row === "object");
+  if (info && typeof info === "object") return [info];
+  return [];
+}
+
+function pickCloneText(...values) {
+  for (const value of values) {
+    if (value == null) continue;
+    const text = String(value).trim();
+    if (text) return text;
   }
+  return null;
+}
+
+function buildCloneUrlInfoPayload(urlRow) {
+  if (!urlRow || typeof urlRow !== "object") return null;
+
+  const startRaw = urlRow.Start_Date ?? urlRow.start_date ?? urlRow.startDate ?? null;
+  const endRaw = urlRow.End_Date ?? urlRow.end_date ?? urlRow.endDate ?? null;
+
+  const payload = {
+    description: urlRow.description ?? urlRow.Description ?? null,
+    LOI: urlRow["LOI(Minute)"] ?? urlRow.LOI ?? urlRow.loi ?? null,
+    IR: urlRow["IR(%)"] ?? urlRow.IR ?? urlRow.ir ?? null,
+    country: urlRow.country ?? urlRow.Country ?? null,
+    CPI: urlRow.CPI ?? urlRow.cpi ?? null,
+    SampleSize: urlRow.SampleSize ?? urlRow.sample_size ?? urlRow.sampleSize ?? null,
+    Start_Date: toDateInputValue(startRaw) || startRaw || null,
+    End_Date: toDateInputValue(endRaw) || endRaw || null,
+    Status: urlRow.Status ?? urlRow.url_status ?? urlRow.status ?? "active",
+    Live_Link: urlRow.Live_Link ?? urlRow.live_link ?? urlRow.liveLink ?? null,
+    Test_Link: urlRow.Test_Link ?? urlRow.test_link ?? urlRow.testLink ?? null,
+    GeoLocation: Number(urlRow.GeoLocation ?? urlRow.geo_location ?? urlRow.geoLocation ?? 0) || 0,
+    UrlProtection:
+      Number(urlRow.UrlProtection ?? urlRow.url_protection ?? urlRow.urlProtection ?? 0) || 0,
+    UniqueIP: Number(urlRow.UniqueIP ?? urlRow.unique_ip ?? urlRow.uniqueIp ?? 0) || 0,
+    PreScreen: Number(urlRow.PreScreen ?? urlRow.pre_screen ?? urlRow.preScreen ?? 0) || 0,
+    FraudDetection:
+      Number(urlRow.FraudDetection ?? urlRow.fraud_detection ?? urlRow.fraudDetection ?? 0) || 0,
+    Language: urlRow.Language ?? urlRow.language ?? null,
+    PreScreenid: urlRow.PreScreenid ?? urlRow.pre_screener_id ?? urlRow.preScreenerId ?? null,
+    PreScreenName: urlRow.PreScreenName ?? urlRow.pre_screen_name ?? null,
+    TerminationPoint:
+      urlRow.TerminationPoint ?? urlRow.termination_point ?? null,
+    CompletionPoint: urlRow.CompletionPoint ?? urlRow.completion_point ?? null,
+    ValidatePoint: urlRow.ValidatePoint ?? urlRow.validate_point ?? null,
+    CompleteURL: urlRow.CompleteURL ?? urlRow.complete_url ?? null,
+    TerminateURL: urlRow.TerminateURL ?? urlRow.terminate_url ?? null,
+    OverQuotaURL: urlRow.OverQuotaURL ?? urlRow.over_quota_url ?? null,
+    QualityTermURL: urlRow.QualityTermURL ?? urlRow.quality_term_url ?? null,
+    SurveyCloseURL: urlRow.SurveyCloseURL ?? urlRow.survey_close_url ?? null,
+  };
+
+  return Object.fromEntries(
+    Object.entries(payload).filter(([, value]) => value !== undefined)
+  );
+}
+
+function buildCloneMultipleUrlPayload(row) {
+  if (!row || typeof row !== "object") return null;
   return {
-    success: true,
-    message: "Survey cloned successfully (mock).",
-    data: record,
+    Live_Link: row.Live_Link ?? row.live_link ?? row.liveLink ?? null,
+    VenderURL: row.VenderURL ?? row.vender_url ?? row.vendorUrl ?? null,
+    Venderid_Userid:
+      row.Venderid_Userid ?? row.venderid_userid ?? row.vendorUserId ?? null,
+    UserType: row.UserType ?? row.user_type ?? row.userType ?? null,
+    Status: row.Status ?? row.status ?? "active",
+  };
+}
+
+/**
+ * Builds POST /api/projects/add body from an existing project record (clone).
+ * Omits id, Project_code, and timestamps — backend generates those.
+ * @param {object} record
+ */
+function buildCloneProjectPayload(record) {
+  const linkType = apiLinkTypeToForm(
+    record?.Project_Link_Type ?? record?.link_type ?? "Single Link"
+  );
+
+  const payload = {
+    Project_Name: pickCloneText(record?.Project_Name, record?.project_name) || "",
+    Clients: pickCloneText(record?.Clients, record?.client_name),
+    Project_Manager: pickCloneText(
+      record?.Project_Manager,
+      record?.project_manager_name
+    ),
+    Sales_Manager: pickCloneText(
+      record?.Sales_Manager,
+      record?.sales_manager_name
+    ),
+    RFQ: pickCloneText(record?.RFQ, record?.sales_project_id, record?.rfq_id),
+    Project_Description: pickCloneText(
+      record?.Project_Description,
+      record?.description
+    ),
+    Project_Link_Type: linkType,
+    Notes: pickCloneText(record?.Notes, record?.notes),
+    Status: formValueToApiStatus(
+      apiStatusToFormValue(record?.Status ?? record?.status)
+    ),
+  };
+
+  const urlRows = normalizeCloneUrlInfoList(record);
+  if (urlRows.length > 0) {
+    const urlInfo = buildCloneUrlInfoPayload(urlRows[0]);
+    if (urlInfo) payload.urlInfo = urlInfo;
+  }
+
+  const multipleUrls = Array.isArray(record?.multipleUrls)
+    ? record.multipleUrls
+        .map((row) => buildCloneMultipleUrlPayload(stripCloneIdentifiers(row)))
+        .filter(Boolean)
+    : [];
+  if (multipleUrls.length > 0) {
+    payload.multipleUrls = multipleUrls;
+  }
+
+  return { payload, urlRows };
+}
+
+/**
+ * Clone a project by re-submitting its data to POST /api/projects/add.
+ * Backend generates a new project id and Project_code.
+ * @param {string|number} surveyId
+ */
+export async function cloneSurvey(surveyId) {
+  if (USE_SURVEY_MOCK_DATA) {
+    await mockDelay(350);
+    const record = cloneMockSurvey(surveyId);
+    if (!record) {
+      throw new ApiError("Survey not found.", null, 404);
+    }
+    return {
+      success: true,
+      message: "Project cloned successfully!",
+      data: record,
+    };
+  }
+
+  const record = await getRecord(surveyId);
+  const { payload, urlRows } = buildCloneProjectPayload(record);
+
+  if (!payload.Project_Name) {
+    throw new ApiError("Project name is required to clone.", null, 400);
+  }
+
+  const data = await apiRequest(API_ROUTES.projects.create, {
+    method: "POST",
+    body: payload,
+  });
+  const created = assertSuccess(data);
+  const newProjectId = created?.data?.id;
+
+  // Create Project accepts a single urlInfo; clone any additional URL configs.
+  if (newProjectId && urlRows.length > 1) {
+    for (const urlRow of urlRows.slice(1)) {
+      const urlInfo = buildCloneUrlInfoPayload(urlRow);
+      if (!urlInfo) continue;
+      await apiRequest(API_ROUTES.projects.createUrl(normalizeSurveyId(newProjectId)), {
+        method: "POST",
+        body: urlInfo,
+      });
+    }
+  }
+
+  return {
+    ...created,
+    message: created?.message || "Project cloned successfully!",
   };
 }
 
