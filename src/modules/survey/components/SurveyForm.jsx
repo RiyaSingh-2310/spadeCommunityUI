@@ -3,7 +3,7 @@ import FormField from "../../../components/admin/FormField";
 import FormRadioGroup from "../../../components/admin/FormRadioGroup";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
-import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
+import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { NAME_FIELD_MAX_LENGTH, limitTextInput } from "../../shared/utils/validation";
 import { PROJECT_LINK_TYPES, PROJECT_STATUS_OPTIONS } from "../data/surveyFormData";
 
@@ -20,6 +20,7 @@ function SurveyForm({
   lockedClientLabel = "",
   readOnlyProjectName = false,
   clientOptions = [],
+  isLoadingClients = false,
   projectManagerOptions = [],
   salesManagerOptions = [],
   salesProjectOptions = [],
@@ -40,17 +41,6 @@ function SurveyForm({
       <TableCard
         title="Project Information"
         isDarkMode={isDarkMode}
-        // headerAction={
-        //   onOpenProjectUrls ? (
-        //     <button
-        //       type="button"
-        //       onClick={onOpenProjectUrls}
-        //       className={getAdminCancelButtonClass("modal")}
-        //     >
-        //       Project URLs
-        //     </button>
-        //   ) : undefined
-        // }
       >
         <div className="grid gap-4 md:grid-cols-2">
           {groupProject ? (
@@ -80,7 +70,10 @@ function SurveyForm({
                 onBlur={() => touch("client")}
                 options={clientOptions}
                 placeholder="Select Client"
-                disabled={disabled || readOnlyClient}
+                disabled={disabled || readOnlyClient || isLoadingClients}
+                loading={isLoadingClients}
+                loadingLabel="Loading clients..."
+                emptyMessage="No clients available"
                 searchPlaceholder="Search client..."
                 aria-label="Select client"
               />

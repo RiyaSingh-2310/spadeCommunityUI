@@ -330,6 +330,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
           isDarkMode={isDarkMode}
           disabled={fieldDisabled(readOnly, isSubmitting)}
           clientOptions={mergedClientOptions}
+          isLoadingClients={isLoadingOptions}
           projectManagerOptions={mergedProjectManagerOptions}
           salesManagerOptions={mergedSalesManagerOptions}
           salesProjectOptions={mergedSalesProjectOptions}

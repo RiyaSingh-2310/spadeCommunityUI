@@ -13,6 +13,7 @@ import { getRequiredError, getRequiredMaxLengthError, isFormValidForFields, limi
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { mapClientsToSelectOptions } from "../hooks/useSurveyFormSelectOptions";
 import { getRecords as getClients } from "../../../services/clients/clientsApi";
+import { MAX_API_LIST_LIMIT } from "../../shared/utils/listQueryParams";
 import {
   createGroupProject,
   createEmptyGroupProjectForm,
@@ -21,6 +22,22 @@ import {
 const GROUP_SURVEY_FORM_FIELDS = ["projectName", "clientId"];
 
 const GROUP_SURVEY_REQUIRED_FIELDS = ["projectName", "clientId"];
+
+async function fetchAllClients() {
+  const limit = MAX_API_LIST_LIMIT;
+  const items = [];
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const response = await getClients({ page, limit });
+    items.push(...(response?.items ?? []));
+    totalPages = Math.max(1, Number(response?.totalPages) || 1);
+    page += 1;
+  } while (page <= totalPages && page <= 50);
+
+  return items;
+}
 
 function AddGroupSurveyPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -38,9 +55,9 @@ function AddGroupSurveyPage({ isDarkMode }) {
     const loadClients = async () => {
       setIsLoadingClients(true);
       try {
-        const data = await getClients();
+        const records = await fetchAllClients();
         if (!cancelled) {
-          setClientOptions(mapClientsToSelectOptions(data.items));
+          setClientOptions(mapClientsToSelectOptions(records, { activeOnly: true }));
         }
       } catch {
         if (!cancelled) setClientOptions([]);
@@ -140,6 +157,7 @@ function AddGroupSurveyPage({ isDarkMode }) {
                 disabled={fieldDisabled(readOnly, isSubmitting)}
                 loading={isLoadingClients}
                 loadingLabel="Loading clients..."
+                emptyMessage="No clients available"
                 searchPlaceholder="Search client..."
                 aria-label="Select client"
               />

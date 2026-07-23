@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
+import { getRecords as getClients } from "../../../services/clients/clientsApi";
 import { getRecords as getSalesProjects } from "../../../services/sales/salesProjectsApi";
 import {
   PROJECT_MANAGER_OPTIONS,
   RFQ_OPTIONS,
   SALES_MANAGER_OPTIONS,
-  SURVEY_CLIENT_OPTIONS,
 } from "../data/surveyFormData";
 import { MAX_API_LIST_LIMIT } from "../../shared/utils/listQueryParams";
+import { normalizeStatusKey } from "../../shared/utils/statusLabels";
 
 export function mergeSelectOption(options = [], value, label) {
   const normalizedValue = String(value ?? "").trim();
@@ -20,11 +21,20 @@ export function mergeSelectOption(options = [], value, label) {
   return [{ value: normalizedValue, label: normalizedLabel }, ...options];
 }
 
-export function mapClientsToSelectOptions(items = []) {
+/**
+ * Maps Client Management API rows to select options.
+ * @param {Array<{ id?: string|number, name?: string, clientCode?: string, status?: string }>} items
+ * @param {{ activeOnly?: boolean }} [options]
+ */
+export function mapClientsToSelectOptions(items = [], { activeOnly = false } = {}) {
   return items
+    .filter((item) => {
+      if (!activeOnly) return true;
+      return normalizeStatusKey(item?.status) !== "inactive";
+    })
     .map((item) => ({
       value: String(item.id ?? ""),
-      label: item.name ?? "",
+      label: String(item.name ?? "").trim(),
       searchText: [item.clientCode, item.name].filter(Boolean).join(" "),
     }))
     .filter((option) => option.value && option.label);
@@ -74,14 +84,14 @@ function getMockSalesProjectOptions() {
   }).filter((option) => option.value);
 }
 
-async function fetchAllSalesProjects() {
+async function fetchAllPaginatedRecords(fetchPage) {
   const limit = MAX_API_LIST_LIMIT;
   const items = [];
   let page = 1;
   let totalPages = 1;
 
   do {
-    const response = await getSalesProjects({ page, limit });
+    const response = await fetchPage({ page, limit });
     const pageItems = Array.isArray(response?.items) ? response.items : [];
     items.push(...pageItems);
     totalPages = Math.max(1, Number(response?.totalPages) || 1);
@@ -91,9 +101,18 @@ async function fetchAllSalesProjects() {
   return items;
 }
 
+async function fetchAllClients() {
+  return fetchAllPaginatedRecords(getClients);
+}
+
+async function fetchAllSalesProjects() {
+  return fetchAllPaginatedRecords(getSalesProjects);
+}
+
 /**
  * Loads select options for the project form.
- * Sales Project uses the live RFQ list API; other lists stay mock/API-ready.
+ * Client list comes from Client Management API (active clients only).
+ * Sales Project uses the live RFQ list API.
  */
 export function useSurveyFormSelectOptions() {
   const [clientOptions, setClientOptions] = useState([]);
@@ -108,21 +127,27 @@ export function useSurveyFormSelectOptions() {
     const loadOptions = async () => {
       setIsLoading(true);
 
-      let salesProjects = [];
-      try {
-        const records = await fetchAllSalesProjects();
-        salesProjects = mapSalesProjectsToSelectOptions(records);
-      } catch {
-        salesProjects = [];
-      }
+      const [clientsResult, salesProjectsResult] = await Promise.allSettled([
+        fetchAllClients(),
+        fetchAllSalesProjects(),
+      ]);
 
       if (cancelled) return;
 
-      setClientOptions([...SURVEY_CLIENT_OPTIONS]);
+      const clients =
+        clientsResult.status === "fulfilled" ? clientsResult.value : [];
+      const salesProjects =
+        salesProjectsResult.status === "fulfilled"
+          ? salesProjectsResult.value
+          : [];
+
+      setClientOptions(mapClientsToSelectOptions(clients, { activeOnly: true }));
       setProjectManagerOptions([...PROJECT_MANAGER_OPTIONS]);
       setSalesManagerOptions([...SALES_MANAGER_OPTIONS]);
       setSalesProjectOptions(
-        salesProjects.length ? salesProjects : getMockSalesProjectOptions()
+        salesProjects.length
+          ? mapSalesProjectsToSelectOptions(salesProjects)
+          : getMockSalesProjectOptions()
       );
       setIsLoading(false);
     };

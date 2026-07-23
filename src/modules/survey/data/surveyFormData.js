@@ -1,5 +1,6 @@
 import { getSurveyProjectDetails } from "./surveyDetailsData";
 
+/** @deprecated Demo/mock only — live forms use Client Management API via useSurveyFormSelectOptions. */
 export const SURVEY_CLIENT_OPTIONS = [
   { value: "1", label: "Alpha Corp International" },
   { value: "2", label: "Beta Labs" },
