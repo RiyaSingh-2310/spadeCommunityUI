@@ -7,12 +7,14 @@ import { getRecords as getPartnerRecords } from "../../../services/partners/part
 import { getRecords as getProjectManagerRecords } from "../../../services/projectManagers/projectManagersApi";
 import { getRecords as getRfqRecords } from "../../../services/sales/salesProjectsApi";
 import { getRecords as getSurveyRecords } from "../../../modules/survey/services/surveyApi";
+import { MAX_API_LIST_LIMIT } from "../../../modules/shared/utils/listQueryParams";
 import {
   buildMonthlySeries,
   fetchWithFallback,
   normalizeStatus,
 } from "./dashboardUtils";
 
+const DASHBOARD_LIST_LIMIT = MAX_API_LIST_LIMIT;
 const EMPTY_DASHBOARD = {
   loading: false,
   users: [],
@@ -47,7 +49,7 @@ export function useDashboardData({ enabled = true } = {}) {
         if (isSales) {
           const [rfqData, surveyData] = await Promise.all([
             getRfqRecords({ page: 1, limit: 5 }),
-            getSurveyRecords({ page: 1, limit: 500 }),
+            getSurveyRecords({ page: 1, limit: DASHBOARD_LIST_LIMIT }),
           ]);
 
           if (cancelled) return;
@@ -62,12 +64,12 @@ export function useDashboardData({ enabled = true } = {}) {
 
         const [userData, clientData, partnerData, pmData, rfqData, surveyData, invoiceData, rewardData, logData] =
           await Promise.all([
-            getUserRecords({ page: 1, limit: 500 }),
-            getClientRecords({ page: 1, limit: 500 }),
-            getPartnerRecords({ page: 1, limit: 500 }),
-            getProjectManagerRecords({ page: 1, limit: 500 }),
+            getUserRecords({ page: 1, limit: DASHBOARD_LIST_LIMIT }),
+            getClientRecords({ page: 1, limit: DASHBOARD_LIST_LIMIT }),
+            getPartnerRecords({ page: 1, limit: DASHBOARD_LIST_LIMIT }),
+            getProjectManagerRecords({ page: 1, limit: DASHBOARD_LIST_LIMIT }),
             getRfqRecords({ page: 1, limit: 5 }),
-            getSurveyRecords({ page: 1, limit: 500 }),
+            getSurveyRecords({ page: 1, limit: DASHBOARD_LIST_LIMIT }),
             fetchWithFallback(["/api/invoice/list", "/api/invoices/list"]),
             fetchWithFallback(["/api/reward/list", "/api/rewards/list", "/api/reward-points/list"]),
             fetchWithFallback([

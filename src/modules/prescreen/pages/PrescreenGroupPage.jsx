@@ -64,7 +64,6 @@ function PrescreenGroupPage({ isDarkMode }) {
       isDarkMode={isDarkMode}
       title="Questionnaire Group"
       breadcrumbs={[
-        { label: "Question Library", to: "/prescreen" },
         { label: "Questionnaire Group" },
       ]}
       searchPlaceholder="Search questionnaire groups..."

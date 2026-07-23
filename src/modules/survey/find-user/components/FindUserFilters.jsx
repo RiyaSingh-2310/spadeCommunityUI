@@ -4,7 +4,8 @@ import SearchableSelect from "../../../../components/admin/SearchableSelect";
 import SearchableMultiSelect from "../../../../components/admin/SearchableMultiSelect";
 import { getAdminInputClass } from "../../../shared/utils/formStyles";
 import {
-  getFindUserQuestions,
+  getFindUserAnswerOptions,
+  getFindUserQuestionsByLanguage,
   normalizeFindUserQuestionOptions,
 } from "../services/findUserApi";
 import { toastApiError } from "../../../../services/toast/apiToast";
@@ -32,23 +33,47 @@ function FindUserFilters({
   onSearch,
   isSearching,
   disabled = false,
+  language = "",
 }) {
   const inputClass = getAdminInputClass();
   const [questions, setQuestions] = useState([]);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
+  const [answerOptionsByQuestionId, setAnswerOptionsByQuestionId] = useState(
+    () => new Map()
+  );
+  const [loadingAnswersFor, setLoadingAnswersFor] = useState("");
 
   useEffect(() => {
     let cancelled = false;
+    const languageKey = String(language ?? "").trim();
 
     async function loadQuestions() {
+      if (!languageKey) {
+        setQuestions([]);
+        setAnswerOptionsByQuestionId(new Map());
+        setIsLoadingQuestions(false);
+        return;
+      }
+
       setIsLoadingQuestions(true);
       try {
-        const nextQuestions = await getFindUserQuestions();
+        const nextQuestions = await getFindUserQuestionsByLanguage(languageKey);
         if (cancelled) return;
         setQuestions(nextQuestions);
+        setAnswerOptionsByQuestionId(() => {
+          const next = new Map();
+          nextQuestions.forEach((question) => {
+            const options = normalizeFindUserQuestionOptions(question.options);
+            if (options.length > 0) {
+              next.set(String(question.id), options);
+            }
+          });
+          return next;
+        });
       } catch (err) {
         if (cancelled) return;
         setQuestions([]);
+        setAnswerOptionsByQuestionId(new Map());
         toastApiError(err);
       } finally {
         if (!cancelled) setIsLoadingQuestions(false);
@@ -59,7 +84,7 @@ function FindUserFilters({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [language]);
 
   const questionsById = useMemo(() => {
     const map = new Map();
@@ -73,7 +98,7 @@ function FindUserFilters({
     () =>
       questions.map((question) => ({
         value: question.id,
-        label: question.question_title || `Question #${question.id}`,
+        label: question.question_title,
       })),
     [questions]
   );
@@ -89,14 +114,40 @@ function FindUserFilters({
     onRemoveFilter?.(rowId);
   };
 
-  const handleQuestionChange = (rowId, questionId) => {
+  const handleQuestionChange = async (rowId, questionId) => {
     updateRow(rowId, { questionId, answers: [] });
+
+    const normalizedId = String(questionId ?? "").trim();
+    if (!normalizedId) return;
+    if (answerOptionsByQuestionId.has(normalizedId)) return;
+
+    const selectedQuestion = questionsById.get(normalizedId);
+    setLoadingAnswersFor(normalizedId);
+    try {
+      const options = await getFindUserAnswerOptions(
+        normalizedId,
+        selectedQuestion?.options
+      );
+      setAnswerOptionsByQuestionId((prev) => {
+        const next = new Map(prev);
+        next.set(normalizedId, options);
+        return next;
+      });
+    } catch (err) {
+      toastApiError(err);
+    } finally {
+      setLoadingAnswersFor((current) =>
+        current === normalizedId ? "" : current
+      );
+    }
   };
 
   const canSearch = filters.every(
     (row) => row.questionId && Array.isArray(row.answers) && row.answers.length > 0
   );
-  const filtersDisabled = disabled || isSearching || isLoadingQuestions;
+  const languageMissing = !String(language ?? "").trim();
+  const filtersDisabled =
+    disabled || isSearching || isLoadingQuestions || languageMissing;
   const canDeleteFilters = filters.length > 1;
 
   return (
@@ -105,19 +156,36 @@ function FindUserFilters({
         const selectedQuestion = row.questionId
           ? questionsById.get(String(row.questionId))
           : null;
-        const answerOptions = mapOptionsToSelectOptions(
-          selectedQuestion?.options
-        );
+        const cachedAnswers =
+          answerOptionsByQuestionId.get(String(row.questionId)) ??
+          selectedQuestion?.options ??
+          [];
+        const answerOptions = mapOptionsToSelectOptions(cachedAnswers);
+        const isLoadingAnswers =
+          Boolean(row.questionId) &&
+          loadingAnswersFor === String(row.questionId);
         const hasAnswerOptions = answerOptions.length > 0;
         const answersUnavailable =
-          Boolean(row.questionId) && !isLoadingQuestions && !hasAnswerOptions;
+          Boolean(row.questionId) &&
+          !isLoadingQuestions &&
+          !isLoadingAnswers &&
+          !hasAnswerOptions;
         const selectedAnswers = Array.isArray(row.answers) ? row.answers : [];
 
         let answerPlaceholder = "Select question first";
         if (answersUnavailable) {
           answerPlaceholder = "No answers available";
+        } else if (isLoadingAnswers) {
+          answerPlaceholder = "Loading answers...";
         } else if (row.questionId) {
           answerPlaceholder = "Select Answer(s)";
+        }
+
+        let questionPlaceholder = "Select Question";
+        if (languageMissing) {
+          questionPlaceholder = "Project URL language required";
+        } else if (isLoadingQuestions) {
+          questionPlaceholder = "Loading questions...";
         }
 
         return (
@@ -138,9 +206,7 @@ function FindUserFilters({
                 value={row.questionId}
                 onChange={(questionId) => handleQuestionChange(row.id, questionId)}
                 options={questionSelectOptions}
-                placeholder={
-                  isLoadingQuestions ? "Loading questions..." : "Select Question"
-                }
+                placeholder={questionPlaceholder}
                 disabled={filtersDisabled}
                 loading={isLoadingQuestions}
                 loadingLabel="Loading questions..."
@@ -164,7 +230,8 @@ function FindUserFilters({
                   disabled ||
                   isSearching ||
                   !row.questionId ||
-                  answersUnavailable
+                  answersUnavailable ||
+                  isLoadingAnswers
                 }
                 emptyMessage="No answers available"
                 searchPlaceholder="Search answer..."

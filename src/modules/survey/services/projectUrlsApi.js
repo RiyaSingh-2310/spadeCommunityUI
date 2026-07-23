@@ -23,6 +23,7 @@ import { delay } from "../data/mockSurveyStore";
 import { getRecords as getQuestionnaireGroups } from "../../../services/questionnaire-group/questionnaireGroupApi";
 import { PRESCREEN_LANGUAGES } from "../../prescreen/data/prescreenLanguages";
 import { parseUtcToIst } from "../../shared/utils/dateTime";
+import { MAX_API_LIST_LIMIT } from "../../shared/utils/listQueryParams";
 import {
   getRecord,
   mapSurveyToProjectDetails,
@@ -516,7 +517,8 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
 }
 
 /**
- * Loads a single Project URL form for edit from GET /api/projects/:id `urlInfo`.
+ * Loads a single Project URL form for edit.
+ * Uses GET /api/projects/:id/url/list (backend has no GET /api/projects/url/:urlId).
  * @param {string|number} projectId
  * @param {string|number} urlId
  * @param {object | null} [fallbackForm] Optional cached list row
@@ -539,19 +541,18 @@ export async function getProjectUrlFormForEdit(projectId, urlId, fallbackForm = 
   }
 
   try {
-    const response = await getProjectUrlById(normalizedUrlId);
-    const raw = response?.data;
-    if (raw) {
-      const record = await getRecord(projectId);
-      const mapped = mapApiUrlInfoToForm(raw, projectId, record);
+    const listResponse = await listProjectUrlsByProject(projectId);
+    const rows = Array.isArray(listResponse?.data) ? listResponse.data : [];
+    const matched = rows.find(
+      (row) => String(row?.id ?? "") === normalizedUrlId
+    );
+    if (matched) {
       return normalizeProjectUrlFormForState(
-        mergeProjectUrlForms(mapped, fallbackForm)
+        mergeProjectUrlForms(matched, fallbackForm)
       );
     }
-  } catch (error) {
-    if (!(error instanceof ApiError && error.status === 404)) {
-      throw error;
-    }
+  } catch {
+    // Fall through to project details urlInfo.
   }
 
   const record = await getRecord(projectId);
@@ -834,19 +835,39 @@ export async function deleteProjectUrl(urlId) {
   return assertSuccess(data);
 }
 
-export async function getProjectUrlById(urlId) {
-  const normalizedUrlId = normalizeUrlId(urlId);
+/**
+ * Resolves a Project URL by id via the project URL list endpoint.
+ * Backend does not expose GET /api/projects/url/:urlId.
+ * @param {string|number} urlId
+ * @param {string|number} [projectId]
+ */
+export async function getProjectUrlById(urlId, projectId) {
+  const rawUrlId = String(urlId ?? "").trim();
+  if (!rawUrlId || rawUrlId === "undefined" || rawUrlId === "null") {
+    throw new ApiError("Project URL ID is required.", null);
+  }
 
   if (USE_PROJECT_URLS_MOCK) {
     await delay();
     return {
       success: true,
-      data: getMockProjectUrlById(normalizedUrlId),
+      data: getMockProjectUrlById(rawUrlId),
     };
   }
 
-  const data = await apiRequest(API_ROUTES.projects.urlById(normalizedUrlId));
-  return assertSuccess(data);
+  const normalizedProjectId = String(projectId ?? "").trim();
+  if (!normalizedProjectId) {
+    throw new ApiError("Project id is required to load a Project URL.", null);
+  }
+
+  const listResponse = await listProjectUrlsByProject(normalizedProjectId);
+  const rows = Array.isArray(listResponse?.data) ? listResponse.data : [];
+  const matched = rows.find((row) => String(row?.id ?? "") === rawUrlId);
+  if (!matched) {
+    throw new ApiError("Project URL not found.", null, 404);
+  }
+
+  return { success: true, data: matched };
 }
 
 /** Filtered pre-screener options for Country + Language (mock). */
@@ -858,9 +879,26 @@ export async function getPreScreenerOptions({ country, language } = {}) {
   };
 }
 
+async function fetchAllQuestionnaireGroupItems() {
+  const limit = MAX_API_LIST_LIMIT;
+  const items = [];
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const response = await getQuestionnaireGroups({ page, limit });
+    const pageItems = Array.isArray(response?.items) ? response.items : [];
+    items.push(...pageItems);
+    totalPages = Math.max(1, Number(response?.totalPages) || 1);
+    page += 1;
+  } while (page <= totalPages && page <= 50);
+
+  return items;
+}
+
 /**
  * Survey groups for Pre-Screen, filtered by selected language.
- * Uses Questionnaire Group list API with mock fallback.
+ * Uses Questionnaire Group list API; displays Survey Title (never IDs).
  */
 export async function getSurveyGroupOptionsForLanguage(language) {
   const languageKey = String(language ?? "").trim().toLowerCase();
@@ -869,8 +907,7 @@ export async function getSurveyGroupOptionsForLanguage(language) {
   }
 
   try {
-    const response = await getQuestionnaireGroups({ page: 1, limit: 500 });
-    const items = Array.isArray(response?.items) ? response.items : [];
+    const items = await fetchAllQuestionnaireGroupItems();
     const options = items
       .filter(
         (item) =>
@@ -878,11 +915,13 @@ export async function getSurveyGroupOptionsForLanguage(language) {
             .trim()
             .toLowerCase() === languageKey
       )
-      .map((item) => ({
-        value: String(item.id),
-        label: String(item.title || item.surveyTitle || item.id),
-      }))
-      .filter((option) => option.value && option.label);
+      .map((item) => {
+        const label = String(item.surveyTitle || item.title || "").trim();
+        const value = String(item.id ?? "").trim();
+        if (!value || !label) return null;
+        return { value, label };
+      })
+      .filter(Boolean);
 
     if (options.length > 0) {
       return { success: true, data: options };
@@ -892,10 +931,14 @@ export async function getSurveyGroupOptionsForLanguage(language) {
   }
 
   await delay(120);
-  const mockOptions = getMockPreScreeners({ language }).map((item) => ({
-    value: item.value,
-    label: item.label,
-  }));
+  const mockOptions = getMockPreScreeners({ language })
+    .map((item) => {
+      const label = String(item.label ?? "").trim();
+      const value = String(item.value ?? "").trim();
+      if (!value || !label) return null;
+      return { value, label };
+    })
+    .filter(Boolean);
   return { success: true, data: mockOptions };
 }
 

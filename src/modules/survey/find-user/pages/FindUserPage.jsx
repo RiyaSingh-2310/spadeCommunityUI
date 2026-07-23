@@ -7,7 +7,10 @@ import FindUserTable from "../components/FindUserTable";
 import FindUserToolbar from "../components/FindUserToolbar";
 import InvitedUsersModal from "../components/InvitedUsersModal";
 import { useInfiniteUsers } from "../hooks/useInfiniteUsers";
-import { inviteFindUsers } from "../services/findUserApi";
+import {
+  getProjectUrlLanguageForFindUser,
+  inviteFindUsers,
+} from "../services/findUserApi";
 import { getRecords as getEmailTemplates } from "../../../user-email-templates/services/userEmailTemplatesApi";
 import { normalizeStatusKey } from "../../../shared/utils/statusLabels";
 import { toastApiError, toastApiSuccess } from "../../../../services/toast/apiToast";
@@ -42,6 +45,12 @@ function FindUserPage({ isDarkMode }) {
   const [selectAll, setSelectAll] = useState(false);
   const [showInvitedModal, setShowInvitedModal] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
+  const [projectUrlLanguage, setProjectUrlLanguage] = useState(
+    () => String(location.state?.language ?? "").trim()
+  );
+  const [isLoadingLanguage, setIsLoadingLanguage] = useState(
+    () => !String(location.state?.language ?? "").trim()
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +92,36 @@ function FindUserPage({ isDarkMode }) {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const stateLanguage = String(location.state?.language ?? "").trim();
+    if (stateLanguage) {
+      setProjectUrlLanguage(stateLanguage);
+      setIsLoadingLanguage(false);
+      return undefined;
+    }
+
+    async function loadLanguage() {
+      setIsLoadingLanguage(true);
+      try {
+        const language = await getProjectUrlLanguageForFindUser(surveyId);
+        if (cancelled) return;
+        setProjectUrlLanguage(language);
+      } catch (err) {
+        if (cancelled) return;
+        setProjectUrlLanguage("");
+        toastApiError(err);
+      } finally {
+        if (!cancelled) setIsLoadingLanguage(false);
+      }
+    }
+
+    loadLanguage();
+    return () => {
+      cancelled = true;
+    };
+  }, [surveyId, location.state?.language]);
+
   const {
     users,
     isLoading,
@@ -95,6 +134,15 @@ function FindUserPage({ isDarkMode }) {
     onPageSizeChange,
     reset,
   } = useInfiniteUsers(surveyId, activeFilters, searchVersion);
+
+  useEffect(() => {
+    setFilterRows([createFilterRow()]);
+    setActiveFilters([]);
+    setSelectedIds(new Set());
+    setSelectAll(false);
+    setSearchVersion(0);
+    reset();
+  }, [projectUrlLanguage, reset]);
 
   const handleSearch = () => {
     const valid = filterRows
@@ -201,6 +249,8 @@ function FindUserPage({ isDarkMode }) {
           onRemoveFilter={handleRemoveFilter}
           onSearch={handleSearch}
           isSearching={isLoading && users.length === 0}
+          disabled={isLoadingLanguage}
+          language={projectUrlLanguage}
         />
       </TableCard>
 

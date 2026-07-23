@@ -863,6 +863,7 @@ function ProjectUrlsTab({
             <FormField
               key={key}
               label={label}
+              required
               hint={`Example: ${example}`}
               error={showError(key) ? errors[key] : ""}
             >

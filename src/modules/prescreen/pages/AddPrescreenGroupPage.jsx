@@ -95,7 +95,7 @@ function QuestionnaireCheckboxList({
           checked={allSelected}
           disabled={disabled}
           onChange={handleSelectAll}
-          className="h-4 w-4 rounded accent-[var(--admin-primary-color)]"
+          className="admin-checkbox"
         />
         <span>Select All</span>
       </label>
@@ -124,7 +124,7 @@ function QuestionnaireCheckboxList({
                   : [...selectedIds, optionId];
                 onChange(next);
               }}
-              className="h-4 w-4 rounded accent-[var(--admin-primary-color)]"
+              className="admin-checkbox"
             />
             <span>{option.label}</span>
           </label>
@@ -331,7 +331,6 @@ function AddPrescreenGroupPage({ isDarkMode }) {
   };
 
   const breadcrumbItems = [
-    { label: "Question Library", to: "/prescreen" },
     { label: "Questionnaire Group", to: "/prescreen/group" },
   ];
 
@@ -339,8 +338,8 @@ function AddPrescreenGroupPage({ isDarkMode }) {
     return (
       <div className="space-y-6">
         <AdminPageHeader
-          title="Edit Survey Group"
-          breadcrumbs={[...breadcrumbItems, { label: "Edit Survey Group" }]}
+          title="Edit Questionnaire Group"
+          breadcrumbs={[...breadcrumbItems, { label: "Edit Questionnaire Group" }]}
           isDarkMode={isDarkMode}
         />
         <div className="admin-text flex items-center gap-2 text-sm">
@@ -355,8 +354,8 @@ function AddPrescreenGroupPage({ isDarkMode }) {
     return (
       <div className="space-y-6">
         <AdminPageHeader
-          title="Edit Survey Group"
-          breadcrumbs={[...breadcrumbItems, { label: "Edit Survey Group" }]}
+          title="Edit Questionnaire Group"
+          breadcrumbs={[...breadcrumbItems, { label: "Edit Questionnaire Group" }]}
           isDarkMode={isDarkMode}
         />
         <p className="admin-text-muted text-sm">Survey group not found.</p>
@@ -374,10 +373,10 @@ function AddPrescreenGroupPage({ isDarkMode }) {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title={isEdit ? "Edit Survey Group" : "Add Survey Group"}
+        title={isEdit ? "Edit Questionnaire Group" : "Add Survey Group"}
         breadcrumbs={[
           ...breadcrumbItems,
-          { label: isEdit ? "Edit Survey Group" : "Add Survey Group" },
+          { label: isEdit ? "Edit Questionnaire Group" : "Add Survey Group" },
         ]}
         isDarkMode={isDarkMode}
       />

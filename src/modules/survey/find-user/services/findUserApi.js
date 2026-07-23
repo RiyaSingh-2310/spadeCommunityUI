@@ -8,6 +8,11 @@ import { formatSurveyListDate } from "../../../shared/utils/dateTime";
 import { apiStatusToFormValue } from "../../../shared/utils/statusLabels";
 import { apiRequest } from "../../../../services/api/client";
 import { ApiError } from "../../../../services/api/ApiError";
+import {
+  getQuestionsByLanguage,
+  getRecord as getQuestionLibraryRecord,
+} from "../../../../services/question-library/questionLibraryApi";
+import { listProjectUrlsByProject } from "../../services/projectUrlsApi";
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -25,7 +30,7 @@ function extractQuestionList(data) {
 }
 
 /**
- * Normalizes question options from the Find User questions API.
+ * Normalizes question options from the Question Library / Find User APIs.
  * @param {unknown} options
  * @returns {string[]}
  */
@@ -62,7 +67,7 @@ export function normalizeFindUserQuestionOptions(options) {
 }
 
 /**
- * Maps GET /api/find-user/questions item.
+ * Maps a Question Library record into the Find User question filter shape.
  * @param {object} record
  */
 function mapFindUserQuestion(record) {
@@ -71,7 +76,11 @@ function mapFindUserQuestion(record) {
   if (id == null || id === "") return null;
 
   const questionTitle = String(
-    record.question_title ?? record.questionTitle ?? record.label ?? ""
+    record.question_title ??
+      record.questionTitle ??
+      record.title ??
+      record.label ??
+      ""
   ).trim();
 
   return {
@@ -86,13 +95,70 @@ function mapFindUserQuestion(record) {
 }
 
 /**
- * GET /api/find-user/questions
+ * Resolves Project URL language for a project (first URL config).
+ * @param {string|number} projectId
+ * @returns {Promise<string>}
+ */
+export async function getProjectUrlLanguageForFindUser(projectId) {
+  const normalizedId = String(projectId ?? "").trim();
+  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
+    return "";
+  }
+
+  const response = await listProjectUrlsByProject(normalizedId);
+  const rows = Array.isArray(response?.data) ? response.data : [];
+  for (const row of rows) {
+    const language = String(row?.language ?? "").trim();
+    if (language) return language;
+  }
+  return "";
+}
+
+/**
+ * Question Filter options from Question Library, filtered by Project URL language.
+ * @param {string} language
  * @returns {Promise<Array<{
  *   id: string,
  *   question_title: string,
  *   question_type: string,
  *   options: string[],
  * }>>}
+ */
+export async function getFindUserQuestionsByLanguage(language) {
+  const languageKey = String(language ?? "").trim();
+  if (!languageKey) return [];
+
+  const records = await getQuestionsByLanguage(languageKey);
+  return (Array.isArray(records) ? records : [])
+    .map(mapFindUserQuestion)
+    .filter((question) => question && question.question_title);
+}
+
+/**
+ * Loads answer options for a Question Library question.
+ * Prefers options already present on the question; falls back to GET by id.
+ * @param {string|number} questionId
+ * @param {string[]} [fallbackOptions]
+ * @returns {Promise<string[]>}
+ */
+export async function getFindUserAnswerOptions(questionId, fallbackOptions = []) {
+  const fromFallback = normalizeFindUserQuestionOptions(fallbackOptions);
+  if (fromFallback.length > 0) return fromFallback;
+
+  const normalizedId = String(questionId ?? "").trim();
+  if (!normalizedId) return [];
+
+  try {
+    const record = await getQuestionLibraryRecord(normalizedId);
+    return normalizeFindUserQuestionOptions(record?.options);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * @deprecated Prefer getFindUserQuestionsByLanguage with Project URL language.
+ * GET /api/find-user/questions
  */
 export async function getFindUserQuestions() {
   const data = await apiRequest(API_ROUTES.findUser.questions);

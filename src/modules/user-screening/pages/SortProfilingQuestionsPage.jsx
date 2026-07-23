@@ -5,6 +5,7 @@ import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminCancelButtonClass } from "../../shared/utils/formStyles";
+import { MAX_API_LIST_LIMIT } from "../../shared/utils/listQueryParams";
 import SortableProfilingQuestionList from "../components/SortableProfilingQuestionList";
 import {
   getRecords,
@@ -12,6 +13,22 @@ import {
   updateScreeningSortOrder,
 } from "../../../services/screening/screeningQuestionsApi";
 import { toastApiError } from "../../../services/toast/apiToast";
+
+async function fetchAllScreeningQuestions() {
+  const limit = MAX_API_LIST_LIMIT;
+  const items = [];
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const data = await getRecords({ page, limit });
+    items.push(...(data.items ?? []));
+    totalPages = Math.max(1, Number(data.totalPages) || 1);
+    page += 1;
+  } while (page <= totalPages && page <= 50);
+
+  return items;
+}
 
 function SortProfilingQuestionsPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -31,10 +48,10 @@ function SortProfilingQuestionsPage({ isDarkMode }) {
       setLoadFailed(false);
 
       try {
-        const data = await getRecords({ page: 1, limit: 500 });
+        const records = await fetchAllScreeningQuestions();
         if (cancelled) return;
 
-        const mapped = (data.items ?? []).map((row) => ({
+        const mapped = records.map((row) => ({
           id: getScreeningRowId(row),
           questionTitle: row.questionTitle ?? row.title ?? "",
           sortOrder: Number(row.sortOrder ?? 0),
@@ -111,7 +128,6 @@ function SortProfilingQuestionsPage({ isDarkMode }) {
         <AdminPageHeader
           title="Sort User Prescreen Questionnaire"
           breadcrumbs={[
-            { label: "Questionnaire Management", to: "/user-screening/questions" },
             { label: "Panel Questionnaire", to: "/user-screening/questions" },
             { label: "Sort Questions" },
           ]}
@@ -134,7 +150,6 @@ function SortProfilingQuestionsPage({ isDarkMode }) {
       <AdminPageHeader
         title="Sort User Prescreen Questionnaire"
         breadcrumbs={[
-          { label: "Questionnaire Management", to: "/user-screening/questions" },
           { label: "Panel Questionnaire", to: "/user-screening/questions" },
           { label: "Sort Questions" },
         ]}

@@ -821,6 +821,17 @@ input[type="number"],
   --portal-dropdown-selected-bg: #e6f6ee;
   --portal-dropdown-selected-text: #10a950;
   --portal-dropdown-focus-ring: rgba(16, 169, 80, 0.28);
+  /* Portal menus are solid light surfaces — keep checkbox tokens local so
+     theme-aware .admin-checkbox works outside .admin-shell. */
+  --admin-primary-color: #10a950;
+  --admin-checkbox-border: #c5d3e3;
+  --admin-checkbox-bg: #ffffff;
+  --admin-checkbox-hover-border: #10a950;
+  --admin-checkbox-checked-bg: #10a950;
+  --admin-checkbox-checked-border: #10a950;
+  --admin-checkbox-check-color: #ffffff;
+  --admin-checkbox-focus-ring: rgba(16, 169, 80, 0.35);
+  --admin-checkbox-disabled-opacity: 0.45;
 
   background-color: var(--portal-dropdown-bg);
   border: 1px solid var(--portal-dropdown-border);

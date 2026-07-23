@@ -6,6 +6,7 @@ import {
   SALES_MANAGER_OPTIONS,
   SURVEY_CLIENT_OPTIONS,
 } from "../data/surveyFormData";
+import { MAX_API_LIST_LIMIT } from "../../shared/utils/listQueryParams";
 
 export function mergeSelectOption(options = [], value, label) {
   const normalizedValue = String(value ?? "").trim();
@@ -73,6 +74,23 @@ function getMockSalesProjectOptions() {
   }).filter((option) => option.value);
 }
 
+async function fetchAllSalesProjects() {
+  const limit = MAX_API_LIST_LIMIT;
+  const items = [];
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const response = await getSalesProjects({ page, limit });
+    const pageItems = Array.isArray(response?.items) ? response.items : [];
+    items.push(...pageItems);
+    totalPages = Math.max(1, Number(response?.totalPages) || 1);
+    page += 1;
+  } while (page <= totalPages && page <= 50);
+
+  return items;
+}
+
 /**
  * Loads select options for the project form.
  * Sales Project uses the live RFQ list API; other lists stay mock/API-ready.
@@ -92,8 +110,8 @@ export function useSurveyFormSelectOptions() {
 
       let salesProjects = [];
       try {
-        const response = await getSalesProjects({ page: 1, limit: 500 });
-        salesProjects = mapSalesProjectsToSelectOptions(response?.items ?? []);
+        const records = await fetchAllSalesProjects();
+        salesProjects = mapSalesProjectsToSelectOptions(records);
       } catch {
         salesProjects = [];
       }

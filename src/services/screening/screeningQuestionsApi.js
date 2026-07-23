@@ -1,6 +1,6 @@
 import { API_ROUTES } from "../../config/api";
 import { extractListTotalFromResponse, safeMapListItems } from "../../modules/shared/utils/listResponse";
-import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
+import { appendListQuery, MAX_API_LIST_LIMIT } from "../../modules/shared/utils/listQueryParams";
 import {
   apiStatusToFormValue,
   formValueToApiStatus,
@@ -508,7 +508,7 @@ export async function getScreeningQuestionsByLanguage(language) {
     const data = await apiRequest(
       appendScreeningListQuery(API_ROUTES.screening.list, {
         page: 1,
-        limit: 500,
+        limit: MAX_API_LIST_LIMIT,
         search: normalizedLanguage,
       })
     );
@@ -682,7 +682,7 @@ export async function getRecord(id) {
     const record = extractQuestionRecord(data);
     if (record) {
       const listData = await apiRequest(
-        appendScreeningListQuery(API_ROUTES.screening.list, { page: 1, limit: 500 })
+        appendScreeningListQuery(API_ROUTES.screening.list, { page: 1, limit: MAX_API_LIST_LIMIT })
       );
       assertSuccess(listData);
       const listRecord = extractQuestionList(listData)
@@ -697,7 +697,7 @@ export async function getRecord(id) {
   }
 
   const data = await apiRequest(
-    appendScreeningListQuery(API_ROUTES.screening.list, { page: 1, limit: 500 })
+    appendScreeningListQuery(API_ROUTES.screening.list, { page: 1, limit: MAX_API_LIST_LIMIT })
   );
   assertSuccess(data);
 
@@ -741,7 +741,7 @@ async function loadQuestionnaireFromList(seed, id) {
   const seedId = String(getRecordId(seed) ?? decodeQuestionId(id));
 
   const data = await apiRequest(
-    appendScreeningListQuery(API_ROUTES.screening.list, { page: 1, limit: 500 })
+    appendScreeningListQuery(API_ROUTES.screening.list, { page: 1, limit: MAX_API_LIST_LIMIT })
   );
   assertSuccess(data);
 
@@ -915,7 +915,7 @@ export async function listCreateSurveyRecords({ page, limit, search } = {}) {
 
   const data = await getRecords({
     page: 1,
-    limit: 500,
+    limit: MAX_API_LIST_LIMIT,
     search: normalizeSearchQuery(search),
   });
 

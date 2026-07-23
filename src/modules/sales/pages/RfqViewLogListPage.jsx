@@ -103,7 +103,6 @@ function RfqViewLogListPage({ isDarkMode }) {
       <AdminPageHeader
         title="View Log List"
         breadcrumbs={[
-          { label: "Sales", to: "/sales/rfq" },
           { label: "RFQ", to: "/sales/rfq" },
           { label: "View Log List" },
         ]}

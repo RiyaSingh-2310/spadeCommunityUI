@@ -208,7 +208,6 @@ function AddSalesManagerPage({ isDarkMode }) {
         <AdminPageHeader
           title="Edit Sales Manager"
           breadcrumbs={[
-            { label: "Sales", to: "/sales/sales-manager" },
             { label: "Sales Manager", to: "/sales/sales-manager" },
             { label: "Edit Sales Manager" },
           ]}
@@ -233,7 +232,6 @@ function AddSalesManagerPage({ isDarkMode }) {
       <AdminPageHeader
         title={isEdit ? "Edit Sales Manager" : "Add Sales Manager"}
         breadcrumbs={[
-          { label: "Sales", to: "/sales/sales-manager" },
           { label: "Sales Manager", to: "/sales/sales-manager" },
           { label: isEdit ? "Edit Sales Manager" : "Add Sales Manager" },
         ]}

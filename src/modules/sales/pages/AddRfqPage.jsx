@@ -374,7 +374,6 @@ function AddRfqPage({ isDarkMode }) {
         <AdminPageHeader
           title="Edit RFQ"
           breadcrumbs={[
-            { label: "Sales", to: "/sales/rfq" },
             { label: "RFQ", to: "/sales/rfq" },
             { label: "Edit RFQ" },
           ]}
@@ -399,7 +398,6 @@ function AddRfqPage({ isDarkMode }) {
       <AdminPageHeader
         title={isEdit ? "Edit RFQ" : "Add RFQ"}
         breadcrumbs={[
-          { label: "Sales", to: "/sales/rfq" },
           { label: "RFQ", to: "/sales/rfq" },
           { label: isEdit ? "Edit RFQ" : "Add RFQ" },
         ]}

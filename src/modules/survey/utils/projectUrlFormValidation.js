@@ -35,7 +35,7 @@ export const PROJECT_URL_REDIRECT_FIELDS = [
   },
   {
     key: "redirectTerminate",
-    label: "Terminated URL",
+    label: "Terminate URL",
     path: "/redirect/terminate",
     example: "https://spade-community.com/redirect/terminate?uid=[identifier]",
   },
@@ -132,14 +132,10 @@ function getDecimalFieldError(value, label, { required = true } = {}) {
   if (requiredError) return requiredError;
   const trimmed = String(value ?? "").trim();
   if (!trimmed) return "";
+  // Input controls already restrict digits / one decimal / max 2 places.
+  // Only surface completeness issues that can still occur while typing.
   if (trimmed.endsWith(".")) return `${label} is incomplete`;
-  if (/[eE]/.test(trimmed)) {
-    return `${label} must be a number with up to 2 decimal places`;
-  }
-  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) {
-    return `${label} must be a number with up to 2 decimal places`;
-  }
-  const [intPart] = trimmed.split(".");
+  const [intPart = ""] = trimmed.split(".");
   if (intPart.length > PROJECT_URL_NUMERIC_MAX_DIGITS) {
     return `${label} must be at most ${PROJECT_URL_NUMERIC_MAX_DIGITS} digits`;
   }
@@ -148,13 +144,13 @@ function getDecimalFieldError(value, label, { required = true } = {}) {
 
 /**
  * Validates redirect URLs: domain may vary, but path + uid=[identifier] must match.
- * Empty values are allowed (optional fields).
+ * All redirect URL fields are required.
  * @param {string} value
  * @param {{ path: string, label: string, example: string }} options
  */
 export function getProjectRedirectUrlError(value, { path, label, example }) {
   const trimmed = String(value ?? "").trim();
-  if (!trimmed) return "";
+  if (!trimmed) return getRequiredError(trimmed, label);
 
   let parsed;
   try {
@@ -242,10 +238,30 @@ function normalizeComparableValue(key, value) {
  * Normalizes loaded/saved form values for stable dirty-state comparisons.
  * @param {object} form
  */
+const DECIMAL_FORM_FIELDS = [
+  "loi",
+  "ir",
+  "cpiRate",
+  "completeRewardPoints",
+  "validateRewardPoints",
+];
+
+/**
+ * @param {object} form
+ */
 export function normalizeProjectUrlFormForState(form) {
   if (!form || typeof form !== "object") return {};
 
   const normalized = { ...form };
+  for (const key of DECIMAL_FORM_FIELDS) {
+    if (normalized[key] == null || normalized[key] === "") continue;
+    // Enforce max 2 decimals for DB-loaded and typed values alike.
+    normalized[key] = sanitizeProjectUrlDecimal(String(normalized[key]));
+    if (String(normalized[key]).endsWith(".")) {
+      normalized[key] = String(normalized[key]).slice(0, -1);
+    }
+  }
+
   for (const key of DIRTY_COMPARE_KEYS) {
     if (typeof normalized[key] === "boolean") continue;
     normalized[key] = normalizeComparableValue(key, normalized[key]);

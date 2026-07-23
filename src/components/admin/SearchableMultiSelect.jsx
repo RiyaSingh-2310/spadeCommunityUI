@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { usePortalDropdownPosition } from "../../modules/shared/hooks/usePortalDropdownPosition";
 import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
 import { filterSelectOptions } from "../../modules/shared/utils/dropdownSearch";
@@ -166,16 +166,15 @@ function SearchableMultiSelect({
                 isSelected={isSelected}
                 onSelect={() => handleToggle(option.value)}
               >
-                <span
-                  className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                    isSelected
-                      ? "border-[var(--admin-primary-color)] bg-[var(--admin-primary-color)] text-white"
-                      : "border-[var(--admin-checkbox-border)] bg-[var(--admin-checkbox-bg)]"
-                  }`}
+                {/* Same checkbox style as Questionnaire Group (Edit) */}
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  readOnly
+                  tabIndex={-1}
                   aria-hidden="true"
-                >
-                  {isSelected ? <Check size={12} strokeWidth={3} /> : null}
-                </span>
+                  className="admin-checkbox pointer-events-none"
+                />
                 <span className="admin-portal-dropdown-text min-w-0 truncate">{option.label}</span>
               </PortalDropdownOption>
             );

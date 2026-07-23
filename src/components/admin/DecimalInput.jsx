@@ -23,13 +23,13 @@ function DecimalInput({
       type="text"
       inputMode="decimal"
       autoComplete="off"
+      {...props}
       value={value}
       onChange={handleChange}
       onKeyDown={preventBlockedNumericKeys}
       onPaste={(e) => handleDecimalPaste(e, onChange, decimalPlaces)}
       onWheel={preventWheelValueChange}
       className={`admin-number-input ${className}`}
-      {...props}
     />
   );
 }

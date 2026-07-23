@@ -140,7 +140,7 @@ function EditEmailTemplatePage({ isDarkMode }) {
       <AdminPageHeader
         title="Edit Email Template"
         breadcrumbs={[
-          // { label: "System Email Template", to: "/system-email" },
+          { label: "System Email Template", to: "/system-email" },
           { label: "Edit Email Template" },
         ]}
         isDarkMode={isDarkMode}

@@ -112,7 +112,6 @@ function CreateSurveyListPage({ isDarkMode }) {
         isDarkMode={isDarkMode}
         title="Create Survey"
         breadcrumbs={[
-          { label: "Pre-Screen" },
           { label: "Create Survey" },
         ]}
         searchPlaceholder="Search surveys..."

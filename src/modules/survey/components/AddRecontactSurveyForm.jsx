@@ -74,7 +74,10 @@ function AddRecontactSurveyForm({
     const loadOptions = async () => {
       setIsLoadingOptions(true);
       try {
-        const projectManagers = await getProjectManagers({ page: 1, limit: 500 });
+        const projectManagers = await getProjectManagers({
+          page: 1,
+          limit: 100,
+        });
         if (!cancelled) {
           setProjectManagerOptions(mapProjectManagersToSelectOptions(projectManagers.items));
         }

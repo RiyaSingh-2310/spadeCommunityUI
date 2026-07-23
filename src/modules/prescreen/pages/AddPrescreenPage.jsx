@@ -230,7 +230,6 @@ function AddPrescreenPage({ isDarkMode }) {
     }
   };
 
-  const breadcrumbRoot = { label: "Pre-Screen", to: "/prescreen" };
   const breadcrumbLibrary = { label: "Question Library", to: "/prescreen" };
 
   if (isEdit && isLoadingRecord) {
@@ -238,7 +237,7 @@ function AddPrescreenPage({ isDarkMode }) {
       <div className="space-y-6">
         <AdminPageHeader
           title="Edit Question"
-          breadcrumbs={[breadcrumbRoot, breadcrumbLibrary, { label: "Edit Question" }]}
+          breadcrumbs={[breadcrumbLibrary, { label: "Edit Question" }]}
           isDarkMode={isDarkMode}
         />
         <div className="admin-text flex items-center gap-2 text-sm">
@@ -254,7 +253,7 @@ function AddPrescreenPage({ isDarkMode }) {
       <div className="space-y-6">
         <AdminPageHeader
           title="Edit Question"
-          breadcrumbs={[breadcrumbRoot, breadcrumbLibrary, { label: "Edit Question" }]}
+          breadcrumbs={[breadcrumbLibrary, { label: "Edit Question" }]}
           isDarkMode={isDarkMode}
         />
         <p className="admin-text-muted text-sm">Prescreen not found.</p>
@@ -274,7 +273,6 @@ function AddPrescreenPage({ isDarkMode }) {
       <AdminPageHeader
         title={isEdit ? "Edit Question" : "Add Question"}
         breadcrumbs={[
-          breadcrumbRoot,
           breadcrumbLibrary,
           { label: isEdit ? "Edit Question" : "Add Question" },
         ]}
@@ -326,7 +324,7 @@ function AddPrescreenPage({ isDarkMode }) {
                 type="checkbox"
                 checked={form.required}
                 onChange={(event) => setField("required", event.target.checked)}
-                className="h-4 w-4 shrink-0 rounded accent-[var(--admin-primary-color)]"
+                className="admin-checkbox shrink-0"
               />
               <span className="font-semibold">Required</span>
             </label>

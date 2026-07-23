@@ -391,7 +391,6 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
       <AdminPageHeader
         title={pageTitle}
         breadcrumbs={[
-          { label: "Pre-Screen", to: LIST_PATH },
           { label: "Create Survey", to: LIST_PATH },
           { label: pageTitle },
         ]}

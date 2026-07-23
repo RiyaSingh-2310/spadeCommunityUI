@@ -121,7 +121,7 @@ function QuestionTypeSection({
             type="checkbox"
             checked={required}
             onChange={(event) => onRequiredChange(event.target.checked)}
-            className="h-4 w-4 shrink-0 rounded accent-[var(--admin-primary-color)]"
+            className="admin-checkbox shrink-0"
           />
           <span className="font-semibold">Required</span>
         </label>
@@ -327,7 +327,6 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
       <AdminPageHeader
         title={pageTitle}
         breadcrumbs={[
-          { label: "Questionnaire Management", to: "/user-screening/questions" },
           { label: "Panel Questionnaire", to: "/user-screening/questions" },
           { label: pageTitle },
         ]}
