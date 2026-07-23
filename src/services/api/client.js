@@ -1,3 +1,4 @@
+import axios from "axios";
 import { API_DEBUG, API_LOGIN_BEARER_TOKEN, buildApiUrl } from "../../config/api";
 import { getAuthToken } from "../auth/authStorage";
 import {
@@ -21,9 +22,81 @@ const HTTP_STATUS_MESSAGES = {
   504: "Gateway timeout. The server took too long to respond.",
 };
 
-export function extractErrorMessage(response, data, rawText) {
-  const message = data?.message ? String(data.message).trim() : "";
-  const detail = data?.error ? String(data.error).trim() : "";
+/**
+ * Shared Axios instance used by all API modules.
+ * Auth, Content-Type, and logging are applied via interceptors / apiRequest.
+ */
+export const axiosInstance = axios.create({
+  timeout: DEFAULT_REQUEST_TIMEOUT_MS,
+  headers: {
+    Accept: "application/json",
+  },
+});
+
+axiosInstance.interceptors.request.use(
+  (config) => {
+    // Let the browser/Axios set multipart boundaries for FormData.
+    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+      if (config.headers) {
+        if (typeof config.headers.delete === "function") {
+          config.headers.delete("Content-Type");
+          config.headers.delete("content-type");
+        } else {
+          delete config.headers["Content-Type"];
+          delete config.headers["content-type"];
+        }
+      }
+    }
+
+    if (API_DEBUG) {
+      console.log("[API] Request URL:", config.url);
+      console.log("[API] Method:", String(config.method ?? "get").toUpperCase());
+      const authHeader = config.headers?.Authorization ?? config.headers?.authorization;
+      console.log(
+        "[API] Auth:",
+        authHeader ? "Bearer <token>" : config.skipAuth ? "disabled" : "missing"
+      );
+      if (config.data !== undefined) {
+        console.log("[API] Payload:", config.data);
+      }
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+axiosInstance.interceptors.response.use(
+  (response) => {
+    if (API_DEBUG) {
+      console.log("[API] Response status:", response.status);
+      console.log("[API] Response data:", response.data);
+    }
+    return response;
+  },
+  (error) => {
+    if (API_DEBUG && error.response) {
+      console.error("[API] Error status:", error.response.status);
+      console.error("[API] Error body:", error.response.data);
+    }
+    return Promise.reject(error);
+  }
+);
+
+/**
+ * @param {{ status?: number, statusText?: string } | null} response
+ * @param {unknown} data
+ * @param {string} [rawText]
+ */
+export function extractErrorMessage(response, data, rawText = "") {
+  const message =
+    data && typeof data === "object" && data.message != null
+      ? String(data.message).trim()
+      : "";
+  const detail =
+    data && typeof data === "object" && data.error != null
+      ? String(data.error).trim()
+      : "";
 
   if (message && detail && detail !== message) {
     const genericMessages = new Set([
@@ -53,13 +126,14 @@ export function extractErrorMessage(response, data, rawText) {
 
   if (typeof data === "string" && data.trim()) return data.trim();
 
-  const preMatch = rawText?.match(/<pre>([^<]+)<\/pre>/i);
+  const text = rawText || (typeof data === "string" ? data : "");
+  const preMatch = text?.match?.(/<pre>([^<]+)<\/pre>/i);
   if (preMatch?.[1]) {
     return preMatch[1].trim();
   }
 
-  if (rawText?.trim() && !rawText.includes("<!DOCTYPE")) {
-    return rawText.trim();
+  if (text?.trim() && !text.includes("<!DOCTYPE")) {
+    return text.trim();
   }
 
   if (response?.status && HTTP_STATUS_MESSAGES[response.status]) {
@@ -75,50 +149,45 @@ export function extractErrorMessage(response, data, rawText) {
   return "Request failed";
 }
 
-export async function readResponseBody(response) {
-  const rawText = await response.text();
-  if (!rawText) {
-    return { data: null, rawText: "" };
+function normalizeErrorPayload(data) {
+  if (data == null) return { data: null, rawText: "" };
+  if (typeof data === "string") {
+    const trimmed = data.trim();
+    if (!trimmed) return { data: null, rawText: "" };
+    try {
+      return { data: JSON.parse(trimmed), rawText: trimmed };
+    } catch {
+      return { data: null, rawText: trimmed };
+    }
   }
-  try {
-    return { data: JSON.parse(rawText), rawText };
-  } catch {
-    return { data: null, rawText };
-  }
+  return { data, rawText: "" };
 }
 
-async function executeRequest(url, fetchInit) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS);
-
-  let response;
-  try {
-    response = await fetch(url, {
-      ...fetchInit,
-      signal: controller.signal,
-    });
-  } catch (networkError) {
-    if (networkError?.name === "AbortError") {
-      throw new ApiError("Request timed out. Please try again.");
-    }
-    if (API_DEBUG) {
-      console.error("[API] Network error:", networkError);
-    }
-    throw new ApiError("Unable to reach the server. Please try again.");
-  } finally {
-    clearTimeout(timeoutId);
+function toNetworkApiError(error) {
+  if (error?.code === "ECONNABORTED" || error?.message?.toLowerCase?.().includes("timeout")) {
+    return new ApiError("Request timed out. Please try again.");
   }
-
-  const { data, rawText } = await readResponseBody(response);
-
   if (API_DEBUG) {
-    console.log("[API] Response status:", response.status);
-    console.log("[API] Response data:", data ?? rawText);
+    console.error("[API] Network error:", error);
   }
-
-  return { response, data, rawText };
+  return new ApiError("Unable to reach the server. Please try again.");
 }
 
+/**
+ * Central HTTP helper used by all service modules.
+ * Preserves the previous fetch-based contract (returns parsed body, throws ApiError).
+ *
+ * @param {string} path Path starting with /api/...
+ * @param {{
+ *   method?: string,
+ *   body?: unknown,
+ *   auth?: boolean,
+ *   loginBearer?: boolean,
+ *   skipSessionExpiryOn401?: boolean,
+ *   headers?: Record<string, string>,
+ *   responseType?: import('axios').ResponseType,
+ * }} [options]
+ */
 export async function apiRequest(path, options = {}) {
   const {
     method = "GET",
@@ -129,6 +198,7 @@ export async function apiRequest(path, options = {}) {
     /** Skip forced session-expired redirect on 401 (intentional logout). */
     skipSessionExpiryOn401 = false,
     headers: extraHeaders = {},
+    responseType = "json",
   } = options;
 
   if (auth && isSessionExpiredHandled()) {
@@ -156,25 +226,14 @@ export async function apiRequest(path, options = {}) {
   }
 
   const url = buildApiUrl(path);
-  const fetchInit = {
+  const requestConfig = {
+    url,
     method,
     headers,
-    body:
-      body === undefined
-        ? undefined
-        : isFormDataBody
-          ? body
-          : JSON.stringify(body),
+    responseType,
+    skipAuth: !auth,
+    data: hasBody ? body : undefined,
   };
-
-  if (API_DEBUG) {
-    console.log("[API] Request URL:", url);
-    console.log("[API] Method:", method);
-    console.log("[API] Auth:", auth ? (headers.Authorization ? "Bearer <token>" : "missing") : "disabled");
-    if (hasBody) {
-      console.log("[API] Payload:", body);
-    }
-  }
 
   const maxAttempts = auth ? 1 + MAX_UNAUTHORIZED_RETRIES : 1;
 
@@ -183,44 +242,48 @@ export async function apiRequest(path, options = {}) {
       throw new ApiError(SESSION_EXPIRED_MESSAGE, null, 401, { sessionExpired: true });
     }
 
-    const { response, data, rawText } = await executeRequest(url, fetchInit);
-
-    if (response.ok) {
-      return data;
-    }
-
-    const status = response.status;
-
-    if (status === 401 && auth) {
-      if (skipSessionExpiryOn401) {
-        throw new ApiError(
-          extractErrorMessage(response, data, rawText) || SESSION_EXPIRED_MESSAGE,
-          data,
-          401
-        );
+    try {
+      const response = await axiosInstance.request(requestConfig);
+      return response.data;
+    } catch (error) {
+      if (!error.response) {
+        throw toNetworkApiError(error);
       }
 
-      if (attempt < maxAttempts) {
-        if (API_DEBUG) {
-          console.warn(
-            `[API] 401 Unauthorized — retry ${attempt}/${MAX_UNAUTHORIZED_RETRIES}:`,
-            path
+      const status = error.response.status;
+      const { data, rawText } = normalizeErrorPayload(error.response.data);
+
+      if (status === 401 && auth) {
+        if (skipSessionExpiryOn401) {
+          throw new ApiError(
+            extractErrorMessage(error.response, data, rawText) || SESSION_EXPIRED_MESSAGE,
+            data,
+            401
           );
         }
-        continue;
+
+        if (attempt < maxAttempts) {
+          if (API_DEBUG) {
+            console.warn(
+              `[API] 401 Unauthorized — retry ${attempt}/${MAX_UNAUTHORIZED_RETRIES}:`,
+              path
+            );
+          }
+          continue;
+        }
+
+        forceLogoutAfterSessionExpired();
+        throw new ApiError(SESSION_EXPIRED_MESSAGE, data, 401, { sessionExpired: true });
       }
 
-      forceLogoutAfterSessionExpired();
-      throw new ApiError(SESSION_EXPIRED_MESSAGE, data, 401, { sessionExpired: true });
+      const message = extractErrorMessage(error.response, data, rawText);
+      if (API_DEBUG) {
+        console.error("[API] Error status:", status);
+        console.error("[API] Error message:", message);
+        console.error("[API] Error body:", data ?? rawText);
+      }
+      throw new ApiError(message, data, status);
     }
-
-    const message = extractErrorMessage(response, data, rawText);
-    if (API_DEBUG) {
-      console.error("[API] Error status:", status);
-      console.error("[API] Error message:", message);
-      console.error("[API] Error body:", data ?? rawText);
-    }
-    throw new ApiError(message, data, status);
   }
 
   throw new ApiError(SESSION_EXPIRED_MESSAGE, null, 401, { sessionExpired: true });

@@ -7,10 +7,9 @@
  * Upload: POST   /api/projects/:id/multiple-url/csv-upload
  * Template: GET  /api/projects/multiple-url/csv-template
  */
-import { API_ROUTES, API_DEBUG, buildApiUrl } from "../../../config/api";
+import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
-import { getAuthToken } from "../../../services/auth/authStorage";
 import {
   mapMultiUrlRecordToRow,
   PROJECT_MULTI_URL_COLUMNS,
@@ -170,43 +169,12 @@ export async function uploadProjectMultiUrlCsv({ projectId, projectUrlId, file }
  * Falls back to the local template string if the API fails to return a file body.
  */
 export async function downloadProjectMultiUrlCsvTemplate() {
-  const path = API_ROUTES.projects.multiUrlCsvTemplate;
-  const url = buildApiUrl(path);
-  const token = getAuthToken();
+  const data = await apiRequest(API_ROUTES.projects.multiUrlCsvTemplate, {
+    method: "GET",
+    responseType: "text",
+  });
 
-  if (!token) {
-    throw new ApiError("Please sign in again to download the CSV template.", null, 401);
-  }
-
-  if (API_DEBUG) {
-    console.log("[API] Request URL:", url);
-    console.log("[API] Method: GET (csv-template)");
-  }
-
-  let response;
-  try {
-    response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  } catch {
-    throw new ApiError("Unable to reach the server. Please try again.");
-  }
-
-  if (!response.ok) {
-    let message = "Failed to download CSV template.";
-    try {
-      const errorBody = await response.json();
-      if (errorBody?.message) message = String(errorBody.message);
-    } catch {
-      // ignore non-JSON error bodies
-    }
-    throw new ApiError(message, null, response.status);
-  }
-
-  const text = await response.text();
+  const text = typeof data === "string" ? data : "";
   const csvContent =
     text && text.trim()
       ? text
