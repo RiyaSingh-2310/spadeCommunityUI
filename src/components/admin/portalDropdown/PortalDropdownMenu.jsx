@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import {
   PORTAL_DROPDOWN_MAX_HEIGHT,
   PORTAL_DROPDOWN_Z_INDEX,
@@ -49,7 +49,14 @@ export function PortalDropdownMenu({
   );
 }
 
-export function PortalDropdownSearch({ value, onChange, placeholder = "Search..." }) {
+export function PortalDropdownSearch({
+  value,
+  onChange,
+  onClear,
+  placeholder = "Search...",
+}) {
+  const hasValue = String(value ?? "").length > 0;
+
   return (
     <div className="admin-portal-dropdown-search shrink-0 border-b p-2.5">
       <div className="relative">
@@ -62,9 +69,28 @@ export function PortalDropdownSearch({ value, onChange, placeholder = "Search...
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          className="admin-portal-dropdown-search-input h-9 w-full rounded-lg pl-8 pr-2.5 text-sm"
+          className={`admin-portal-dropdown-search-input h-9 w-full rounded-lg pl-8 text-sm ${
+            hasValue ? "pr-8" : "pr-2.5"
+          }`}
           autoFocus
         />
+        {hasValue ? (
+          <button
+            type="button"
+            onClick={() => {
+              if (onClear) {
+                onClear();
+                return;
+              }
+              onChange?.({ target: { value: "" } });
+            }}
+            className="admin-portal-dropdown-text-muted absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded hover:opacity-80"
+            aria-label="Clear search"
+            title="Clear search"
+          >
+            <X size={14} />
+          </button>
+        ) : null}
       </div>
     </div>
   );

@@ -6,6 +6,8 @@ import SearchableSelect from "../../../components/admin/SearchableSelect";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   createSalesLog,
+  getRecord,
+  mapSalesProjectToForm,
   resolveSalesProjectLogId,
 } from "../../../services/sales/salesProjectsApi";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
@@ -39,6 +41,7 @@ function AddRfqLogModal({ isOpen, onClose, row, isDarkMode, onSubmitted }) {
     commentBy: "Sales",
   }));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingSubject, setIsLoadingSubject] = useState(false);
 
   const errors = useMemo(
     () => ({
@@ -54,16 +57,51 @@ function AddRfqLogModal({ isOpen, onClose, row, isDarkMode, onSubmitted }) {
     fields: LOG_FORM_FIELDS,
   });
 
-  useEffect(() => {
-    if (!isOpen) resetValidation();
-  }, [isOpen, resetValidation]);
-
   const projectId = resolveSalesProjectLogId(row);
+
+  useEffect(() => {
+    if (!isOpen) {
+      resetValidation();
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    setForm({
+      subject: row?.emailSubject ?? "",
+      comment: "",
+      commentBy: "Sales",
+    });
+
+    const loadLatestSubject = async () => {
+      if (!projectId) return;
+      setIsLoadingSubject(true);
+      try {
+        const project = await getRecord(projectId);
+        if (cancelled) return;
+        const mapped = mapSalesProjectToForm(project);
+        const latestSubject = String(mapped.subject ?? "").trim();
+        if (latestSubject) {
+          setForm((prev) => ({ ...prev, subject: latestSubject }));
+        }
+      } catch {
+        // Keep list-row subject if refresh fails.
+      } finally {
+        if (!cancelled) setIsLoadingSubject(false);
+      }
+    };
+
+    loadLatestSubject();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, projectId, row?.emailSubject, resetValidation]);
 
   if (!isOpen || !projectId) return null;
 
   const canSubmit =
     !isSubmitting &&
+    !isLoadingSubject &&
     !errors.subject &&
     !errors.comment &&
     !errors.commentBy &&
@@ -126,11 +164,13 @@ function AddRfqLogModal({ isOpen, onClose, row, isDarkMode, onSubmitted }) {
             <FormField label="Email Subject" required error={showError("subject")}>
               <input
                 className={inputClass}
-                placeholder="Enter Email Subject"
+                placeholder={
+                  isLoadingSubject ? "Loading latest subject..." : "Enter Email Subject"
+                }
                 value={form.subject}
                 onChange={(e) => setForm((prev) => ({ ...prev, subject: e.target.value }))}
                 onBlur={() => touch("subject")}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isLoadingSubject}
               />
             </FormField>
 

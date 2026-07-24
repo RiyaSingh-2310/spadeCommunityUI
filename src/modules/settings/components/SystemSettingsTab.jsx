@@ -1,19 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import FormField from "../../../components/admin/FormField";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
-import { toastApiSuccess } from "../../../services/toast/apiToast";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { useTheme } from "../../../context/ThemeContext";
-import {
-  DEFAULT_SYSTEM_SETTINGS,
-  getSystemSettings,
-  saveSystemSettings,
-} from "../utils/settingsStorage";
+import { DEFAULT_SYSTEM_SETTINGS } from "../utils/settingsStorage";
 import {
   THEME_PREFERENCE_OPTIONS,
   normalizeThemePreference,
 } from "../utils/themePreference";
+import {
+  fetchSystemSettings,
+  updateSystemSettings,
+} from "../services/systemSettingsApi";
 import PreferenceToggle from "./PreferenceToggle";
 
 const LANGUAGE_OPTIONS = ["English", "Spanish", "French", "German", "Hindi"];
@@ -24,16 +25,44 @@ function SystemSettingsTab({ isDarkMode }) {
   const { themePreference, setThemePreference } = useTheme();
   const [form, setForm] = useState(DEFAULT_SYSTEM_SETTINGS);
   const [initialSnapshot, setInitialSnapshot] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const inputClass = getAdminInputClass();
 
   useEffect(() => {
-    const saved = getSystemSettings();
-    const normalized = {
-      ...saved,
-      themePreference: normalizeThemePreference(saved.themePreference),
+    let cancelled = false;
+
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const loaded = await fetchSystemSettings();
+        if (cancelled) return;
+        const normalized = {
+          ...loaded,
+          themePreference: normalizeThemePreference(loaded.themePreference),
+        };
+        setForm(normalized);
+        setInitialSnapshot(normalized);
+        setThemePreference(normalized.themePreference);
+      } catch (error) {
+        if (cancelled) return;
+        toastApiError(error);
+        const fallback = {
+          ...DEFAULT_SYSTEM_SETTINGS,
+          themePreference: normalizeThemePreference(themePreference),
+        };
+        setForm(fallback);
+        setInitialSnapshot(fallback);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
     };
-    setForm(normalized);
-    setInitialSnapshot(normalized);
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
 
   useEffect(() => {
@@ -56,18 +85,31 @@ function SystemSettingsTab({ isDarkMode }) {
     const normalized = normalizeThemePreference(value);
     setField("themePreference", normalized);
     setThemePreference(normalized);
-    setInitialSnapshot((prev) =>
-      prev ? { ...prev, themePreference: normalized } : prev
-    );
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!isDirty) return;
-    saveSystemSettings(form);
-    setInitialSnapshot({ ...form });
-    toastApiSuccess({ message: "System settings saved successfully." });
+    if (!isDirty || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      const data = await updateSystemSettings(form);
+      setInitialSnapshot({ ...form });
+      toastApiSuccess(data?.message ? data : { message: "System settings saved successfully." });
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-[var(--admin-primary-color)]" />
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -187,10 +229,10 @@ function SystemSettingsTab({ isDarkMode }) {
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={!isDirty}
+          disabled={!isDirty || isSaving}
           className="h-11 rounded-xl bg-[var(--admin-primary-color)] px-5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Save Settings
+          {isSaving ? "Saving..." : "Save Settings"}
         </button>
       </div>
     </form>

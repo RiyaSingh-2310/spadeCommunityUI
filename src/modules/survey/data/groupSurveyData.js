@@ -9,16 +9,10 @@ export const GROUP_SURVEY_CLIENT_OPTIONS = [
 
 export const GROUP_PROJECT_NAMES = ["Latvia HCP", "Lithuania HCP", "CZE HCP"];
 
-export const GROUP_PROJECT_MANAGER_OPTIONS = [
-  "Krish",
-  "Manoj Kumar",
-  "Mohit",
-  "Pravesh",
-  "Rahul",
-  "Ravi Prakash",
-];
+export const GROUP_PROJECT_MANAGER_OPTIONS = [];
 
-export const GROUP_SALES_MANAGER_OPTIONS = ["Pravesh", "Krish", "Manoj Kumar", "Rahul"];
+/** @deprecated Demo only — live group forms should load managers from API. */
+export const GROUP_SALES_MANAGER_OPTIONS = [];
 
 export const ADD_PROJECT_DEFAULTS = {
   description: "50 HCPs in each country",

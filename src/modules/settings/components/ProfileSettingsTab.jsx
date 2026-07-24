@@ -3,7 +3,7 @@ import { Loader2, Upload, X } from "lucide-react";
 import Avatar from "../../../components/shared/Avatar";
 import FormField from "../../../components/admin/FormField";
 import TableCard from "../../../components/admin/TableCard";
-import { getAdminUser } from "../../../services/auth/authStorage";
+import { getAdminUser, isAuthenticated } from "../../../services/auth/authStorage";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   IMAGE_UPLOAD_ACCEPT,
@@ -36,12 +36,13 @@ const PASSWORD_FIELDS = ["currentPassword", "newPassword", "confirmPassword"];
 function ProfileSettingsTab({ isDarkMode }) {
   const sessionUser = getAdminUser();
   const userId = sessionUser?.id;
-  const canLoadProfile = Boolean(userId);
+  const canLoadProfile = Boolean(userId) || isAuthenticated();
 
   const [form, setForm] = useState({
     name: sessionUser?.displayName ?? sessionUser?.name ?? "",
     email: sessionUser?.email ?? "",
   });
+  const [profileUserId, setProfileUserId] = useState(userId ?? "");
   const [profileMeta, setProfileMeta] = useState({
     status: "Active",
     permission_type: sessionUser?.permission_type ?? "user",
@@ -102,6 +103,9 @@ function ProfileSettingsTab({ isDarkMode }) {
           imageUrl: loadedForm.imageUrl ?? "",
         };
 
+        setProfileUserId(
+          String(admin?.id ?? admin?.admin_id ?? userId ?? "").trim()
+        );
         setForm({
           name: loadedForm.name,
           email: loadedForm.email,
@@ -116,7 +120,6 @@ function ProfileSettingsTab({ isDarkMode }) {
         setPreview("");
         setImageFile(null);
         setImageValidationError("");
-        void admin;
       } catch (error) {
         if (cancelled) return;
         toastApiError(error);
@@ -131,6 +134,8 @@ function ProfileSettingsTab({ isDarkMode }) {
       cancelled = true;
     };
   }, [canLoadProfile, userId]);
+
+  const activeUserId = profileUserId || userId;
 
   const profileErrors = useMemo(
     () => ({
@@ -185,13 +190,13 @@ function ProfileSettingsTab({ isDarkMode }) {
     isFormValidForFields(profileErrors, PROFILE_FIELDS) &&
     !isSavingProfile &&
     !isLoading &&
-    Boolean(userId);
+    Boolean(activeUserId);
 
   const canUpdatePassword =
     isFormValidForFields(passwordErrors, PASSWORD_FIELDS) &&
     !isSavingPassword &&
     !isLoading &&
-    Boolean(userId);
+    Boolean(activeUserId);
 
   const handleAvatarFileChange = (event) => {
     const file = event.target.files?.[0];
@@ -225,23 +230,27 @@ function ProfileSettingsTab({ isDarkMode }) {
   const handleSaveProfile = async (event) => {
     event.preventDefault();
     if (!validateProfileSubmit() || !canSaveProfile) return;
-    if (!userId) return;
+    if (!activeUserId) return;
 
     setIsSavingProfile(true);
     try {
-      const data = await updateProfile(userId, {
+      const data = await updateProfile(activeUserId, {
         name: form.name,
+        email: form.email,
         status: profileMeta.status,
         permission_type: profileMeta.permission_type,
         permissions: profileMeta.permissions,
         imageFile,
       });
       toastApiSuccess(data);
-      const refreshed = await fetchProfile(userId);
+      const refreshed = await fetchProfile(activeUserId);
       const snapshot = {
         name: refreshed.form.name.trim(),
         imageUrl: refreshed.form.imageUrl ?? "",
       };
+      setProfileUserId(
+        String(refreshed.admin?.id ?? refreshed.admin?.admin_id ?? activeUserId).trim()
+      );
       setForm({
         name: refreshed.form.name,
         email: refreshed.form.email,
@@ -260,7 +269,7 @@ function ProfileSettingsTab({ isDarkMode }) {
   const handleUpdatePassword = async (event) => {
     event.preventDefault();
     if (!validatePasswordSubmit() || !canUpdatePassword) return;
-    if (!userId) return;
+    if (!activeUserId) return;
 
     setIsSavingPassword(true);
     try {

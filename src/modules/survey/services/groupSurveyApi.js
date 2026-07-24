@@ -7,7 +7,7 @@ import {
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import { appendListQuery } from "../../shared/utils/listQueryParams";
-import { createSurveyUnderGroup, getRecords as getSurveyRecords } from "./surveyApi";
+import { createSurveyUnderGroup, mapSurveyToRow } from "./surveyApi";
 import { formatSurveyListDate } from "../../shared/utils/dateTime";
 
 function assertSuccess(data) {
@@ -258,12 +258,39 @@ export async function deleteGroupProject(id) {
   return assertSuccess(data);
 }
 
-/** GET /api/survey/list?group_project_id=:id */
+/**
+ * Surveys linked to a group project — from GET /api/survey/groupproject/:id.
+ * @param {string|number} groupProjectId
+ * @param {{ page?: number, limit?: number, search?: string }} [options]
+ */
 export async function getGroupProjectSurveys(groupProjectId, options = {}) {
-  return getSurveyRecords({
-    ...options,
-    groupProjectId,
-  });
+  const project = await getRecord(groupProjectId);
+  const surveys = Array.isArray(project?.surveys) ? project.surveys : [];
+  const search = String(options.search ?? "").trim().toLowerCase();
+
+  const filtered = search
+    ? surveys.filter((survey) => {
+        const name = String(survey?.project_name ?? survey?.Project_Name ?? "").toLowerCase();
+        const code = String(survey?.survey_id ?? survey?.Project_code ?? "").toLowerCase();
+        return name.includes(search) || code.includes(search);
+      })
+    : surveys;
+
+  const page = Math.max(1, Number(options.page) || 1);
+  const limit = Math.max(1, Number(options.limit) || 10);
+  const total = filtered.length;
+  const start = (page - 1) * limit;
+  const pageItems = filtered.slice(start, start + limit);
+
+  return {
+    success: true,
+    total,
+    count: total,
+    page,
+    limit,
+    totalPages: Math.max(1, Math.ceil(total / limit) || 1),
+    items: pageItems.map((survey) => mapSurveyToRow(survey)),
+  };
 }
 
 /** POST /api/survey/add/:groupProjectId */

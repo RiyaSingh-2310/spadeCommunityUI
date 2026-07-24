@@ -7,7 +7,8 @@ import { getAdminCancelButtonClass } from "../../shared/utils/formStyles";
 import SurveyForm from "../components/SurveyForm";
 import { createEmptySurveyForm } from "../data/surveyFormData";
 import {
-  mergeSelectOption,
+  ensureSelectOption,
+  resolveSelectValue,
   useSurveyFormSelectOptions,
 } from "../hooks/useSurveyFormSelectOptions";
 import {
@@ -25,10 +26,6 @@ import {
   SURVEY_FORM_FIELDS,
 } from "../utils/surveyFormValidation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
-import {
-  applyResolvedSelectIds,
-  resolveSelectIdByLabel,
-} from "../../shared/utils/formPopulation";
 import {
   getSurveyDetailsPath,
   getSurveyEditBreadcrumbs,
@@ -57,48 +54,76 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     isLoading: isLoadingOptions,
   } = useSurveyFormSelectOptions();
 
+  const clientLabel =
+    loadedRecord?.Clients ??
+    loadedRecord?.client_name ??
+    loadedRecord?.clientName ??
+    "";
+  const projectManagerLabel =
+    loadedRecord?.Project_Manager ??
+    loadedRecord?.project_manager_name ??
+    loadedRecord?.projectManagerName ??
+    "";
+  const salesManagerLabel =
+    loadedRecord?.Sales_Manager ??
+    loadedRecord?.sales_manager_name ??
+    loadedRecord?.salesManagerName ??
+    "";
+  const salesProjectLabel = String(
+    loadedRecord?.sales_project_id ??
+      loadedRecord?.rfq_id ??
+      loadedRecord?.RFQ ??
+      loadedRecord?.sales_project_name ??
+      ""
+  ).trim();
+
   const mergedClientOptions = useMemo(
     () =>
-      mergeSelectOption(
+      ensureSelectOption(
         clientOptions,
-        loadedRecord?.client_id ?? loadedRecord?.client_code,
-        loadedRecord?.Clients ?? loadedRecord?.client_name
+        loadedRecord?.client_id ?? loadedRecord?.client_code ?? form.client,
+        clientLabel || form.client
       ),
-    [clientOptions, loadedRecord]
+    [clientOptions, loadedRecord, form.client, clientLabel]
   );
 
   const mergedProjectManagerOptions = useMemo(
     () =>
-      mergeSelectOption(
+      ensureSelectOption(
         projectManagerOptions,
-        loadedRecord?.project_manager_id,
-        loadedRecord?.Project_Manager ?? loadedRecord?.project_manager_name
+        loadedRecord?.project_manager_id ?? form.projectManager,
+        projectManagerLabel || form.projectManager
       ),
-    [projectManagerOptions, loadedRecord]
+    [
+      projectManagerOptions,
+      loadedRecord,
+      form.projectManager,
+      projectManagerLabel,
+    ]
   );
 
   const mergedSalesManagerOptions = useMemo(
     () =>
-      mergeSelectOption(
+      ensureSelectOption(
         salesManagerOptions,
-        loadedRecord?.sales_manager_id,
-        loadedRecord?.Sales_Manager ?? loadedRecord?.sales_manager_name
+        loadedRecord?.sales_manager_id ?? form.salesManager,
+        salesManagerLabel || form.salesManager
       ),
-    [salesManagerOptions, loadedRecord]
+    [salesManagerOptions, loadedRecord, form.salesManager, salesManagerLabel]
   );
 
-  const mergedSalesProjectOptions = useMemo(() => {
-    const salesProjectId =
-      loadedRecord?.sales_project_id ??
-      loadedRecord?.rfq_id ??
-      loadedRecord?.sales_project_name ??
-      loadedRecord?.RFQ;
-    return mergeSelectOption(
-      salesProjectOptions,
-      salesProjectId,
-      salesProjectId != null ? String(salesProjectId) : ""
-    );
-  }, [salesProjectOptions, loadedRecord]);
+  const mergedSalesProjectOptions = useMemo(
+    () =>
+      ensureSelectOption(
+        salesProjectOptions,
+        loadedRecord?.sales_project_id ??
+          loadedRecord?.rfq_id ??
+          loadedRecord?.RFQ ??
+          form.salesProject,
+        salesProjectLabel || form.salesProject
+      ),
+    [salesProjectOptions, loadedRecord, form.salesProject, salesProjectLabel]
+  );
 
   const validationOptions = useMemo(
     () => ({ excludeId: isEdit ? id : undefined }),
@@ -131,9 +156,42 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
         if (cancelled) return;
 
         const mapped = mapSurveyToForm(record, createEmptySurveyForm());
+
+        // Resolve name-only API values against loaded option lists immediately.
+        const resolved = {
+          ...mapped,
+          client: resolveSelectValue(
+            clientOptions,
+            mapped.client || record?.client_id,
+            record?.Clients ?? record?.client_name ?? mapped.client
+          ),
+          projectManager: resolveSelectValue(
+            projectManagerOptions,
+            mapped.projectManager || record?.project_manager_id,
+            record?.Project_Manager ??
+              record?.project_manager_name ??
+              mapped.projectManager
+          ),
+          salesManager: resolveSelectValue(
+            salesManagerOptions,
+            mapped.salesManager || record?.sales_manager_id,
+            record?.Sales_Manager ??
+              record?.sales_manager_name ??
+              mapped.salesManager
+          ),
+          salesProject: resolveSelectValue(
+            salesProjectOptions,
+            mapped.salesProject ||
+              record?.sales_project_id ||
+              record?.rfq_id ||
+              record?.RFQ,
+            record?.RFQ ?? record?.sales_project_name ?? mapped.salesProject
+          ),
+        };
+
         setLoadedRecord(record);
-        setForm(mapped);
-        setInitialSnapshot(cloneSurveyForm(mapped));
+        setForm(resolved);
+        setInitialSnapshot(cloneSurveyForm(resolved));
       } catch (error) {
         if (cancelled) return;
         toastApiError(error);
@@ -148,6 +206,8 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     return () => {
       cancelled = true;
     };
+    // Options are read after `isLoadingOptions` becomes false in the same render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid re-fetching when option array identities change
   }, [id, isEdit, isLoadingOptions, resetValidation]);
 
   useEffect(() => {
@@ -155,48 +215,64 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
       return;
     }
 
-    applyResolvedSelectIds(setForm, setInitialSnapshot, {
-      client: !form.client
-        ? resolveSelectIdByLabel(
-            clientOptions,
-            loadedRecord?.Clients ?? loadedRecord?.client_name
-          )
-        : "",
-      projectManager: !form.projectManager
-        ? resolveSelectIdByLabel(
-            projectManagerOptions,
-            loadedRecord?.Project_Manager ?? loadedRecord?.project_manager_name
-          )
-        : "",
-      salesManager: !form.salesManager
-        ? resolveSelectIdByLabel(
-            salesManagerOptions,
-            loadedRecord?.Sales_Manager ?? loadedRecord?.sales_manager_name
-          )
-        : "",
-      salesProject: !form.salesProject
-        ? String(
-            loadedRecord?.sales_project_id ??
-              loadedRecord?.rfq_id ??
-              loadedRecord?.sales_project_name ??
-              loadedRecord?.RFQ ??
-              ""
-          )
-        : "",
-    });
+    const nextClient = resolveSelectValue(
+      mergedClientOptions,
+      form.client || loadedRecord?.client_id,
+      clientLabel
+    );
+    const nextProjectManager = resolveSelectValue(
+      mergedProjectManagerOptions,
+      form.projectManager || loadedRecord?.project_manager_id,
+      projectManagerLabel
+    );
+    const nextSalesManager = resolveSelectValue(
+      mergedSalesManagerOptions,
+      form.salesManager || loadedRecord?.sales_manager_id,
+      salesManagerLabel
+    );
+    const nextSalesProject = resolveSelectValue(
+      mergedSalesProjectOptions,
+      form.salesProject ||
+        loadedRecord?.sales_project_id ||
+        loadedRecord?.rfq_id ||
+        loadedRecord?.RFQ,
+      salesProjectLabel
+    );
+
+    const patches = {};
+    if (nextClient && nextClient !== form.client) patches.client = nextClient;
+    if (nextProjectManager && nextProjectManager !== form.projectManager) {
+      patches.projectManager = nextProjectManager;
+    }
+    if (nextSalesManager && nextSalesManager !== form.salesManager) {
+      patches.salesManager = nextSalesManager;
+    }
+    if (nextSalesProject && nextSalesProject !== form.salesProject) {
+      patches.salesProject = nextSalesProject;
+    }
+
+    if (!Object.keys(patches).length) return;
+
+    setForm((prev) => ({ ...prev, ...patches }));
+    setInitialSnapshot((prev) => (prev ? { ...prev, ...patches } : prev));
   }, [
     isEdit,
     isLoadingOptions,
     isLoadingRecord,
     initialSnapshot,
     loadedRecord,
-    clientOptions,
-    projectManagerOptions,
-    salesManagerOptions,
+    mergedClientOptions,
+    mergedProjectManagerOptions,
+    mergedSalesManagerOptions,
+    mergedSalesProjectOptions,
     form.client,
     form.projectManager,
     form.salesManager,
     form.salesProject,
+    clientLabel,
+    projectManagerLabel,
+    salesManagerLabel,
+    salesProjectLabel,
   ]);
 
   const isDirty = useMemo(() => {

@@ -9,7 +9,7 @@ const OTP_LENGTH = 6;
 
 const maskEmail = (email) => {
   if (!email || !email.includes("@")) {
-    return "joh*****@gmail.com";
+    return "your email";
   }
   const [name, domain] = email.split("@");
   const visiblePart = name.slice(0, 3);

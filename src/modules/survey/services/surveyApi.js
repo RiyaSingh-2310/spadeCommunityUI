@@ -530,7 +530,38 @@ function resolveNestedSurveyFormId(survey, idKeys, nestedKey, fallback = "") {
     return String(nested.id);
   }
 
+  // CamelCase nested objects (projectManager / salesManager / client)
+  const camelKey = String(nestedKey ?? "").replace(/_([a-z])/g, (_, c) =>
+    c.toUpperCase()
+  );
+  if (camelKey && camelKey !== nestedKey) {
+    const camelNested = survey?.[camelKey];
+    if (
+      camelNested &&
+      typeof camelNested === "object" &&
+      camelNested.id != null &&
+      camelNested.id !== ""
+    ) {
+      return String(camelNested.id);
+    }
+  }
+
   return fallback;
+}
+
+/**
+ * Extracts a display label from common project API name fields.
+ * @param {object} survey
+ * @param {string[]} keys
+ */
+function resolveSurveyFormLabel(survey, keys = []) {
+  for (const key of keys) {
+    const value = survey?.[key];
+    if (value != null && String(value).trim() !== "") {
+      return String(value).trim();
+    }
+  }
+  return "";
 }
 
 export function mapSurveyToForm(survey, fallback = null) {
@@ -539,14 +570,56 @@ export function mapSurveyToForm(survey, fallback = null) {
     survey?.Project_Link_Type ?? survey?.link_type ?? base.projectLinkType
   );
 
+  const clientId = resolveNestedSurveyFormId(
+    survey,
+    ["client_id", "Client_id", "ClientId"],
+    "client",
+    ""
+  );
+  const clientLabel = resolveSurveyFormLabel(survey, [
+    "Clients",
+    "client_name",
+    "clientName",
+    "Client",
+  ]);
+
+  const projectManagerId = resolveNestedSurveyFormId(
+    survey,
+    ["project_manager_id", "Project_Manager_id", "projectManagerId"],
+    "project_manager",
+    ""
+  );
+  const projectManagerLabel = resolveSurveyFormLabel(survey, [
+    "Project_Manager",
+    "project_manager_name",
+    "projectManagerName",
+    "projectManager",
+  ]);
+
+  const salesManagerId = resolveNestedSurveyFormId(
+    survey,
+    ["sales_manager_id", "Sales_Manager_id", "salesManagerId"],
+    "sales_manager",
+    ""
+  );
+  const salesManagerLabel = resolveSurveyFormLabel(survey, [
+    "Sales_Manager",
+    "sales_manager_name",
+    "salesManagerName",
+    "salesManager",
+  ]);
+
+  const salesProjectId = resolveSurveyFormId(
+    survey,
+    ["sales_project_id", "rfq_id", "RFQ", "sales_project_name", "rfq"],
+    base.salesProject
+  );
+
   return {
     ...base,
-    client: resolveNestedSurveyFormId(
-      survey,
-      ["client_id"],
-      "client",
-      survey?.client_code != null ? String(survey.client_code) : base.client
-    ),
+    // Prefer IDs; keep labels as temporary values so SearchableSelect can still match
+    // once options load (SurveyFormPage resolves label → id via ensureSelectOption).
+    client: clientId || clientLabel || base.client,
     projectName: pickSurveyFormValue(
       survey?.Project_Name ?? survey?.project_name,
       base.projectName
@@ -555,23 +628,10 @@ export function mapSurveyToForm(survey, fallback = null) {
       survey?.Project_code ?? survey?.survey_id ?? survey?.project_code,
       base.projectCode
     ),
-    projectManager: resolveNestedSurveyFormId(
-      survey,
-      ["project_manager_id"],
-      "project_manager",
-      base.projectManager
-    ),
-    salesManager: resolveNestedSurveyFormId(
-      survey,
-      ["sales_manager_id"],
-      "sales_manager",
-      base.salesManager
-    ),
-    salesProject: resolveSurveyFormId(
-      survey,
-      ["sales_project_id", "rfq_id"],
-      base.salesProject
-    ),
+    projectManager:
+      projectManagerId || projectManagerLabel || base.projectManager,
+    salesManager: salesManagerId || salesManagerLabel || base.salesManager,
+    salesProject: salesProjectId,
     description: pickSurveyFormValue(
       survey?.Project_Description ?? survey?.description,
       base.description
@@ -621,7 +681,7 @@ export function buildUpdateSurveyPayload(form, selectOptions = {}, urlForm = nul
 
 /** GET /api/projects/list */
 export async function getRecords({ page, limit, search, groupProjectId } = {}) {
-  if (USE_SURVEY_MOCK_DATA || groupProjectId) {
+  if (USE_SURVEY_MOCK_DATA) {
     await mockDelay();
     const result = filterMockSurveys({ page, limit, search, groupProjectId });
     return {

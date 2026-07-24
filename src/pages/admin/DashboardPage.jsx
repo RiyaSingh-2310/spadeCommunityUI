@@ -4,7 +4,6 @@ import AdminPageHeader from "../../components/admin/AdminPageHeader";
 import PermissionDenied from "../../components/admin/PermissionDenied";
 import TableCard from "../../components/admin/TableCard";
 import { useModulePermission } from "../../modules/permissions/useModulePermission";
-import { isManagerLoginRole } from "../../services/auth/loginRole";
 import { formatDashboardDate, formatDashboardTime } from "../../modules/shared/utils/dateTime";
 import { formatStatusLabel } from "../../modules/shared/utils/statusLabels";
 import { BarsChart, DonutChart, PolylineChart, SummaryCard } from "./dashboard/dashboardCharts";
@@ -16,10 +15,10 @@ function DashboardPage({ isDarkMode }) {
   const { canRead } = useModulePermission("dashboard");
   const borderRow = isDarkMode ? "border-[#263850]" : "border-[#e6edf5]";
   const headClass = "admin-text-muted";
-  const isManager = isManagerLoginRole();
 
   const {
     isSales,
+    isManager,
     dashboard,
     surveyStatus,
     rfqStatus,
@@ -28,6 +27,7 @@ function DashboardPage({ isDarkMode }) {
     rewardStats,
     kpiRows,
     latestSurveys,
+    latestGroupSurveys,
     latestRfqs,
     surveyTrend,
     rfqTrend,
@@ -43,8 +43,10 @@ function DashboardPage({ isDarkMode }) {
 
   const dashboardSubtitle = isSales
     ? "Track your latest RFQs and survey projects."
-    : "Monitor system health, growth, operations, and revenue in one place.";
-  const isSalesDataLoading = dashboard.loading;
+    : isManager
+      ? "Track your projects and group surveys."
+      : "Monitor system health, growth, operations, and revenue in one place.";
+  const isScopedDataLoading = dashboard.loading;
 
   if (!canRead) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
@@ -89,7 +91,7 @@ function DashboardPage({ isDarkMode }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {isSalesDataLoading ? (
+                  {isScopedDataLoading ? (
                     <tr className={`border-t ${borderRow}`}>
                       <td colSpan={5} className="admin-text-muted px-3 py-6 text-center text-sm">
                         Loading...
@@ -136,7 +138,7 @@ function DashboardPage({ isDarkMode }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {isSalesDataLoading ? (
+                  {isScopedDataLoading ? (
                     <tr className={`border-t ${borderRow}`}>
                       <td colSpan={5} className="admin-text-muted px-3 py-6 text-center text-sm">
                         Loading...
@@ -172,6 +174,144 @@ function DashboardPage({ isDarkMode }) {
             </div>
           </TableCard>
         </div>
+      ) : isManager ? (
+        <>
+          <div className="space-y-3">
+            {kpiRows.map((row, idx) => (
+              <div key={idx} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {row.map((card) => (
+                  <SummaryCard key={card.label} icon={card.icon} label={card.label} value={card.value} />
+                ))}
+              </div>
+            ))}
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <TableCard title="Survey Status Distribution" isDarkMode={isDarkMode}>
+              <DonutChart
+                data={[
+                  { label: "Active", value: surveyStatus.active, color: "#10a950" },
+                  { label: "Closed", value: surveyStatus.closed, color: "#0e7f3f" },
+                  { label: "Draft", value: surveyStatus.draft, color: "#50cf8a" },
+                  { label: "Paused", value: surveyStatus.paused, color: "#8ce9b6" },
+                ]}
+              />
+            </TableCard>
+            <TableCard title="Survey Trend (Last 12 Months)" isDarkMode={isDarkMode}>
+              <PolylineChart data={surveyTrend} />
+            </TableCard>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <TableCard title="Recent Projects" isDarkMode={isDarkMode}>
+              <div className="overflow-x-auto">
+                <table className="admin-table min-w-full text-sm">
+                  <thead>
+                    <tr className={headClass}>
+                      {["ID", "Project Name", "Client", "Start Date", "End Date", "Status"].map((h) => (
+                        <th key={h} className={TABLE_HEAD}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isScopedDataLoading ? (
+                      <tr className={`border-t ${borderRow}`}>
+                        <td colSpan={6} className="admin-text-muted px-3 py-6 text-center text-sm">
+                          Loading...
+                        </td>
+                      </tr>
+                    ) : latestSurveys.length === 0 ? (
+                      <tr className={`border-t ${borderRow}`}>
+                        <td colSpan={6} className="admin-text-muted px-3 py-6 text-center text-sm">
+                          No survey records found
+                        </td>
+                      </tr>
+                    ) : (
+                      latestSurveys.map((row) => (
+                        <tr key={row.recordId ?? row.id} className={`border-t ${borderRow}`}>
+                          <td className="admin-text px-3 py-3 whitespace-nowrap">{row.id ?? "—"}</td>
+                          <td className="admin-text px-3 py-3 whitespace-nowrap">{row.projectName || "—"}</td>
+                          <td className="admin-text px-3 py-3 whitespace-nowrap">{row.clientName || "—"}</td>
+                          <td className="admin-text px-3 py-3 whitespace-nowrap">{row.startDate || "—"}</td>
+                          <td className="admin-text px-3 py-3 whitespace-nowrap">{row.endDate || "—"}</td>
+                          <td className="admin-text px-3 py-3 whitespace-nowrap">{formatStatusLabel(row.status)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </TableCard>
+
+            <TableCard title="Recent Group Surveys" isDarkMode={isDarkMode}>
+              <div className="overflow-x-auto">
+                <table className="admin-table min-w-full text-sm">
+                  <thead>
+                    <tr className={headClass}>
+                      {["ID", "Project Name", "Status", "Created"].map((h) => (
+                        <th key={h} className={TABLE_HEAD}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isScopedDataLoading ? (
+                      <tr className={`border-t ${borderRow}`}>
+                        <td colSpan={4} className="admin-text-muted px-3 py-6 text-center text-sm">
+                          Loading...
+                        </td>
+                      </tr>
+                    ) : latestGroupSurveys.length === 0 ? (
+                      <tr className={`border-t ${borderRow}`}>
+                        <td colSpan={4} className="admin-text-muted px-3 py-6 text-center text-sm">
+                          No group survey records found
+                        </td>
+                      </tr>
+                    ) : (
+                      latestGroupSurveys.map((row) => (
+                        <tr key={row.recordId ?? row.id} className={`border-t ${borderRow}`}>
+                          <td className="admin-text px-3 py-3 whitespace-nowrap">{row.id ?? "—"}</td>
+                          <td className="admin-text px-3 py-3 whitespace-nowrap">
+                            {row.projectName || row.name || "—"}
+                          </td>
+                          <td className="admin-text px-3 py-3 whitespace-nowrap">
+                            {formatStatusLabel(row.status)}
+                          </td>
+                          <td className="admin-text px-3 py-3 whitespace-nowrap">
+                            {formatDashboardDate(row.createdAt ?? row.created_at ?? "")}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </TableCard>
+          </div>
+
+          <TableCard title="Quick Actions" isDarkMode={isDarkMode}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                { label: "View Projects", path: "/survey" },
+                { label: "Add Project", path: "/survey/add" },
+                { label: "Group Surveys", path: "/survey/group" },
+                { label: "Settings", path: "/settings?tab=profile" },
+              ].map((action) => (
+                <button
+                  key={action.label}
+                  type="button"
+                  onClick={() => navigate(action.path)}
+                  className="rounded-xl border border-(--admin-header-surface-border) bg-(--admin-header-search-bg) px-4 py-3 text-left text-sm font-semibold admin-text transition hover:opacity-90"
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          </TableCard>
+        </>
       ) : (
         <>
           <div className="space-y-3">

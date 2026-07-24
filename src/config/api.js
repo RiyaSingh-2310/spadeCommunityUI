@@ -5,6 +5,7 @@ export const API_ROUTES = {
   admin: {
     login: "/api/admin/login",
     logout: "/api/admin/logout",
+    me: "/api/admin/me",
     forgotPassword: "/api/admin/forgot-password",
     verifyOtp: "/api/admin/verify-otp",
     resetPassword: "/api/admin/reset-password",
@@ -36,6 +37,7 @@ export const API_ROUTES = {
     list: "/api/projectmanager/list",
     create: "/api/projectmanager/add",
     login: "/api/projectmanager/login",
+    me: "/api/projectmanager/me",
     byId: (id) => `/api/projectmanager/${id}`,
     update: (id) => `/api/projectmanager/${id}`,
     updateStatus: (id) => `/api/projectmanager/${id}/status`,
@@ -56,6 +58,7 @@ export const API_ROUTES = {
     list: "/api/salesmanager/list",
     create: "/api/salesmanager",
     login: "/api/salesmanager/login",
+    me: "/api/salesmanager/me",
     byId: (id) => `/api/salesmanager/${id}`,
     update: (id) => `/api/salesmanager/${id}`,
     updateStatus: (id) => `/api/salesmanager/status/${id}`,
@@ -207,6 +210,13 @@ export const API_ROUTES = {
       `/api/messages/${encodeURIComponent(String(id ?? "").trim())}/read`,
     delete: (id) =>
       `/api/messages/${encodeURIComponent(String(id ?? "").trim())}`,
+  },
+  homepage: {
+    list: "/api/homepage/list",
+    bySection: (section) =>
+      `/api/homepage/${encodeURIComponent(String(section ?? "").trim())}`,
+    updateSection: (section) =>
+      `/api/homepage/${encodeURIComponent(String(section ?? "").trim())}`,
   },
 };
 

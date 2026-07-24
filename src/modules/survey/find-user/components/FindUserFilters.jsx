@@ -212,6 +212,7 @@ function FindUserFilters({
                 loadingLabel="Loading questions..."
                 emptyMessage="No questions found"
                 searchPlaceholder="Search question..."
+                searchable
                 aria-label="Select question filter"
               />
             </div>
@@ -235,6 +236,7 @@ function FindUserFilters({
                 }
                 emptyMessage="No answers available"
                 searchPlaceholder="Search answer..."
+                searchable
                 aria-label="Select answer filter"
               />
 

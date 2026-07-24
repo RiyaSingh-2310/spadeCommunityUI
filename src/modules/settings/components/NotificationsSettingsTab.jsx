@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import TableCard from "../../../components/admin/TableCard";
-import { toastApiSuccess } from "../../../services/toast/apiToast";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { DEFAULT_NOTIFICATION_SETTINGS } from "../utils/settingsStorage";
 import {
-  DEFAULT_NOTIFICATION_SETTINGS,
-  getNotificationSettings,
-  saveNotificationSettings,
-} from "../utils/settingsStorage";
+  fetchNotificationSettings,
+  updateNotificationSettings,
+} from "../services/systemSettingsApi";
 import PreferenceToggle from "./PreferenceToggle";
 
 const NOTIFICATION_ITEMS = [
@@ -39,11 +40,33 @@ const NOTIFICATION_ITEMS = [
 function NotificationsSettingsTab({ isDarkMode }) {
   const [form, setForm] = useState(DEFAULT_NOTIFICATION_SETTINGS);
   const [initialSnapshot, setInitialSnapshot] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const saved = getNotificationSettings();
-    setForm(saved);
-    setInitialSnapshot(saved);
+    let cancelled = false;
+
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const loaded = await fetchNotificationSettings();
+        if (cancelled) return;
+        setForm(loaded);
+        setInitialSnapshot(loaded);
+      } catch (error) {
+        if (cancelled) return;
+        toastApiError(error);
+        setForm({ ...DEFAULT_NOTIFICATION_SETTINGS });
+        setInitialSnapshot({ ...DEFAULT_NOTIFICATION_SETTINGS });
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const isDirty = useMemo(() => {
@@ -51,13 +74,33 @@ function NotificationsSettingsTab({ isDarkMode }) {
     return JSON.stringify(form) !== JSON.stringify(initialSnapshot);
   }, [form, initialSnapshot]);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!isDirty) return;
-    saveNotificationSettings(form);
-    setInitialSnapshot({ ...form });
-    toastApiSuccess({ message: "Notification preferences saved successfully." });
+    if (!isDirty || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      const data = await updateNotificationSettings(form);
+      setInitialSnapshot({ ...form });
+      toastApiSuccess(
+        data?.message
+          ? data
+          : { message: "Notification preferences saved successfully." }
+      );
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-[var(--admin-primary-color)]" />
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit}>
@@ -86,10 +129,10 @@ function NotificationsSettingsTab({ isDarkMode }) {
         <div className="mt-6 flex justify-end">
           <button
             type="submit"
-            disabled={!isDirty}
+            disabled={!isDirty || isSaving}
             className="h-11 rounded-xl bg-[var(--admin-primary-color)] px-5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Save Preferences
+            {isSaving ? "Saving..." : "Save Preferences"}
           </button>
         </div>
       </TableCard>
