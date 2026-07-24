@@ -32,7 +32,7 @@ export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {
 
       if (requestId !== requestIdRef.current) return;
 
-      setUsers(result.items ?? []);
+      setUsers(Array.isArray(result.items) ? result.items : []);
       setTotalItems(result.total ?? 0);
       setTotalPages(result.totalPages ?? 0);
       setHasSearched(true);
@@ -65,6 +65,11 @@ export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {
     setCurrentPage(1);
   }, []);
 
+  const refresh = useCallback(() => {
+    if (searchVersion < 1) return;
+    loadPage();
+  }, [searchVersion, loadPage]);
+
   const handlePageChange = useCallback((page) => {
     setCurrentPage(page);
   }, []);
@@ -85,5 +90,6 @@ export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {
     onPageChange: handlePageChange,
     onPageSizeChange: handlePageSizeChange,
     reset,
+    refresh,
   };
 }

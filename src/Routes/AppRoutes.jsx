@@ -310,6 +310,10 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
             element={withSuspense(Pages.MessagesPage, { isDarkMode })}
           />
           <Route
+            path="/notifications/messages/:id"
+            element={withSuspense(Pages.MessageDetailsPage, { isDarkMode })}
+          />
+          <Route
             path="/reward-points/history"
             element={withSuspense(Pages.RewardHistoryPage, { isDarkMode })}
           />

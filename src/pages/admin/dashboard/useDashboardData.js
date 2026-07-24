@@ -15,6 +15,11 @@ import {
 } from "./dashboardUtils";
 
 const DASHBOARD_LIST_LIMIT = MAX_API_LIST_LIMIT;
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 const EMPTY_DASHBOARD = {
   loading: false,
   users: [],
@@ -56,8 +61,8 @@ export function useDashboardData({ enabled = true } = {}) {
           setDashboard({
             ...EMPTY_DASHBOARD,
             loading: false,
-            rfqs: rfqData.items ?? [],
-            surveys: surveyData.items ?? [],
+            rfqs: asArray(rfqData.items),
+            surveys: asArray(surveyData.items),
           });
           return;
         }
@@ -83,15 +88,15 @@ export function useDashboardData({ enabled = true } = {}) {
         setDashboard({
           ...EMPTY_DASHBOARD,
           loading: false,
-          users: userData.items ?? [],
-          clients: clientData.items ?? [],
-          partners: partnerData.items ?? [],
-          projectManagers: pmData.items ?? [],
-          rfqs: rfqData.items ?? [],
-          surveys: surveyData.items ?? [],
-          invoices: invoiceData.items ?? [],
-          rewards: rewardData.items ?? [],
-          logs: logData.items ?? [],
+          users: asArray(userData.items),
+          clients: asArray(clientData.items),
+          partners: asArray(partnerData.items),
+          projectManagers: asArray(pmData.items),
+          rfqs: asArray(rfqData.items),
+          surveys: asArray(surveyData.items),
+          invoices: asArray(invoiceData.items),
+          rewards: asArray(rewardData.items),
+          logs: asArray(logData.items),
         });
       } catch {
         if (cancelled) return;
@@ -106,7 +111,7 @@ export function useDashboardData({ enabled = true } = {}) {
 
   const surveyStatus = useMemo(() => {
     const result = { active: 0, closed: 0, draft: 0, paused: 0 };
-    dashboard.surveys.forEach((s) => {
+    asArray(dashboard.surveys).forEach((s) => {
       const st = normalizeStatus(s.status);
       if (st.includes("active")) result.active += 1;
       else if (st.includes("closed")) result.closed += 1;
@@ -118,7 +123,7 @@ export function useDashboardData({ enabled = true } = {}) {
 
   const rfqStatus = useMemo(() => {
     const result = { won: 0, lost: 0, pending: 0 };
-    dashboard.rfqs.forEach((rfq) => {
+    asArray(dashboard.rfqs).forEach((rfq) => {
       const st = normalizeStatus(rfq.status);
       if (st === "won") result.won += 1;
       else if (st === "lost") result.lost += 1;
@@ -129,7 +134,7 @@ export function useDashboardData({ enabled = true } = {}) {
 
   const usersByCountry = useMemo(() => {
     const map = new Map();
-    dashboard.users.forEach((u) => {
+    asArray(dashboard.users).forEach((u) => {
       const country = String(u.country ?? "Unknown").trim() || "Unknown";
       map.set(country, (map.get(country) ?? 0) + 1);
     });
@@ -145,7 +150,7 @@ export function useDashboardData({ enabled = true } = {}) {
 
   const invoiceStats = useMemo(() => {
     const stats = { total: 0, paid: 0, pending: 0, overdue: 0, paidAmount: 0, pendingAmount: 0 };
-    dashboard.invoices.forEach((inv) => {
+    asArray(dashboard.invoices).forEach((inv) => {
       const amount = Number(inv.amount ?? inv.grossAmount ?? inv.total ?? 0) || 0;
       const status = normalizeStatus(inv.status);
       stats.total += 1;
@@ -164,8 +169,9 @@ export function useDashboardData({ enabled = true } = {}) {
   }, [dashboard.invoices]);
 
   const rewardStats = useMemo(() => {
-    const stats = { pending: 0, completed: 0, redeemedPoints: 0, totalRequests: dashboard.rewards.length };
-    dashboard.rewards.forEach((r) => {
+    const rewards = asArray(dashboard.rewards);
+    const stats = { pending: 0, completed: 0, redeemedPoints: 0, totalRequests: rewards.length };
+    rewards.forEach((r) => {
       const status = normalizeStatus(r.status);
       const points = Number(r.redeem_points ?? r.points ?? 0) || 0;
       if (status.includes("pending")) stats.pending += 1;
@@ -175,29 +181,48 @@ export function useDashboardData({ enabled = true } = {}) {
     return stats;
   }, [dashboard.rewards]);
 
+  const users = asArray(dashboard.users);
+  const clients = asArray(dashboard.clients);
+  const partners = asArray(dashboard.partners);
+  const projectManagers = asArray(dashboard.projectManagers);
+  const surveys = asArray(dashboard.surveys);
+  const rfqs = asArray(dashboard.rfqs);
+  const rewards = asArray(dashboard.rewards);
+
   const kpiRows = [
     [
-      { icon: Users, label: "Total Users", value: dashboard.users.length },
-      { icon: UserCog, label: "Total Clients", value: dashboard.clients.length },
-      { icon: Handshake, label: "Total Partners", value: dashboard.partners.length },
-      { icon: ClipboardList, label: "Total Project Managers", value: dashboard.projectManagers.length },
+      { icon: Users, label: "Total Users", value: users.length },
+      { icon: UserCog, label: "Total Clients", value: clients.length },
+      { icon: Handshake, label: "Total Partners", value: partners.length },
+      { icon: ClipboardList, label: "Total Project Managers", value: projectManagers.length },
     ],
   ];
 
   return {
     isSales,
-    dashboard,
+    dashboard: {
+      ...dashboard,
+      users,
+      clients,
+      partners,
+      projectManagers,
+      surveys,
+      rfqs,
+      rewards,
+      invoices: asArray(dashboard.invoices),
+      logs: asArray(dashboard.logs),
+    },
     surveyStatus,
     rfqStatus,
     usersByCountry,
     invoiceStats,
     rewardStats,
     kpiRows,
-    latestSurveys: dashboard.surveys.slice(0, 5),
-    latestRfqs: dashboard.rfqs.slice(0, 5),
-    surveyTrend: buildMonthlySeries(dashboard.surveys, "createdAt"),
-    rfqTrend: buildMonthlySeries(dashboard.rfqs, "createdAt"),
-    userTrend: buildMonthlySeries(dashboard.users, "createdAt"),
-    rewardTrend: buildMonthlySeries(dashboard.rewards, "created_at"),
+    latestSurveys: surveys.slice(0, 5),
+    latestRfqs: rfqs.slice(0, 5),
+    surveyTrend: buildMonthlySeries(surveys, "createdAt"),
+    rfqTrend: buildMonthlySeries(rfqs, "createdAt"),
+    userTrend: buildMonthlySeries(users, "createdAt"),
+    rewardTrend: buildMonthlySeries(rewards, "created_at"),
   };
 }

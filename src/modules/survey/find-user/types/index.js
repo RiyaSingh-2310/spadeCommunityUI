@@ -8,11 +8,13 @@
 /**
  * @typedef {Object} FindUserRecord
  * @property {string} id
+ * @property {string} [panelistId]
  * @property {string} name
  * @property {string} email
  * @property {string} mobile
  * @property {"Yes" | "No"} preScreenCompleted
  * @property {string} joiningDate
+ * @property {string} [invitedAt]
  * @property {"Invited" | "Not Invited" | "Opened" | "Completed"} inviteStatus
  * @property {number} earnedPoints
  * @property {string} message

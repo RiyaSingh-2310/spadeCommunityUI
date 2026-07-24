@@ -198,6 +198,16 @@ export const API_ROUTES = {
     list: "/api/system-emails/list",
     byId: (id) => `/api/system-emails/${id}`,
   },
+  messages: {
+    list: "/api/messages/list",
+    unreadCount: "/api/messages/unread-count",
+    readAll: "/api/messages/read-all",
+    byId: (id) => `/api/messages/${encodeURIComponent(String(id ?? "").trim())}`,
+    markRead: (id) =>
+      `/api/messages/${encodeURIComponent(String(id ?? "").trim())}/read`,
+    delete: (id) =>
+      `/api/messages/${encodeURIComponent(String(id ?? "").trim())}`,
+  },
 };
 
 export const API_BASE_URL =

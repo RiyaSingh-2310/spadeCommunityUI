@@ -243,14 +243,25 @@ function mapFindUserSearchRecord(record) {
     record.createdAt ??
     "";
 
+  const invitedAtRaw =
+    record.invitedAt ??
+    record.invited_at ??
+    record.invite_date ??
+    record.inviteDate ??
+    "";
+
   const earnedPointsRaw =
-    record.earnedPoints ??
     record.earned_points ??
+    record.earnedPoints ??
     record.balance_point ??
     record.balancePoint ??
     record.reward_points ??
     0;
   const earnedPointsNum = Number(earnedPointsRaw);
+
+  const messageRaw = record.message ?? record.invite_message ?? "";
+  const message =
+    messageRaw == null ? "" : String(messageRaw).trim();
 
   return {
     id: String(id),
@@ -269,16 +280,19 @@ function mapFindUserSearchRecord(record) {
     joiningDate: joiningRaw
       ? formatSurveyListDate(joiningRaw) || displayOrDash(joiningRaw)
       : "—",
+    invitedAt: invitedAtRaw
+      ? formatSurveyListDate(invitedAtRaw) || displayOrDash(invitedAtRaw)
+      : "—",
     inviteStatus: formatInviteStatus(
       record.inviteStatus ??
         record.invite_status ??
         record.invitation_status ??
-        "Not Invited"
+        "not_invited"
     ),
     earnedPoints: Number.isFinite(earnedPointsNum)
       ? Math.round(earnedPointsNum * 100) / 100
       : 0,
-    message: String(record.message ?? record.invite_message ?? "").trim(),
+    message,
     status: apiStatusToFormValue(record.status),
   };
 }

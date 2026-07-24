@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { PermissionsProvider, usePermissions } from "../../modules/permissions/PermissionsContext";
 import { FormAccessProvider, isFormRoute } from "../../modules/permissions/FormAccessContext";
+import { MessagesProvider } from "../../modules/notifications/context/MessagesContext";
 import { getRoutePermissionAccess } from "../../modules/permissions/routePermissions";
 import { resolveAuthenticatedLandingPath } from "../../modules/permissions/resolveAuthenticatedLandingPath";
 import {
@@ -105,7 +106,11 @@ function AdminLayoutContent({ isDarkMode, onToggleTheme }) {
             {shouldRedirectFromDashboard ? (
               <Navigate to={landingPath} replace />
             ) : hasAccess ? (
-              <PageErrorBoundary isDarkMode={isDarkMode}>
+              <PageErrorBoundary
+                key={location.pathname}
+                resetKey={location.pathname}
+                isDarkMode={isDarkMode}
+              >
                 {isFormRoute(location.pathname) ? (
                   <FormAccessProvider isDarkMode={isDarkMode}>
                     <Outlet />
@@ -127,7 +132,9 @@ function AdminLayoutContent({ isDarkMode, onToggleTheme }) {
 function AdminLayout(props) {
   return (
     <PermissionsProvider>
-      <AdminLayoutContent {...props} />
+      <MessagesProvider>
+        <AdminLayoutContent {...props} />
+      </MessagesProvider>
     </PermissionsProvider>
   );
 }

@@ -134,6 +134,8 @@ function ModuleListingPage({
   compactTable = false,
   /** When set, description cells clamp to this many lines (user email templates). */
   descriptionMaxLines = null,
+  /** Optional row className resolver for unread/highlight styles. */
+  getRowClassName = null,
 }) {
   const navigate = useNavigate();
   const {
@@ -148,13 +150,16 @@ function ModuleListingPage({
   const usesServerListing = serverPaginated || serverSearch;
   const currentPage = usesServerListing ? paginationPage : internalCurrentPage;
   const pageSize = usesServerListing ? (paginationPageSize ?? initialPageSize) : internalPageSize;
-  const [internalData, setInternalData] = useState(rows);
+  const [internalData, setInternalData] = useState(() =>
+    (Array.isArray(rows) ? rows : []).filter(Boolean)
+  );
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [expandedRowIds, setExpandedRowIds] = useState(() => new Set());
   const hasExpandColumn = Boolean(renderExpandedContent);
 
-  const hasActionColumn = columns.some(isActionColumn);
+  const safeColumns = Array.isArray(columns) ? columns : [];
+  const hasActionColumn = safeColumns.some(isActionColumn);
   const isExternallyManaged = Boolean(
     onStatusToggle ||
       onStatusChange ||
@@ -284,16 +289,17 @@ function ModuleListingPage({
     onSecondaryActionClick && secondaryActionLabel && allowWrite
   );
 
-  const safeRows = Array.isArray(rows) ? rows : [];
+  const safeRows = (Array.isArray(rows) ? rows : []).filter(Boolean);
 
-  const rowsSignature = safeRows.map((row) => row[rowIdKey] ?? row.id ?? "").join(",");
+  const rowsSignature = safeRows.map((row) => row?.[rowIdKey] ?? row?.id ?? "").join(",");
   const [prevRowsSignature, setPrevRowsSignature] = useState(rowsSignature);
   if (!isExternallyManaged && rowsSignature !== prevRowsSignature) {
     setPrevRowsSignature(rowsSignature);
     setInternalData(safeRows);
   }
 
-  const data = isExternallyManaged ? safeRows : internalData;
+  const rawData = isExternallyManaged ? safeRows : internalData;
+  const data = Array.isArray(rawData) ? rawData.filter(Boolean) : [];
 
   const handlePageChange = useCallback(
     (nextPage) => {
@@ -373,7 +379,7 @@ function ModuleListingPage({
     setInternalCurrentPage((prev) => Math.min(prev, pages));
   }, [filtered.length, pageSize, debouncedQuery, usesServerListing]);
 
-  const hasProfileImageColumn = columns.some(isProfileImageColumn);
+  const hasProfileImageColumn = safeColumns.some(isProfileImageColumn);
 
   const paginationFooter =
     showPagination &&
@@ -403,7 +409,7 @@ function ModuleListingPage({
     ) : null;
 
   const displayColumns = useMemo(() => {
-    let cols = filterColumns(columns);
+    let cols = filterColumns(safeColumns);
     const showActionColumn = shouldShowListingActionColumn({
       permissionModule,
       actionVariant,
@@ -433,7 +439,7 @@ function ModuleListingPage({
     }
     return cols;
   }, [
-    columns,
+    safeColumns,
     filterColumns,
     permissionModule,
     actionVariant,
@@ -719,9 +725,15 @@ function ModuleListingPage({
               const rowKey = row[rowIdKey] || row.id || row.name || idx;
               const rowId = getRowId(row);
               const isExpanded = hasExpandColumn && expandedRowIds.has(String(rowId));
+              const rowClassName =
+                typeof getRowClassName === "function"
+                  ? getRowClassName(row, globalIdx)
+                  : "";
               return (
               <Fragment key={rowKey}>
-              <tr className="admin-table-row align-middle">
+              <tr
+                className={`admin-table-row align-middle${rowClassName ? ` ${rowClassName}` : ""}`}
+              >
                 {hasExpandColumn && (
                   <td className="px-3 py-3 align-middle whitespace-nowrap">
                     <button

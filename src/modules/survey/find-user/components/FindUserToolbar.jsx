@@ -12,11 +12,12 @@ function FindUserToolbar({
   onListInvited,
   inviteDisabled,
   disabled = false,
+  isInviting = false,
   visibleCount = 0,
   selectedCount = 0,
 }) {
   const inputClass = getAdminInputClass();
-  const canInvite = !inviteDisabled && !disabled;
+  const canInvite = !inviteDisabled && !disabled && !isInviting;
 
   return (
     <div className="space-y-4">
@@ -66,14 +67,17 @@ function FindUserToolbar({
             onClick={onInvite}
             disabled={!canInvite}
             title={
-              canInvite
-                ? "Invite selected users"
-                : "Select at least one user and an email template"
+              isInviting
+                ? "Sending invites..."
+                : canInvite
+                  ? "Invite selected users"
+                  : "Select at least one user and an email template"
             }
             className="h-10 shrink-0 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Invite
-            {selectedCount > 0 ? ` (${selectedCount})` : ""}
+            {isInviting
+              ? "Inviting..."
+              : `Invite${selectedCount > 0 ? ` (${selectedCount})` : ""}`}
           </button>
         </div>
         <button

@@ -1,9 +1,19 @@
 import { Component } from "react";
 
+function isChunkLoadError(error) {
+  const message = String(error?.message ?? error ?? "");
+  return (
+    /Failed to fetch dynamically imported module/i.test(message) ||
+    /Importing a module script failed/i.test(message) ||
+    /Loading chunk [\d]+ failed/i.test(message) ||
+    /error loading dynamically imported module/i.test(message)
+  );
+}
+
 class PageErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, reloadAttempted: false };
   }
 
   static getDerivedStateFromError(error) {
@@ -14,10 +24,31 @@ class PageErrorBoundary extends Component {
     if (import.meta.env.DEV) {
       console.error("Page render error:", error, errorInfo);
     }
+
+    // Stale deploy chunks: one automatic reload recovers without the error screen.
+    if (isChunkLoadError(error) && !this.state.reloadAttempted && typeof window !== "undefined") {
+      const key = "spade_chunk_reload";
+      const alreadyReloaded = sessionStorage.getItem(key) === "1";
+      if (!alreadyReloaded) {
+        sessionStorage.setItem(key, "1");
+        window.location.reload();
+        return;
+      }
+      sessionStorage.removeItem(key);
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
+      this.setState({ hasError: false, error: null, reloadAttempted: false });
+    }
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, error: null });
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("spade_chunk_reload");
+    }
+    this.setState({ hasError: false, error: null, reloadAttempted: false });
   };
 
   render() {
