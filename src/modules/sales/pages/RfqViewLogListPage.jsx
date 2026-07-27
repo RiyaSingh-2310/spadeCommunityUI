@@ -4,7 +4,11 @@ import { useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import TableCard from "../../../components/admin/TableCard";
 import { toastApiError } from "../../../services/toast/apiToast";
-import { getSalesLogListWithDetails } from "../../../services/sales/salesProjectsApi";
+import {
+  getRecord,
+  getSalesLogListWithDetails,
+  mapSalesProjectToForm,
+} from "../../../services/sales/salesProjectsApi";
 
 function RichTextContent({ html }) {
   const content = String(html ?? "").trim();
@@ -60,6 +64,8 @@ function LogCard({ log, isDarkMode }) {
 function RfqViewLogListPage({ isDarkMode }) {
   const { projectId } = useParams();
   const [logs, setLogs] = useState([]);
+  const [projectSubject, setProjectSubject] = useState("");
+  const [projectName, setProjectName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
 
@@ -73,18 +79,26 @@ function RfqViewLogListPage({ isDarkMode }) {
 
     let cancelled = false;
 
-    const loadLogs = async () => {
+    const load = async () => {
       setIsLoading(true);
       setLoadFailed(false);
 
       try {
-        const data = await getSalesLogListWithDetails(normalizedId);
-        if (!cancelled) {
-          setLogs(data.items ?? []);
-        }
+        const [project, logData] = await Promise.all([
+          getRecord(normalizedId),
+          getSalesLogListWithDetails(normalizedId),
+        ]);
+        if (cancelled) return;
+
+        const mapped = mapSalesProjectToForm(project);
+        setProjectSubject(String(mapped.subject ?? "").trim());
+        setProjectName(String(mapped.clientName ?? "").trim());
+        setLogs(logData.items ?? []);
       } catch (error) {
         if (cancelled) return;
         setLogs([]);
+        setProjectSubject("");
+        setProjectName("");
         setLoadFailed(true);
         toastApiError(error);
       } finally {
@@ -92,7 +106,7 @@ function RfqViewLogListPage({ isDarkMode }) {
       }
     };
 
-    loadLogs();
+    load();
     return () => {
       cancelled = true;
     };
@@ -101,30 +115,46 @@ function RfqViewLogListPage({ isDarkMode }) {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="View Log List"
-        breadcrumbs={[
-          { label: "RFQ", to: "/sales/rfq" },
-          { label: "View Log List" },
-        ]}
+        title="Sales Project Logs"
+        subtitle={
+          projectName
+            ? `${projectName}${projectSubject ? ` · ${projectSubject}` : ""}`
+            : projectSubject || "View communication logs for this sales project."
+        }
         isDarkMode={isDarkMode}
+        breadcrumbs={[
+          { label: "Sales Projects", to: "/sales/rfq" },
+          { label: "View Logs" },
+        ]}
       />
 
+      {!isLoading && !loadFailed ? (
+        <TableCard title="Current Email Subject" isDarkMode={isDarkMode}>
+          <p className="admin-text text-sm font-semibold">
+            {projectSubject || "—"}
+          </p>
+          <p className="admin-text-muted mt-1 text-xs">
+            Latest value from the sales project record (same source as Edit).
+          </p>
+        </TableCard>
+      ) : null}
+
       {isLoading ? (
-        <div className="flex min-h-[240px] items-center justify-center">
-          <Loader2 size={28} className="animate-spin text-[#10a950]" />
+        <div className="flex min-h-[200px] items-center justify-center">
+          <Loader2 size={28} className="animate-spin text-[var(--admin-primary-color)]" />
         </div>
       ) : loadFailed ? (
-        <TableCard isDarkMode={isDarkMode}>
-          <p className="admin-text-muted text-sm">Unable to load logs.</p>
-        </TableCard>
+        <div className="admin-text rounded-xl border border-[var(--admin-header-surface-border)] p-6 text-sm">
+          Unable to load sales project logs.
+        </div>
       ) : logs.length === 0 ? (
-        <TableCard isDarkMode={isDarkMode}>
-          <p className="admin-text-muted text-sm">No Data Available</p>
-        </TableCard>
+        <div className="admin-text-muted rounded-xl border border-[var(--admin-header-surface-border)] p-6 text-center text-sm">
+          No logs found for this project.
+        </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-4">
           {logs.map((log) => (
-            <LogCard key={log.id ?? log.createdAt} log={log} isDarkMode={isDarkMode} />
+            <LogCard key={log.id} log={log} isDarkMode={isDarkMode} />
           ))}
         </div>
       )}

@@ -50,6 +50,8 @@ export function resolveProfileImageUrl(recordOrSource) {
 
 /**
  * Resolves API upload paths to a full URL for display.
+ * Absolute `/uploads/...` URLs are rewritten to the current API origin so
+ * stale localhost/prod hosts from older API responses still resolve correctly.
  * @param {string | null | undefined} imageUrl
  */
 export function resolveMediaUrl(imageUrl) {
@@ -57,9 +59,21 @@ export function resolveMediaUrl(imageUrl) {
   const trimmed = String(imageUrl).trim();
   if (!trimmed) return null;
   if (trimmed.startsWith("blob:") || trimmed.startsWith("data:")) return trimmed;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
 
   const origin = API_BASE_URL.replace(/\/api\/?$/, "");
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.pathname.startsWith("/uploads/")) {
+        return `${origin}${parsed.pathname}${parsed.search}`;
+      }
+    } catch {
+      // Keep original absolute URL when parsing fails.
+    }
+    return trimmed;
+  }
+
   if (trimmed.startsWith("/")) return `${origin}${trimmed}`;
   return `${origin}/${trimmed}`;
 }

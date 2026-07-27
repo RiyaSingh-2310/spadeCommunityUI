@@ -55,6 +55,7 @@ const ROUTE_RULES = [
   { matcher: /^\/user-email-templates\/add/, module: "user_email_templates", requiresWrite: true },
   { matcher: /^\/user-email-templates\/edit\//, module: "user_email_templates", requiresWrite: true },
   { matcher: /^\/user-email-templates(\/|$)/, module: "user_email_templates" },
+  { matcher: /^\/notifications\/messages\/[^/]+$/, module: "messages" },
   { matcher: /^\/notifications\/messages(\/|$)/, module: "messages" },
   { matcher: /^\/notifications(\/|$)/, module: "notifications" },
   { matcher: /^\/reward-points\/history(\/|$)/, module: "reward_history" },

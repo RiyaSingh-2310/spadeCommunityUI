@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
@@ -21,6 +22,9 @@ import {
   getGroupSurveyBreadcrumbs,
 } from "../utils/groupSurveyNavigation";
 
+const CLONE_CONFIRM_CLASS =
+  "admin-btn-primary flex h-10 cursor-pointer items-center justify-center gap-2 px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60";
+
 function GroupSurveyProjectsListPage({ isDarkMode }) {
   const navigate = useNavigate();
   const { groupId } = useParams();
@@ -29,6 +33,8 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
   const [groupRecord, setGroupRecord] = useState(null);
   const [isLoadingGroup, setIsLoadingGroup] = useState(true);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+  const [cloneTarget, setCloneTarget] = useState(null);
+  const [isCloning, setIsCloning] = useState(false);
 
   const fetchProjects = useCallback(
     async (params) => {
@@ -128,6 +134,24 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
     }
   };
 
+  const handleCloneConfirm = async () => {
+    const id = cloneTarget?.recordId;
+    if (id == null || isCloning) return;
+
+    setIsCloning(true);
+    setCloneTarget(null);
+
+    try {
+      const data = await cloneSurvey(id);
+      toastApiSuccess(data);
+      await refreshProjects();
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsCloning(false);
+    }
+  };
+
   if (isLoadingGroup) {
     return (
       <div className="flex min-h-[240px] items-center justify-center">
@@ -137,100 +161,109 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
   }
 
   return (
-    <ModuleListingPage
-      isDarkMode={isDarkMode}
-      title="Group Survey"
-      subtitle={groupProjectName}
-      breadcrumbs={breadcrumbs}
-      searchPlaceholder="Search Project"
-      actionLabel="Add Group Survey"
-      onActionClick={() => navigate("/survey/group/add")}
-      columns={[
-        "ID",
-        "Project Name",
-        "Client Code",
-        "LOI",
-        "IR",
-        "Start Date",
-        "End Date",
-        "Status",
-        "Action",
-      ]}
-      rows={rows}
-      rowIdKey="recordId"
-      actionVariant="view-edit"
-      showDeleteAction={false}
-      permissionModule="group_survey"
-      onView={(row) => {
-        const recordId = row?.recordId;
-        if (recordId == null) return;
-        navigate(getGroupProjectViewPath(groupId, recordId));
-      }}
-      onEdit={(row) => {
-        const recordId = row?.recordId;
-        if (recordId == null) return;
-        const editTarget = getGroupProjectEditPath(recordId, groupId);
-        navigate(
-          {
-            pathname: editTarget.pathname,
-            search: editTarget.search,
-          },
-          { state: editTarget.state }
-        );
-      }}
-      onFindUser={(row) => {
-        const recordId = row?.recordId;
-        if (recordId == null) return;
-        navigate(getGroupProjectFindUserPath(groupId, recordId), {
-          state: {
-            surveyName: row.projectName || "",
-            returnTo: projectsPath,
-          },
-        });
-      }}
-      onUserSurveyData={(row) => {
-        const recordId = row?.recordId;
-        if (recordId == null) return;
-        navigate(getGroupProjectUserSurveyDataPath(groupId, recordId), {
-          state: {
-            surveyName: row.projectName || "",
-            returnTo: projectsPath,
-          },
-        });
-      }}
-      onSurveyClone={async (row) => {
-        const id = row?.recordId;
-        if (id == null) return;
-        try {
-          const data = await cloneSurvey(id);
-          toastApiSuccess(data);
-          await refreshProjects();
-        } catch (error) {
-          toastApiError(error);
-        }
-      }}
-      surveyActionLabels={{
-        view: "Details",
-        edit: "Edit",
-        findUser: "Find User",
-        userSurveyData: "User Survey Data",
-        surveyClone: "Survey Clone",
-      }}
-      onStatusToggle={handleStatusToggle}
-      isLoading={isLoading}
-      emptyMessage="No projects found"
-      onSearch={handleSearch}
-      totalRecords={totalRecords}
-      serverPaginated
-      serverSearch
-      paginationPage={currentPage}
-      onPaginationPageChange={handlePageChange}
-      paginationPageSize={pageSize}
-      onPaginationPageSizeChange={handlePageSizeChange}
-      showPagination
-      nowrapAllCells
-      compactStatusColumn
-    />
+    <>
+      <ModuleListingPage
+        isDarkMode={isDarkMode}
+        title="Group Survey"
+        subtitle={groupProjectName}
+        breadcrumbs={breadcrumbs}
+        searchPlaceholder="Search Project"
+        actionLabel="Add Group Survey"
+        onActionClick={() => navigate("/survey/group/add")}
+        columns={[
+          "ID",
+          "Project Name",
+          "Client Code",
+          "LOI",
+          "IR",
+          "Start Date",
+          "End Date",
+          "Status",
+          "Action",
+        ]}
+        rows={rows}
+        rowIdKey="recordId"
+        actionVariant="view-edit"
+        showDeleteAction={false}
+        permissionModule="group_survey"
+        onView={(row) => {
+          const recordId = row?.recordId;
+          if (recordId == null) return;
+          navigate(getGroupProjectViewPath(groupId, recordId));
+        }}
+        onEdit={(row) => {
+          const recordId = row?.recordId;
+          if (recordId == null) return;
+          const editTarget = getGroupProjectEditPath(recordId, groupId);
+          navigate(
+            {
+              pathname: editTarget.pathname,
+              search: editTarget.search,
+            },
+            { state: editTarget.state }
+          );
+        }}
+        onFindUser={(row) => {
+          const recordId = row?.recordId;
+          if (recordId == null) return;
+          navigate(getGroupProjectFindUserPath(groupId, recordId), {
+            state: {
+              surveyName: row.projectName || "",
+              returnTo: projectsPath,
+            },
+          });
+        }}
+        onUserSurveyData={(row) => {
+          const recordId = row?.recordId;
+          if (recordId == null) return;
+          navigate(getGroupProjectUserSurveyDataPath(groupId, recordId), {
+            state: {
+              surveyName: row.projectName || "",
+              returnTo: projectsPath,
+            },
+          });
+        }}
+        onSurveyClone={(row) => {
+          if (row?.recordId == null || isCloning) return;
+          setCloneTarget(row);
+        }}
+        surveyActionLabels={{
+          view: "Details",
+          edit: "Edit",
+          findUser: "Find User",
+          userSurveyData: "User Survey Data",
+          surveyClone: "Survey Clone",
+        }}
+        onStatusToggle={handleStatusToggle}
+        isLoading={isLoading}
+        emptyMessage="No projects found"
+        onSearch={handleSearch}
+        totalRecords={totalRecords}
+        serverPaginated
+        serverSearch
+        paginationPage={currentPage}
+        onPaginationPageChange={handlePageChange}
+        paginationPageSize={pageSize}
+        onPaginationPageSizeChange={handlePageSizeChange}
+        showPagination
+        nowrapAllCells
+        compactStatusColumn
+      />
+
+      <DeleteConfirmModal
+        isOpen={Boolean(cloneTarget)}
+        onCancel={() => {
+          if (!isCloning) setCloneTarget(null);
+        }}
+        onConfirm={handleCloneConfirm}
+        isDeleting={isCloning}
+        title="Clone Project"
+        message="Are you sure you want to clone this project?"
+        confirmLabel="Clone"
+        confirmingLabel="Cloning..."
+        confirmClassName={CLONE_CONFIRM_CLASS}
+      />
+    </>
   );
 }
 

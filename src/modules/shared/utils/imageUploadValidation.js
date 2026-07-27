@@ -1,5 +1,5 @@
-/** Maximum image upload size: 5 MB */
-export const IMAGE_UPLOAD_MAX_SIZE_BYTES = 5 * 1024 * 1024;
+/** Maximum image upload size: 500 KB */
+export const IMAGE_UPLOAD_MAX_SIZE_BYTES = 500 * 1024;
 
 /** File input accept attribute for allowed image types */
 export const IMAGE_UPLOAD_ACCEPT = "image/jpeg,image/png,.jpg,.jpeg,.png";
@@ -7,7 +7,7 @@ export const IMAGE_UPLOAD_ACCEPT = "image/jpeg,image/png,.jpg,.jpeg,.png";
 export const IMAGE_UPLOAD_TYPE_ERROR =
   "Only JPG, JPEG, and PNG image files are allowed.";
 
-export const IMAGE_UPLOAD_SIZE_ERROR = "Image size must not exceed 5 MB.";
+export const IMAGE_UPLOAD_SIZE_ERROR = "Image size must not exceed 500 KB.";
 
 const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png"]);
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/jpg", "image/png"]);

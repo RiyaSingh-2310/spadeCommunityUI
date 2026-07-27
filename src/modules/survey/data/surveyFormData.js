@@ -9,29 +9,14 @@ export const SURVEY_CLIENT_OPTIONS = [
   { value: "5", label: "Epsilon Ltd" },
 ];
 
-export const PROJECT_MANAGER_OPTIONS = [
-  { value: "1", label: "Priya Desai" },
-  { value: "2", label: "Arun Kumar" },
-  { value: "3", label: "Meera Shah" },
-  { value: "4", label: "Rohan Verma" },
-  { value: "5", label: "Anita Patel" },
-];
+/** @deprecated Demo/mock only — live forms use APIs via useSurveyFormSelectOptions. */
+export const PROJECT_MANAGER_OPTIONS = [];
 
-export const SALES_MANAGER_OPTIONS = [
-  { value: "1", label: "Arun Kumar" },
-  { value: "2", label: "Sneha Rao" },
-  { value: "3", label: "Vikram Singh" },
-  { value: "4", label: "Kavya Nair" },
-];
+/** @deprecated Demo/mock only — live forms use APIs via useSurveyFormSelectOptions. */
+export const SALES_MANAGER_OPTIONS = [];
 
-/** RFQ ID options used when sales/project/list is unavailable. */
-export const RFQ_OPTIONS = [
-  { value: "PRJ-011", label: "PRJ-011" },
-  { value: "PRJ-012", label: "PRJ-012" },
-  { value: "PRJ-013", label: "PRJ-013" },
-  { value: "PRJ-014", label: "PRJ-014" },
-  { value: "PRJ-015", label: "PRJ-015" },
-];
+/** @deprecated Demo/mock only — live forms use APIs via useSurveyFormSelectOptions. */
+export const RFQ_OPTIONS = [];
 
 /** @deprecated Prefer RFQ_OPTIONS */
 export const SALES_PROJECT_OPTIONS = RFQ_OPTIONS;
@@ -80,15 +65,15 @@ export function getDemoSurveyFormForEdit(id) {
   const numId = Number(String(id).replace(/\D/g, "")) || 1;
   const client =
     SURVEY_CLIENT_OPTIONS[(numId - 1) % SURVEY_CLIENT_OPTIONS.length]?.value ?? "";
-  const salesProject = RFQ_OPTIONS[(numId - 1) % RFQ_OPTIONS.length]?.value ?? "";
+  const salesProject = "";
 
   return {
     ...createEmptySurveyForm(),
     client,
     projectName: project.projectName,
     projectCode: project.surveyId || `PRJ-${10000 + numId}`,
-    projectManager: String(1 + ((numId - 1) % 5)),
-    salesManager: String(1 + ((numId - 1) % 4)),
+    projectManager: "",
+    salesManager: "",
     salesProject,
     description: `<p>${project.description}</p>`,
     projectLinkType: "Single Link",

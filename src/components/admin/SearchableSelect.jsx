@@ -35,24 +35,26 @@ function SearchableSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const normalizedOptions = useMemo(() => toSelectOptions(options), [options]);
-  const isSearchable =
-    searchable ?? normalizedOptions.length > 5;
+  // Immutable source list — never replaced by filtered results.
+  const sourceOptions = useMemo(() => toSelectOptions(options), [options]);
+  const isSearchable = searchable ?? sourceOptions.length > 5;
 
-  const selectedOption = normalizedOptions.find(
+  const selectedOption = sourceOptions.find(
     (option) => String(option.value) === String(value ?? "")
   );
   const selectedLabel = selectedOption?.label ?? "";
 
   const filteredOptions = useMemo(() => {
-    if (!isSearchable) return normalizedOptions;
-    return filterSelectOptions(normalizedOptions, search);
-  }, [normalizedOptions, search, isSearchable]);
+    if (!isSearchable) return sourceOptions;
+    const query = String(search ?? "");
+    // Empty / whitespace search must always restore the full source list.
+    if (!query.trim()) return sourceOptions;
+    return filterSelectOptions(sourceOptions, query);
+  }, [sourceOptions, search, isSearchable]);
 
   const menuStyle = usePortalDropdownPosition(isOpen, triggerRef, menuRef);
 
-  const triggerClass =
-    inputClass?.trim() || getAdminInputClass();
+  const triggerClass = inputClass?.trim() || getAdminInputClass();
 
   const closeMenu = useCallback(
     (shouldBlur = false) => {
@@ -63,15 +65,27 @@ function SearchableSelect({
     [onBlur]
   );
 
-  const openMenu = () => {
+  const openMenu = useCallback(() => {
     if (disabled || loading) return;
+    setSearch("");
     setIsOpen(true);
-  };
+  }, [disabled, loading]);
 
-  usePortalDropdownCloseOthers(isOpen, () => closeMenu());
+  const handleSearchChange = useCallback((event) => {
+    setSearch(String(event?.target?.value ?? ""));
+  }, []);
+
+  const handleSearchClear = useCallback(() => {
+    setSearch("");
+  }, []);
+
+  usePortalDropdownCloseOthers(isOpen, closeMenu);
 
   useEffect(() => {
-    if (!isOpen) return undefined;
+    if (!isOpen) {
+      setSearch("");
+      return undefined;
+    }
 
     const handleOutside = (event) => {
       const target = event.target;
@@ -138,7 +152,8 @@ function SearchableSelect({
         {isSearchable && (
           <PortalDropdownSearch
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={handleSearchChange}
+            onClear={handleSearchClear}
             placeholder={searchPlaceholder}
           />
         )}

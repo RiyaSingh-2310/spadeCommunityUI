@@ -195,6 +195,7 @@ export function createEmptyProjectUrlForm(projectId = "") {
     preScreen: false,
     surveyGroupId: "",
     preScreenerId: "",
+    preScreenerName: "",
     completeRewardPoints: "",
     validateRewardPoints: "",
     redirectComplete: "",
@@ -242,6 +243,13 @@ export function mapProjectUrlToForm(record) {
     preScreen,
     surveyGroupId: surveyGroupId ? String(surveyGroupId) : "",
     preScreenerId: surveyGroupId ? String(surveyGroupId) : "",
+    preScreenerName: String(
+      record.preScreenerName ??
+        record.preScreenName ??
+        record.PreScreenName ??
+        record.pre_screen_name ??
+        ""
+    ).trim(),
     completeRewardPoints:
       record.completeRewardPoints != null ? String(record.completeRewardPoints) : "",
     validateRewardPoints:
@@ -374,6 +382,14 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
     ),
     preScreen: Boolean(Number(preScreenFlag ?? 0)) || Boolean(preScreenerId),
     preScreenerId: preScreenerId != null ? String(preScreenerId) : "",
+    preScreenerName: String(
+      pickUrlInfoField(urlInfo, [
+        "PreScreenName",
+        "pre_screen_name",
+        "preScreenerName",
+        "survey_group_name",
+      ]) ?? ""
+    ).trim(),
     completeRewardPoints: toFormNumberValue(
       pickUrlInfoField(urlInfo, [
         "CompletionPoint",
@@ -395,6 +411,10 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
         "validateRewardPoints",
         "Validate_Point",
         "ValidationPoint",
+        "TerminationPoint",
+        "termination_point",
+        "term_point",
+        "termPoint",
       ]) ??
         pickUrlInfoField(projectRecord, [
           "ValidatePoint",
@@ -402,6 +422,10 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
           "validateRewardPoints",
           "Validate_Point",
           "ValidationPoint",
+          "TerminationPoint",
+          "termination_point",
+          "term_point",
+          "termPoint",
         ])
     ),
     redirectComplete: pickRedirectField(
@@ -547,8 +571,9 @@ export async function getProjectUrlFormForEdit(projectId, urlId, fallbackForm = 
       (row) => String(row?.id ?? "") === normalizedUrlId
     );
     if (matched) {
+      const mapped = mapApiUrlInfoToForm(matched, projectId);
       return normalizeProjectUrlFormForState(
-        mergeProjectUrlForms(matched, fallbackForm)
+        mergeProjectUrlForms(mapped, fallbackForm)
       );
     }
   } catch {

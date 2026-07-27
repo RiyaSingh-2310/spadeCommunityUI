@@ -186,7 +186,7 @@ export async function updateSalesManager(id, payload) {
     body.append("email", payload.email.trim());
     body.append("status", formValueToApiStatus(payload.status));
     body.append("profile_image", payload.profileImage);
-    if (encryptedPassword) body.append("password", encryptedPassword);
+    if (encryptedPassword) body.append("new_password", encryptedPassword);
 
     const data = await apiRequest(API_ROUTES.salesManagers.update(normalizedId), {
       method: "PUT",
@@ -202,7 +202,7 @@ export async function updateSalesManager(id, payload) {
       name: payload.name.trim(),
       email: payload.email.trim(),
       status: formValueToApiStatus(payload.status),
-      ...(encryptedPassword ? { password: encryptedPassword } : {}),
+      ...(encryptedPassword ? { new_password: encryptedPassword } : {}),
     },
   });
 

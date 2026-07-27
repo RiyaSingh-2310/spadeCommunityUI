@@ -42,6 +42,7 @@ const COLUMN_KEY_MAP = {
   "Right Answer": "rightAnswer",
   Subject: "subject",
   Date: "date",
+  "Date & Time": "dateTime",
   Username: "username",
   "User Name": "userName",
   "Panelist Name": "panelistName",
@@ -148,12 +149,44 @@ const VALUE_FALLBACKS = {
   surveyTitle: ["title", "groupTitle", "group_title"],
   createdDate: ["createdAt"],
   createdAt: ["createdDate", "date"],
+  dateTime: ["datetime", "date", "createdAt", "created_at"],
   credit: ["totalRewardCredit"],
   debit: ["totalRewardDebit"],
   balance: ["totalRewardBalance"],
 };
 
+/**
+ * Coerce a cell value to a React-safe primitive (avoids "Objects are not valid as a React child").
+ * @param {unknown} value
+ */
+export function formatCellDisplayValue(value) {
+  if (value === undefined || value === null || value === "") return "-";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    const parts = value
+      .map((item) => {
+        if (item == null) return "";
+        if (typeof item === "string" || typeof item === "number") return String(item);
+        if (typeof item === "object") {
+          return String(item.label ?? item.name ?? item.title ?? item.code ?? "");
+        }
+        return "";
+      })
+      .filter(Boolean);
+    return parts.length ? parts.join(", ") : "-";
+  }
+  if (typeof value === "object") {
+    const label = value.label ?? value.name ?? value.title ?? value.code ?? value.Clients;
+    if (label != null && label !== "") return String(label);
+    return "-";
+  }
+  return String(value);
+}
+
 export function getRowValue(row, columnLabel) {
+  if (!row || typeof row !== "object") return "-";
   const key = getColumnKey(columnLabel);
   const keysToTry = [key, ...(VALUE_FALLBACKS[key] || [])];
   for (const k of keysToTry) {
@@ -162,7 +195,7 @@ export function getRowValue(row, columnLabel) {
       if (key === "status" || k === "status") {
         return formatStatusLabel(row.statusLabel ?? value);
       }
-      return value;
+      return formatCellDisplayValue(value);
     }
   }
   return "-";

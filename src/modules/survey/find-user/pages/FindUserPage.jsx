@@ -133,6 +133,7 @@ function FindUserPage({ isDarkMode }) {
     onPageChange,
     onPageSizeChange,
     reset,
+    refresh,
   } = useInfiniteUsers(surveyId, activeFilters, searchVersion);
 
   useEffect(() => {
@@ -216,6 +217,7 @@ function FindUserPage({ isDarkMode }) {
       toastApiSuccess(data);
       setSelectedIds(new Set());
       setSelectAll(false);
+      refresh();
     } catch (err) {
       toastApiError(err);
     } finally {
@@ -266,6 +268,7 @@ function FindUserPage({ isDarkMode }) {
           onListInvited={() => setShowInvitedModal(true)}
           inviteDisabled={!inviteEnabled}
           disabled={isInviting}
+          isInviting={isInviting}
           visibleCount={users.length}
           selectedCount={selectedIds.size}
         />

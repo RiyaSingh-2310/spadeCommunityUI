@@ -10,9 +10,14 @@ import {
   Sun,
 } from "lucide-react";
 import heroLogo from "../assets/hero.png";
+import { getAdminDisplayName, getAdminUser } from "../services/auth/authStorage";
 
 export default function Navbar({ isDarkMode, onToggleTheme }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const admin = getAdminUser();
+  const adminName = getAdminDisplayName(admin);
+  const adminEmail = admin?.email || "";
+  const adminInitial = adminName?.charAt(0)?.toUpperCase() || "A";
 
   return (
     <div
@@ -116,7 +121,7 @@ export default function Navbar({ isDarkMode, onToggleTheme }) {
                 }`}
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0ea246] text-base font-bold text-white">
-                  A
+                  {adminInitial}
                 </div>
                 <div>
                   <h4
@@ -124,10 +129,10 @@ export default function Navbar({ isDarkMode, onToggleTheme }) {
                       isDarkMode ? "text-[#f8fafc]" : "text-[#202c3d]"
                     }`}
                   >
-                    Super Admin
+                    {adminName}
                   </h4>
                   <p className={`text-xs ${isDarkMode ? "text-[#94a3b8]" : "text-[#8f99a8]"}`}>
-                    admin@spadecommunity.com
+                    {adminEmail || "—"}
                   </p>
                 </div>
               </div>

@@ -11,15 +11,34 @@ export function SectionDivider() {
   );
 }
 
+function formatDetailValue(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    const parts = value
+      .map((item) => {
+        if (item == null) return "";
+        if (typeof item === "string" || typeof item === "number") return String(item);
+        if (typeof item === "object") {
+          return String(item.label ?? item.name ?? item.title ?? item.code ?? "");
+        }
+        return "";
+      })
+      .filter(Boolean);
+    return parts.length ? parts.join(", ") : "—";
+  }
+  if (typeof value === "object") {
+    const label = value.label ?? value.name ?? value.title ?? value.code;
+    if (label != null && label !== "") return String(label);
+    return "—";
+  }
+  return String(value);
+}
+
 export function DetailField({ label, value, className = "" }) {
-  const content =
-    value === null || value === undefined || value === "" ? (
-      "—"
-    ) : typeof value === "string" || typeof value === "number" ? (
-      value
-    ) : (
-      value
-    );
+  const content = formatDetailValue(value);
 
   return (
     <div className={className}>

@@ -12,15 +12,16 @@ function FindUserToolbar({
   onListInvited,
   inviteDisabled,
   disabled = false,
+  isInviting = false,
   visibleCount = 0,
   selectedCount = 0,
 }) {
   const inputClass = getAdminInputClass();
-  const canInvite = !inviteDisabled && !disabled;
+  const canInvite = !inviteDisabled && !disabled && !isInviting;
 
   return (
-    <div className="space-y-4">
-      <label className="admin-text flex cursor-pointer items-center gap-2.5 text-sm font-medium">
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center lg:flex-nowrap">
+      <label className="admin-text flex shrink-0 cursor-pointer items-center gap-2.5 text-sm font-medium">
         <input
           type="checkbox"
           className="admin-checkbox"
@@ -28,62 +29,62 @@ function FindUserToolbar({
           onChange={(e) => onSelectAllChange(e.target.checked)}
           disabled={disabled || visibleCount === 0}
         />
-        Select All
-        {visibleCount > 0 && (
-          <span className="admin-text-muted text-xs">
-            ({selectedCount > 0 ? `${selectedCount} selected / ` : ""}
-            {visibleCount} visible)
-          </span>
-        )}
+        <span className="whitespace-nowrap">
+          Select All
+          {visibleCount > 0 && (
+            <span className="admin-text-muted ml-1 text-xs font-normal">
+              ({selectedCount > 0 ? `${selectedCount} selected / ` : ""}
+              {visibleCount} visible)
+            </span>
+          )}
+        </span>
       </label>
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="min-w-0 flex-1 sm:max-w-sm">
-            <label className="admin-text mb-2 block text-sm font-semibold">
-              Email Template
-            </label>
-            <SearchableSelect
-              inputClass={inputClass}
-              value={emailTemplate}
-              onChange={(value) => onEmailTemplateChange(String(value ?? ""))}
-              options={emailTemplateOptions}
-              placeholder={
-                isLoadingEmailTemplates
-                  ? "Loading templates..."
-                  : "Select Email Template"
-              }
-              disabled={disabled || isLoadingEmailTemplates}
-              loading={isLoadingEmailTemplates}
-              loadingLabel="Loading templates..."
-              emptyMessage="No email templates found"
-              searchPlaceholder="Search template..."
-              aria-label="Select email template"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={onInvite}
-            disabled={!canInvite}
-            title={
-              canInvite
-                ? "Invite selected users"
-                : "Select at least one user and an email template"
-            }
-            className="h-10 shrink-0 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Invite
-            {selectedCount > 0 ? ` (${selectedCount})` : ""}
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={onListInvited}
-          className="admin-btn-cancel h-10 shrink-0 rounded-xl px-5 text-sm font-semibold"
-        >
-          List Invited Users
-        </button>
+      <div className="min-w-0 w-full sm:min-w-[220px] sm:flex-1 lg:max-w-sm">
+        <SearchableSelect
+          inputClass={inputClass}
+          value={emailTemplate}
+          onChange={(value) => onEmailTemplateChange(String(value ?? ""))}
+          options={emailTemplateOptions}
+          placeholder={
+            isLoadingEmailTemplates
+              ? "Loading templates..."
+              : "Select Email Template"
+          }
+          disabled={disabled || isLoadingEmailTemplates}
+          loading={isLoadingEmailTemplates}
+          loadingLabel="Loading templates..."
+          emptyMessage="No email templates found"
+          searchPlaceholder="Search template..."
+          aria-label="Select email template"
+        />
       </div>
+
+      <button
+        type="button"
+        onClick={onInvite}
+        disabled={!canInvite}
+        title={
+          isInviting
+            ? "Sending invites..."
+            : canInvite
+              ? "Invite selected users"
+              : "Select at least one user and an email template"
+        }
+        className="h-10 w-full shrink-0 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+      >
+        {isInviting
+          ? "Inviting..."
+          : `Invite${selectedCount > 0 ? ` (${selectedCount})` : ""}`}
+      </button>
+
+      <button
+        type="button"
+        onClick={onListInvited}
+        className="admin-btn-cancel h-10 w-full shrink-0 rounded-xl px-5 text-sm font-semibold sm:w-auto"
+      >
+        List Invited Users
+      </button>
     </div>
   );
 }

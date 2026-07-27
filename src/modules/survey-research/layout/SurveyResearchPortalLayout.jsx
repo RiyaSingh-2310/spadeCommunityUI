@@ -75,7 +75,7 @@ function SurveyResearchPortalLayout({ isDarkMode, onToggleTheme }) {
         </header>
 
         <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
-          <PageErrorBoundary>
+          <PageErrorBoundary key={location.pathname} resetKey={location.pathname}>
             <Outlet />
           </PageErrorBoundary>
         </main>

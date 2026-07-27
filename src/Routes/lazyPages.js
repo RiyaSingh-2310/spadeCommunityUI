@@ -111,6 +111,9 @@ export const EditEmailTemplatePage = lazy(
 
 /** Notifications & rewards */
 export const MessagesPage = lazy(() => import("../modules/notifications/pages/MessagesPage"));
+export const MessageDetailsPage = lazy(
+  () => import("../modules/notifications/pages/MessageDetailsPage")
+);
 export const PendingRewardsPage = lazy(
   () => import("../modules/reward-points/pages/PendingRewardsPage")
 );

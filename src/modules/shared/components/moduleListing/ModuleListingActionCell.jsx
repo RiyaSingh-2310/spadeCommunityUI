@@ -171,7 +171,11 @@ function ModuleListingActionCell({
     if (!allowWrite && onView && !useSurveyActions) {
       return (
         <td key={col} className={cellClass}>
-          <ViewActionButton isDarkMode={isDarkMode} onView={() => onView(row, globalIdx)} />
+          <ViewActionButton
+            isDarkMode={isDarkMode}
+            iconOnly
+            onView={() => onView(row, globalIdx)}
+          />
         </td>
       );
     }
@@ -195,7 +199,11 @@ function ModuleListingActionCell({
     ) : (
       <div className="flex items-center justify-end gap-1">
         {allowRead && onView ? (
-          <ViewActionButton isDarkMode={isDarkMode} onView={() => onView(row, globalIdx)} />
+          <ViewActionButton
+            isDarkMode={isDarkMode}
+            iconOnly
+            onView={() => onView(row, globalIdx)}
+          />
         ) : null}
         <IconActions
           isDarkMode={isDarkMode}

@@ -20,7 +20,7 @@ export function useModulePermission(moduleKey) {
         showActions: true,
         showAddButton: true,
         showSubmit: true,
-        filterColumns: (columns) => columns,
+        filterColumns: (columns) => (Array.isArray(columns) ? columns : []),
       };
     }
 
@@ -37,7 +37,7 @@ export function useModulePermission(moduleKey) {
       showSubmit: allowWrite,
       permissions,
       isSuperAdmin,
-      filterColumns: (columns = []) => columns,
+      filterColumns: (columns = []) => (Array.isArray(columns) ? columns : []),
     };
   }, [moduleKey, canRead, canWrite, permissions, isSuperAdmin]);
 }

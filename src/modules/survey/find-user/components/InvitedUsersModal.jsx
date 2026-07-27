@@ -18,6 +18,8 @@ const COLUMNS = [
   "Name",
   "Email",
   "Invite Status",
+  "Message",
+  "Invited At",
   "Earned Points",
   "Status",
 ];
@@ -154,8 +156,9 @@ function InvitedUsersModal({ isOpen, onClose, isDarkMode, surveyId }) {
                 ) : (
                   users.map((row, idx) => {
                     const globalIdx = (currentPage - 1) * pageSize + idx;
+                    const rowKey = `${row.id}-${row.panelistId || idx}`;
                     return (
-                      <tr key={row.id} className="align-middle">
+                      <tr key={rowKey} className="align-middle">
                         <td className="admin-text whitespace-nowrap">
                           {globalIdx + 1}
                         </td>
@@ -163,6 +166,15 @@ function InvitedUsersModal({ isOpen, onClose, isDarkMode, surveyId }) {
                         <td className="admin-text whitespace-nowrap">{row.email}</td>
                         <td className="admin-text whitespace-nowrap">
                           {row.inviteStatus}
+                        </td>
+                        <td
+                          className="admin-text-muted max-w-[200px] truncate"
+                          title={row.message || undefined}
+                        >
+                          {row.message || "—"}
+                        </td>
+                        <td className="admin-text whitespace-nowrap">
+                          {row.invitedAt || "—"}
                         </td>
                         <td className="admin-text whitespace-nowrap">
                           {row.earnedPoints}

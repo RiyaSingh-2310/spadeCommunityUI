@@ -364,6 +364,52 @@ function ProjectUrlsTab({
     return "Select Pre-Screen Group";
   }, [form.language, isLoadingPreScreeners, preScreenerOptions.length]);
 
+  const countryOptions = useMemo(() => {
+    const selected = String(form.country ?? "").trim();
+    if (!selected) return PROJECT_URL_COUNTRY_OPTIONS;
+    const exists = PROJECT_URL_COUNTRY_OPTIONS.some(
+      (option) =>
+        String(typeof option === "string" ? option : option?.value ?? "")
+          .trim()
+          .toLowerCase() === selected.toLowerCase()
+    );
+    return exists ? PROJECT_URL_COUNTRY_OPTIONS : [selected, ...PROJECT_URL_COUNTRY_OPTIONS];
+  }, [form.country]);
+
+  const languageOptions = useMemo(() => {
+    const selected = String(form.language ?? "").trim();
+    if (!selected) return PROJECT_URL_PRESCREEN_LANGUAGES;
+    const exists = PROJECT_URL_PRESCREEN_LANGUAGES.some(
+      (option) =>
+        String(typeof option === "string" ? option : option?.value ?? "")
+          .trim()
+          .toLowerCase() === selected.toLowerCase()
+    );
+    return exists
+      ? PROJECT_URL_PRESCREEN_LANGUAGES
+      : [selected, ...PROJECT_URL_PRESCREEN_LANGUAGES];
+  }, [form.language]);
+
+  const mergedPreScreenerOptions = useMemo(() => {
+    const selectedId = String(form.preScreenerId || form.surveyGroupId || "").trim();
+    if (!selectedId) return preScreenerOptions;
+    if (
+      preScreenerOptions.some((option) => String(option.value) === selectedId)
+    ) {
+      return preScreenerOptions;
+    }
+    const label =
+      String(form.preScreenerName ?? form.preScreenName ?? "").trim() ||
+      selectedId;
+    return [{ value: selectedId, label }, ...preScreenerOptions];
+  }, [
+    preScreenerOptions,
+    form.preScreenerId,
+    form.surveyGroupId,
+    form.preScreenerName,
+    form.preScreenName,
+  ]);
+
   const handleLanguageChange = (language) => {
     setForm((prev) => ({
       ...prev,
@@ -714,7 +760,7 @@ function ProjectUrlsTab({
               inputClass={inputClass}
               value={form.country}
               onChange={(value) => setField("country", value)}
-              options={PROJECT_URL_COUNTRY_OPTIONS}
+              options={countryOptions}
               placeholder="Select Country"
               searchPlaceholder="Search country..."
               aria-label="Country"
@@ -726,7 +772,7 @@ function ProjectUrlsTab({
               inputClass={inputClass}
               value={form.language}
               onChange={handleLanguageChange}
-              options={PROJECT_URL_PRESCREEN_LANGUAGES}
+              options={languageOptions}
               placeholder="Select Language"
               searchPlaceholder="Search language..."
               aria-label="Language"
@@ -844,7 +890,7 @@ function ProjectUrlsTab({
                   }));
                   touch("preScreenerId");
                 }}
-                options={preScreenerOptions}
+                options={mergedPreScreenerOptions}
                 placeholder={preScreenerPlaceholder}
                 searchPlaceholder="Search pre-screen group..."
                 aria-label="Pre-Screen Group"

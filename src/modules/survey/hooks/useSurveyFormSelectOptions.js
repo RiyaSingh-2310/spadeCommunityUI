@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 import { getRecords as getClients } from "../../../services/clients/clientsApi";
+import { getRecords as getProjectManagers } from "../../../services/projectManagers/projectManagersApi";
+import { getRecords as getSalesManagers } from "../../../services/sales/salesManagersApi";
 import { getRecords as getSalesProjects } from "../../../services/sales/salesProjectsApi";
-import {
-  PROJECT_MANAGER_OPTIONS,
-  RFQ_OPTIONS,
-  SALES_MANAGER_OPTIONS,
-} from "../data/surveyFormData";
 import { MAX_API_LIST_LIMIT } from "../../shared/utils/listQueryParams";
 import { normalizeStatusKey } from "../../shared/utils/statusLabels";
+import { resolveSelectIdByLabel } from "../../shared/utils/formPopulation";
 
 export function mergeSelectOption(options = [], value, label) {
   const normalizedValue = String(value ?? "").trim();
@@ -19,6 +17,77 @@ export function mergeSelectOption(options = [], value, label) {
 
   const normalizedLabel = String(label ?? "").trim() || normalizedValue;
   return [{ value: normalizedValue, label: normalizedLabel }, ...options];
+}
+
+/**
+ * Ensures an option exists for an API-selected id or label (name-only responses).
+ * Prefer matching by id, then by label; otherwise inject a synthetic option.
+ */
+export function ensureSelectOption(options = [], value, label) {
+  const normalizedValue = String(value ?? "").trim();
+  const normalizedLabel = String(label ?? "").trim();
+
+  if (normalizedValue) {
+    const byValue = options.find(
+      (option) => String(option.value) === normalizedValue
+    );
+    if (byValue) return options;
+
+    const byLabel = normalizedLabel
+      ? options.find(
+          (option) =>
+            String(option.label ?? "").trim().toLowerCase() ===
+            normalizedLabel.toLowerCase()
+        )
+      : null;
+    if (byLabel) return options;
+
+    return [
+      {
+        value: normalizedValue,
+        label: normalizedLabel || normalizedValue,
+      },
+      ...options,
+    ];
+  }
+
+  if (!normalizedLabel) return options;
+
+  const byLabel = options.find(
+    (option) =>
+      String(option.label ?? "").trim().toLowerCase() ===
+      normalizedLabel.toLowerCase()
+  );
+  if (byLabel) return options;
+
+  return [
+    {
+      value: normalizedLabel,
+      label: normalizedLabel,
+    },
+    ...options,
+  ];
+}
+
+/**
+ * Resolves a select value from id and/or display label against loaded options.
+ */
+export function resolveSelectValue(options = [], idValue, labelValue) {
+  const normalizedId = String(idValue ?? "").trim();
+  if (
+    normalizedId &&
+    options.some((option) => String(option.value) === normalizedId)
+  ) {
+    return normalizedId;
+  }
+
+  const byLabel = resolveSelectIdByLabel(options, labelValue);
+  if (byLabel) return byLabel;
+
+  if (normalizedId) return normalizedId;
+
+  const normalizedLabel = String(labelValue ?? "").trim();
+  return normalizedLabel;
 }
 
 /**
@@ -44,7 +113,7 @@ export function mapProjectManagersToSelectOptions(items = []) {
   return items
     .map((item) => ({
       value: String(item.id ?? ""),
-      label: item.name ?? "",
+      label: String(item.name ?? "").trim(),
     }))
     .filter((option) => option.value && option.label);
 }
@@ -53,7 +122,7 @@ export function mapSalesManagersToSelectOptions(items = []) {
   return items
     .map((item) => ({
       value: String(item.id ?? ""),
-      label: item.name ?? "",
+      label: String(item.name ?? "").trim(),
     }))
     .filter((option) => option.value && option.label);
 }
@@ -74,14 +143,6 @@ export function mapSalesProjectsToSelectOptions(items = []) {
       };
     })
     .filter(Boolean);
-}
-
-/** Fallback IDs when RFQ list API is unavailable. */
-function getMockSalesProjectOptions() {
-  return RFQ_OPTIONS.map((option) => {
-    const id = String(option.value ?? "").trim();
-    return { value: id, label: id, searchText: id };
-  }).filter((option) => option.value);
 }
 
 async function fetchAllPaginatedRecords(fetchPage) {
@@ -105,14 +166,22 @@ async function fetchAllClients() {
   return fetchAllPaginatedRecords(getClients);
 }
 
+async function fetchAllProjectManagers() {
+  return fetchAllPaginatedRecords(getProjectManagers);
+}
+
+async function fetchAllSalesManagers() {
+  return fetchAllPaginatedRecords(getSalesManagers);
+}
+
 async function fetchAllSalesProjects() {
   return fetchAllPaginatedRecords(getSalesProjects);
 }
 
 /**
  * Loads select options for the project form.
- * Client list comes from Client Management API (active clients only).
- * Sales Project uses the live RFQ list API.
+ * Client / Project Manager / Sales Manager / Sales Project from live APIs only
+ * (no hardcoded fallback lists).
  */
 export function useSurveyFormSelectOptions() {
   const [clientOptions, setClientOptions] = useState([]);
@@ -127,8 +196,15 @@ export function useSurveyFormSelectOptions() {
     const loadOptions = async () => {
       setIsLoading(true);
 
-      const [clientsResult, salesProjectsResult] = await Promise.allSettled([
+      const [
+        clientsResult,
+        projectManagersResult,
+        salesManagersResult,
+        salesProjectsResult,
+      ] = await Promise.allSettled([
         fetchAllClients(),
+        fetchAllProjectManagers(),
+        fetchAllSalesManagers(),
         fetchAllSalesProjects(),
       ]);
 
@@ -136,19 +212,27 @@ export function useSurveyFormSelectOptions() {
 
       const clients =
         clientsResult.status === "fulfilled" ? clientsResult.value : [];
+      const projectManagers =
+        projectManagersResult.status === "fulfilled"
+          ? projectManagersResult.value
+          : [];
+      const salesManagers =
+        salesManagersResult.status === "fulfilled"
+          ? salesManagersResult.value
+          : [];
       const salesProjects =
         salesProjectsResult.status === "fulfilled"
           ? salesProjectsResult.value
           : [];
 
-      setClientOptions(mapClientsToSelectOptions(clients, { activeOnly: true }));
-      setProjectManagerOptions([...PROJECT_MANAGER_OPTIONS]);
-      setSalesManagerOptions([...SALES_MANAGER_OPTIONS]);
-      setSalesProjectOptions(
-        salesProjects.length
-          ? mapSalesProjectsToSelectOptions(salesProjects)
-          : getMockSalesProjectOptions()
+      setClientOptions(
+        mapClientsToSelectOptions(clients, {
+          activeOnly: false,
+        })
       );
+      setProjectManagerOptions(mapProjectManagersToSelectOptions(projectManagers));
+      setSalesManagerOptions(mapSalesManagersToSelectOptions(salesManagers));
+      setSalesProjectOptions(mapSalesProjectsToSelectOptions(salesProjects));
       setIsLoading(false);
     };
 

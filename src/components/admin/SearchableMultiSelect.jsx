@@ -35,20 +35,23 @@ function SearchableMultiSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const normalizedOptions = useMemo(() => toSelectOptions(options), [options]);
+  // Immutable source list — never replaced by filtered results.
+  const sourceOptions = useMemo(() => toSelectOptions(options), [options]);
   const selectedValues = useMemo(
     () => (Array.isArray(value) ? value.map((item) => String(item)) : []),
     [value]
   );
   const selectedSet = useMemo(() => new Set(selectedValues), [selectedValues]);
 
-  const isSearchable =
-    searchable ?? normalizedOptions.length > 5;
+  const isSearchable = searchable ?? sourceOptions.length > 5;
 
   const filteredOptions = useMemo(() => {
-    if (!isSearchable) return normalizedOptions;
-    return filterSelectOptions(normalizedOptions, search);
-  }, [normalizedOptions, search, isSearchable]);
+    if (!isSearchable) return sourceOptions;
+    const query = String(search ?? "");
+    // Empty / whitespace search must always restore the full source list.
+    if (!query.trim()) return sourceOptions;
+    return filterSelectOptions(sourceOptions, query);
+  }, [sourceOptions, search, isSearchable]);
 
   const menuStyle = usePortalDropdownPosition(isOpen, triggerRef, menuRef);
 
@@ -57,11 +60,11 @@ function SearchableMultiSelect({
   const selectedLabel = useMemo(() => {
     if (!selectedValues.length) return "";
     const labels = selectedValues.map((selected) => {
-      const match = normalizedOptions.find((option) => String(option.value) === selected);
+      const match = sourceOptions.find((option) => String(option.value) === selected);
       return match?.label ?? selected;
     });
     return labels.join(", ");
-  }, [selectedValues, normalizedOptions]);
+  }, [selectedValues, sourceOptions]);
 
   const closeMenu = useCallback(
     (shouldBlur = false) => {
@@ -72,15 +75,27 @@ function SearchableMultiSelect({
     [onBlur]
   );
 
-  const openMenu = () => {
+  const openMenu = useCallback(() => {
     if (disabled || loading) return;
+    setSearch("");
     setIsOpen(true);
-  };
+  }, [disabled, loading]);
 
-  usePortalDropdownCloseOthers(isOpen, () => closeMenu());
+  const handleSearchChange = useCallback((event) => {
+    setSearch(String(event?.target?.value ?? ""));
+  }, []);
+
+  const handleSearchClear = useCallback(() => {
+    setSearch("");
+  }, []);
+
+  usePortalDropdownCloseOthers(isOpen, closeMenu);
 
   useEffect(() => {
-    if (!isOpen) return undefined;
+    if (!isOpen) {
+      setSearch("");
+      return undefined;
+    }
 
     const handleOutside = (event) => {
       const target = event.target;
@@ -150,7 +165,8 @@ function SearchableMultiSelect({
         {isSearchable && (
           <PortalDropdownSearch
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={handleSearchChange}
+            onClear={handleSearchClear}
             placeholder={searchPlaceholder}
           />
         )}

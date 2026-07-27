@@ -8,17 +8,18 @@ import {
   getAdminUser,
 } from "../../services/auth/authStorage";
 import { performLogout } from "../../services/auth/authApi";
+import { useMessages } from "../../modules/notifications/context/MessagesContext";
 import HeaderSearch from "./HeaderSearch";
 import NotificationDrawer from "./NotificationDrawer";
 
 function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobileMenu }) {
   const navigate = useNavigate();
+  const { unreadCount } = useMessages();
   const [admin, setAdmin] = useState(() => getAdminUser());
   const adminName = admin?.displayName || "Admin";
   const adminEmail = admin?.email || "";
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(3);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -200,7 +201,6 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
       <NotificationDrawer
         isOpen={isNotificationOpen}
         onClose={() => setIsNotificationOpen(false)}
-        onUnreadCountChange={setUnreadCount}
       />
     </>
   );

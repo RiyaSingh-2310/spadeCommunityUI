@@ -138,7 +138,7 @@ export function mapSalesProjectToForm(project) {
     salesManagerName,
     email: project?.email ?? "",
     country: project?.country ?? "",
-    subject: project?.email_subject ?? "",
+    subject: project?.email_subject ?? project?.emailSubject ?? "",
     status: apiStatusToFormStatus(project?.status),
     comment: project?.comment ?? "",
     salesManagerId:
@@ -254,7 +254,7 @@ export function mapSalesProjectToRow(project) {
     country: project?.country ?? "",
     status: project?.status ?? "",
     statusRaw: project?.status ?? "",
-    emailSubject: project?.email_subject ?? "",
+    emailSubject: project?.email_subject ?? project?.emailSubject ?? "",
     salesManager: project?.sales_manager_name ?? project?.sales_manager ?? "",
     createdAt: project?.created_at ?? "",
     recordId: project?.id,

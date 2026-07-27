@@ -7,7 +7,6 @@ import RichTextEditor from "../../../components/admin/RichTextEditor";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
-import { applyResolvedSelectIds, resolveSelectIdByLabel } from "../../shared/utils/formPopulation";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getRequiredError, getRequiredMaxLengthError, isFormValidForFields, limitTextInput, NAME_FIELD_MAX_LENGTH } from "../../shared/utils/validation";
@@ -15,7 +14,8 @@ import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast
 import { getRecords as getClients } from "../../../services/clients/clientsApi";
 import {
   mapClientsToSelectOptions,
-  mergeSelectOption,
+  ensureSelectOption,
+  resolveSelectValue,
 } from "../hooks/useSurveyFormSelectOptions";
 import { MAX_API_LIST_LIMIT } from "../../shared/utils/listQueryParams";
 import {
@@ -72,7 +72,7 @@ function EditGroupSurveyPage({ isDarkMode }) {
       try {
         const records = await fetchAllClients();
         if (!cancelled) {
-          setClientOptions(mapClientsToSelectOptions(records, { activeOnly: true }));
+          setClientOptions(mapClientsToSelectOptions(records, { activeOnly: false }));
         }
       } catch {
         if (!cancelled) setClientOptions([]);
@@ -101,18 +101,29 @@ function EditGroupSurveyPage({ isDarkMode }) {
         if (cancelled) return;
 
         const mapped = mapGroupProjectToForm(project);
+        const clientLabel =
+          project?.clients?.find(
+            (client) => String(client?.id) === String(mapped.clientId)
+          )?.name ??
+          project?.client_names ??
+          "";
+        const resolvedClientId = resolveSelectValue(
+          clientOptions,
+          mapped.clientId,
+          clientLabel
+        );
         setLoadedRecord(project);
         setForm({
           projectName: mapped.projectName,
           description: mapped.description,
           notes: mapped.notes,
-          clientId: mapped.clientId,
+          clientId: resolvedClientId,
         });
         setInitialSnapshot({
           projectName: mapped.projectName.trim(),
           description: mapped.description ?? "",
           notes: mapped.notes ?? "",
-          clientId: String(mapped.clientId ?? ""),
+          clientId: String(resolvedClientId ?? ""),
         });
       } catch (error) {
         if (cancelled) return;
@@ -136,10 +147,18 @@ function EditGroupSurveyPage({ isDarkMode }) {
       (client) => String(client?.id) === String(form.clientId)
     );
     const clientLabel = savedClient?.name ?? loadedRecord?.client_names ?? "";
+    const nextClientId = resolveSelectValue(
+      clientOptions,
+      form.clientId || loadedRecord?.client_id,
+      clientLabel
+    );
 
-    applyResolvedSelectIds(setForm, setInitialSnapshot, {
-      clientId: !form.clientId ? resolveSelectIdByLabel(clientOptions, clientLabel) : "",
-    });
+    if (!nextClientId || nextClientId === form.clientId) return;
+
+    setForm((prev) => ({ ...prev, clientId: nextClientId }));
+    setInitialSnapshot((prev) =>
+      prev ? { ...prev, clientId: nextClientId } : prev
+    );
   }, [
     isLoadingRecord,
     isLoadingClients,
@@ -154,7 +173,7 @@ function EditGroupSurveyPage({ isDarkMode }) {
       (client) => String(client?.id) === String(form.clientId)
     );
 
-    return mergeSelectOption(
+    return ensureSelectOption(
       clientOptions,
       form.clientId,
       savedClient?.name ?? loadedRecord?.client_names

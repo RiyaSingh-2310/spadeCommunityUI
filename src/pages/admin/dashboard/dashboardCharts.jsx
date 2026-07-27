@@ -1,12 +1,17 @@
 import { numberFmt } from "./dashboardUtils";
 
+function asChartData(data) {
+  return Array.isArray(data) ? data : [];
+}
+
 export function PolylineChart({ data }) {
+  const series = asChartData(data);
   const width = 100;
   const height = 44;
-  const max = Math.max(...data.map((d) => d.value), 1);
-  const points = data
+  const max = Math.max(...series.map((d) => d.value), 1);
+  const points = series
     .map((item, idx) => {
-      const x = (idx / Math.max(data.length - 1, 1)) * width;
+      const x = (idx / Math.max(series.length - 1, 1)) * width;
       const y = height - (item.value / max) * (height - 4) - 2;
       return `${x},${y}`;
     })
@@ -15,8 +20,8 @@ export function PolylineChart({ data }) {
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="h-36 w-full">
       <polyline fill="none" stroke="var(--admin-primary-color)" strokeWidth="2.5" points={points} />
-      {data.map((item, idx) => {
-        const x = (idx / Math.max(data.length - 1, 1)) * width;
+      {series.map((item, idx) => {
+        const x = (idx / Math.max(series.length - 1, 1)) * width;
         const y = height - (item.value / max) * (height - 4) - 2;
         return (
           <circle key={`${item.label}-${idx}`} cx={x} cy={y} r="1.6" fill="var(--admin-primary-color)" />
@@ -27,10 +32,11 @@ export function PolylineChart({ data }) {
 }
 
 export function DonutChart({ data }) {
-  const total = Math.max(data.reduce((sum, item) => sum + item.value, 0), 1);
+  const series = asChartData(data);
+  const total = Math.max(series.reduce((sum, item) => sum + item.value, 0), 1);
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
-  const segments = data.map((item) => (item.value / total) * circumference);
+  const segments = series.map((item) => (item.value / total) * circumference);
   const offsets = segments.map((_, idx) =>
     segments.slice(0, idx).reduce((sum, current) => sum + current, 0)
   );
@@ -38,7 +44,7 @@ export function DonutChart({ data }) {
     <div className="flex items-center gap-4">
       <svg viewBox="0 0 120 120" className="h-40 w-40 shrink-0">
         <circle cx="60" cy="60" r={radius} fill="none" stroke="var(--admin-header-search-border)" strokeWidth="14" />
-        {data.map((item, idx) => (
+        {series.map((item, idx) => (
           <circle
             key={item.label}
             cx="60"
@@ -54,7 +60,7 @@ export function DonutChart({ data }) {
         ))}
       </svg>
       <div className="space-y-2">
-        {data.map((item) => (
+        {series.map((item) => (
           <div key={item.label} className="flex items-center gap-2 text-xs">
             <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
             <span className="admin-text-muted">{item.label}</span>
@@ -67,10 +73,11 @@ export function DonutChart({ data }) {
 }
 
 export function BarsChart({ data }) {
-  const max = Math.max(...data.map((d) => d.value), 1);
+  const series = asChartData(data);
+  const max = Math.max(...series.map((d) => d.value), 1);
   return (
     <div className="grid grid-cols-3 gap-3 pt-3">
-      {data.map((item) => (
+      {series.map((item) => (
         <div key={item.label} className="space-y-2">
           <div className="h-28 rounded-xl bg-[var(--admin-header-search-bg)] p-2">
             <div
