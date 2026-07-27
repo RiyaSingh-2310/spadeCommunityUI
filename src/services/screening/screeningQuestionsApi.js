@@ -411,7 +411,7 @@ function buildQuestionBody(payload, { includeStatus = true, partial = false } = 
     source.questionType ?? source.question_type ?? "textbox"
   );
   const options = resolveOptionsAsStrings(source);
-  const sortOrder = Number(source.sortOrder ?? source.sort_order ?? 0) || 0;
+  const sortOrder = Number(source.sortOrder ?? source.sort_order ?? 0) || null;
   const isRequired = Boolean(
     source.required ?? source.is_required ?? source.isRequired
   );
