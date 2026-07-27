@@ -841,15 +841,18 @@ export async function updateScreeningQuestionStatus(id, status) {
   return assertSuccess(data);
 }
 
-/** PUT /api/screening/questions/sort-order */
+/** PUT /api/panel-questionnaire/sort-order */
 export async function updateScreeningSortOrder(items) {
   const data = await apiRequest(API_ROUTES.screening.sortOrder, {
     method: "PUT",
     body: {
-      items: (items ?? []).map((item, index) => ({
-        id: item.id,
-        sort_order: Number(item.sort_order ?? item.sortOrder ?? index) || index,
-      })),
+      items: (items ?? []).map((item, index) => {
+        const sortOrder = item.sort_order ?? item.sortOrder ?? index + 1;
+        return {
+          id: Number(item.id),
+          sort_order: Number(sortOrder) || index + 1,
+        };
+      }),
     },
   });
 

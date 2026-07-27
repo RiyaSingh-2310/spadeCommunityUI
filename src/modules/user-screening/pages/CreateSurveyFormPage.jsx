@@ -57,24 +57,32 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = mode === "edit";
+  const normalizedEditId = isEdit ? decodeQuestionId(id) : "";
+  const hasInvalidEditId = isEdit && !normalizedEditId;
   const { readOnly: permissionReadOnly, canSubmitForm } = useAdminFormAccess();
   const readOnly = permissionReadOnly;
   const [form, setForm] = useState(buildEmptyForm);
   const [initialSnapshot, setInitialSnapshot] = useState(null);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
-  const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
+  const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit && Boolean(normalizedEditId));
   const [loadFailed, setLoadFailed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletedRecordIds, setDeletedRecordIds] = useState([]);
-  const [languageQuestionOptions, setLanguageQuestionOptions] = useState([]);
+  const [languageQuestionsState, setLanguageQuestionsState] = useState({
+    language: "",
+    options: [],
+  });
   const [isLoadingLanguageQuestions, setIsLoadingLanguageQuestions] = useState(false);
   const [addingQuestionId, setAddingQuestionId] = useState(null);
   const inputClass = getAdminInputClass();
+  const selectedLanguage = String(form.language ?? "").trim();
+  const resolvedActiveQuestionIndex = useMemo(() => {
+    if (form.questions.length === 0) return 0;
+    return Math.min(activeQuestionIndex, form.questions.length - 1);
+  }, [activeQuestionIndex, form.questions.length]);
 
   useEffect(() => {
-    const language = String(form.language ?? "").trim();
-    if (!language) {
-      setLanguageQuestionOptions([]);
+    if (!selectedLanguage) {
       return undefined;
     }
 
@@ -83,13 +91,13 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
     const loadLanguageQuestions = async () => {
       setIsLoadingLanguageQuestions(true);
       try {
-        const options = await getCreateSurveyQuestionOptions(language);
+        const options = await getCreateSurveyQuestionOptions(selectedLanguage);
         if (cancelled) return;
-        setLanguageQuestionOptions(options);
+        setLanguageQuestionsState({ language: selectedLanguage, options });
       } catch (error) {
         if (cancelled) return;
         toastApiError(error);
-        setLanguageQuestionOptions([]);
+        setLanguageQuestionsState({ language: selectedLanguage, options: [] });
       } finally {
         if (!cancelled) setIsLoadingLanguageQuestions(false);
       }
@@ -99,9 +107,13 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
     return () => {
       cancelled = true;
     };
-  }, [form.language]);
+  }, [selectedLanguage]);
 
   const availableLanguageQuestions = useMemo(() => {
+    const languageQuestionOptions =
+      languageQuestionsState.language === selectedLanguage && selectedLanguage
+        ? languageQuestionsState.options
+        : [];
     const selectedKeys = new Set(
       form.questions.flatMap((question) => {
         const keys = [];
@@ -118,17 +130,10 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
       const label = String(option.label ?? "").trim();
       return !selectedKeys.has(optionId) && !selectedKeys.has(label);
     });
-  }, [form.questions, languageQuestionOptions]);
+  }, [form.questions, languageQuestionsState, selectedLanguage]);
 
   useEffect(() => {
-    const normalizedId = decodeQuestionId(id);
-    if (!isEdit || !normalizedId) {
-      setForm(buildEmptyForm());
-      setInitialSnapshot(null);
-      setActiveQuestionIndex(0);
-      setIsLoadingRecord(false);
-      setLoadFailed(false);
-      setDeletedRecordIds([]);
+    if (!isEdit || !normalizedEditId) {
       return undefined;
     }
 
@@ -139,7 +144,7 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
       setLoadFailed(false);
 
       try {
-        const records = await getQuestionnaireByQuestionId(normalizedId);
+        const records = await getQuestionnaireByQuestionId(normalizedEditId);
         if (cancelled) return;
 
         const snapshot = mapQuestionnaireToForm(records);
@@ -161,13 +166,7 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
     return () => {
       cancelled = true;
     };
-  }, [isEdit, id]);
-
-  useEffect(() => {
-    if (activeQuestionIndex >= form.questions.length) {
-      setActiveQuestionIndex(Math.max(0, form.questions.length - 1));
-    }
-  }, [activeQuestionIndex, form.questions.length]);
+  }, [isEdit, normalizedEditId]);
 
   const errors = useMemo(
     () => ({
@@ -260,23 +259,30 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
 
   const moveQuestion = (direction) => {
     setForm((prev) => {
-      const targetIndex = activeQuestionIndex + direction;
+      const currentIndex = Math.min(
+        activeQuestionIndex,
+        Math.max(0, prev.questions.length - 1)
+      );
+      const targetIndex = currentIndex + direction;
       if (targetIndex < 0 || targetIndex >= prev.questions.length) return prev;
       const nextQuestions = [...prev.questions];
-      [nextQuestions[activeQuestionIndex], nextQuestions[targetIndex]] = [
+      [nextQuestions[currentIndex], nextQuestions[targetIndex]] = [
         nextQuestions[targetIndex],
-        nextQuestions[activeQuestionIndex],
+        nextQuestions[currentIndex],
       ];
       return { ...prev, questions: nextQuestions };
     });
-    setActiveQuestionIndex((prev) => prev + direction);
+    setActiveQuestionIndex((prev) => {
+      const currentIndex = Math.min(prev, Math.max(0, form.questions.length - 1));
+      return currentIndex + direction;
+    });
   };
 
   const handleClearForm = () => {
     setForm(buildEmptyForm());
     setInitialSnapshot(null);
     setActiveQuestionIndex(0);
-    setLanguageQuestionOptions([]);
+    setLanguageQuestionsState({ language: "", options: [] });
     setDeletedRecordIds([]);
     resetValidation();
   };
@@ -289,7 +295,7 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
     options: question.options,
     required: question.required,
     status: form.status,
-    sortOrder,
+    sortOrder: sortOrder + 1,
   });
 
   const handleSubmit = async () => {
@@ -311,12 +317,12 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
 
           if (question.recordId) {
             lastData = await updateScreeningQuestion(question.recordId, payload);
-            sortItems.push({ id: question.recordId, sort_order: index });
+            sortItems.push({ id: question.recordId, sort_order: index + 1 });
           } else if (hasQuestionContent(question)) {
             lastData = await createScreeningQuestion(payload);
             const createdId = lastData?.data?.id;
             if (createdId != null) {
-              sortItems.push({ id: createdId, sort_order: index });
+              sortItems.push({ id: createdId, sort_order: index + 1 });
             }
           }
         }
@@ -368,7 +374,7 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
     );
   }
 
-  if (isEdit && loadFailed) {
+  if (isEdit && (loadFailed || hasInvalidEditId)) {
     return (
       <div className="space-y-6">
         <AdminPageHeader title="Edit Survey" isDarkMode={isDarkMode} />
@@ -436,7 +442,7 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
           <div className="admin-form-grid-2">
             <FormField label="Question Text">
               <div className={`${QUESTIONS_LIST_BORDER} px-3 py-2`}>
-                {!form.language ? (
+                {!selectedLanguage ? (
                   <p className="admin-text-muted py-2 text-sm">Select a language first.</p>
                 ) : isLoadingLanguageQuestions ? (
                   <div className="flex items-center gap-2 py-2 text-sm">
@@ -491,7 +497,7 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
                   ) : (
                     <ul className="space-y-1">
                       {form.questions.map((question, index) => {
-                        const isActive = index === activeQuestionIndex;
+                        const isActive = index === resolvedActiveQuestionIndex;
                         const label = question.questionText?.trim() || "Untitled";
 
                         return (
@@ -535,7 +541,7 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
                   <button
                     type="button"
                     onClick={() => moveQuestion(-1)}
-                    disabled={isSubmitting || activeQuestionIndex === 0}
+                    disabled={isSubmitting || resolvedActiveQuestionIndex === 0}
                     className={getAdminCancelButtonClass("modal")}
                   >
                     Move Up
@@ -544,7 +550,7 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
                     type="button"
                     onClick={() => moveQuestion(1)}
                     disabled={
-                      isSubmitting || activeQuestionIndex >= form.questions.length - 1
+                      isSubmitting || resolvedActiveQuestionIndex >= form.questions.length - 1
                     }
                     className={getAdminCancelButtonClass("modal")}
                   >
