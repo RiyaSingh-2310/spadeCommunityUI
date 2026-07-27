@@ -11,6 +11,7 @@ import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast
 import CommunityUserExpandableDetails from "../components/CommunityUserExpandableDetails";
 import CommunityUsersToolbar from "../components/CommunityUsersToolbar";
 import {
+  bulkResendInvite,
   deleteRecord,
   downloadPanelists,
   getRecords,
@@ -174,17 +175,17 @@ function CommunityUsersPage({ isDarkMode }) {
 
     setIsResending(true);
     try {
-      await Promise.all(ids.map((userId) => resendEmail(userId)));
+      const data = await bulkResendInvite(ids);
       setBulkResendOpen(false);
-      toastApiSuccess({
-        message: `Verification email resent to ${ids.length} panelist(s).`,
-      });
+      setSelectedRowIds(new Set());
+      toastApiSuccess(data);
+      await refresh();
     } catch (error) {
       toastApiError(error);
     } finally {
       setIsResending(false);
     }
-  }, [selectedRowIds, isResending]);
+  }, [selectedRowIds, isResending, refresh]);
 
   const handleBulkDownloadRequest = useCallback(() => {
     if (selectedRowIds.size === 0) return;
@@ -236,14 +237,20 @@ function CommunityUsersPage({ isDarkMode }) {
       setIsResending(true);
       try {
         const data = await resendEmail(row.id);
+        setSelectedRowIds((prev) => {
+          const next = new Set(prev);
+          next.delete(String(row.id));
+          return next;
+        });
         toastApiSuccess(data);
+        await refresh();
       } catch (error) {
         toastApiError(error);
       } finally {
         setIsResending(false);
       }
     },
-    [isResending]
+    [isResending, refresh]
   );
 
   const handleStatusToggle = async (row) => {

@@ -490,12 +490,32 @@ export async function updateStatus(id, status) {
   return assertSuccess(data);
 }
 
+/** POST /api/panelist/:id/resend-invite */
 export async function resendEmail(id) {
-  const user = getCommunityUserById(id);
-  if (!user) {
-    throw new Error("User not found.");
+  const normalizedId = normalizePanelistId(id);
+  const data = await apiRequest(API_ROUTES.panelist.resendInvite(normalizedId), {
+    method: "POST",
+  });
+
+  return assertSuccess(data);
+}
+
+/** POST /api/panelist/bulk-invite */
+export async function bulkResendInvite(ids) {
+  const normalizedIds = (Array.isArray(ids) ? ids : [])
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id));
+
+  if (normalizedIds.length === 0) {
+    throw new ApiError("No panelist ids provided.", null);
   }
-  return { message: `Verification email resent to ${user.emailAddress}.` };
+
+  const data = await apiRequest(API_ROUTES.panelist.bulkInvite, {
+    method: "POST",
+    body: { ids: normalizedIds },
+  });
+
+  return assertSuccess(data);
 }
 
 /**

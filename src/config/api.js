@@ -164,6 +164,8 @@ export const API_ROUTES = {
     logout: "/api/panelist/logout",
     byId: (id) => `/api/panelist/${id}`,
     updateStatus: (id) => `/api/panelist/${id}/status`,
+    resendInvite: (id) => `/api/panelist/${id}/resend-invite`,
+    bulkInvite: "/api/panelist/bulk-invite",
   },
   emailTemplates: {
     list: "/api/email-templates/list",

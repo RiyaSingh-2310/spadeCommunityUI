@@ -17,15 +17,13 @@ import { toastApiError } from "../../../services/toast/apiToast";
 async function fetchAllScreeningQuestions() {
   const limit = MAX_API_LIST_LIMIT;
   const items = [];
-  let page = 1;
-  let totalPages = 1;
 
-  do {
+  for (let page = 1; page <= 50; page += 1) {
     const data = await getRecords({ page, limit });
     items.push(...(data.items ?? []));
-    totalPages = Math.max(1, Number(data.totalPages) || 1);
-    page += 1;
-  } while (page <= totalPages && page <= 50);
+    const totalPages = Math.max(1, Number(data.totalPages) || 1);
+    if (page >= totalPages) break;
+  }
 
   return items;
 }
@@ -51,11 +49,14 @@ function SortProfilingQuestionsPage({ isDarkMode }) {
         const records = await fetchAllScreeningQuestions();
         if (cancelled) return;
 
-        const mapped = records.map((row) => ({
-          id: getScreeningRowId(row),
-          questionTitle: row.questionTitle ?? row.title ?? "",
-          sortOrder: Number(row.sortOrder ?? 0),
-        }));
+        const mapped = records
+          .map((row) => ({
+            id: getScreeningRowId(row),
+            questionTitle: row.questionTitle ?? row.title ?? "",
+            language: row.language ?? "",
+            sortOrder: Number(row.sortOrder ?? 0),
+          }))
+          .sort((left, right) => left.sortOrder - right.sortOrder);
 
         setItems(mapped);
         setInitialItems(mapped);
@@ -90,7 +91,7 @@ function SortProfilingQuestionsPage({ isDarkMode }) {
       const data = await updateScreeningSortOrder(
         items.map((item, index) => ({
           id: item.id,
-          sort_order: index,
+          sort_order: index + 1,
         }))
       );
       const successMessage = data?.message || "Question order updated.";
