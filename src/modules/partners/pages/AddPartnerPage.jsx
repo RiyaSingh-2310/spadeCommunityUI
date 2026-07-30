@@ -7,6 +7,7 @@ import CountrySelect from "../../../components/admin/CountrySelect";
 import PhoneInput from "../../../components/admin/PhoneInput";
 import TableCard from "../../../components/admin/TableCard";
 import { getDefaultPhoneCountryCode } from "../../shared/data/phoneCountries";
+import { sanitizePositiveInteger } from "../../shared/utils/numericInputUtils";
 import { useAdminFormAccess } from "../../permissions/FormAccessContext";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
@@ -14,6 +15,7 @@ import {
   createPartner,
   getRecord,
   mapPartnerToForm,
+  PARTNER_PANEL_SIZE_MAX_DIGITS,
   updatePartner,
 } from "../../../services/partners/partnersApi";
 import {
@@ -23,6 +25,7 @@ import {
   getContactPersonError,
   getEmailError,
   getOptionalUrlError,
+  getOptionalPositiveIntegerError,
   getPhoneError,
   getRequiredError,
   getRichTextError,
@@ -106,6 +109,9 @@ function AddPartnerPage({ isDarkMode }) {
     };
 
     const apiBaseUrlError = getOptionalUrlError(form.apiBaseUrl, "API Base URL");
+    const panelSizeError = getOptionalPositiveIntegerError(form.panelSize, "Panel Size", {
+      maxDigits: PARTNER_PANEL_SIZE_MAX_DIGITS,
+    });
 
     if (!isEdit) {
       return {
@@ -115,7 +121,7 @@ function AddPartnerPage({ isDarkMode }) {
         website: form.website.trim()
           ? getUrlError(form.website, { required: false })
           : "",
-        panelSize: "",
+        panelSize: panelSizeError,
         complete: getOptionalUrlError(form.complete, "Complete URL"),
         terminate: getOptionalUrlError(form.terminate, "Terminate URL"),
         overQuota: getOptionalUrlError(form.overQuota, "Over Quota URL"),
@@ -133,7 +139,7 @@ function AddPartnerPage({ isDarkMode }) {
       website: form.website.trim()
         ? getUrlError(form.website, { required: false })
         : "",
-      panelSize: "",
+      panelSize: panelSizeError,
       complete: getOptionalUrlError(form.complete, "Complete URL"),
       terminate: getOptionalUrlError(form.terminate, "Terminate URL"),
       overQuota: getOptionalUrlError(form.overQuota, "Over Quota URL"),
@@ -290,7 +296,7 @@ function AddPartnerPage({ isDarkMode }) {
               ["Email Address", "email", "Enter Email Address", "email", true],
               ["Contact Person", "contactPerson", "Enter Contact Person", "text", false],
               ["Website URL", "website", "Enter Website URL", "url", false],
-              ["Panel Size", "panelSize", "Enter Panel Size", "numeric", false],
+              ["Panel Size", "panelSize", "Enter Panel Size", "positiveNumeric", false],
               ["Complete URL", "complete", "Enter Complete URL", "text", false],
               ["Terminate URL", "terminate", "Enter Terminate URL", "text", false],
               ["Over Quota URL", "overQuota", "Enter Over Quota URL", "text", false],
@@ -306,12 +312,27 @@ function AddPartnerPage({ isDarkMode }) {
                       <span className="text-[var(--admin-danger-text)]"> *</span>
                     )}
                   </label>
-                  {fieldType === "numeric" ? (
+                  {fieldType === "numeric" || fieldType === "positiveNumeric" ? (
                     <NumericInput
                       className={inputClass}
                       placeholder={placeholder}
                       value={form[key]}
-                      onChange={(v) => setField(key, v)}
+                      onChange={(v) =>
+                        setField(
+                          key,
+                          fieldType === "positiveNumeric"
+                            ? sanitizePositiveInteger(
+                                v,
+                                key === "panelSize"
+                                  ? PARTNER_PANEL_SIZE_MAX_DIGITS
+                                  : undefined
+                              )
+                            : v
+                        )
+                      }
+                      maxLength={
+                        key === "panelSize" ? PARTNER_PANEL_SIZE_MAX_DIGITS : undefined
+                      }
                       onBlur={() => touch(key)}
                       disabled={fieldDisabled(readOnlyField)}
                     />

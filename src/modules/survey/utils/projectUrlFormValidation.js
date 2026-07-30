@@ -24,6 +24,7 @@ export const PROJECT_URL_FORM_FIELDS = [
   "redirectSurveyClose",
   "completeRewardPoints",
   "validateRewardPoints",
+  "terminationRewardPoints",
 ];
 
 export const PROJECT_URL_REDIRECT_FIELDS = [
@@ -88,6 +89,7 @@ const DIRTY_COMPARE_KEYS = [
   "redirectSurveyClose",
   "completeRewardPoints",
   "validateRewardPoints",
+  "terminationRewardPoints",
 ];
 
 export function sanitizeProjectUrlInteger(raw) {
@@ -197,11 +199,16 @@ export function getProjectUrlFormErrors(form) {
     ...redirectErrors,
     completeRewardPoints: getDecimalFieldError(
       form.completeRewardPoints,
-      "Reward Point"
+      "Completion Point"
     ),
     validateRewardPoints: getDecimalFieldError(
       form.validateRewardPoints,
-      "Validate Reward Point",
+      "Validate Point",
+      { required: false }
+    ),
+    terminationRewardPoints: getDecimalFieldError(
+      form.terminationRewardPoints,
+      "Termination Point",
       { required: false }
     ),
   };
@@ -244,6 +251,7 @@ const DECIMAL_FORM_FIELDS = [
   "cpiRate",
   "completeRewardPoints",
   "validateRewardPoints",
+  "terminationRewardPoints",
 ];
 
 /**

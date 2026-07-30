@@ -198,6 +198,7 @@ export function createEmptyProjectUrlForm(projectId = "") {
     preScreenerName: "",
     completeRewardPoints: "",
     validateRewardPoints: "",
+    terminationRewardPoints: "",
     redirectComplete: "",
     redirectTerminate: "",
     redirectOverQuota: "",
@@ -254,6 +255,10 @@ export function mapProjectUrlToForm(record) {
       record.completeRewardPoints != null ? String(record.completeRewardPoints) : "",
     validateRewardPoints:
       record.validateRewardPoints != null ? String(record.validateRewardPoints) : "",
+    terminationRewardPoints:
+      record.terminationRewardPoints != null
+        ? String(record.terminationRewardPoints)
+        : "",
     redirectComplete: record.redirectComplete ?? "",
     redirectTerminate: record.redirectTerminate ?? "",
     redirectOverQuota: record.redirectOverQuota ?? "",
@@ -411,10 +416,6 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
         "validateRewardPoints",
         "Validate_Point",
         "ValidationPoint",
-        "TerminationPoint",
-        "termination_point",
-        "term_point",
-        "termPoint",
       ]) ??
         pickUrlInfoField(projectRecord, [
           "ValidatePoint",
@@ -422,8 +423,20 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
           "validateRewardPoints",
           "Validate_Point",
           "ValidationPoint",
+        ])
+    ),
+    terminationRewardPoints: toFormNumberValue(
+      pickUrlInfoField(urlInfo, [
+        "TerminationPoint",
+        "termination_point",
+        "terminationRewardPoints",
+        "term_point",
+        "termPoint",
+      ]) ??
+        pickUrlInfoField(projectRecord, [
           "TerminationPoint",
           "termination_point",
+          "terminationRewardPoints",
           "term_point",
           "termPoint",
         ])
@@ -629,6 +642,10 @@ function buildProjectUrlUpdatePayload(form) {
       form.completeRewardPoints === "" ? null : Number(form.completeRewardPoints),
     validateRewardPoints:
       form.validateRewardPoints === "" ? null : Number(form.validateRewardPoints),
+    terminationRewardPoints:
+      form.terminationRewardPoints === ""
+        ? null
+        : Number(form.terminationRewardPoints),
     redirectComplete: String(form.redirectComplete ?? "").trim(),
     redirectTerminate: String(form.redirectTerminate ?? "").trim(),
     redirectOverQuota: String(form.redirectOverQuota ?? "").trim(),
@@ -671,6 +688,7 @@ export function buildCreateProjectUrlApiPayload(form = {}) {
     SurveyCloseURL: String(form.redirectSurveyClose ?? "").trim(),
     CompletionPoint: toApiNumber(form.completeRewardPoints),
     ValidatePoint: toApiNumber(form.validateRewardPoints),
+    TerminationPoint: toApiNumber(form.terminationRewardPoints),
   });
 }
 
@@ -910,13 +928,13 @@ async function fetchAllQuestionnaireGroupItems() {
   let page = 1;
   let totalPages = 1;
 
-  do {
+  while (page <= totalPages && page <= 50) {
     const response = await getQuestionnaireGroups({ page, limit });
     const pageItems = Array.isArray(response?.items) ? response.items : [];
     items.push(...pageItems);
     totalPages = Math.max(1, Number(response?.totalPages) || 1);
     page += 1;
-  } while (page <= totalPages && page <= 50);
+  }
 
   return items;
 }

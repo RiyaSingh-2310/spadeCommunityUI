@@ -17,6 +17,8 @@ import { ApiError } from "../api/ApiError";
 import { formatLocaleDateTime } from "../../modules/shared/utils/dateTime";
 import { encryptValue } from "../../modules/shared/utils/encryption";
 
+export const PARTNER_PANEL_SIZE_MAX_DIGITS = 9;
+
 function isApiSuccess(data) {
   if (!data || typeof data !== "object") return false;
   const explicit = data.success;
@@ -169,13 +171,17 @@ export function mapPartnerToForm(partner) {
  */
 function buildPartnerSurveyPayload(form) {
   const panelSize = Number.parseInt(String(form.panelSize ?? "").trim(), 10);
+  const panelSizeMax = 10 ** PARTNER_PANEL_SIZE_MAX_DIGITS - 1;
 
   return {
     country: form.country.trim(),
     contact_person: form.contactPerson.trim(),
     contact_no: resolvePartnerContactNo(form.contactNumber, form.country),
     website_url: form.website.trim(),
-    panel_size: Number.isFinite(panelSize) ? panelSize : 0,
+    panel_size:
+      Number.isFinite(panelSize) && panelSize > 0
+        ? Math.min(panelSize, panelSizeMax)
+        : 0,
     complete: String(form.complete ?? "").trim(),
     terminate: String(form.terminate ?? "").trim(),
     over_quota: String(form.overQuota ?? "").trim(),
@@ -202,6 +208,7 @@ function buildPartnerApiFields(form) {
 
 export function buildCreatePartnerPayload(form) {
   const panelSize = Number.parseInt(String(form.panelSize ?? "").trim(), 10);
+  const panelSizeMax = 10 ** PARTNER_PANEL_SIZE_MAX_DIGITS - 1;
 
   return {
     name: form.name.trim(),
@@ -210,7 +217,10 @@ export function buildCreatePartnerPayload(form) {
     country: form.country.trim(),
     contact_person: form.contactPerson.trim(),
     website_url: form.website.trim(),
-    panel_size: Number.isFinite(panelSize) ? panelSize : 0,
+    panel_size:
+      Number.isFinite(panelSize) && panelSize > 0
+        ? Math.min(panelSize, panelSizeMax)
+        : 0,
     complete: String(form.complete ?? "").trim(),
     terminate: String(form.terminate ?? "").trim(),
     over_quota: String(form.overQuota ?? "").trim(),
@@ -321,6 +331,12 @@ const PARTNER_URL_FIELD_CONFIG = [
     label: "Complete URL",
     rowKey: "completeUrl",
     apiKeys: ["complete_val", "complete"],
+    isUrl: true,
+  },
+  {
+    label: "Terminate URL",
+    rowKey: "terminateUrl",
+    apiKeys: ["terminate_val", "terminate"],
     isUrl: true,
   },
   {

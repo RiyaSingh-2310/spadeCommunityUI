@@ -156,6 +156,26 @@ export function getRequiredError(value, label) {
   return "";
 }
 
+export function getOptionalPositiveIntegerError(
+  value,
+  label,
+  { maxDigits } = {}
+) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) return "";
+  if (!/^\d+$/.test(trimmed)) {
+    return `${label} must be a positive whole number`;
+  }
+  if (maxDigits != null && trimmed.length > maxDigits) {
+    return `${label} must be at most ${maxDigits} digits`;
+  }
+  const num = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(num) || num <= 0) {
+    return `${label} must be greater than 0`;
+  }
+  return "";
+}
+
 export function getEmailError(
   value,
   { required = true, label = "Email Address", maxLength = EMAIL_FIELD_MAX_LENGTH } = {}

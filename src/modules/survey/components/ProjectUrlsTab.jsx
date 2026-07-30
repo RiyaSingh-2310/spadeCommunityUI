@@ -507,6 +507,7 @@ function ProjectUrlsTab({
         sampleSize: trimOnBlur(form.sampleSize),
         completeRewardPoints: trimOnBlur(form.completeRewardPoints),
         validateRewardPoints: trimOnBlur(form.validateRewardPoints),
+        terminationRewardPoints: trimOnBlur(form.terminationRewardPoints),
         id: resolvedUrlId,
         projectId: form.projectId || String(projectFk ?? ""),
         surveyGroupId: form.preScreenerId || form.surveyGroupId,
@@ -966,9 +967,9 @@ function ProjectUrlsTab({
       <SectionDivider />
 
       <TableCard title="Reward Information" isDarkMode={isDarkMode}>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <FormField
-            label="Reward Point"
+            label="Completion Point"
             required
             error={
               showError("completeRewardPoints") ? errors.completeRewardPoints : ""
@@ -981,7 +982,7 @@ function ProjectUrlsTab({
                 setField("completeRewardPoints", sanitizeProjectUrlDecimal(value))
               }
               onBlur={() => touch("completeRewardPoints")}
-              placeholder="e.g. 2.5"
+              placeholder="e.g. 30"
               decimalPlaces={PROJECT_URL_CPI_MAX_DECIMALS}
               disabled={!canWrite}
               aria-invalid={Boolean(
@@ -990,7 +991,34 @@ function ProjectUrlsTab({
             />
           </FormField>
           <FormField
-            label="Validate Reward Points"
+            label="Termination Point"
+            error={
+              showError("terminationRewardPoints")
+                ? errors.terminationRewardPoints
+                : ""
+            }
+          >
+            <DecimalInput
+              className={inputClass}
+              value={form.terminationRewardPoints}
+              onChange={(value) =>
+                setField(
+                  "terminationRewardPoints",
+                  sanitizeProjectUrlDecimal(value)
+                )
+              }
+              onBlur={() => touch("terminationRewardPoints")}
+              placeholder="e.g. 10"
+              decimalPlaces={PROJECT_URL_CPI_MAX_DECIMALS}
+              disabled={!canWrite}
+              aria-invalid={Boolean(
+                showError("terminationRewardPoints") &&
+                  errors.terminationRewardPoints
+              )}
+            />
+          </FormField>
+          <FormField
+            label="Validate Point"
             error={
               showError("validateRewardPoints") ? errors.validateRewardPoints : ""
             }
@@ -1002,7 +1030,7 @@ function ProjectUrlsTab({
                 setField("validateRewardPoints", sanitizeProjectUrlDecimal(value))
               }
               onBlur={() => touch("validateRewardPoints")}
-              placeholder="e.g. 0.5"
+              placeholder="e.g. 30"
               decimalPlaces={PROJECT_URL_CPI_MAX_DECIMALS}
               disabled={!canWrite}
               aria-invalid={Boolean(

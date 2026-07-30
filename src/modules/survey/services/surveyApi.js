@@ -357,8 +357,9 @@ export function buildProjectUrlApiFields(form = {}) {
     unique_ip: Boolean(form.uniqueIp),
     pre_screen: Boolean(form.preScreen),
     language: language.toLowerCase(),
-    termination_point: toNullableNumber(form.validateRewardPoints),
+    termination_point: toNullableNumber(form.terminationRewardPoints),
     completion_point: toNullableNumber(form.completeRewardPoints),
+    validate_point: toNullableNumber(form.validateRewardPoints),
   };
 }
 
