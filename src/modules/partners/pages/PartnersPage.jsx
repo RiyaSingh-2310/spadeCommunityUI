@@ -23,6 +23,7 @@ const LIST_COLUMNS = [
   "Email Address",
   "Country",
   "Contact Number",
+  "Panel Size",
   "Website URL",
   "Created Date",
   "Status",

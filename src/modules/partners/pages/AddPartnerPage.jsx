@@ -290,7 +290,7 @@ function AddPartnerPage({ isDarkMode }) {
               ["Email Address", "email", "Enter Email Address", "email", true],
               ["Contact Person", "contactPerson", "Enter Contact Person", "text", false],
               ["Website URL", "website", "Enter Website URL", "url", false],
-              ...(isEdit ? [["Panel Size", "panelSize", "Enter Panel Size", "text", false]] : []),
+              ["Panel Size", "panelSize", "Enter Panel Size", "numeric", false],
               ["Complete URL", "complete", "Enter Complete URL", "text", false],
               ["Terminate URL", "terminate", "Enter Terminate URL", "text", false],
               ["Over Quota URL", "overQuota", "Enter Over Quota URL", "text", false],

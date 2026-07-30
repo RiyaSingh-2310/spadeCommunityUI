@@ -46,7 +46,14 @@ import {
   secondaryBtnClass,
 } from "./surveyDetailsShared";
 
-const PROJECT_URL_LIST_COLUMNS = ["ID", "Description", "Status", "Action"];
+const PROJECT_URL_LIST_COLUMNS = [
+  "ID",
+  "Description",
+  "Country",
+  "Language",
+  "Status",
+  "Action",
+];
 
 function InteractiveCheckbox({ label, checked, onChange, disabled }) {
   return (
@@ -82,10 +89,14 @@ function normalizeUrlRecord(row, projectFk) {
 function toListRow(record) {
   const id = record?.id != null && record.id !== "" ? String(record.id) : "";
   const description = String(record?.discussion ?? "").trim() || "—";
+  const country = String(record?.country ?? "").trim() || "—";
+  const language = String(record?.language ?? "").trim() || "—";
   const status = String(record?.status ?? "").trim() || "Open";
   return {
     id,
     description,
+    country,
+    language,
     status,
     record,
   };
@@ -93,6 +104,42 @@ function toListRow(record) {
 
 function trimOnBlur(value) {
   return String(value ?? "").trim();
+}
+
+function getListRouteFormState(projectFk) {
+  return {
+    selectedUrlId: "",
+    form: createEmptyProjectUrlForm(projectFk),
+    initialSnapshot: null,
+    pendingDelete: null,
+  };
+}
+
+function getAddRouteFormState(projectFk) {
+  const nextForm = normalizeProjectUrlFormForState(
+    createEmptyProjectUrlForm(projectFk)
+  );
+  return {
+    selectedUrlId: "",
+    form: nextForm,
+    initialSnapshot: cloneProjectUrlForm(nextForm),
+    pendingDelete: null,
+  };
+}
+
+function getRouteFormState(projectFk, urlView) {
+  if (urlView === PROJECT_URL_VIEW_IDS.ADD) {
+    return getAddRouteFormState(projectFk);
+  }
+  if (urlView === PROJECT_URL_VIEW_IDS.LIST) {
+    return getListRouteFormState(projectFk);
+  }
+  return {
+    selectedUrlId: "",
+    form: createEmptyProjectUrlForm(projectFk),
+    initialSnapshot: null,
+    pendingDelete: null,
+  };
 }
 
 function ProjectUrlsTab({
@@ -119,21 +166,30 @@ function ProjectUrlsTab({
       : "list";
 
   const [urlRecords, setUrlRecords] = useState([]);
-  const [form, setForm] = useState(() => createEmptyProjectUrlForm(projectFk));
-  const [initialSnapshot, setInitialSnapshot] = useState(null);
-  const [selectedUrlId, setSelectedUrlId] = useState("");
+  const [form, setForm] = useState(
+    () => getRouteFormState(projectFk, urlView).form
+  );
+  const [initialSnapshot, setInitialSnapshot] = useState(
+    () => getRouteFormState(projectFk, urlView).initialSnapshot
+  );
+  const [selectedUrlId, setSelectedUrlId] = useState(
+    () => getRouteFormState(projectFk, urlView).selectedUrlId
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [preScreenerOptions, setPreScreenerOptions] = useState([]);
   const [isLoadingPreScreeners, setIsLoadingPreScreeners] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(
+    () => getRouteFormState(projectFk, urlView).pendingDelete
+  );
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isLoadingEditForm, setIsLoadingEditForm] = useState(false);
-  const loadedEditKeyRef = useRef("");
-  const editFormReadyRef = useRef(false);
+  const [routeState, setRouteState] = useState({ projectFk, urlView });
+  const [loadedEditKey, setLoadedEditKey] = useState("");
+  const [editFormReady, setEditFormReady] = useState(false);
   const navigateToListRef = useRef(() => {});
 
   const isEdit = urlView === PROJECT_URL_VIEW_IDS.EDIT;
+  const isLoadingEditForm = isEdit && Boolean(urlId) && !editFormReady;
 
   const errors = useMemo(() => getProjectUrlFormErrors(form), [form]);
   const { showError, touch, validateSubmit, resetValidation, isValid } =
@@ -153,59 +209,39 @@ function ProjectUrlsTab({
     });
   }, [onViewChange]);
 
-  navigateToListRef.current = navigateToList;
-
-  const resetFormState = useCallback(() => {
-    setSelectedUrlId("");
-    setForm(createEmptyProjectUrlForm(projectFk));
-    setInitialSnapshot(null);
-    setPendingDelete(null);
-    loadedEditKeyRef.current = "";
-    editFormReadyRef.current = false;
-    resetValidation();
-  }, [projectFk, resetValidation]);
-
-  const initAddForm = useCallback(() => {
-    const nextForm = normalizeProjectUrlFormForState(
-      createEmptyProjectUrlForm(projectFk)
-    );
-    setSelectedUrlId("");
-    setForm(nextForm);
-    setInitialSnapshot(cloneProjectUrlForm(nextForm));
-    resetValidation();
-  }, [projectFk, resetValidation]);
-
-  // Reset local form state when switching projects.
   useEffect(() => {
-    if (urlView === PROJECT_URL_VIEW_IDS.ADD) {
-      initAddForm();
-      return;
-    }
-    if (urlView === PROJECT_URL_VIEW_IDS.LIST) {
-      resetFormState();
-    }
-  }, [projectFk]); // eslint-disable-line react-hooks/exhaustive-deps -- only on project switch
+    navigateToListRef.current = navigateToList;
+  }, [navigateToList]);
 
-  // Initialize add/list form when the routed view changes.
+  if (routeState.projectFk !== projectFk || routeState.urlView !== urlView) {
+    setRouteState({ projectFk, urlView });
+
+    if (
+      urlView === PROJECT_URL_VIEW_IDS.ADD ||
+      urlView === PROJECT_URL_VIEW_IDS.LIST
+    ) {
+      const nextFormState = getRouteFormState(projectFk, urlView);
+      setSelectedUrlId(nextFormState.selectedUrlId);
+      setForm(nextFormState.form);
+      setInitialSnapshot(nextFormState.initialSnapshot);
+      setPendingDelete(nextFormState.pendingDelete);
+      setLoadedEditKey("");
+      setEditFormReady(false);
+      resetValidation();
+    } else {
+      setLoadedEditKey("");
+      setEditFormReady(false);
+    }
+  }
+
   useEffect(() => {
     if (!canWrite && urlView === PROJECT_URL_VIEW_IDS.ADD) {
       navigateToList();
-      return;
     }
-    if (urlView === PROJECT_URL_VIEW_IDS.ADD) {
-      initAddForm();
-      return;
-    }
-    if (urlView === PROJECT_URL_VIEW_IDS.LIST) {
-      resetFormState();
-    }
-  }, [urlView, initAddForm, resetFormState, canWrite, navigateToList]);
+  }, [canWrite, urlView, navigateToList]);
 
   useEffect(() => {
     if (urlView !== PROJECT_URL_VIEW_IDS.EDIT) {
-      loadedEditKeyRef.current = "";
-      editFormReadyRef.current = false;
-      setIsLoadingEditForm(false);
       return undefined;
     }
     if (!urlId) {
@@ -214,12 +250,11 @@ function ProjectUrlsTab({
     }
 
     const editKey = `${projectFk}:${urlId}`;
-    if (loadedEditKeyRef.current === editKey && editFormReadyRef.current) {
+    if (loadedEditKey === editKey && editFormReady) {
       return undefined;
     }
 
     let cancelled = false;
-    setIsLoadingEditForm(true);
 
     const loadEditForm = async () => {
       try {
@@ -236,16 +271,14 @@ function ProjectUrlsTab({
         setSelectedUrlId(normalized.id ? String(normalized.id) : String(urlId));
         setForm(normalized);
         setInitialSnapshot(cloneProjectUrlForm(normalized));
-        loadedEditKeyRef.current = editKey;
-        editFormReadyRef.current = true;
+        setLoadedEditKey(editKey);
+        setEditFormReady(true);
         resetValidation();
       } catch (error) {
         if (!cancelled) {
           toastApiError(error);
           navigateToListRef.current();
         }
-      } finally {
-        if (!cancelled) setIsLoadingEditForm(false);
       }
     };
 
