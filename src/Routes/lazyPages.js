@@ -174,6 +174,11 @@ export const PublicQuestionnairePage = lazy(
   () => import("../modules/public-questionnaire/pages/PublicQuestionnairePage")
 );
 
+/** Public partner survey start page (no admin layout) */
+export const DoSurveyStartPage = lazy(
+  () => import("../modules/public-survey/pages/DoSurveyStartPage")
+);
+
 /** Survey Research Portal (demo) */
 export const SurveyResearchPortalLayout = lazy(
   () => import("../modules/survey-research/layout/SurveyResearchPortalLayout")

@@ -390,6 +390,8 @@ export function buildUpdateProjectApiPayload(form, selectOptions = {}, urlForm =
     Sales_Manager: resolveOptionLabel(salesManagerOptions, form.salesManager),
     RFQ: salesProjectId,
     Project_Description: String(form.description ?? "").trim(),
+    Project_Link_Type: form.projectLinkType || "Single Link",
+    link_type: formLinkTypeToApi(form.projectLinkType),
     Notes: String(form.notes ?? "").trim(),
     Status: formValueToApiStatus(form.status),
   };
@@ -415,6 +417,8 @@ export function buildUpdateProjectPayloadFromDetails(project, urlForm) {
     Sales_Manager: String(project?.salesManager ?? "").trim(),
     RFQ: String(project?.salesProject ?? project?.rfq ?? "").trim(),
     Project_Description: String(project?.description ?? "").trim(),
+    Project_Link_Type: project?.projectLinkType || "Single Link",
+    link_type: formLinkTypeToApi(project?.projectLinkType),
     Notes: String(project?.note ?? "").trim(),
     Status: formValueToApiStatus(project?.projectStatus),
     ...buildProjectUrlApiFields(urlForm),
@@ -453,6 +457,7 @@ export function buildCreateProjectPayload(form, selectOptions = {}) {
     rfq_id: salesProjectId,
     Project_Description: String(form.description ?? "").trim(),
     Project_Link_Type: form.projectLinkType || "Single Link",
+    link_type: formLinkTypeToApi(form.projectLinkType),
     Notes: String(form.notes ?? "").trim(),
     Status: formValueToApiStatus(form.status),
   };

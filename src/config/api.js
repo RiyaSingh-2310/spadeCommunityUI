@@ -151,6 +151,11 @@ export const API_ROUTES = {
     update: (id) => `/api/supplier-mapping/${id}`,
     updateStatus: (id) => `/api/supplier-mapping/status/${id}`,
   },
+  doSurvey: {
+    byToken: (token) => `/api/dosurvey/${encodeURIComponent(String(token ?? "").trim())}`,
+    start: (token) =>
+      `/api/dosurvey/${encodeURIComponent(String(token ?? "").trim())}/start`,
+  },
   groupSurvey: {
     list: "/api/survey/groupproject/list",
     create: "/api/survey/groupproject/add",

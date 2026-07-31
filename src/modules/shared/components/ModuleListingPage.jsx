@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ExternalLink, Minus, Plus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DebouncedSearchInput from "../../../components/admin/DebouncedSearchInput";
@@ -19,7 +19,6 @@ import {
 } from "../../permissions/moduleListingPermissions";
 import ViewActionButton from "../../../components/admin/ViewActionButton";
 import TableCard from "../../../components/admin/TableCard";
-import AdminSummaryCards from "../../../components/admin/AdminSummaryCards";
 import {
   getColumnKey,
   getRowValue,
@@ -29,7 +28,6 @@ import {
   isIdColumn,
   isCheckboxColumn,
   isDescriptionColumn,
-  isLinkModeColumn,
   isProfileImageColumn,
   isSnoColumn,
   isStatusColumn,
@@ -78,8 +76,6 @@ function ModuleListingPage({
   editPath,
   onSearch,
   onStatusToggle,
-  /** When set, Link Mode column renders a test/live toggle. */
-  onLinkModeToggle,
   /** When set, status column renders as a themed dropdown (e.g. Approved / Rejected). */
   statusDropdownOptions = null,
   onStatusChange,
@@ -375,12 +371,6 @@ function ModuleListingPage({
     paginationTotalItems,
     usesServerListing,
   ]);
-
-  useEffect(() => {
-    if (usesServerListing) return;
-    const pages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
-    setInternalCurrentPage((prev) => Math.min(prev, pages));
-  }, [filtered.length, pageSize, debouncedQuery, usesServerListing]);
 
   const hasProfileImageColumn = safeColumns.some(isProfileImageColumn);
 
@@ -880,30 +870,6 @@ function ModuleListingPage({
                                     })
                                   );
                                 }
-                              : undefined
-                          }
-                        />
-                      </td>
-                    );
-                  }
-                  if (isLinkModeColumn(col)) {
-                    const linkMode = String(row.linkMode ?? "test").trim().toLowerCase();
-                    const isLive = linkMode === "live";
-                    const isToggling = Boolean(row.linkModeToggling);
-                    return (
-                      <td
-                        key={col}
-                        className={`admin-table-status-col px-3 py-3 align-middle ${statusColumnClass}`}
-                      >
-                        <StatusToggle
-                          checked={isLive}
-                          labelOn="Live"
-                          labelOff="Test"
-                          readOnly={!allowWrite || !onLinkModeToggle || isToggling}
-                          compact={compactStatusColumn}
-                          onChange={
-                            allowWrite && onLinkModeToggle && !isToggling
-                              ? () => onLinkModeToggle(row, globalIdx)
                               : undefined
                           }
                         />

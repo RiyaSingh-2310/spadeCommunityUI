@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, Loader2, Upload, X } from "lucide-react";
 import FormField from "../../../components/admin/FormField";
 import TableCard from "../../../components/admin/TableCard";
-import { useModulePermission } from "../../permissions/useModulePermission";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { ApiError } from "../../../services/api/ApiError";
 import {
@@ -26,22 +25,6 @@ import {
 
 const SELECTED_FILES_PREVIEW_LIMIT = 3;
 
-function resolveProjectUrlId(project, overrideId = "") {
-  if (overrideId != null && String(overrideId).trim() !== "") {
-    return String(overrideId).trim();
-  }
-  const urlInfo = Array.isArray(project?.urlInfo) ? project.urlInfo : [];
-  const primary = urlInfo[0];
-  if (!primary || typeof primary !== "object") return "";
-  const value =
-    primary.url_id ??
-    primary.Url_Id ??
-    primary.project_url_id ??
-    primary.id ??
-    "";
-  return value != null && value !== "" ? String(value) : "";
-}
-
 function isCsvFile(file) {
   if (!file) return false;
   const name = String(file.name ?? "").toLowerCase();
@@ -56,16 +39,58 @@ function getFileKey(file) {
   return `${file.name}::${file.size}::${file.lastModified}`;
 }
 
-function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDarkMode }) {
-  const { canWrite } = useModulePermission("survey");
+function renderMultiUrlCell(row, col) {
+  switch (col) {
+    case "ID":
+      return row.id || "—";
+    case "Project ID":
+      return row.projectId || "—";
+    case "Project URL ID":
+      return row.projectUrlId || "—";
+    case "Live Link":
+      return row.liveLink ? (
+        <a
+          href={row.liveLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="break-all text-[var(--admin-success-text)] hover:underline"
+        >
+          {row.liveLink}
+        </a>
+      ) : (
+        "—"
+      );
+    case "Vendor URL":
+      return row.vendorUrl || "—";
+    case "Vendor ID":
+      return row.vendorId || "—";
+    case "User ID":
+      return row.userId || "—";
+    case "User Type":
+      return row.userType || "—";
+    case "Status":
+      return <StatusBadge status={row.status || "Active"} />;
+    default:
+      return "—";
+  }
+}
+
+function ProjectMultiUrlCsvUploadSection({
+  projectId,
+  projectUrlId = "",
+  isDarkMode,
+  canWrite = false,
+  showContextFields = true,
+  showRecordsTable = true,
+  title = "Upload Multi URLs",
+}) {
   const inputClass = getAdminInputClass();
   const fileInputRef = useRef(null);
-
-  const projectId = project?.recordId ?? project?.id ?? "";
-  const projectUrlId = resolveProjectUrlId(project, projectUrlIdProp);
+  const resolvedProjectId = String(projectId ?? "").trim();
+  const resolvedProjectUrlId = String(projectUrlId ?? "").trim();
 
   const [rows, setRows] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingRows, setIsLoadingRows] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -80,23 +105,28 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
   const hiddenFileCount = Math.max(0, selectedFiles.length - SELECTED_FILES_PREVIEW_LIMIT);
 
   const refreshRows = async () => {
-    const response = await listProjectMultiUrls(projectId, projectUrlId);
+    if (!resolvedProjectId) {
+      setRows([]);
+      return;
+    }
+    const response = await listProjectMultiUrls(resolvedProjectId, resolvedProjectUrlId);
     setRows(Array.isArray(response?.data) ? response.data : []);
   };
 
+  const shouldLoadRows = showRecordsTable && Boolean(resolvedProjectId);
+
   useEffect(() => {
+    if (!shouldLoadRows) return undefined;
+
     let cancelled = false;
 
     const load = async () => {
-      if (!projectId) {
-        setRows([]);
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
+      setIsLoadingRows(true);
       try {
-        const response = await listProjectMultiUrls(projectId, projectUrlId);
+        const response = await listProjectMultiUrls(
+          resolvedProjectId,
+          resolvedProjectUrlId
+        );
         if (cancelled) return;
         setRows(Array.isArray(response?.data) ? response.data : []);
       } catch (error) {
@@ -105,7 +135,7 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
           setRows([]);
         }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) setIsLoadingRows(false);
       }
     };
 
@@ -113,7 +143,7 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
     return () => {
       cancelled = true;
     };
-  }, [projectId, projectUrlId]);
+  }, [shouldLoadRows, resolvedProjectId, resolvedProjectUrlId]);
 
   const clearFileInput = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -164,7 +194,7 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
 
   const handleUpload = async (event) => {
     event.preventDefault();
-    if (!canWrite || selectedFiles.length === 0 || !projectUrlId) return;
+    if (!canWrite || selectedFiles.length === 0 || !resolvedProjectUrlId) return;
 
     setIsUploading(true);
     const successes = [];
@@ -174,8 +204,8 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
       for (const file of selectedFiles) {
         try {
           const data = await uploadProjectMultiUrlCsv({
-            projectId,
-            projectUrlId,
+            projectId: resolvedProjectId,
+            projectUrlId: resolvedProjectUrlId,
             file,
           });
           successes.push({
@@ -193,7 +223,7 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
         }
       }
 
-      if (successes.length > 0) {
+      if (successes.length > 0 && showRecordsTable) {
         try {
           await refreshRows();
         } catch (error) {
@@ -251,62 +281,33 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
     }
   };
 
-  const renderCell = (row, col) => {
-    switch (col) {
-      case "ID":
-        return row.id || "—";
-      case "Project ID":
-        return row.projectId || "—";
-      case "Project URL ID":
-        return row.projectUrlId || "—";
-      case "Live Link":
-        return row.liveLink ? (
-          <a
-            href={row.liveLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="break-all text-[var(--admin-success-text)] hover:underline"
-          >
-            {row.liveLink}
-          </a>
-        ) : (
-          "—"
-        );
-      case "Vendor URL":
-        return row.vendorUrl || "—";
-      case "Vendor ID":
-        return row.vendorId || "—";
-      case "User ID":
-        return row.userId || "—";
-      case "User Type":
-        return row.userType || "—";
-      case "Status":
-        return <StatusBadge status={row.status || "Active"} />;
-      default:
-        return "—";
-    }
-  };
-
   return (
     <div className="space-y-0">
-      <TableCard title="Upload Multi URLs" isDarkMode={isDarkMode}>
+      <TableCard title={title} isDarkMode={isDarkMode}>
         <form className="space-y-4" onSubmit={handleUpload} noValidate>
-          <div className="grid gap-4 md:grid-cols-2">
-            <FormField label="Project ID">
-              <input className={inputClass} value={projectId || "—"} readOnly disabled />
-            </FormField>
-            <FormField label="Project URL ID">
-              <input
-                className={inputClass}
-                value={projectUrlId || "—"}
-                readOnly
-                disabled
-              />
-            </FormField>
-          </div>
+          {showContextFields ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField label="Project ID">
+                <input
+                  className={inputClass}
+                  value={resolvedProjectId || "—"}
+                  readOnly
+                  disabled
+                />
+              </FormField>
+              <FormField label="Project URL ID">
+                <input
+                  className={inputClass}
+                  value={resolvedProjectUrlId || "—"}
+                  readOnly
+                  disabled
+                />
+              </FormField>
+            </div>
+          ) : null}
 
           <div className="grid gap-4 md:grid-cols-[1fr_auto_auto_auto] md:items-end">
-            <FormField label="Upload URL">
+            <FormField label="Upload CSV">
               <input
                 className={inputClass}
                 value={selectedSummary}
@@ -348,7 +349,10 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
             <button
               type="submit"
               disabled={
-                !canWrite || selectedFiles.length === 0 || isUploading || !projectUrlId
+                !canWrite ||
+                selectedFiles.length === 0 ||
+                isUploading ||
+                !resolvedProjectUrlId
               }
               className={`${primaryBtnClass} inline-flex min-w-[120px] items-center justify-center gap-2`}
             >
@@ -410,7 +414,7 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
             </div>
           ) : null}
 
-          {!projectUrlId ? (
+          {!resolvedProjectUrlId ? (
             <p className="admin-text-muted text-sm">
               Save the Project URL first to obtain a Project URL ID before uploading.
             </p>
@@ -418,28 +422,31 @@ function ProjectMultiUrlTab({ project, projectUrlId: projectUrlIdProp = "", isDa
         </form>
       </TableCard>
 
-      <SectionDivider />
-
-      {isLoading ? (
-        <div className="admin-text flex items-center gap-2 text-sm">
-          <Loader2 size={16} className="animate-spin" />
-          Loading multi URL records...
-        </div>
-      ) : rows.length === 0 ? (
-        <TableCard title="Project Multi URL Records" isDarkMode={isDarkMode}>
-          <p className="admin-text-muted text-sm">No multi URL records yet.</p>
-        </TableCard>
-      ) : (
-        <SurveyDataTable
-          title="Project Multi URL Records"
-          columns={PROJECT_MULTI_URL_COLUMNS}
-          rows={rows}
-          renderCell={renderCell}
-          isDarkMode={isDarkMode}
-        />
-      )}
+      {showRecordsTable && shouldLoadRows ? (
+        <>
+          <SectionDivider />
+          {isLoadingRows ? (
+            <div className="admin-text flex items-center gap-2 text-sm">
+              <Loader2 size={16} className="animate-spin" />
+              Loading multi URL records...
+            </div>
+          ) : rows.length === 0 ? (
+            <TableCard title="Project Multi URL Records" isDarkMode={isDarkMode}>
+              <p className="admin-text-muted text-sm">No multi URL records yet.</p>
+            </TableCard>
+          ) : (
+            <SurveyDataTable
+              title="Project Multi URL Records"
+              columns={PROJECT_MULTI_URL_COLUMNS}
+              rows={rows}
+              renderCell={renderMultiUrlCell}
+              isDarkMode={isDarkMode}
+            />
+          )}
+        </>
+      ) : null}
     </div>
   );
 }
 
-export default ProjectMultiUrlTab;
+export default ProjectMultiUrlCsvUploadSection;

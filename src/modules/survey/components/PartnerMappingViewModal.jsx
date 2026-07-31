@@ -4,6 +4,7 @@ import { getAdminCancelButtonClass } from "../../shared/utils/formStyles";
 import {
   getSupplierMappingById,
   mapSupplierMappingToDetail,
+  appendIsTestToPartnerUrl,
 } from "../services/supplierMappingApi";
 import { DetailField, DetailGrid, ReadOnlyUrl } from "./surveyDetailsShared";
 import { toastApiError } from "../../../services/toast/apiToast";
@@ -13,6 +14,7 @@ function PartnerMappingViewModal({
   onClose,
   mappingId,
   partnerName,
+  isMultiLink = false,
 }) {
   const [detail, setDetail] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -91,6 +93,12 @@ function PartnerMappingViewModal({
               />
               <DetailField label="Partner Quota" value={detail.quota} />
               <DetailField label="CPI" value={detail.cpi} />
+              {isMultiLink ? (
+                <DetailField
+                  label="Links To Assign"
+                  value={detail.linksToAssign ?? "—"}
+                />
+              ) : null}
               <DetailField label="Complete" value={detail.complete} />
               <DetailField label="Terminate" value={detail.terminate} />
               <DetailField label="Over Quota" value={detail.overQuota} />
@@ -102,7 +110,11 @@ function PartnerMappingViewModal({
               />
               <DetailField
                 label="Partner URL"
-                value={<ReadOnlyUrl url={detail.partnerUrl} />}
+                value={
+                  <ReadOnlyUrl
+                    url={appendIsTestToPartnerUrl(detail.partnerUrl, detail.isTest)}
+                  />
+                }
               />
             </DetailGrid>
           )}

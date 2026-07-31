@@ -10,7 +10,6 @@ import {
   updateSurveyStatus,
 } from "../services/surveyApi";
 import ProjectDetailsTab from "../components/ProjectDetailsTab";
-import ProjectMultiUrlTab from "../components/ProjectMultiUrlTab";
 // import ProjectReportTab from "../components/ProjectReportTab";
 import ProjectUrlsTab from "../components/ProjectUrlsTab";
 import PartnerMappingTab from "../components/PartnerMappingTab";
@@ -32,12 +31,6 @@ import {
   SURVEY_DETAIL_TAB_IDS,
 } from "../utils/surveyDetailsNavigation";
 
-function isMultiLinkProject(project) {
-  return String(project?.projectLinkType ?? "")
-    .toLowerCase()
-    .includes("multi");
-}
-
 function hasSavedProjectUrl(project) {
   const urls = Array.isArray(project?.urlInfo) ? project.urlInfo : [];
   return urls.length > 0;
@@ -58,7 +51,6 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
   const [projectStatus, setProjectStatus] = useState("");
   const [draftStatus, setDraftStatus] = useState("");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [projectUrlSaved, setProjectUrlSaved] = useState(false);
   const [savedProjectUrlId, setSavedProjectUrlId] = useState("");
 
   const parsedSearch = useMemo(
@@ -66,18 +58,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
     [searchParams]
   );
 
-  const isMultiLink = isMultiLinkProject(project);
-  const multiUrlEnabled =
-    Boolean(projectUrlSaved) || hasSavedProjectUrl(project);
-
-  const visibleTabs = useMemo(
-    () =>
-      getSurveyDetailTabs({
-        isMultiLink,
-        multiUrlEnabled,
-      }),
-    [isMultiLink, multiUrlEnabled]
-  );
+  const visibleTabs = useMemo(() => getSurveyDetailTabs(), []);
 
   const activeTab = useMemo(() => {
     const requested = parsedSearch.tab;
@@ -158,7 +139,6 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         setProjectStatus(mapped.projectStatus);
         setDraftStatus(mapped.projectStatus);
         if (hasSavedProjectUrl(mapped)) {
-          setProjectUrlSaved(true);
           const urlInfo = Array.isArray(mapped.urlInfo) ? mapped.urlInfo : [];
           const nextId =
             urlInfo[0]?.url_id ??
@@ -328,7 +308,6 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
   };
 
   const handleProjectUrlSaved = async (payload = {}) => {
-    setProjectUrlSaved(true);
     const mapped = await loadSurvey({ silent: true });
     const urlInfo = Array.isArray(mapped?.urlInfo) ? mapped.urlInfo : [];
     const fromReload =
@@ -429,18 +408,11 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
             key={`partner-mapping-${id}`}
             projectId={project?.recordId ?? id}
             projectUrlId={savedProjectUrlId}
+            projectLinkType={project?.projectLinkType}
             isDarkMode={isDarkMode}
             readOnly={salesViewMode}
           />
         )}
-        {activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_MULTI_URL &&
-          multiUrlEnabled && (
-            <ProjectMultiUrlTab
-              project={project}
-              projectUrlId={savedProjectUrlId}
-              isDarkMode={isDarkMode}
-            />
-          )}
         {/* {activeTab === "supplier-mapping" && (
           <SupplierMappingTab surveyId={id} isDarkMode={isDarkMode} />
         )} */}

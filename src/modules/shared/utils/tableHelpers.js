@@ -211,10 +211,6 @@ export function isStatusColumn(columnLabel) {
   return getColumnKey(columnLabel) === "status";
 }
 
-export function isLinkModeColumn(columnLabel) {
-  return getColumnKey(columnLabel) === "linkmode";
-}
-
 export function isActionColumn(columnLabel) {
   const key = getColumnKey(columnLabel);
   return key === "action" || key === "actions";
