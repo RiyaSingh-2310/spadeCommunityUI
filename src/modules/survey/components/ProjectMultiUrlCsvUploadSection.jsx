@@ -192,8 +192,7 @@ function ProjectMultiUrlCsvUploadSection({
     clearFileInput();
   };
 
-  const handleUpload = async (event) => {
-    event.preventDefault();
+  const handleUpload = async () => {
     if (!canWrite || selectedFiles.length === 0 || !resolvedProjectUrlId) return;
 
     setIsUploading(true);
@@ -284,7 +283,7 @@ function ProjectMultiUrlCsvUploadSection({
   return (
     <div className="space-y-0">
       <TableCard title={title} isDarkMode={isDarkMode}>
-        <form className="space-y-4" onSubmit={handleUpload} noValidate>
+        <div className="space-y-4">
           {showContextFields ? (
             <div className="grid gap-4 md:grid-cols-2">
               <FormField label="Project ID">
@@ -347,13 +346,14 @@ function ProjectMultiUrlCsvUploadSection({
               {isDownloadingTemplate ? "Downloading..." : "Download CSV Template"}
             </button>
             <button
-              type="submit"
+              type="button"
               disabled={
                 !canWrite ||
                 selectedFiles.length === 0 ||
                 isUploading ||
                 !resolvedProjectUrlId
               }
+              onClick={handleUpload}
               className={`${primaryBtnClass} inline-flex min-w-[120px] items-center justify-center gap-2`}
             >
               {isUploading ? (
@@ -419,7 +419,7 @@ function ProjectMultiUrlCsvUploadSection({
               Save the Project URL first to obtain a Project URL ID before uploading.
             </p>
           ) : null}
-        </form>
+        </div>
       </TableCard>
 
       {showRecordsTable && shouldLoadRows ? (

@@ -196,8 +196,7 @@ export function buildSupplierMappingApiPayload({
 
   const linksCount = toApiNumber(linksToAssign);
   if (linksCount != null) {
-    payload.LinksToAssign = linksCount;
-    payload.links_to_assign = linksCount;
+    payload.linksToAssign = linksCount;
   }
 
   return payload;

@@ -392,6 +392,8 @@ export function buildUpdateProjectApiPayload(form, selectOptions = {}, urlForm =
     Project_Description: String(form.description ?? "").trim(),
     Project_Link_Type: form.projectLinkType || "Single Link",
     link_type: formLinkTypeToApi(form.projectLinkType),
+    startDate: form.startDate || "",
+    endDate: form.endDate || "",
     Notes: String(form.notes ?? "").trim(),
     Status: formValueToApiStatus(form.status),
   };
@@ -458,6 +460,8 @@ export function buildCreateProjectPayload(form, selectOptions = {}) {
     Project_Description: String(form.description ?? "").trim(),
     Project_Link_Type: form.projectLinkType || "Single Link",
     link_type: formLinkTypeToApi(form.projectLinkType),
+    startDate: form.startDate || "",
+    endDate: form.endDate || "",
     Notes: String(form.notes ?? "").trim(),
     Status: formValueToApiStatus(form.status),
   };
@@ -484,6 +488,8 @@ export function buildCreateSurveyPayload(form) {
     description: form.description ?? "",
     Project_Link_Type: form.projectLinkType || "Single Link",
     link_type: formLinkTypeToApi(form.projectLinkType),
+    startDate: form.startDate || "",
+    endDate: form.endDate || "",
     Notes: form.notes?.trim() ?? "",
     notes: form.notes?.trim() ?? "",
     Status: statusValue,
@@ -643,6 +649,12 @@ export function mapSurveyToForm(survey, fallback = null) {
       base.description
     ),
     projectLinkType: linkType,
+    startDate: toDateInputValue(
+      pickField(survey, ["Start_Date", "start_date", "startDate"]) ?? base.startDate
+    ),
+    endDate: toDateInputValue(
+      pickField(survey, ["End_Date", "end_date", "endDate"]) ?? base.endDate
+    ),
     notes: pickSurveyFormValue(survey?.Notes ?? survey?.notes, base.notes),
     status: apiStatusToFormValue(survey?.Status ?? survey?.status) || base.status || "Active",
     groupProjectId: resolveSurveyFormId(
