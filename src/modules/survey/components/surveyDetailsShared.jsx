@@ -1,4 +1,5 @@
 import TableCard from "../../../components/admin/TableCard";
+import { ExternalLink } from "lucide-react";
 import { ADMIN_TABLE_INNER_CLASS } from "../../shared/utils/tableHelpers";
 import { formatStatusLabel } from "../../shared/utils/statusLabels";
 
@@ -74,12 +75,32 @@ export function ReadOnlyUrl({ url }) {
 }
 
 export function TruncatedUrl({ url, maxWidthClass = "max-w-[220px]" }) {
+  const urlText = String(url ?? "").trim();
+  if (!urlText) {
+    return <span className="admin-text">—</span>;
+  }
+
+  if (/^https?:\/\//i.test(urlText)) {
+    return (
+      <a
+        href={urlText}
+        target="_blank"
+        rel="noreferrer noopener"
+        className={`admin-text inline-flex max-w-full items-center gap-1.5 text-[var(--admin-primary-color)] hover:underline ${maxWidthClass}`}
+        title={urlText}
+      >
+        <span className="min-w-0 truncate">{urlText}</span>
+        <ExternalLink size={14} className="shrink-0 opacity-70" aria-hidden />
+      </a>
+    );
+  }
+
   return (
     <span
-      className={`admin-text inline-block truncate text-sm font-medium text-[var(--admin-success-text)] ${maxWidthClass}`}
-      title={url}
+      className={`admin-text inline-block truncate text-sm font-medium ${maxWidthClass}`}
+      title={urlText}
     >
-      {url}
+      {urlText}
     </span>
   );
 }
