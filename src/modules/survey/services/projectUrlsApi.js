@@ -163,6 +163,11 @@ function toApiFlag(value) {
   return value ? 1 : 0;
 }
 
+function normalizeLinkMode(value) {
+  const mode = String(value ?? "test").trim().toLowerCase();
+  return mode === "live" ? "live" : "test";
+}
+
 /** Removes undefined keys so the API receives only populated fields. */
 function compactApiPayload(payload) {
   return Object.fromEntries(
@@ -186,6 +191,7 @@ export function createEmptyProjectUrlForm(projectId = "") {
     startDate: "",
     endDate: "",
     status: "Open",
+    linkMode: "test",
     testLink: "",
     liveLink: "",
     geoLocation: false,
@@ -198,6 +204,7 @@ export function createEmptyProjectUrlForm(projectId = "") {
     preScreenerName: "",
     completeRewardPoints: "",
     validateRewardPoints: "",
+    terminationRewardPoints: "",
     redirectComplete: "",
     redirectTerminate: "",
     redirectOverQuota: "",
@@ -234,6 +241,7 @@ export function mapProjectUrlToForm(record) {
     startDate: record.startDate ?? "",
     endDate: record.endDate ?? "",
     status: normalizeProjectUrlStatus(record.status),
+    linkMode: normalizeLinkMode(record.linkMode ?? record.link_mode),
     testLink: record.testLink ?? "",
     liveLink: record.liveLink ?? "",
     geoLocation: Boolean(record.geoLocation),
@@ -254,6 +262,10 @@ export function mapProjectUrlToForm(record) {
       record.completeRewardPoints != null ? String(record.completeRewardPoints) : "",
     validateRewardPoints:
       record.validateRewardPoints != null ? String(record.validateRewardPoints) : "",
+    terminationRewardPoints:
+      record.terminationRewardPoints != null
+        ? String(record.terminationRewardPoints)
+        : "",
     redirectComplete: record.redirectComplete ?? "",
     redirectTerminate: record.redirectTerminate ?? "",
     redirectOverQuota: record.redirectOverQuota ?? "",
@@ -344,6 +356,10 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
         pickUrlInfoField(projectRecord, ["End_Date", "end_date", "End Date", "endDate"])
     ),
     status,
+    linkMode: normalizeLinkMode(
+      pickUrlInfoField(urlInfo, ["link_mode", "linkMode", "Link_Mode"]) ??
+        pickUrlInfoField(projectRecord, ["link_mode", "linkMode", "Link_Mode"])
+    ),
     testLink:
       pickUrlInfoField(urlInfo, ["Test_Link", "test_link", "testLink"]) ??
       pickUrlInfoField(projectRecord, ["Test_Link", "test_link", "testLink"]) ??
@@ -411,10 +427,6 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
         "validateRewardPoints",
         "Validate_Point",
         "ValidationPoint",
-        "TerminationPoint",
-        "termination_point",
-        "term_point",
-        "termPoint",
       ]) ??
         pickUrlInfoField(projectRecord, [
           "ValidatePoint",
@@ -422,8 +434,20 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
           "validateRewardPoints",
           "Validate_Point",
           "ValidationPoint",
+        ])
+    ),
+    terminationRewardPoints: toFormNumberValue(
+      pickUrlInfoField(urlInfo, [
+        "TerminationPoint",
+        "termination_point",
+        "terminationRewardPoints",
+        "term_point",
+        "termPoint",
+      ]) ??
+        pickUrlInfoField(projectRecord, [
           "TerminationPoint",
           "termination_point",
+          "terminationRewardPoints",
           "term_point",
           "termPoint",
         ])
@@ -629,6 +653,10 @@ function buildProjectUrlUpdatePayload(form) {
       form.completeRewardPoints === "" ? null : Number(form.completeRewardPoints),
     validateRewardPoints:
       form.validateRewardPoints === "" ? null : Number(form.validateRewardPoints),
+    terminationRewardPoints:
+      form.terminationRewardPoints === ""
+        ? null
+        : Number(form.terminationRewardPoints),
     redirectComplete: String(form.redirectComplete ?? "").trim(),
     redirectTerminate: String(form.redirectTerminate ?? "").trim(),
     redirectOverQuota: String(form.redirectOverQuota ?? "").trim(),
@@ -671,6 +699,7 @@ export function buildCreateProjectUrlApiPayload(form = {}) {
     SurveyCloseURL: String(form.redirectSurveyClose ?? "").trim(),
     CompletionPoint: toApiNumber(form.completeRewardPoints),
     ValidatePoint: toApiNumber(form.validateRewardPoints),
+    TerminationPoint: toApiNumber(form.terminationRewardPoints),
   });
 }
 
@@ -861,6 +890,39 @@ export async function deleteProjectUrl(urlId) {
 }
 
 /**
+ * PATCH /api/projects/url/:urlId/link-mode — switch between test and live survey links.
+ * @param {string|number} urlId
+ * @param {"test" | "live"} linkMode
+ */
+export async function updateProjectUrlLinkMode(urlId, linkMode) {
+  const normalizedUrlId = normalizeUrlId(urlId);
+  const nextMode = normalizeLinkMode(linkMode);
+
+  if (USE_PROJECT_URLS_MOCK) {
+    await delay(200);
+    const record = updateMockProjectUrlById(normalizedUrlId, { linkMode: nextMode });
+    if (!record) {
+      return {
+        success: false,
+        message: "Project URL not found.",
+        data: null,
+      };
+    }
+    return {
+      success: true,
+      message: `Link mode switched to ${nextMode}!`,
+      data: record,
+    };
+  }
+
+  const data = await apiRequest(API_ROUTES.projects.updateUrlLinkMode(normalizedUrlId), {
+    method: "PATCH",
+    body: { link_mode: nextMode },
+  });
+  return assertSuccess(data);
+}
+
+/**
  * Resolves a Project URL by id via the project URL list endpoint.
  * Backend does not expose GET /api/projects/url/:urlId.
  * @param {string|number} urlId
@@ -910,13 +972,13 @@ async function fetchAllQuestionnaireGroupItems() {
   let page = 1;
   let totalPages = 1;
 
-  do {
+  while (page <= totalPages && page <= 50) {
     const response = await getQuestionnaireGroups({ page, limit });
     const pageItems = Array.isArray(response?.items) ? response.items : [];
     items.push(...pageItems);
     totalPages = Math.max(1, Number(response?.totalPages) || 1);
     page += 1;
-  } while (page <= totalPages && page <= 50);
+  }
 
   return items;
 }

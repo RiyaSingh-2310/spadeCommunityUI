@@ -26,6 +26,7 @@ export function getSurveyDetailTabs({
   const tabs = [
     { id: "project-details", label: "Project Information" },
     { id: "project-urls", label: "Project URL" },
+    { id: "partner-mapping", label: "Partner Mapping" },
   ];
 
   if (isMultiLink) {

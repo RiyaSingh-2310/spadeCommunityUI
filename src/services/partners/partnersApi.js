@@ -17,6 +17,8 @@ import { ApiError } from "../api/ApiError";
 import { formatLocaleDateTime } from "../../modules/shared/utils/dateTime";
 import { encryptValue } from "../../modules/shared/utils/encryption";
 
+export const PARTNER_PANEL_SIZE_MAX_DIGITS = 9;
+
 function isApiSuccess(data) {
   if (!data || typeof data !== "object") return false;
   const explicit = data.success;
@@ -103,7 +105,10 @@ export function mapPartnerToRow(partner) {
     createdDate: formatLocaleDateTime(createdRaw),
     createdAt: createdRaw,
     contactPerson: partner?.contact_person ?? "",
-    panelSize: partner?.panel_size ?? "",
+    panelSize:
+      partner?.panel_size != null && String(partner.panel_size).trim() !== ""
+        ? String(partner.panel_size)
+        : "—",
     completeUrl: partner?.complete_val ?? partner?.complete ?? "",
     terminateUrl: partner?.terminate_val ?? partner?.terminate ?? "",
     overQuotaUrl: partner?.over_quota_val ?? partner?.over_quota ?? "",
@@ -166,13 +171,17 @@ export function mapPartnerToForm(partner) {
  */
 function buildPartnerSurveyPayload(form) {
   const panelSize = Number.parseInt(String(form.panelSize ?? "").trim(), 10);
+  const panelSizeMax = 10 ** PARTNER_PANEL_SIZE_MAX_DIGITS - 1;
 
   return {
     country: form.country.trim(),
     contact_person: form.contactPerson.trim(),
     contact_no: resolvePartnerContactNo(form.contactNumber, form.country),
     website_url: form.website.trim(),
-    panel_size: Number.isFinite(panelSize) ? panelSize : 0,
+    panel_size:
+      Number.isFinite(panelSize) && panelSize > 0
+        ? Math.min(panelSize, panelSizeMax)
+        : 0,
     complete: String(form.complete ?? "").trim(),
     terminate: String(form.terminate ?? "").trim(),
     over_quota: String(form.overQuota ?? "").trim(),
@@ -198,6 +207,9 @@ function buildPartnerApiFields(form) {
 }
 
 export function buildCreatePartnerPayload(form) {
+  const panelSize = Number.parseInt(String(form.panelSize ?? "").trim(), 10);
+  const panelSizeMax = 10 ** PARTNER_PANEL_SIZE_MAX_DIGITS - 1;
+
   return {
     name: form.name.trim(),
     email: form.email.trim(),
@@ -205,6 +217,10 @@ export function buildCreatePartnerPayload(form) {
     country: form.country.trim(),
     contact_person: form.contactPerson.trim(),
     website_url: form.website.trim(),
+    panel_size:
+      Number.isFinite(panelSize) && panelSize > 0
+        ? Math.min(panelSize, panelSizeMax)
+        : 0,
     complete: String(form.complete ?? "").trim(),
     terminate: String(form.terminate ?? "").trim(),
     over_quota: String(form.overQuota ?? "").trim(),
@@ -318,6 +334,12 @@ const PARTNER_URL_FIELD_CONFIG = [
     isUrl: true,
   },
   {
+    label: "Terminate URL",
+    rowKey: "terminateUrl",
+    apiKeys: ["terminate_val", "terminate"],
+    isUrl: true,
+  },
+  {
     label: "Over Quota URL",
     rowKey: "overQuotaUrl",
     apiKeys: ["over_quota_val", "over_quota"],
@@ -342,37 +364,11 @@ const PARTNER_EXPANDABLE_FIELD_CONFIG = [
   ...PARTNER_URL_FIELD_CONFIG,
 ];
 
-const PARTNER_TABLE_API_KEYS = new Set([
-  "id",
-  "code",
-  "name",
-  "email",
-  "website_url",
-  "contact_no",
-  "country",
-  "status",
-  "created_at",
-]);
-
-function hasPartnerApiValue(partner, apiKeys) {
-  return apiKeys.some((key) => {
-    if (!(key in partner)) return false;
-    const value = partner[key];
-    return value != null && String(value).trim() !== "";
-  });
-}
-
 function formatPartnerDetailExtraValue(key, value) {
   if (key.endsWith("_at") && value) {
     return formatLocaleDateTime(value);
   }
   return String(value);
-}
-
-function formatPartnerApiKeyLabel(key) {
-  return String(key)
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function buildPartnerExpandableFields(partner, config) {

@@ -357,8 +357,9 @@ export function buildProjectUrlApiFields(form = {}) {
     unique_ip: Boolean(form.uniqueIp),
     pre_screen: Boolean(form.preScreen),
     language: language.toLowerCase(),
-    termination_point: toNullableNumber(form.validateRewardPoints),
+    termination_point: toNullableNumber(form.terminationRewardPoints),
     completion_point: toNullableNumber(form.completeRewardPoints),
+    validate_point: toNullableNumber(form.validateRewardPoints),
   };
 }
 
@@ -1162,6 +1163,99 @@ export async function updateSupplierMapping(surveyId, payload) {
       message: "Supplier mapping updated successfully.",
     };
   }
+}
+
+function toPartnerMappingBoolean(value, fallback = false) {
+  if (typeof value === "boolean") return value;
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (!normalized) return fallback;
+  if (["1", "true", "yes", "on", "active"].includes(normalized)) return true;
+  if (["0", "false", "no", "off", "inactive"].includes(normalized)) return false;
+  return fallback;
+}
+
+/**
+ * Maps GET /api/survey/:id/partners row into Partner Mapping table shape.
+ * @param {object} partner
+ * @param {number} index
+ */
+export function mapPartnerToMappingRow(partner, index = 0) {
+  const partnerCode = String(
+    partner?.code ?? partner?.partner_code ?? partner?.supplierCode ?? ""
+  ).trim();
+  const partnerUrl = String(
+    partner?.vendor_url ??
+      partner?.partner_url ??
+      partner?.supplier_url ??
+      partner?.url ??
+      partner?.supplierUrl ??
+      ""
+  ).trim();
+
+  return {
+    sno: index + 1,
+    id: resolvePartnerRecordId(partner),
+    partnerCode: partnerCode || "—",
+    partnerName: String(partner?.name ?? partner?.partner_name ?? "").trim() || "—",
+    quota:
+      partner?.allocated_size ??
+      partner?.panel_size ??
+      partner?.quota ??
+      partner?.supplier_quota ??
+      "—",
+    cpi: partner?.cpi ?? partner?.cpi_rate ?? partner?.cpi_usd ?? "—",
+    partnerUrl,
+    statusActive: toPartnerMappingBoolean(
+      partner?.status ?? partner?.is_active ?? partner?.active,
+      true
+    ),
+    isTest: toPartnerMappingBoolean(partner?.is_test ?? partner?.isTest ?? partner?.test_mode),
+    record: partner,
+  };
+}
+
+/** GET partner mapping details (supplier-mapping API). */
+export async function fetchPartnerMappingDetails(projectId, partnerCode) {
+  return fetchSupplierMappingDetails(projectId, partnerCode);
+}
+
+/**
+ * PUT partner mapping (supplier-mapping API).
+ * @param {string|number} projectId
+ * @param {{
+ *   partnerCode?: string,
+ *   quota?: string|number,
+ *   cpi?: string|number,
+ *   statusActive?: boolean,
+ *   isTest?: boolean,
+ *   redirects?: Record<string, string>,
+ * }} payload
+ */
+export async function upsertPartnerMapping(projectId, payload = {}) {
+  const redirects = payload.redirects ?? {};
+  const body = {
+    supplierCode: String(payload.partnerCode ?? "").trim(),
+    supplierQuota: payload.quota,
+    cpi: payload.cpi,
+    status: payload.statusActive ? "Active" : "Inactive",
+    is_test: payload.isTest ? 1 : 0,
+    redirects: {
+      complete: redirects.complete ?? "",
+      terminate: redirects.terminate ?? "",
+      overQuota: redirects.overQuota ?? "",
+      qualityTerm: redirects.qualityTerm ?? "",
+      surveyClose: redirects.surveyClose ?? "",
+      postbackUrl: redirects.postbackUrl ?? "",
+    },
+  };
+
+  const data = await updateSupplierMapping(projectId, body);
+  return {
+    ...data,
+    message: data?.message || "Partner mapping saved successfully.",
+  };
 }
 
 function extractPartnersList(data) {

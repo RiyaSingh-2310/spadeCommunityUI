@@ -135,6 +135,7 @@ export const API_ROUTES = {
     urlList: (id) => `/api/projects/${id}/url/list`,
     // Backend has no GET /api/projects/url/:urlId — use urlList + match by id.
     updateUrl: (urlId) => `/api/projects/url/${urlId}`,
+    updateUrlLinkMode: (urlId) => `/api/projects/url/${urlId}/link-mode`,
     deleteUrl: (urlId) => `/api/projects/url/${urlId}`,
     multiUrlList: (id) => `/api/projects/${id}/multiple-url/list`,
     createMultiUrl: (id) => `/api/projects/${id}/multiple-url`,
@@ -142,6 +143,13 @@ export const API_ROUTES = {
     deleteMultiUrl: (urlId) => `/api/projects/multiple-url/${urlId}`,
     multiUrlCsvTemplate: "/api/projects/multiple-url/csv-template",
     uploadMultiUrls: (id) => `/api/projects/${id}/multiple-url/csv-upload`,
+  },
+  supplierMapping: {
+    list: "/api/supplier-mapping/list",
+    create: "/api/supplier-mapping",
+    byId: (id) => `/api/supplier-mapping/${id}`,
+    update: (id) => `/api/supplier-mapping/${id}`,
+    updateStatus: (id) => `/api/supplier-mapping/status/${id}`,
   },
   groupSurvey: {
     list: "/api/survey/groupproject/list",
@@ -219,6 +227,10 @@ export const API_ROUTES = {
       `/api/homepage/${encodeURIComponent(String(section ?? "").trim())}`,
     updateSection: (section) =>
       `/api/homepage/${encodeURIComponent(String(section ?? "").trim())}`,
+  },
+  systemSettings: {
+    get: "/api/system-settings",
+    update: "/api/system-settings",
   },
 };
 

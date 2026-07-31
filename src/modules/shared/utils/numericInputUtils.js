@@ -7,6 +7,18 @@ export function sanitizeInteger(raw) {
   return String(raw ?? "").replace(/\D/g, "");
 }
 
+/** Whole numbers greater than zero (empty allowed while typing). */
+export function sanitizePositiveInteger(raw, maxDigits) {
+  const digits =
+    maxDigits != null
+      ? sanitizeInteger(raw).slice(0, maxDigits)
+      : sanitizeInteger(raw);
+  if (!digits) return "";
+  const num = Number.parseInt(digits, 10);
+  if (!Number.isFinite(num) || num <= 0) return "";
+  return String(num);
+}
+
 /**
  * Numeric string with at most `maxDecimals` digits after the decimal point.
  * Examples: "10.50" valid, "10.999" -> "10.99"

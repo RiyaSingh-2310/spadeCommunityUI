@@ -7,9 +7,11 @@ import {
   saveNotificationSettings,
   saveSystemSettings,
 } from "../utils/settingsStorage";
-import { normalizeThemePreference } from "../utils/themePreference";
+import {
+  normalizeThemePreference,
+  toApiThemePreference,
+} from "../utils/themePreference";
 
-const SYSTEM_SETTINGS_SECTION = "system_settings";
 const NOTIFICATION_SETTINGS_SECTION = "notification_preferences";
 
 function assertSuccess(data) {
@@ -82,11 +84,13 @@ function mapSystemSettingsFromApi(fields = {}) {
     sessionTimeout: String(
       fields.sessionTimeout ??
         fields.session_timeout ??
+        fields.session_timeout_minutes ??
         DEFAULT_SYSTEM_SETTINGS.sessionTimeout
     ),
     rememberMeDuration: String(
       fields.rememberMeDuration ??
         fields.remember_me_duration ??
+        fields.remember_me_days ??
         DEFAULT_SYSTEM_SETTINGS.rememberMeDuration
     ),
   };
@@ -118,16 +122,19 @@ function mapNotificationSettingsFromApi(fields = {}) {
 }
 
 function toApiSystemPayload(settings) {
+  const sessionTimeout = Number(settings.sessionTimeout);
+  const rememberMeDays = Number(settings.rememberMeDuration);
+
   return {
-    applicationName: String(settings.applicationName ?? "").trim(),
-    defaultLanguage: String(settings.defaultLanguage ?? "").trim(),
-    dateFormat: String(settings.dateFormat ?? "").trim(),
-    timeFormat: String(settings.timeFormat ?? "").trim(),
-    themePreference: normalizeThemePreference(settings.themePreference),
-    twoFactorAuth: String(Boolean(settings.twoFactorAuth)),
-    loginAlerts: String(Boolean(settings.loginAlerts)),
-    sessionTimeout: String(settings.sessionTimeout ?? ""),
-    rememberMeDuration: String(settings.rememberMeDuration ?? ""),
+    application_name: String(settings.applicationName ?? "").trim(),
+    default_language: String(settings.defaultLanguage ?? "").trim(),
+    date_format: String(settings.dateFormat ?? "").trim(),
+    time_format: String(settings.timeFormat ?? "").trim(),
+    theme_preference: toApiThemePreference(settings.themePreference),
+    two_factor_auth: settings.twoFactorAuth ? 1 : 0,
+    login_alerts: settings.loginAlerts ? 1 : 0,
+    session_timeout_minutes: Number.isFinite(sessionTimeout) ? sessionTimeout : undefined,
+    remember_me_days: Number.isFinite(rememberMeDays) ? rememberMeDays : undefined,
   };
 }
 
@@ -155,35 +162,42 @@ async function updateSection(section, fields) {
   return assertSuccess(data);
 }
 
+function isNotFoundError(error) {
+  if (error?.status === 404 || error?.response?.status === 404) return true;
+  const message = String(error?.message ?? "").toLowerCase();
+  return message.includes("not found");
+}
+
 /**
- * Loads system settings from the homepage settings API.
- * Falls back to defaults when the section has not been created yet.
+ * Loads system settings from GET /api/system-settings.
+ * Falls back to defaults when settings have not been created yet.
  */
 export async function fetchSystemSettings() {
   try {
-    const fields = await fetchSection(SYSTEM_SETTINGS_SECTION);
-    const mapped = mapSystemSettingsFromApi(fields);
+    const data = await apiRequest(API_ROUTES.systemSettings.get);
+    assertSuccess(data);
+    const mapped = mapSystemSettingsFromApi(data?.data ?? {});
     saveSystemSettings(mapped);
     return mapped;
   } catch (error) {
-    // Missing section (404) → start from defaults; other errors rethrow.
-    if (error?.status === 404 || error?.response?.status === 404) {
-      return { ...DEFAULT_SYSTEM_SETTINGS };
-    }
-    const message = String(error?.message ?? "").toLowerCase();
-    if (message.includes("not found")) {
+    if (isNotFoundError(error)) {
       return { ...DEFAULT_SYSTEM_SETTINGS };
     }
     throw error;
   }
 }
 
+/** PUT /api/system-settings — update system settings. */
 export async function updateSystemSettings(settings) {
   const payload = toApiSystemPayload(settings);
-  const data = await updateSection(SYSTEM_SETTINGS_SECTION, payload);
-  const mapped = mapSystemSettingsFromApi(payload);
+  const data = await apiRequest(API_ROUTES.systemSettings.update, {
+    method: "PUT",
+    body: payload,
+  });
+  const response = assertSuccess(data);
+  const mapped = mapSystemSettingsFromApi(response?.data ?? payload);
   saveSystemSettings(mapped);
-  return data;
+  return response;
 }
 
 /**
@@ -196,11 +210,7 @@ export async function fetchNotificationSettings() {
     saveNotificationSettings(mapped);
     return mapped;
   } catch (error) {
-    if (error?.status === 404 || error?.response?.status === 404) {
-      return { ...DEFAULT_NOTIFICATION_SETTINGS };
-    }
-    const message = String(error?.message ?? "").toLowerCase();
-    if (message.includes("not found")) {
+    if (isNotFoundError(error)) {
       return { ...DEFAULT_NOTIFICATION_SETTINGS };
     }
     throw error;

@@ -19,6 +19,8 @@ const COLUMN_KEY_MAP = {
   "Due Date": "dueDate",
   "Gross Amount": "grossAmount",
   "Partner Code": "partnerCode",
+  "Partner Name": "partnerName",
+  "Allocated Size": "allocatedSize",
   "Email Address": "emailAddress",
   "Email Title": "emailTitle",
   "Email Template": "emailTitle",
@@ -31,17 +33,16 @@ const COLUMN_KEY_MAP = {
   Reason: "reason",
   Date: "date",
   "Contact Number": "contactNumber",
+  "Panel Size": "panelSize",
   "Website URL": "websiteUrl",
   "Project ID": "projectId",
   "Project ID (if won)": "projectId",
-  "Client Code": "clientCode",
   "Survey Title": "surveyTitle",
   Title: "title",
   "Template Title": "title",
   Language: "language",
   "Right Answer": "rightAnswer",
   Subject: "subject",
-  Date: "date",
   "Date & Time": "dateTime",
   Username: "username",
   "User Name": "userName",
@@ -80,6 +81,7 @@ const NOWRAP_DATA_KEYS = new Set([
   "country",
   "contactNumber",
   "contact",
+  "panelSize",
   "websiteUrl",
   "website",
   "url",
@@ -207,6 +209,10 @@ export function isNowrapDataColumn(columnLabel) {
 
 export function isStatusColumn(columnLabel) {
   return getColumnKey(columnLabel) === "status";
+}
+
+export function isLinkModeColumn(columnLabel) {
+  return getColumnKey(columnLabel) === "linkmode";
 }
 
 export function isActionColumn(columnLabel) {
