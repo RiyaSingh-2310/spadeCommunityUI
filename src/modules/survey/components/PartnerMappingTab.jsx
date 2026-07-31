@@ -34,7 +34,6 @@ import {
 const TABLE_COLUMNS = [
   "#",
   "Partner Code",
-  "Partner Name",
   "Quota",
   "CPI",
   "Partner URL",
@@ -435,7 +434,6 @@ function PartnerMappingTab({
 
     const map = {
       "Partner Code": row.partnerCode,
-      "Partner Name": row.partnerName,
       Quota: row.quota,
       CPI: row.cpi,
     };
