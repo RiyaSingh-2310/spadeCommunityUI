@@ -24,6 +24,7 @@ import {
   PROJECT_URL_COUNTRY_OPTIONS,
   PROJECT_URL_PRESCREEN_LANGUAGES,
   PROJECT_URL_STATUS_OPTIONS,
+  updateProjectUrlLinkMode,
   updateProjectUrls,
 } from "../services/projectUrlsApi";
 import {
@@ -46,13 +47,12 @@ import {
   secondaryBtnClass,
 } from "./surveyDetailsShared";
 
-const PROJECT_URL_LIST_COLUMNS = [
+const PROJECT_URL_LIST_COLUMNS_BASE = [
   "ID",
   "Description",
   "Country",
   "Language",
   "Status",
-  "Action",
 ];
 
 function InteractiveCheckbox({ label, checked, onChange, disabled }) {
@@ -92,12 +92,14 @@ function toListRow(record) {
   const country = String(record?.country ?? "").trim() || "—";
   const language = String(record?.language ?? "").trim() || "—";
   const status = String(record?.status ?? "").trim() || "Open";
+  const linkMode = String(record?.linkMode ?? "test").trim().toLowerCase();
   return {
     id,
     description,
     country,
     language,
     status,
+    linkMode,
     record,
   };
 }
@@ -183,6 +185,7 @@ function ProjectUrlsTab({
     () => getRouteFormState(projectFk, urlView).pendingDelete
   );
   const [isDeleting, setIsDeleting] = useState(false);
+  const [linkModeTogglingIds, setLinkModeTogglingIds] = useState(() => new Set());
   const [routeState, setRouteState] = useState({ projectFk, urlView });
   const [loadedEditKey, setLoadedEditKey] = useState("");
   const [editFormReady, setEditFormReady] = useState(false);
@@ -379,6 +382,15 @@ function ProjectUrlsTab({
     () => urlRecords.map((record) => toListRow(record)),
     [urlRecords]
   );
+
+  const listColumns = useMemo(() => {
+    const columns = [...PROJECT_URL_LIST_COLUMNS_BASE];
+    if (!isMultiLink) {
+      columns.push("Link Mode");
+    }
+    columns.push("Action");
+    return columns;
+  }, [isMultiLink]);
 
   const isDirty = useMemo(() => {
     if (!isEdit || !initialSnapshot) return false;
@@ -584,6 +596,55 @@ function ProjectUrlsTab({
     }
   };
 
+  const handleLinkModeToggle = async (row) => {
+    if (!canWrite) return;
+
+    const urlRecordId = String(row?.id ?? row?.record?.id ?? "").trim();
+    if (!urlRecordId) {
+      toastApiError("Project URL ID is required to switch link mode.");
+      return;
+    }
+
+    const currentMode = String(row?.linkMode ?? "test").trim().toLowerCase();
+    const nextMode = currentMode === "live" ? "test" : "live";
+
+    if (linkModeTogglingIds.has(urlRecordId)) return;
+
+    setLinkModeTogglingIds((prev) => new Set(prev).add(urlRecordId));
+    setUrlRecords((prev) =>
+      prev.map((record) =>
+        String(record.id) === urlRecordId ? { ...record, linkMode: nextMode } : record
+      )
+    );
+
+    try {
+      const data = await updateProjectUrlLinkMode(urlRecordId, nextMode);
+      toastApiSuccess(data);
+      setUrlRecords((prev) =>
+        prev.map((record) =>
+          String(record.id) === urlRecordId
+            ? { ...record, linkMode: nextMode }
+            : record
+        )
+      );
+    } catch (error) {
+      toastApiError(error);
+      setUrlRecords((prev) =>
+        prev.map((record) =>
+          String(record.id) === urlRecordId
+            ? { ...record, linkMode: currentMode }
+            : record
+        )
+      );
+    } finally {
+      setLinkModeTogglingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(urlRecordId);
+        return next;
+      });
+    }
+  };
+
   if (view === "form" && isEdit && isLoadingEditForm) {
     return (
       <div className="admin-text flex items-center gap-2 py-8 text-sm">
@@ -603,8 +664,11 @@ function ProjectUrlsTab({
           searchPlaceholder="Search Project URL..."
           actionLabel={canWrite ? "+ Add Project URL" : undefined}
           onActionClick={canWrite ? openAddForm : undefined}
-          columns={PROJECT_URL_LIST_COLUMNS}
-          rows={listRows}
+          columns={listColumns}
+          rows={listRows.map((row) => ({
+            ...row,
+            linkModeToggling: linkModeTogglingIds.has(row.id),
+          }))}
           rowIdKey="id"
           actionVariant={canWrite ? "edit-delete" : "view-edit"}
           showDeleteAction={canWrite}
@@ -612,6 +676,14 @@ function ProjectUrlsTab({
           onEdit={canWrite ? openEditForm : undefined}
           onDelete={canWrite ? handleDeleteRequest : undefined}
           onView={!canWrite ? openEditForm : undefined}
+          onLinkModeToggle={
+            canWrite && !isMultiLink
+              ? (row) => {
+                  if (row.linkModeToggling) return;
+                  handleLinkModeToggle(row);
+                }
+              : undefined
+          }
           permissionModule="survey"
           isLoading={isLoading}
           emptyMessage="No Project URL records found"

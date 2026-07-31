@@ -29,6 +29,7 @@ import {
   isIdColumn,
   isCheckboxColumn,
   isDescriptionColumn,
+  isLinkModeColumn,
   isProfileImageColumn,
   isSnoColumn,
   isStatusColumn,
@@ -77,6 +78,8 @@ function ModuleListingPage({
   editPath,
   onSearch,
   onStatusToggle,
+  /** When set, Link Mode column renders a test/live toggle. */
+  onLinkModeToggle,
   /** When set, status column renders as a themed dropdown (e.g. Approved / Rejected). */
   statusDropdownOptions = null,
   onStatusChange,
@@ -877,6 +880,30 @@ function ModuleListingPage({
                                     })
                                   );
                                 }
+                              : undefined
+                          }
+                        />
+                      </td>
+                    );
+                  }
+                  if (isLinkModeColumn(col)) {
+                    const linkMode = String(row.linkMode ?? "test").trim().toLowerCase();
+                    const isLive = linkMode === "live";
+                    const isToggling = Boolean(row.linkModeToggling);
+                    return (
+                      <td
+                        key={col}
+                        className={`admin-table-status-col px-3 py-3 align-middle ${statusColumnClass}`}
+                      >
+                        <StatusToggle
+                          checked={isLive}
+                          labelOn="Live"
+                          labelOff="Test"
+                          readOnly={!allowWrite || !onLinkModeToggle || isToggling}
+                          compact={compactStatusColumn}
+                          onChange={
+                            allowWrite && onLinkModeToggle && !isToggling
+                              ? () => onLinkModeToggle(row, globalIdx)
                               : undefined
                           }
                         />

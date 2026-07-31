@@ -163,6 +163,11 @@ function toApiFlag(value) {
   return value ? 1 : 0;
 }
 
+function normalizeLinkMode(value) {
+  const mode = String(value ?? "test").trim().toLowerCase();
+  return mode === "live" ? "live" : "test";
+}
+
 /** Removes undefined keys so the API receives only populated fields. */
 function compactApiPayload(payload) {
   return Object.fromEntries(
@@ -186,6 +191,7 @@ export function createEmptyProjectUrlForm(projectId = "") {
     startDate: "",
     endDate: "",
     status: "Open",
+    linkMode: "test",
     testLink: "",
     liveLink: "",
     geoLocation: false,
@@ -235,6 +241,7 @@ export function mapProjectUrlToForm(record) {
     startDate: record.startDate ?? "",
     endDate: record.endDate ?? "",
     status: normalizeProjectUrlStatus(record.status),
+    linkMode: normalizeLinkMode(record.linkMode ?? record.link_mode),
     testLink: record.testLink ?? "",
     liveLink: record.liveLink ?? "",
     geoLocation: Boolean(record.geoLocation),
@@ -349,6 +356,10 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
         pickUrlInfoField(projectRecord, ["End_Date", "end_date", "End Date", "endDate"])
     ),
     status,
+    linkMode: normalizeLinkMode(
+      pickUrlInfoField(urlInfo, ["link_mode", "linkMode", "Link_Mode"]) ??
+        pickUrlInfoField(projectRecord, ["link_mode", "linkMode", "Link_Mode"])
+    ),
     testLink:
       pickUrlInfoField(urlInfo, ["Test_Link", "test_link", "testLink"]) ??
       pickUrlInfoField(projectRecord, ["Test_Link", "test_link", "testLink"]) ??
@@ -874,6 +885,39 @@ export async function deleteProjectUrl(urlId) {
 
   const data = await apiRequest(API_ROUTES.projects.deleteUrl(normalizedUrlId), {
     method: "DELETE",
+  });
+  return assertSuccess(data);
+}
+
+/**
+ * PATCH /api/projects/url/:urlId/link-mode — switch between test and live survey links.
+ * @param {string|number} urlId
+ * @param {"test" | "live"} linkMode
+ */
+export async function updateProjectUrlLinkMode(urlId, linkMode) {
+  const normalizedUrlId = normalizeUrlId(urlId);
+  const nextMode = normalizeLinkMode(linkMode);
+
+  if (USE_PROJECT_URLS_MOCK) {
+    await delay(200);
+    const record = updateMockProjectUrlById(normalizedUrlId, { linkMode: nextMode });
+    if (!record) {
+      return {
+        success: false,
+        message: "Project URL not found.",
+        data: null,
+      };
+    }
+    return {
+      success: true,
+      message: `Link mode switched to ${nextMode}!`,
+      data: record,
+    };
+  }
+
+  const data = await apiRequest(API_ROUTES.projects.updateUrlLinkMode(normalizedUrlId), {
+    method: "PATCH",
+    body: { link_mode: nextMode },
   });
   return assertSuccess(data);
 }

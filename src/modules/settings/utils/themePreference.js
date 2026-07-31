@@ -19,8 +19,20 @@ export const THEME_PREFERENCE_OPTIONS = [
  */
 export function normalizeThemePreference(value) {
   const normalized = String(value ?? "").trim().toLowerCase();
-  if (normalized === THEME_PREFERENCES.DARK) return THEME_PREFERENCES.DARK;
+  if (normalized === THEME_PREFERENCES.DARK || normalized.includes("dark")) {
+    return THEME_PREFERENCES.DARK;
+  }
+  if (normalized === THEME_PREFERENCES.LIGHT || normalized.includes("light")) {
+    return THEME_PREFERENCES.LIGHT;
+  }
   return THEME_PREFERENCES.LIGHT;
+}
+
+/** Maps app theme preference to the system-settings API label. */
+export function toApiThemePreference(preference) {
+  return normalizeThemePreference(preference) === THEME_PREFERENCES.DARK
+    ? "Dark Theme"
+    : "Light Theme";
 }
 
 export function getStoredThemePreference() {

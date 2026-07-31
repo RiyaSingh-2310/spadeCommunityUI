@@ -151,6 +151,7 @@ function createProjectUrlSeed(projectId, index) {
     startDate: `2026-0${1 + (index % 6)}-05`,
     endDate: `2026-0${2 + (index % 6)}-25`,
     status: index === 0 ? "Open" : statuses[index % statuses.length],
+    linkMode: index % 2 === 0 ? "live" : "test",
     testLink: `https://speed-community.com/survey/test/${projectId || index + 1}/${country.toLowerCase().replace(/\s+/g, "-")}`,
     liveLink: `https://speed-community.com/survey/live/${projectId || index + 1}/${country.toLowerCase().replace(/\s+/g, "-")}`,
     geoLocation: index % 2 === 0,

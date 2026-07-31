@@ -13,6 +13,7 @@ import ProjectDetailsTab from "../components/ProjectDetailsTab";
 import ProjectMultiUrlTab from "../components/ProjectMultiUrlTab";
 // import ProjectReportTab from "../components/ProjectReportTab";
 import ProjectUrlsTab from "../components/ProjectUrlsTab";
+import PartnerMappingTab from "../components/PartnerMappingTab";
 // import SupplierMappingTab from "../components/SupplierMappingTab";
 import SurveyDetailsHeader, {
   getSurveyDetailTabs,
@@ -421,6 +422,15 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
             urlId={urlId}
             onViewChange={handleProjectUrlViewChange}
             onSaved={salesViewMode ? undefined : handleProjectUrlSaved}
+          />
+        )}
+        {activeTab === SURVEY_DETAIL_TAB_IDS.PARTNER_MAPPING && (
+          <PartnerMappingTab
+            key={`partner-mapping-${id}`}
+            projectId={project?.recordId ?? id}
+            projectUrlId={savedProjectUrlId}
+            isDarkMode={isDarkMode}
+            readOnly={salesViewMode}
           />
         )}
         {activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_MULTI_URL &&

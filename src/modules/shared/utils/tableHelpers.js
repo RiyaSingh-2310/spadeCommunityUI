@@ -19,6 +19,8 @@ const COLUMN_KEY_MAP = {
   "Due Date": "dueDate",
   "Gross Amount": "grossAmount",
   "Partner Code": "partnerCode",
+  "Partner Name": "partnerName",
+  "Allocated Size": "allocatedSize",
   "Email Address": "emailAddress",
   "Email Title": "emailTitle",
   "Email Template": "emailTitle",
@@ -207,6 +209,10 @@ export function isNowrapDataColumn(columnLabel) {
 
 export function isStatusColumn(columnLabel) {
   return getColumnKey(columnLabel) === "status";
+}
+
+export function isLinkModeColumn(columnLabel) {
+  return getColumnKey(columnLabel) === "linkmode";
 }
 
 export function isActionColumn(columnLabel) {
