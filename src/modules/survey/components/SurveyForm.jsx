@@ -7,6 +7,7 @@ import TableCard from "../../../components/admin/TableCard";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { NAME_FIELD_MAX_LENGTH, limitTextInput } from "../../shared/utils/validation";
 import { PROJECT_LINK_TYPES, PROJECT_STATUS_OPTIONS } from "../data/surveyFormData";
+import ProjectMultiUrlCsvUploadSection from "./ProjectMultiUrlCsvUploadSection";
 
 function SurveyForm({
   form,
@@ -27,13 +28,16 @@ function SurveyForm({
   salesProjectOptions = [],
   /** @deprecated Use salesProjectOptions */
   rfqOptions = [],
-  onOpenProjectUrls,
+  showMultiUrlCsvUpload = false,
+  multiUrlCsvFiles = [],
+  onMultiUrlCsvFilesChange,
 }) {
   const inputClass = getAdminInputClass();
   const selectClass = `${inputClass} appearance-none`;
   const resolvedSalesProjectOptions = salesProjectOptions.length
     ? salesProjectOptions
     : rfqOptions;
+  const isMultiLink = form.projectLinkType === "Multi Link";
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -163,7 +167,6 @@ function SurveyForm({
 
           <FormField
             label="Start Date"
-            required
             error={showError("startDate") ? errors.startDate : ""}
           >
             <AdminDatePicker
@@ -180,7 +183,6 @@ function SurveyForm({
 
           <FormField
             label="End Date"
-            required
             error={showError("endDate") ? errors.endDate : ""}
           >
             <AdminDatePicker
@@ -209,6 +211,21 @@ function SurveyForm({
             isDarkMode={isDarkMode}
           />
         </div>
+
+        {showMultiUrlCsvUpload && isMultiLink ? (
+          <div className="mt-4">
+            <ProjectMultiUrlCsvUploadSection
+              isDarkMode={isDarkMode}
+              canWrite={!disabled}
+              showContextFields={false}
+              showRecordsTable={false}
+              deferUpload
+              selectedFiles={multiUrlCsvFiles}
+              onSelectedFilesChange={onMultiUrlCsvFilesChange}
+              title="Upload Multi URL Links"
+            />
+          </div>
+        ) : null}
 
         <div className="mt-4 space-y-4">
           <FormField label="Description">

@@ -81,7 +81,11 @@ function ProjectMultiUrlCsvUploadSection({
   isDarkMode,
   canWrite = false,
   showContextFields = true,
+  showUploadControls = true,
   showRecordsTable = true,
+  deferUpload = false,
+  selectedFiles: controlledSelectedFiles,
+  onSelectedFilesChange,
   title = "Upload Multi URLs",
 }) {
   const inputClass = getAdminInputClass();
@@ -93,7 +97,9 @@ function ProjectMultiUrlCsvUploadSection({
   const [isLoadingRows, setIsLoadingRows] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [internalSelectedFiles, setInternalSelectedFiles] = useState([]);
+  const selectedFiles = controlledSelectedFiles ?? internalSelectedFiles;
+  const setSelectedFiles = onSelectedFilesChange ?? setInternalSelectedFiles;
 
   const selectedSummary = useMemo(() => {
     if (selectedFiles.length === 0) return "";
@@ -282,6 +288,7 @@ function ProjectMultiUrlCsvUploadSection({
 
   return (
     <div className="space-y-0">
+      {showUploadControls ? (
       <TableCard title={title} isDarkMode={isDarkMode}>
         <div className="space-y-4">
           {showContextFields ? (
@@ -345,24 +352,26 @@ function ProjectMultiUrlCsvUploadSection({
               )}
               {isDownloadingTemplate ? "Downloading..." : "Download CSV Template"}
             </button>
-            <button
-              type="button"
-              disabled={
-                !canWrite ||
-                selectedFiles.length === 0 ||
-                isUploading ||
-                !resolvedProjectUrlId
-              }
-              onClick={handleUpload}
-              className={`${primaryBtnClass} inline-flex min-w-[120px] items-center justify-center gap-2`}
-            >
-              {isUploading ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Upload size={16} />
-              )}
-              {isUploading ? "Uploading..." : "Upload"}
-            </button>
+            {!deferUpload ? (
+              <button
+                type="button"
+                disabled={
+                  !canWrite ||
+                  selectedFiles.length === 0 ||
+                  isUploading ||
+                  !resolvedProjectUrlId
+                }
+                onClick={handleUpload}
+                className={`${primaryBtnClass} inline-flex min-w-[120px] items-center justify-center gap-2`}
+              >
+                {isUploading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Upload size={16} />
+                )}
+                {isUploading ? "Uploading..." : "Upload"}
+              </button>
+            ) : null}
           </div>
 
           {selectedFiles.length > 0 ? (
@@ -414,13 +423,18 @@ function ProjectMultiUrlCsvUploadSection({
             </div>
           ) : null}
 
-          {!resolvedProjectUrlId ? (
+          {deferUpload ? (
+            <p className="admin-text-muted text-sm">
+              Selected CSV files will be uploaded when you save the project.
+            </p>
+          ) : !resolvedProjectUrlId ? (
             <p className="admin-text-muted text-sm">
               Save the Project URL first to obtain a Project URL ID before uploading.
             </p>
           ) : null}
         </div>
       </TableCard>
+      ) : null}
 
       {showRecordsTable && shouldLoadRows ? (
         <>

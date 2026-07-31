@@ -26,6 +26,7 @@ import {
   PROJECT_URL_STATUS_OPTIONS,
   updateProjectUrls,
 } from "../services/projectUrlsApi";
+import { listProjectMultiUrls } from "../services/projectMultiUrlApi";
 import {
   areProjectUrlFormsEqual,
   cloneProjectUrlForm,
@@ -40,7 +41,6 @@ import {
   sanitizeProjectUrlInteger,
 } from "../utils/projectUrlFormValidation";
 import { PROJECT_URL_VIEW_IDS } from "../utils/surveyDetailsNavigation";
-import ProjectMultiUrlCsvUploadSection from "./ProjectMultiUrlCsvUploadSection";
 import {
   SectionDivider,
   primaryBtnClass,
@@ -52,8 +52,28 @@ const PROJECT_URL_LIST_COLUMNS_BASE = [
   "Description",
   "Country",
   "Language",
-  "Status",
+  "CPI",
+  "LOI",
+  "Start Date",
+  "End Date",
+  "IR",
 ];
+
+const MULTI_LINK_COUNT_COLUMN = "Multi Link Count";
+
+function formatListMetric(value) {
+  const text = String(value ?? "").trim();
+  return text || "—";
+}
+
+function buildMultiLinkCountMap(multiUrlRows = []) {
+  return (Array.isArray(multiUrlRows) ? multiUrlRows : []).reduce((acc, row) => {
+    const urlId = String(row?.projectUrlId ?? "").trim();
+    if (!urlId) return acc;
+    acc[urlId] = (acc[urlId] || 0) + 1;
+    return acc;
+  }, {});
+}
 
 function InteractiveCheckbox({ label, checked, onChange, disabled }) {
   return (
@@ -86,17 +106,37 @@ function normalizeUrlRecord(row, projectFk) {
   });
 }
 
-function toListRow(record) {
+function toListRow(record, { multiLinkCountByUrlId = {} } = {}) {
   const id = record?.id != null && record.id !== "" ? String(record.id) : "";
   const description = String(record?.discussion ?? "").trim() || "—";
   const country = String(record?.country ?? "").trim() || "—";
   const language = String(record?.language ?? "").trim() || "—";
   const status = String(record?.status ?? "").trim() || "Open";
+  const cpiRate = formatListMetric(record?.cpiRate);
+  const loi = formatListMetric(record?.loi);
+  const startDate = formatListMetric(record?.startDate);
+  const endDate = formatListMetric(record?.endDate);
+  const ir = formatListMetric(record?.ir);
+  const apiMultiLinkCount = formatListMetric(record?.multiLinkCount);
+  const countedMultiLinks = id ? multiLinkCountByUrlId[id] : undefined;
+  const multiLinkCount =
+    apiMultiLinkCount !== "—"
+      ? apiMultiLinkCount
+      : countedMultiLinks != null
+        ? String(countedMultiLinks)
+        : "—";
+
   return {
     id,
     description,
     country,
     language,
+    cpiRate,
+    loi,
+    startDate,
+    endDate,
+    ir,
+    multiLinkCount,
     status,
     record,
   };
@@ -182,6 +222,7 @@ function ProjectUrlsTab({
   const [pendingDelete, setPendingDelete] = useState(
     () => getRouteFormState(projectFk, urlView).pendingDelete
   );
+  const [multiLinkCountByUrlId, setMultiLinkCountByUrlId] = useState({});
   const [isDeleting, setIsDeleting] = useState(false);
   const [routeState, setRouteState] = useState({ projectFk, urlView });
   const [loadedEditKey, setLoadedEditKey] = useState("");
@@ -190,9 +231,6 @@ function ProjectUrlsTab({
 
   const isEdit = urlView === PROJECT_URL_VIEW_IDS.EDIT;
   const isLoadingEditForm = isEdit && Boolean(urlId) && !editFormReady;
-  const resolvedProjectUrlId = String(
-    selectedUrlId || form.id || urlId || ""
-  ).trim();
 
   const errors = useMemo(() => getProjectUrlFormErrors(form), [form]);
   const { showError, touch, validateSubmit, resetValidation, isValid } =
@@ -308,16 +346,32 @@ function ProjectUrlsTab({
             Boolean(String(row.loi ?? "").trim()) ||
             Boolean(String(row.country ?? "").trim())
         );
+
+      if (isMultiLink) {
+        try {
+          const multiUrlResponse = await listProjectMultiUrls(projectFk);
+          const multiRows = Array.isArray(multiUrlResponse?.data)
+            ? multiUrlResponse.data
+            : [];
+          setMultiLinkCountByUrlId(buildMultiLinkCountMap(multiRows));
+        } catch {
+          setMultiLinkCountByUrlId({});
+        }
+      } else {
+        setMultiLinkCountByUrlId({});
+      }
+
       setUrlRecords(mapped);
       return mapped;
     } catch (error) {
       toastApiError(error);
       setUrlRecords([]);
+      setMultiLinkCountByUrlId({});
       return [];
     } finally {
       setIsLoading(false);
     }
-  }, [projectFk]);
+  }, [projectFk, isMultiLink]);
 
   useEffect(() => {
     let cancelled = false;
@@ -379,14 +433,18 @@ function ProjectUrlsTab({
   }, [form.language, view, isLoadingEditForm]);
 
   const listRows = useMemo(
-    () => urlRecords.map((record) => toListRow(record)),
-    [urlRecords]
+    () => urlRecords.map((record) => toListRow(record, { multiLinkCountByUrlId })),
+    [urlRecords, multiLinkCountByUrlId]
   );
 
-  const listColumns = useMemo(
-    () => [...PROJECT_URL_LIST_COLUMNS_BASE, "Action"],
-    []
-  );
+  const listColumns = useMemo(() => {
+    const columns = [...PROJECT_URL_LIST_COLUMNS_BASE];
+    if (isMultiLink) {
+      columns.push(MULTI_LINK_COUNT_COLUMN);
+    }
+    columns.push("Status", "Action");
+    return columns;
+  }, [isMultiLink]);
 
   const isDirty = useMemo(() => {
     if (!isEdit || !initialSnapshot) return false;
@@ -870,20 +928,7 @@ function ProjectUrlsTab({
 
           <SectionDivider />
         </>
-      ) : (
-        <>
-          <ProjectMultiUrlCsvUploadSection
-            projectId={projectFk}
-            projectUrlId={resolvedProjectUrlId}
-            isDarkMode={isDarkMode}
-            canWrite={canWrite}
-            showContextFields={false}
-            showRecordsTable
-            title="Upload Multi URL Links"
-          />
-          <SectionDivider />
-        </>
-      )}
+      ) : null}
 
       <TableCard title="Project Filters / Security" isDarkMode={isDarkMode}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

@@ -25,6 +25,7 @@ import {
   updateSupplierMappingStatus,
   updateSupplierMappingTestMode,
 } from "../services/supplierMappingApi";
+import { listProjectMultiUrls } from "../services/projectMultiUrlApi";
 import PartnerMappingViewModal from "./PartnerMappingViewModal";
 import {
   primaryBtnClass,
@@ -100,6 +101,13 @@ function createEmptyPartnerForm() {
   };
 }
 
+function sumAssignedMultiLinks(rows = []) {
+  return rows.reduce((total, row) => {
+    const value = Number(String(row?.linksToAssign ?? "").trim());
+    return total + (Number.isFinite(value) ? value : 0);
+  }, 0);
+}
+
 function PartnerMappingTab({
   projectId,
   projectUrlId,
@@ -117,6 +125,7 @@ function PartnerMappingTab({
     .includes("multi");
 
   const [rows, setRows] = useState([]);
+  const [multiLinkTotal, setMultiLinkTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState("add");
@@ -139,18 +148,35 @@ function PartnerMappingTab({
         projectId,
         projectUrlId: resolvedProjectUrlId,
       });
-      setRows(
-        Array.isArray(records)
-          ? records.map((record, index) => mapSupplierMappingToRow(record, index))
-          : []
-      );
+      const nextRows = Array.isArray(records)
+        ? records.map((record, index) => mapSupplierMappingToRow(record, index))
+        : [];
+      setRows(nextRows);
+
+      if (isMultiLink) {
+        try {
+          const multiUrlResponse = await listProjectMultiUrls(
+            projectId,
+            resolvedProjectUrlId
+          );
+          const multiRows = Array.isArray(multiUrlResponse?.data)
+            ? multiUrlResponse.data
+            : [];
+          setMultiLinkTotal(multiRows.length);
+        } catch {
+          setMultiLinkTotal(0);
+        }
+      } else {
+        setMultiLinkTotal(0);
+      }
     } catch (error) {
       toastApiError(error);
       setRows([]);
+      setMultiLinkTotal(0);
     } finally {
       setIsLoading(false);
     }
-  }, [projectId, resolvedProjectUrlId]);
+  }, [projectId, resolvedProjectUrlId, isMultiLink]);
 
   useEffect(() => {
     loadMappings();
@@ -207,6 +233,11 @@ function PartnerMappingTab({
       ),
     [partnerOptions, assignedPartnerIds]
   );
+
+  const leftMultiLinkCount = useMemo(() => {
+    if (!isMultiLink) return 0;
+    return Math.max(0, multiLinkTotal - sumAssignedMultiLinks(rows));
+  }, [isMultiLink, multiLinkTotal, rows]);
 
   const tableColumns = useMemo(() => {
     const columns = [...TABLE_COLUMNS];
@@ -501,13 +532,20 @@ function PartnerMappingTab({
           isDarkMode={isDarkMode}
           footer={
             allowWrite ? (
-              <button
-                type="button"
-                onClick={openAddForm}
-                className="text-sm font-semibold text-[var(--admin-primary-color)] transition hover:opacity-80"
-              >
-                + Add Partner
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={openAddForm}
+                  className="text-sm font-semibold text-[var(--admin-primary-color)] transition hover:opacity-80"
+                >
+                  + Add Partner
+                </button>
+                {isMultiLink ? (
+                  <span className="text-sm font-semibold text-[var(--admin-danger-text)]">
+                    (Left Multi Link - {leftMultiLinkCount})
+                  </span>
+                ) : null}
+              </div>
             ) : null
           }
         />

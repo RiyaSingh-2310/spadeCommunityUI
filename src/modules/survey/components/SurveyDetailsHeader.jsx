@@ -13,7 +13,7 @@ export const SURVEY_DETAIL_TABS = [
 
 /**
  * Build Project Details tabs.
- * Multi-link CSV upload lives inside the Project URL tab (not a separate tab).
+ * Multi-link CSV upload is available when creating a project (Create Project form).
  */
 export function getSurveyDetailTabs() {
   return [

@@ -13,6 +13,10 @@ import {
   resolveGroupClientNames,
   resolveGroupPrimaryClientId,
 } from "../services/groupSurveyApi";
+import {
+  resolveCreatedProjectId,
+  uploadPendingMultiUrlCsvFiles,
+} from "../services/projectMultiUrlApi";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   getSurveyFormErrors,
@@ -20,6 +24,7 @@ import {
   SURVEY_FORM_FIELDS,
 } from "../utils/surveyFormValidation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { ApiError } from "../../../services/api/ApiError";
 
 function AddGroupSurveyProjectPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -30,6 +35,7 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [form, setForm] = useState(createEmptySurveyForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [multiUrlCsvFiles, setMultiUrlCsvFiles] = useState([]);
   const {
     clientOptions,
     projectManagerOptions,
@@ -83,6 +89,12 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
     fields: SURVEY_FORM_FIELDS,
   });
 
+  useEffect(() => {
+    if (form.projectLinkType !== "Multi Link" && multiUrlCsvFiles.length > 0) {
+      setMultiUrlCsvFiles([]);
+    }
+  }, [form.projectLinkType, multiUrlCsvFiles.length]);
+
   const canSubmit =
     showSubmit &&
     !readOnly &&
@@ -99,7 +111,30 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
     setIsSubmitting(true);
     try {
       const data = await createGroupSurveyProject(groupId, form);
-      toastApiSuccess(data);
+      const isMultiLink = form.projectLinkType === "Multi Link";
+      const pendingCsvFiles = isMultiLink ? multiUrlCsvFiles : [];
+
+      if (pendingCsvFiles.length > 0) {
+        const projectId = resolveCreatedProjectId(data);
+        if (!projectId) {
+          throw new ApiError("Project was created but the project ID was not returned.");
+        }
+
+        const uploadResult = await uploadPendingMultiUrlCsvFiles({
+          projectId,
+          createResponse: data,
+          files: pendingCsvFiles,
+        });
+
+        toastApiSuccess({
+          message:
+            uploadResult.uploaded === 1
+              ? "Project created and 1 CSV file uploaded successfully."
+              : `Project created and ${uploadResult.uploaded} CSV file(s) uploaded successfully.`,
+        });
+      } else {
+        toastApiSuccess(data);
+      }
       navigate(`/survey/group/${encodeURIComponent(groupId)}/projects`, {
         replace: true,
         state: { refresh: true },
@@ -175,6 +210,9 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
           projectManagerOptions={projectManagerOptions}
           salesManagerOptions={salesManagerOptions}
           salesProjectOptions={salesProjectOptions}
+          showMultiUrlCsvUpload
+          multiUrlCsvFiles={multiUrlCsvFiles}
+          onMultiUrlCsvFilesChange={setMultiUrlCsvFiles}
         />
 
         <div className="admin-form-actions flex flex-wrap items-center gap-3">

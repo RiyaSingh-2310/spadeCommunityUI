@@ -17,6 +17,10 @@ import {
   mapSurveyToForm,
   updateSurvey,
 } from "../services/surveyApi";
+import {
+  resolveCreatedProjectId,
+  uploadPendingMultiUrlCsvFiles,
+} from "../services/projectMultiUrlApi";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   areSurveyFormsEqual,
@@ -26,10 +30,9 @@ import {
   SURVEY_FORM_FIELDS,
 } from "../utils/surveyFormValidation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { ApiError } from "../../../services/api/ApiError";
 import {
-  getSurveyDetailsPath,
   getSurveyEditBreadcrumbs,
-  SURVEY_DETAIL_TAB_IDS,
 } from "../utils/surveyDetailsNavigation";
 
 function SurveyFormPage({ isDarkMode, mode = "create" }) {
@@ -46,6 +49,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [multiUrlCsvFiles, setMultiUrlCsvFiles] = useState([]);
   const {
     clientOptions,
     projectManagerOptions,
@@ -275,10 +279,19 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     salesProjectLabel,
   ]);
 
+  useEffect(() => {
+    if (form.projectLinkType !== "Multi Link" && multiUrlCsvFiles.length > 0) {
+      setMultiUrlCsvFiles([]);
+    }
+  }, [form.projectLinkType, multiUrlCsvFiles.length]);
+
   const isDirty = useMemo(() => {
     if (!isEdit || !initialSnapshot) return false;
     return !areSurveyFormsEqual(form, initialSnapshot);
   }, [isEdit, initialSnapshot, form]);
+
+  const hasPendingMultiUrlCsv =
+    form.projectLinkType === "Multi Link" && multiUrlCsvFiles.length > 0;
 
   const canSubmit =
     showSubmit &&
@@ -288,7 +301,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     !isLoadingRecord &&
     !isLoadingOptions &&
     !loadFailed &&
-    (!isEdit || isDirty);
+    (!isEdit || isDirty || hasPendingMultiUrlCsv);
 
   const selectOptions = {
     clientOptions: mergedClientOptions,
@@ -302,7 +315,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     if (
       !validateSubmit() ||
       !isSurveyFormSubmittable(form, validationOptions) ||
-      (isEdit && !isDirty)
+      (isEdit && !isDirty && !hasPendingMultiUrlCsv)
     ) {
       return;
     }
@@ -311,10 +324,50 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     try {
       if (isEdit) {
         const data = await updateSurvey(id, form, selectOptions);
-        toastApiSuccess(data);
+        const pendingCsvFiles = hasPendingMultiUrlCsv ? multiUrlCsvFiles : [];
+
+        if (pendingCsvFiles.length > 0) {
+          const uploadResult = await uploadPendingMultiUrlCsvFiles({
+            projectId: id,
+            createResponse: loadedRecord ? { data: loadedRecord } : data,
+            files: pendingCsvFiles,
+          });
+
+          toastApiSuccess({
+            message:
+              uploadResult.uploaded === 1
+                ? "Project updated and 1 CSV file uploaded successfully."
+                : `Project updated and ${uploadResult.uploaded} CSV file(s) uploaded successfully.`,
+          });
+        } else {
+          toastApiSuccess(data);
+        }
       } else {
         const data = await createSurvey(form, selectOptions);
-        toastApiSuccess(data);
+        const isMultiLink = form.projectLinkType === "Multi Link";
+        const pendingCsvFiles = isMultiLink ? multiUrlCsvFiles : [];
+
+        if (pendingCsvFiles.length > 0) {
+          const projectId = resolveCreatedProjectId(data);
+          if (!projectId) {
+            throw new ApiError("Project was created but the project ID was not returned.");
+          }
+
+          const uploadResult = await uploadPendingMultiUrlCsvFiles({
+            projectId,
+            createResponse: data,
+            files: pendingCsvFiles,
+          });
+
+          toastApiSuccess({
+            message:
+              uploadResult.uploaded === 1
+                ? "Project created and 1 CSV file uploaded successfully."
+                : `Project created and ${uploadResult.uploaded} CSV file(s) uploaded successfully.`,
+          });
+        } else {
+          toastApiSuccess(data);
+        }
       }
 
       navigate(returnTo ?? "/survey", {
@@ -410,18 +463,9 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
           projectManagerOptions={mergedProjectManagerOptions}
           salesManagerOptions={mergedSalesManagerOptions}
           salesProjectOptions={mergedSalesProjectOptions}
-          onOpenProjectUrls={
-            isEdit
-              ? () =>
-                  navigate(
-                    getSurveyDetailsPath({
-                      id,
-                      groupId,
-                      tab: SURVEY_DETAIL_TAB_IDS.PROJECT_URLS,
-                    })
-                  )
-              : undefined
-          }
+          showMultiUrlCsvUpload
+          multiUrlCsvFiles={multiUrlCsvFiles}
+          onMultiUrlCsvFilesChange={setMultiUrlCsvFiles}
         />
 
         <div className="admin-form-actions flex flex-wrap items-center gap-3">

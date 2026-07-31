@@ -238,6 +238,8 @@ export function mapProjectUrlToForm(record) {
     language: record.language ?? "",
     cpiRate: record.cpiRate != null ? String(record.cpiRate) : "",
     sampleSize: record.sampleSize != null ? String(record.sampleSize) : "",
+    multiLinkCount:
+      record.multiLinkCount != null ? String(record.multiLinkCount) : "",
     startDate: record.startDate ?? "",
     endDate: record.endDate ?? "",
     status: normalizeProjectUrlStatus(record.status),
@@ -347,6 +349,22 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
     sampleSize:
       pickUrlInfoField(urlInfo, ["SampleSize", "sample_size", "sampleSize"]) ??
       pickUrlInfoField(projectRecord, ["SampleSize", "sample_size", "sampleSize"]),
+    multiLinkCount: toFormNumberValue(
+      pickUrlInfoField(urlInfo, [
+        "multi_link_count",
+        "multiLinkCount",
+        "Multi_Link_Count",
+        "multiple_url_count",
+        "multipleUrlCount",
+      ]) ??
+        pickUrlInfoField(projectRecord, [
+          "multi_link_count",
+          "multiLinkCount",
+          "Multi_Link_Count",
+          "multiple_url_count",
+          "multipleUrlCount",
+        ])
+    ),
     startDate: toFormDateValue(
       pickUrlInfoField(urlInfo, ["Start_Date", "start_date", "Start Date", "startDate"]) ??
         pickUrlInfoField(projectRecord, ["Start_Date", "start_date", "Start Date", "startDate"])

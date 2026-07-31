@@ -27,10 +27,8 @@ export function getSurveyFormErrors(form, options = {}) {
     projectManager: getRequiredError(form.projectManager, "Project Manager"),
     projectLinkType: getRequiredError(form.projectLinkType, "Project Link Type"),
     status: getRequiredError(form.status, "Status"),
-    startDate: getRequiredError(form.startDate, "Start Date"),
-    endDate:
-      getRequiredError(form.endDate, "End Date") ||
-      getDateRangeError(form.startDate, form.endDate),
+    startDate: "",
+    endDate: getDateRangeError(form.startDate, form.endDate),
     salesManager: "",
     salesProject: "",
   };
