@@ -166,6 +166,7 @@ export function mapSupplierMappingToForm(record) {
 
 /**
  * Builds POST/PUT /api/supplier-mapping body from the Partner Mapping form.
+ * Matches backend contract: partnerid, projectid, projectUrlId, quota, CPI, redirect URLs, status, IsTest.
  */
 export function buildSupplierMappingApiPayload({
   partnerId,
@@ -203,32 +204,38 @@ export function buildSupplierMappingApiPayload({
 }
 
 /**
- * GET /api/supplier-mapping/list — optionally filtered by project / project URL.
+ * GET /api/supplier-mapping/list
+ * Matches provided cURL:
+ *   curl --location 'http://localhost:5050/api/supplier-mapping/list'
+ *     --header 'Authorization: Bearer …'
+ * Response: { success, data: [...], total, page, limit, totalPages }
  */
 export async function listSupplierMappings({ projectId, projectUrlId } = {}) {
+  // Matches backend list contract:
+  // GET /api/supplier-mapping/list?page&limit&projectid&partnerid&status&search
+  const normalizedProjectId = String(projectId ?? "").trim();
+  const normalizedUrlId = String(projectUrlId ?? "").trim();
   const url = appendListQuery(API_ROUTES.supplierMapping.list, {
     page: 1,
     limit: MAX_API_LIST_LIMIT,
     extra: {
-      projectid: projectId,
-      projectUrlId,
+      ...(normalizedProjectId ? { projectid: normalizedProjectId } : {}),
     },
   });
 
-  const data = await apiRequest(url);
+  const data = await apiRequest(url, { method: "GET" });
   assertSuccess(data);
+
   const rows = Array.isArray(data?.data) ? data.data : [];
+  if (!normalizedUrlId) return rows;
 
-  const normalizedProjectId = String(projectId ?? "").trim();
-  const normalizedUrlId = String(projectUrlId ?? "").trim();
-  if (!normalizedProjectId && !normalizedUrlId) return rows;
-
+  // Backend has no projectUrlId query filter — narrow client-side after projectid filter.
   return rows.filter((row) => {
-    const rowProjectId = String(row?.projectid ?? row?.project_id ?? "").trim();
-    const rowUrlId = String(row?.projectUrlId ?? row?.project_url_id ?? "").trim();
-    if (normalizedProjectId && rowProjectId !== normalizedProjectId) return false;
-    if (normalizedUrlId && rowUrlId !== normalizedUrlId) return false;
-    return true;
+    const rowUrlId = String(
+      pickField(row, ["projectUrlId", "project_url_id", "projecturlid", "ProjectUrlId"]) ??
+        ""
+    ).trim();
+    return !rowUrlId || rowUrlId === normalizedUrlId;
   });
 }
 

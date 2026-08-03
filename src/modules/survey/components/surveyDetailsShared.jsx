@@ -143,9 +143,22 @@ export function StatusBadge({ status }) {
 const TABLE_HEAD =
   "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
 
-export function SurveyDataTable({ title, columns, rows, renderCell, isDarkMode, footer }) {
+export function SurveyDataTable({
+  title,
+  columns,
+  rows,
+  renderCell,
+  isDarkMode,
+  footer,
+  headerAction,
+}) {
   return (
-    <TableCard title={title} isDarkMode={isDarkMode} footer={footer}>
+    <TableCard
+      title={title}
+      isDarkMode={isDarkMode}
+      footer={footer}
+      headerAction={headerAction}
+    >
       <table className={ADMIN_TABLE_INNER_CLASS}>
         <thead>
           <tr>

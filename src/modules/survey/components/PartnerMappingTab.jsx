@@ -362,10 +362,21 @@ function PartnerMappingTab({
     if (!allowWrite || !resolvedProjectUrlId) return;
     if (!validateSubmit() || !isFormValid(errors)) return;
 
+    const payload = buildPayloadFromForm();
+    if (
+      payload.partnerid == null ||
+      payload.projectid == null ||
+      payload.projectUrlId == null
+    ) {
+      toastApiError({
+        message: "partnerid, projectid and projectUrlId are required!",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     const isCreate = formMode === "add";
     try {
-      const payload = buildPayloadFromForm();
       const data =
         formMode === "edit" && form.mappingId
           ? await updateSupplierMappingRecord(form.mappingId, payload)
@@ -530,22 +541,22 @@ function PartnerMappingTab({
           rows={rows}
           renderCell={renderCell}
           isDarkMode={isDarkMode}
-          footer={
+          headerAction={
             allowWrite ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={openAddForm}
-                  className="text-sm font-semibold text-[var(--admin-primary-color)] transition hover:opacity-80"
-                >
-                  + Add Partner
-                </button>
-                {isMultiLink ? (
-                  <span className="text-sm font-semibold text-[var(--admin-danger-text)]">
-                    (Left Multi Link - {leftMultiLinkCount})
-                  </span>
-                ) : null}
-              </div>
+              <button
+                type="button"
+                onClick={openAddForm}
+                className="h-10 cursor-pointer rounded-xl bg-[#10a950] px-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,169,80,0.28)] transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]"
+              >
+                + Add Partner
+              </button>
+            ) : null
+          }
+          footer={
+            allowWrite && isMultiLink ? (
+              <span className="text-sm font-semibold text-[var(--admin-danger-text)]">
+                (Left Multi Link - {leftMultiLinkCount})
+              </span>
             ) : null
           }
         />
@@ -564,7 +575,7 @@ function PartnerMappingTab({
               </div>
             ) : (
               <div className="space-y-5">
-                <div className={`grid gap-4 ${isMultiLink ? "md:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-3"}`}>
+                <div className="grid gap-4 md:grid-cols-3">
                   <FormField
                     label="Partner"
                     required
@@ -615,29 +626,30 @@ function PartnerMappingTab({
                       aria-invalid={Boolean(showError("cpi") && errors.cpi)}
                     />
                   </FormField>
-                  {isMultiLink ? (
-                    <FormField
-                      label="Links To Assign"
-                      required
-                      error={showError("linksToAssign") ? errors.linksToAssign : ""}
-                      hint="How many multi URLs should be assigned to this partner"
-                    >
-                      <NumericInput
-                        className={inputClass}
-                        value={form.linksToAssign}
-                        onChange={(value) =>
-                          setForm((prev) => ({ ...prev, linksToAssign: value }))
-                        }
-                        onBlur={() => touch("linksToAssign")}
-                        disabled={isSubmitting}
-                        placeholder="e.g. 10"
-                        aria-invalid={Boolean(
-                          showError("linksToAssign") && errors.linksToAssign
-                        )}
-                      />
-                    </FormField>
-                  ) : null}
                 </div>
+
+                {isMultiLink ? (
+                  <FormField
+                    label="Link to Assign"
+                    required
+                    error={showError("linksToAssign") ? errors.linksToAssign : ""}
+                    hint="How many multi URLs should be assigned to this partner"
+                  >
+                    <NumericInput
+                      className={inputClass}
+                      value={form.linksToAssign}
+                      onChange={(value) =>
+                        setForm((prev) => ({ ...prev, linksToAssign: value }))
+                      }
+                      onBlur={() => touch("linksToAssign")}
+                      disabled={isSubmitting}
+                      placeholder="e.g. 10"
+                      aria-invalid={Boolean(
+                        showError("linksToAssign") && errors.linksToAssign
+                      )}
+                    />
+                  </FormField>
+                ) : null}
 
                 <div>
                   <h3 className="admin-text mb-3 text-sm font-bold">
