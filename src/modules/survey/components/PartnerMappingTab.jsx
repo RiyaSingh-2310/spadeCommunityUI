@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Eye, Link2, Loader2, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import FormField from "../../../components/admin/FormField";
-import NumericInput from "../../../components/admin/NumericInput";
+// import NumericInput from "../../../components/admin/NumericInput";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import StatusToggle from "../../../components/admin/StatusToggle";
 import TableCard from "../../../components/admin/TableCard";
@@ -251,14 +251,15 @@ function PartnerMappingTab({
     if (!String(form.quota ?? "").trim()) next.quota = "Partner quota is required";
     if (!String(form.cpi ?? "").trim()) next.cpi = "CPI is required";
 
-    if (isMultiLink) {
-      const linksValue = String(form.linksToAssign ?? "").trim();
-      if (!linksValue) {
-        next.linksToAssign = "Number of links is required";
-      } else if (!/^\d+$/.test(linksValue) || Number(linksValue) < 1) {
-        next.linksToAssign = "Enter a valid number of links (minimum 1)";
-      }
-    }
+    // Link to Assign field is temporarily hidden.
+    // if (isMultiLink) {
+    //   const linksValue = String(form.linksToAssign ?? "").trim();
+    //   if (!linksValue) {
+    //     next.linksToAssign = "Number of links is required";
+    //   } else if (!/^\d+$/.test(linksValue) || Number(linksValue) < 1) {
+    //     next.linksToAssign = "Enter a valid number of links (minimum 1)";
+    //   }
+    // }
 
     REDIRECT_FIELDS.forEach((field) => {
       next[field.key] = getOptionalUrlError(
@@ -272,7 +273,7 @@ function PartnerMappingTab({
 
   const validationFields = useMemo(() => {
     const fields = ["partnerId", "quota", "cpi", ...REDIRECT_FIELD_KEYS];
-    if (isMultiLink) fields.push("linksToAssign");
+    // if (isMultiLink) fields.push("linksToAssign");
     return fields;
   }, [isMultiLink]);
 
@@ -654,7 +655,7 @@ function PartnerMappingTab({
                   </FormField>
                 </div>
 
-                {isMultiLink ? (
+                {/* {isMultiLink ? (
                   <FormField
                     label="Link to Assign"
                     required
@@ -675,7 +676,7 @@ function PartnerMappingTab({
                       )}
                     />
                   </FormField>
-                ) : null}
+                ) : null} */}
 
                 <div>
                   <h3 className="admin-text mb-3 text-sm font-bold">
