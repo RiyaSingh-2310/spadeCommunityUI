@@ -38,9 +38,21 @@ import {
 } from "../../shared/utils/validation";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 
-const PARTNER_ADD_REQUIRED_FIELDS = ["name", "email", "country", "contactNumber"];
+const PARTNER_ADD_REQUIRED_FIELDS = [
+  "name",
+  "email",
+  "country",
+  "contactNumber",
+  "panelSize",
+];
 
-const PARTNER_EDIT_REQUIRED_FIELDS = ["name", "email", "country", "contactNumber"];
+const PARTNER_EDIT_REQUIRED_FIELDS = [
+  "name",
+  "email",
+  "country",
+  "contactNumber",
+  "panelSize",
+];
 
 const PARTNER_FORM_FIELDS = [
   "code",
@@ -109,9 +121,11 @@ function AddPartnerPage({ isDarkMode }) {
     };
 
     const apiBaseUrlError = getOptionalUrlError(form.apiBaseUrl, "API Base URL");
-    const panelSizeError = getOptionalPositiveIntegerError(form.panelSize, "Panel Size", {
-      maxDigits: PARTNER_PANEL_SIZE_MAX_DIGITS,
-    });
+    const panelSizeError =
+      getRequiredError(form.panelSize, "Panel Size") ||
+      getOptionalPositiveIntegerError(form.panelSize, "Panel Size", {
+        maxDigits: PARTNER_PANEL_SIZE_MAX_DIGITS,
+      });
 
     if (!isEdit) {
       return {
@@ -296,7 +310,7 @@ function AddPartnerPage({ isDarkMode }) {
               ["Email Address", "email", "Enter Email Address", "email", true],
               ["Contact Person", "contactPerson", "Enter Contact Person", "text", false],
               ["Website URL", "website", "Enter Website URL", "url", false],
-              ["Panel Size", "panelSize", "Enter Panel Size", "positiveNumeric", false],
+              ["Panel Size", "panelSize", "Enter Panel Size", "positiveNumeric", true],
               ["Complete URL", "complete", "Enter Complete URL", "text", false],
               ["Terminate URL", "terminate", "Enter Terminate URL", "text", false],
               ["Over Quota URL", "overQuota", "Enter Over Quota URL", "text", false],
