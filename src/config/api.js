@@ -28,6 +28,7 @@ export const API_ROUTES = {
   },
   partners: {
     list: "/api/partner/list",
+    panelSizes: "/api/partner/panel-sizes",
     byId: (id) => `/api/partner/${id}`,
     create: "/api/partner/add",
     update: (id) => `/api/partner/${id}`,
@@ -143,6 +144,7 @@ export const API_ROUTES = {
     deleteMultiUrl: (urlId) => `/api/projects/multiple-url/${urlId}`,
     multiUrlCsvTemplate: "/api/projects/multiple-url/csv-template",
     uploadMultiUrls: (id) => `/api/projects/${id}/multiple-url/csv-upload`,
+    multiLinkStats: (id) => `/api/projects/${id}/multi-link-stats`,
   },
   supplierMapping: {
     list: "/api/supplier-mapping/list",

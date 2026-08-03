@@ -6,6 +6,7 @@
  * Delete: DELETE /api/projects/multiple-url/:urlId
  * Upload: POST   /api/projects/:id/multiple-url/csv-upload
  * Template: GET  /api/projects/multiple-url/csv-template
+ * Stats:  GET    /api/projects/:id/multi-link-stats
  */
 import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
@@ -78,6 +79,62 @@ export function buildCreateMultiUrlApiPayload(form = {}) {
     UserType: String(form.UserType ?? form.userType ?? "").trim(),
     Status: String(form.Status ?? form.status ?? "active").trim() || "active",
   };
+}
+
+/**
+ * Normalizes GET /api/projects/:id/multi-link-stats payload.
+ * @param {object} [raw]
+ */
+export function mapMultiLinkStats(raw = {}) {
+  const source =
+    raw && typeof raw === "object" && raw.data && typeof raw.data === "object"
+      ? raw.data
+      : raw;
+
+  const toNumber = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const addPartnerRaw =
+    source?.addPartner ?? source?.add_partner ?? source?.addpartner;
+
+  return {
+    projectId: source?.project_id ?? source?.projectId ?? "",
+    totalMultiLinks: toNumber(
+      source?.totalMultiLinkCount ??
+        source?.total_multi_links ??
+        source?.totalMultiLinks
+    ),
+    remainingMultiLinks: toNumber(
+      source?.remainingMultiLinkCount ??
+        source?.remaining_multi_links ??
+        source?.remainingMultiLinks
+    ),
+    sampleSize: toNumber(
+      source?.sampleSize ?? source?.sample_size
+    ),
+    sampleAdded: toNumber(
+      source?.samplesAdded ??
+        source?.sample_added ??
+        source?.sampleAdded
+    ),
+    addPartner:
+      addPartnerRaw === false ||
+      addPartnerRaw === 0 ||
+      addPartnerRaw === "0" ||
+      addPartnerRaw === "false"
+        ? false
+        : true,
+  };
+}
+
+/** GET /api/projects/:id/multi-link-stats */
+export async function getProjectMultiLinkStats(projectId) {
+  const normalizedId = normalizeProjectId(projectId);
+  const data = await apiRequest(API_ROUTES.projects.multiLinkStats(normalizedId));
+  assertSuccess(data);
+  return mapMultiLinkStats(data);
 }
 
 /** GET /api/projects/:id/multiple-url/list */

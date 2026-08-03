@@ -102,12 +102,12 @@ export const SIDEBAR_NAV_ITEMS = [
         matcher: /^\/survey(\/|$)/,
         permissionKeys: ["survey"],
       },
-      {
-        label: "Group Survey",
-        root: "/survey/group",
-        matcher: /^\/survey\/group(\/|$)/,
-        permissionKeys: ["group_survey"],
-      },
+      // {
+      //   label: "Group Survey",
+      //   root: "/survey/group",
+      //   matcher: /^\/survey\/group(\/|$)/,
+      //   permissionKeys: ["group_survey"],
+      // },
       {
         label: "Recontact Survey",
         root: "/survey/recontact",

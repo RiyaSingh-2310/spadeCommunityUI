@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Eye, Loader2, Pencil } from "lucide-react";
+import { Eye, Link2, Loader2, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import FormField from "../../../components/admin/FormField";
 import NumericInput from "../../../components/admin/NumericInput";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import StatusToggle from "../../../components/admin/StatusToggle";
 import TableCard from "../../../components/admin/TableCard";
-import { getRecords as getPartnerRecords } from "../../../services/partners/partnersApi";
+import { getPartnerPanelSizes } from "../../../services/partners/partnersApi";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
-import { MAX_API_LIST_LIMIT } from "../../shared/utils/listQueryParams";
 import { getOptionalUrlError, isFormValid } from "../../shared/utils/validation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { mapPartnersToSelectOptions } from "../services/surveyApi";
@@ -25,7 +24,7 @@ import {
   updateSupplierMappingStatus,
   updateSupplierMappingTestMode,
 } from "../services/supplierMappingApi";
-import { listProjectMultiUrls } from "../services/projectMultiUrlApi";
+import { getProjectMultiLinkStats } from "../services/projectMultiUrlApi";
 import PartnerMappingViewModal from "./PartnerMappingViewModal";
 import {
   primaryBtnClass,
@@ -101,12 +100,13 @@ function createEmptyPartnerForm() {
   };
 }
 
-function sumAssignedMultiLinks(rows = []) {
-  return rows.reduce((total, row) => {
-    const value = Number(String(row?.linksToAssign ?? "").trim());
-    return total + (Number.isFinite(value) ? value : 0);
-  }, 0);
-}
+const EMPTY_MULTI_LINK_STATS = {
+  totalMultiLinks: 0,
+  remainingMultiLinks: 0,
+  sampleSize: 0,
+  sampleAdded: 0,
+  addPartner: true,
+};
 
 function PartnerMappingTab({
   projectId,
@@ -125,7 +125,7 @@ function PartnerMappingTab({
     .includes("multi");
 
   const [rows, setRows] = useState([]);
-  const [multiLinkTotal, setMultiLinkTotal] = useState(0);
+  const [multiLinkStats, setMultiLinkStats] = useState(EMPTY_MULTI_LINK_STATS);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState("add");
@@ -136,6 +136,22 @@ function PartnerMappingTab({
   const [viewTarget, setViewTarget] = useState(null);
   const [togglingRowId, setTogglingRowId] = useState("");
 
+  const loadMultiLinkStats = useCallback(async () => {
+    if (!projectId) {
+      setMultiLinkStats(EMPTY_MULTI_LINK_STATS);
+      return EMPTY_MULTI_LINK_STATS;
+    }
+
+    try {
+      const stats = await getProjectMultiLinkStats(projectId);
+      setMultiLinkStats(stats);
+      return stats;
+    } catch {
+      setMultiLinkStats(EMPTY_MULTI_LINK_STATS);
+      return EMPTY_MULTI_LINK_STATS;
+    }
+  }, [projectId]);
+
   const loadMappings = useCallback(async () => {
     if (!projectId || !resolvedProjectUrlId) {
       setRows([]);
@@ -144,39 +160,25 @@ function PartnerMappingTab({
 
     setIsLoading(true);
     try {
-      const records = await listSupplierMappings({
-        projectId,
-        projectUrlId: resolvedProjectUrlId,
-      });
+      const [records] = await Promise.all([
+        listSupplierMappings({
+          projectId,
+          projectUrlId: resolvedProjectUrlId,
+        }),
+        loadMultiLinkStats(),
+      ]);
       const nextRows = Array.isArray(records)
         ? records.map((record, index) => mapSupplierMappingToRow(record, index))
         : [];
       setRows(nextRows);
-
-      if (isMultiLink) {
-        try {
-          const multiUrlResponse = await listProjectMultiUrls(
-            projectId,
-            resolvedProjectUrlId
-          );
-          const multiRows = Array.isArray(multiUrlResponse?.data)
-            ? multiUrlResponse.data
-            : [];
-          setMultiLinkTotal(multiRows.length);
-        } catch {
-          setMultiLinkTotal(0);
-        }
-      } else {
-        setMultiLinkTotal(0);
-      }
     } catch (error) {
       toastApiError(error);
       setRows([]);
-      setMultiLinkTotal(0);
+      setMultiLinkStats(EMPTY_MULTI_LINK_STATS);
     } finally {
       setIsLoading(false);
     }
-  }, [projectId, resolvedProjectUrlId, isMultiLink]);
+  }, [projectId, resolvedProjectUrlId, loadMultiLinkStats]);
 
   useEffect(() => {
     loadMappings();
@@ -192,19 +194,17 @@ function PartnerMappingTab({
 
   const loadPartnerOptions = useCallback(async () => {
     try {
-      const response = await getPartnerRecords({
-        page: 1,
-        limit: MAX_API_LIST_LIMIT,
-      });
-      const items = Array.isArray(response?.items) ? response.items : [];
+      const items = await getPartnerPanelSizes();
+      const partners = Array.isArray(items) ? items : [];
       setPartnerOptionsSource(
-        items.map((partner) => ({
+        partners.map((partner) => ({
           partner_id: partner.id,
-          code: partner.partnerCode,
+          code: partner.code,
           name: partner.name,
+          panel_size: partner.panel_size,
         }))
       );
-      return items;
+      return partners;
     } catch (error) {
       toastApiError(error);
       setPartnerOptionsSource([]);
@@ -233,11 +233,6 @@ function PartnerMappingTab({
       ),
     [partnerOptions, assignedPartnerIds]
   );
-
-  const leftMultiLinkCount = useMemo(() => {
-    if (!isMultiLink) return 0;
-    return Math.max(0, multiLinkTotal - sumAssignedMultiLinks(rows));
-  }, [isMultiLink, multiLinkTotal, rows]);
 
   const tableColumns = useMemo(() => {
     const columns = [...TABLE_COLUMNS];
@@ -329,12 +324,18 @@ function PartnerMappingTab({
     const partner = partnerOptionsSource.find(
       (item) => String(item.partner_id ?? item.id) === String(partnerId)
     );
+    const panelSize = partner?.panel_size ?? partner?.panelSize;
     setForm((prev) => ({
       ...prev,
       partnerId: String(partnerId),
       partnerCode: String(partner?.code ?? "").trim(),
+      quota:
+        panelSize != null && String(panelSize).trim() !== ""
+          ? String(panelSize)
+          : prev.quota,
     }));
     touch("partnerId");
+    touch("quota");
   };
 
   const setRedirect = (key, value) => {
@@ -518,11 +519,20 @@ function PartnerMappingTab({
   };
 
   const canSubmit = isFormValid(errors) && !isSubmitting && !isFormLoading;
+  const showAddPartner = allowWrite && multiLinkStats.addPartner;
 
   if (!resolvedProjectUrlId) {
     return (
-      <div className="admin-text rounded-xl border border-[var(--admin-border)] p-6 text-sm">
-        Save a Project URL first to enable partner mapping for this project.
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-header-search-bg)] px-6 py-14 text-center sm:px-10">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-[var(--admin-border)] bg-[var(--admin-input-bg)] admin-text-subtle">
+          <Link2 size={22} strokeWidth={1.75} aria-hidden />
+        </div>
+        <h3 className="admin-text text-base font-semibold tracking-tight">
+          Partner Mapping unavailable
+        </h3>
+        <p className="admin-text-muted mt-2 max-w-md text-sm leading-relaxed">
+          Save a Project URL first to enable Partner Mapping for this project.
+        </p>
       </div>
     );
   }
@@ -542,7 +552,7 @@ function PartnerMappingTab({
           renderCell={renderCell}
           isDarkMode={isDarkMode}
           headerAction={
-            allowWrite ? (
+            showAddPartner ? (
               <button
                 type="button"
                 onClick={openAddForm}
@@ -553,11 +563,27 @@ function PartnerMappingTab({
             ) : null
           }
           footer={
-            allowWrite && isMultiLink ? (
-              <span className="text-sm font-semibold text-[var(--admin-danger-text)]">
-                (Left Multi Link - {leftMultiLinkCount})
-              </span>
-            ) : null
+            <div className="flex flex-wrap items-start gap-x-8 gap-y-3 text-sm">
+              {isMultiLink ? (
+                <div>
+                  <p className="admin-text-muted text-xs font-medium uppercase tracking-wide">
+                    Remaining Multi-Links
+                  </p>
+                  <p className="mt-1 font-semibold text-[var(--admin-danger-text)]">
+                    {multiLinkStats.remainingMultiLinks} /{" "}
+                    {multiLinkStats.totalMultiLinks}
+                  </p>
+                </div>
+              ) : null}
+              <div>
+                <p className="admin-text-muted text-xs font-medium uppercase tracking-wide">
+                  Sample Assigned
+                </p>
+                <p className="admin-text mt-1 font-semibold">
+                  {multiLinkStats.sampleAdded} / {multiLinkStats.sampleSize}
+                </p>
+              </div>
+            </div>
           }
         />
       )}

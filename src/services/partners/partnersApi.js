@@ -264,6 +264,23 @@ export async function getRecords({ page, limit, search } = {}) {
   };
 }
 
+/**
+ * GET /api/partner/panel-sizes — full partner list with panel sizes (non-paginated).
+ * @returns {Promise<{ id: string|number, code: string, name: string, panel_size: number }[]>}
+ */
+export async function getPartnerPanelSizes() {
+  const data = await apiRequest(API_ROUTES.partners.panelSizes);
+  assertSuccess(data);
+
+  const partners = extractPartnersList(data);
+  return partners.map((partner) => ({
+    id: partner?.id,
+    code: partner?.code ?? "",
+    name: partner?.name ?? "",
+    panel_size: Number(partner?.panel_size ?? partner?.panelSize ?? 0) || 0,
+  }));
+}
+
 const partnerDetailCache = new Map();
 
 /** Clears cached partner detail responses (all rows or one id). */
