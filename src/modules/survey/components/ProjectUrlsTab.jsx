@@ -29,7 +29,6 @@ import {
 } from "../services/projectUrlsApi";
 import {
   listProjectMultiUrls,
-  uploadPendingMultiUrlCsvFiles,
 } from "../services/projectMultiUrlApi";
 import { updateProjectLinkType } from "../services/surveyApi";
 import { PROJECT_LINK_TYPES } from "../data/surveyFormData";
@@ -644,35 +643,29 @@ function ProjectUrlsTab({
       };
 
       const isCreate = urlView === PROJECT_URL_VIEW_IDS.ADD;
+      const pendingCsvFiles = isMultiLink ? multiUrlCsvFiles : [];
       const data = isCreate
-        ? await createProjectUrl(projectFk, payloadForm)
+        ? await createProjectUrl(projectFk, payloadForm, {
+            isMultiLink,
+            csvFiles: pendingCsvFiles,
+          })
         : await updateProjectUrls(projectFk, payloadForm, {
             project,
             urlId: resolvedUrlId,
+            isMultiLink,
+            csvFiles: pendingCsvFiles,
           });
+
+      if (pendingCsvFiles.length > 0) {
+        setMultiUrlCsvFiles([]);
+      }
+
+      toastApiSuccess(data);
 
       const savedId =
         data?.data?.id != null
           ? String(data.data.id)
           : resolvedUrlId || selectedUrlId || form.id || "";
-
-      const pendingCsvFiles = isMultiLink ? multiUrlCsvFiles : [];
-      if (pendingCsvFiles.length > 0) {
-        const uploadResult = await uploadPendingMultiUrlCsvFiles({
-          projectId: projectFk,
-          createResponse: data,
-          files: pendingCsvFiles,
-        });
-        setMultiUrlCsvFiles([]);
-        toastApiSuccess({
-          message:
-            uploadResult.uploaded === 1
-              ? "Project URL saved and 1 CSV file uploaded successfully."
-              : `Project URL saved and ${uploadResult.uploaded} CSV file(s) uploaded successfully.`,
-        });
-      } else {
-        toastApiSuccess(data);
-      }
 
       try {
         await loadUrlRecords();

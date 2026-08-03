@@ -721,6 +721,37 @@ export function buildCreateProjectUrlApiPayload(form = {}) {
   });
 }
 
+/**
+ * Builds multipart/form-data for Multi Link Project URL create/update.
+ * Parts: `metadata` (JSON) + optional `csvFile` (CSV upload).
+ * @param {object} form
+ * @param {{ csvFiles?: File[]|File|null }} [options]
+ */
+export function buildProjectUrlMultipartFormData(form = {}, options = {}) {
+  const metadata = buildCreateProjectUrlApiPayload(form);
+  const body = new FormData();
+  // Send as a text field (not a file part) so multer exposes it on req.body.metadata.
+  body.append("metadata", JSON.stringify(metadata));
+
+  const rawFiles = options.csvFiles;
+  const files = Array.isArray(rawFiles)
+    ? rawFiles.filter(Boolean)
+    : rawFiles
+      ? [rawFiles]
+      : [];
+
+  files.forEach((file) => {
+    body.append("csvFile", file);
+  });
+
+  return body;
+}
+
+function normalizeCsvFilesOption(csvFiles) {
+  if (!csvFiles) return [];
+  return Array.isArray(csvFiles) ? csvFiles.filter(Boolean) : [csvFiles];
+}
+
 /** GET all Project URL configs for a project. Uses GET /api/projects/:id/url/list. */
 export async function listProjectUrlsByProject(projectId) {
   if (!USE_PROJECT_URLS_MOCK) {
@@ -796,24 +827,33 @@ export function buildUpdateProjectUrlApiPayload(form = {}) {
 
 /**
  * PUT /api/projects/url/:urlId — update an existing Project URL config.
+ * Single Link: JSON body.
+ * Multi Link: multipart/form-data with `metadata` + optional `csvFile`.
  * @param {string|number} urlId
  * @param {object} form
+ * @param {{ isMultiLink?: boolean, csvFiles?: File[]|File|null }} [options]
  */
-export async function updateProjectUrl(urlId, form = {}) {
-  const payload = buildUpdateProjectUrlApiPayload({
+export async function updateProjectUrl(urlId, form = {}, options = {}) {
+  const isMultiLink = Boolean(options.isMultiLink);
+  const csvFiles = normalizeCsvFilesOption(options.csvFiles);
+  const normalizedForm = {
     ...createEmptyProjectUrlForm(form.projectId),
     ...form,
     status: form.status || "Open",
-  });
+  };
 
   if (USE_PROJECT_URLS_MOCK) {
     return updateProjectUrlById(urlId, form);
   }
 
   const normalizedUrlId = normalizeUrlId(urlId);
+  const body = isMultiLink
+    ? buildProjectUrlMultipartFormData(normalizedForm, { csvFiles })
+    : buildUpdateProjectUrlApiPayload(normalizedForm);
+
   const data = await apiRequest(API_ROUTES.projects.updateUrl(normalizedUrlId), {
     method: "PUT",
-    body: payload,
+    body,
   });
   return assertSuccess(data);
 }
@@ -822,7 +862,7 @@ export async function updateProjectUrl(urlId, form = {}) {
  * Persists Project URL changes (create or update).
  * @param {string|number} projectId
  * @param {object} form
- * @param {{ project?: object }} [options] Legacy options (unused for live API)
+ * @param {{ project?: object, urlId?: string|number, isMultiLink?: boolean, csvFiles?: File[]|File|null }} [options]
  */
 export async function updateProjectUrls(projectId, form, options = {}) {
   const urlId = String(form?.id ?? options?.urlId ?? "").trim();
@@ -830,11 +870,18 @@ export async function updateProjectUrls(projectId, form, options = {}) {
     if (!urlId) {
       throw new ApiError("Project URL ID is required for update.", null);
     }
-    return updateProjectUrl(urlId, {
-      ...form,
-      id: urlId,
-      projectId: form.projectId || projectId,
-    });
+    return updateProjectUrl(
+      urlId,
+      {
+        ...form,
+        id: urlId,
+        projectId: form.projectId || projectId,
+      },
+      {
+        isMultiLink: options.isMultiLink,
+        csvFiles: options.csvFiles,
+      }
+    );
   }
 
   if (urlId) {
@@ -852,24 +899,25 @@ export async function updateProjectUrls(projectId, form, options = {}) {
 
 /**
  * POST /api/projects/:id/url — create a Project URL config under a project.
+ * Single Link: JSON body.
+ * Multi Link: multipart/form-data with `metadata` + optional `csvFile`.
  * @param {string|number} projectId
  * @param {object} form
+ * @param {{ isMultiLink?: boolean, csvFiles?: File[]|File|null }} [options]
  */
-export async function createProjectUrl(projectId, form = {}) {
-  const payload = buildCreateProjectUrlApiPayload({
+export async function createProjectUrl(projectId, form = {}, options = {}) {
+  const isMultiLink = Boolean(options.isMultiLink);
+  const csvFiles = normalizeCsvFilesOption(options.csvFiles);
+  const normalizedForm = {
     ...createEmptyProjectUrlForm(projectId),
     ...form,
     status: form.status || "Open",
-  });
+  };
 
   if (USE_PROJECT_URLS_MOCK) {
     await delay(350);
     const record = createMockProjectUrl(projectId, {
-      ...buildProjectUrlUpdatePayload({
-        ...createEmptyProjectUrlForm(projectId),
-        ...form,
-        status: form.status || "Open",
-      }),
+      ...buildProjectUrlUpdatePayload(normalizedForm),
     });
     return {
       success: true,
@@ -879,9 +927,13 @@ export async function createProjectUrl(projectId, form = {}) {
   }
 
   const normalizedId = normalizeProjectId(projectId);
+  const body = isMultiLink
+    ? buildProjectUrlMultipartFormData(normalizedForm, { csvFiles })
+    : buildCreateProjectUrlApiPayload(normalizedForm);
+
   const data = await apiRequest(API_ROUTES.projects.createUrl(normalizedId), {
     method: "POST",
-    body: payload,
+    body,
   });
   return assertSuccess(data);
 }

@@ -575,14 +575,14 @@ function PartnerMappingTab({
                   </p>
                 </div>
               ) : null}
-              <div>
+              {/* <div>
                 <p className="admin-text-muted text-xs font-medium uppercase tracking-wide">
                   Sample Assigned
                 </p>
                 <p className="admin-text mt-1 font-semibold">
                   {multiLinkStats.sampleAdded} / {multiLinkStats.sampleSize}
                 </p>
-              </div>
+              </div> */}
             </div>
           }
         />
