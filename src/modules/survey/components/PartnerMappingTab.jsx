@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Eye, Loader2, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import FormField from "../../../components/admin/FormField";
+import NumericInput from "../../../components/admin/NumericInput";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import StatusToggle from "../../../components/admin/StatusToggle";
 import TableCard from "../../../components/admin/TableCard";
@@ -15,6 +16,7 @@ import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast
 import { mapPartnersToSelectOptions } from "../services/surveyApi";
 import {
   buildSupplierMappingApiPayload,
+  appendIsTestToPartnerUrl,
   createSupplierMapping,
   listSupplierMappings,
   mapSupplierMappingToForm,
@@ -23,6 +25,7 @@ import {
   updateSupplierMappingStatus,
   updateSupplierMappingTestMode,
 } from "../services/supplierMappingApi";
+import { listProjectMultiUrls } from "../services/projectMultiUrlApi";
 import PartnerMappingViewModal from "./PartnerMappingViewModal";
 import {
   primaryBtnClass,
@@ -84,6 +87,7 @@ function createEmptyPartnerForm() {
     partnerCode: "",
     quota: "",
     cpi: "",
+    linksToAssign: "",
     statusActive: true,
     isTest: false,
     redirects: {
@@ -97,9 +101,17 @@ function createEmptyPartnerForm() {
   };
 }
 
+function sumAssignedMultiLinks(rows = []) {
+  return rows.reduce((total, row) => {
+    const value = Number(String(row?.linksToAssign ?? "").trim());
+    return total + (Number.isFinite(value) ? value : 0);
+  }, 0);
+}
+
 function PartnerMappingTab({
   projectId,
   projectUrlId,
+  projectLinkType = "",
   isDarkMode,
   readOnly = false,
 }) {
@@ -108,8 +120,12 @@ function PartnerMappingTab({
   const inputClass = getAdminInputClass();
   const navigate = useNavigate();
   const resolvedProjectUrlId = String(projectUrlId ?? "").trim();
+  const isMultiLink = String(projectLinkType ?? "")
+    .toLowerCase()
+    .includes("multi");
 
   const [rows, setRows] = useState([]);
+  const [multiLinkTotal, setMultiLinkTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState("add");
@@ -132,18 +148,35 @@ function PartnerMappingTab({
         projectId,
         projectUrlId: resolvedProjectUrlId,
       });
-      setRows(
-        Array.isArray(records)
-          ? records.map((record, index) => mapSupplierMappingToRow(record, index))
-          : []
-      );
+      const nextRows = Array.isArray(records)
+        ? records.map((record, index) => mapSupplierMappingToRow(record, index))
+        : [];
+      setRows(nextRows);
+
+      if (isMultiLink) {
+        try {
+          const multiUrlResponse = await listProjectMultiUrls(
+            projectId,
+            resolvedProjectUrlId
+          );
+          const multiRows = Array.isArray(multiUrlResponse?.data)
+            ? multiUrlResponse.data
+            : [];
+          setMultiLinkTotal(multiRows.length);
+        } catch {
+          setMultiLinkTotal(0);
+        }
+      } else {
+        setMultiLinkTotal(0);
+      }
     } catch (error) {
       toastApiError(error);
       setRows([]);
+      setMultiLinkTotal(0);
     } finally {
       setIsLoading(false);
     }
-  }, [projectId, resolvedProjectUrlId]);
+  }, [projectId, resolvedProjectUrlId, isMultiLink]);
 
   useEffect(() => {
     loadMappings();
@@ -201,11 +234,36 @@ function PartnerMappingTab({
     [partnerOptions, assignedPartnerIds]
   );
 
+  const leftMultiLinkCount = useMemo(() => {
+    if (!isMultiLink) return 0;
+    return Math.max(0, multiLinkTotal - sumAssignedMultiLinks(rows));
+  }, [isMultiLink, multiLinkTotal, rows]);
+
+  const tableColumns = useMemo(() => {
+    const columns = [...TABLE_COLUMNS];
+    if (isMultiLink) {
+      const cpiIndex = columns.indexOf("CPI");
+      if (cpiIndex >= 0) {
+        columns.splice(cpiIndex + 1, 0, "Links Assigned");
+      }
+    }
+    return columns;
+  }, [isMultiLink]);
+
   const errors = useMemo(() => {
     const next = {};
     if (!form.partnerId) next.partnerId = "Partner is required";
     if (!String(form.quota ?? "").trim()) next.quota = "Partner quota is required";
     if (!String(form.cpi ?? "").trim()) next.cpi = "CPI is required";
+
+    if (isMultiLink) {
+      const linksValue = String(form.linksToAssign ?? "").trim();
+      if (!linksValue) {
+        next.linksToAssign = "Number of links is required";
+      } else if (!/^\d+$/.test(linksValue) || Number(linksValue) < 1) {
+        next.linksToAssign = "Enter a valid number of links (minimum 1)";
+      }
+    }
 
     REDIRECT_FIELDS.forEach((field) => {
       next[field.key] = getOptionalUrlError(
@@ -215,11 +273,17 @@ function PartnerMappingTab({
     });
 
     return next;
-  }, [form]);
+  }, [form, isMultiLink]);
+
+  const validationFields = useMemo(() => {
+    const fields = ["partnerId", "quota", "cpi", ...REDIRECT_FIELD_KEYS];
+    if (isMultiLink) fields.push("linksToAssign");
+    return fields;
+  }, [isMultiLink]);
 
   const { showError, touch, validateSubmit } = useFormValidation({
     errors,
-    fields: ["partnerId", "quota", "cpi", ...REDIRECT_FIELD_KEYS],
+    fields: validationFields,
   });
 
   const resetForm = () => {
@@ -287,6 +351,7 @@ function PartnerMappingTab({
       projectUrlId: resolvedProjectUrlId,
       quota: form.quota,
       cpi: form.cpi,
+      linksToAssign: isMultiLink ? form.linksToAssign : undefined,
       redirects: form.redirects,
       statusActive: form.statusActive,
       isTest: form.isTest,
@@ -370,7 +435,7 @@ function PartnerMappingTab({
       return row.partnerUrl
         ? (
             <TruncatedUrl
-              url={row.partnerUrl}
+              url={appendIsTestToPartnerUrl(row.partnerUrl, row.isTest)}
               maxWidthClass="max-w-[180px] sm:max-w-[280px]"
             />
           )
@@ -436,6 +501,7 @@ function PartnerMappingTab({
       "Partner Code": row.partnerCode,
       Quota: row.quota,
       CPI: row.cpi,
+      "Links Assigned": row.linksToAssign ?? "—",
     };
     return map[col] ?? "—";
   };
@@ -460,19 +526,26 @@ function PartnerMappingTab({
       ) : (
         <SurveyDataTable
           title="Partner Mapping"
-          columns={TABLE_COLUMNS}
+          columns={tableColumns}
           rows={rows}
           renderCell={renderCell}
           isDarkMode={isDarkMode}
           footer={
             allowWrite ? (
-              <button
-                type="button"
-                onClick={openAddForm}
-                className="text-sm font-semibold text-[var(--admin-primary-color)] transition hover:opacity-80"
-              >
-                + Add Partner
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={openAddForm}
+                  className="text-sm font-semibold text-[var(--admin-primary-color)] transition hover:opacity-80"
+                >
+                  + Add Partner
+                </button>
+                {isMultiLink ? (
+                  <span className="text-sm font-semibold text-[var(--admin-danger-text)]">
+                    (Left Multi Link - {leftMultiLinkCount})
+                  </span>
+                ) : null}
+              </div>
             ) : null
           }
         />
@@ -491,7 +564,7 @@ function PartnerMappingTab({
               </div>
             ) : (
               <div className="space-y-5">
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className={`grid gap-4 ${isMultiLink ? "md:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-3"}`}>
                   <FormField
                     label="Partner"
                     required
@@ -542,6 +615,28 @@ function PartnerMappingTab({
                       aria-invalid={Boolean(showError("cpi") && errors.cpi)}
                     />
                   </FormField>
+                  {isMultiLink ? (
+                    <FormField
+                      label="Links To Assign"
+                      required
+                      error={showError("linksToAssign") ? errors.linksToAssign : ""}
+                      hint="How many multi URLs should be assigned to this partner"
+                    >
+                      <NumericInput
+                        className={inputClass}
+                        value={form.linksToAssign}
+                        onChange={(value) =>
+                          setForm((prev) => ({ ...prev, linksToAssign: value }))
+                        }
+                        onBlur={() => touch("linksToAssign")}
+                        disabled={isSubmitting}
+                        placeholder="e.g. 10"
+                        aria-invalid={Boolean(
+                          showError("linksToAssign") && errors.linksToAssign
+                        )}
+                      />
+                    </FormField>
+                  ) : null}
                 </div>
 
                 <div>
@@ -604,6 +699,7 @@ function PartnerMappingTab({
         onClose={() => setViewTarget(null)}
         mappingId={viewTarget?.mappingId}
         partnerName={viewTarget?.partnerName}
+        isMultiLink={isMultiLink}
       />
     </>
   );

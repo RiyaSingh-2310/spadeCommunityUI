@@ -53,6 +53,8 @@ export function createEmptySurveyForm() {
     notes: "",
     projectLinkType: "Single Link",
     status: "Active",
+    startDate: "",
+    endDate: "",
     groupProjectId: "",
   };
 }

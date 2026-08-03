@@ -1,4 +1,5 @@
 import {
+  getDateRangeError,
   getRequiredError,
   getRequiredMaxLengthError,
   isFormValid,
@@ -26,6 +27,8 @@ export function getSurveyFormErrors(form, options = {}) {
     projectManager: getRequiredError(form.projectManager, "Project Manager"),
     projectLinkType: getRequiredError(form.projectLinkType, "Project Link Type"),
     status: getRequiredError(form.status, "Status"),
+    startDate: "",
+    endDate: getDateRangeError(form.startDate, form.endDate),
     salesManager: "",
     salesProject: "",
   };
@@ -46,6 +49,8 @@ export const SURVEY_FORM_FIELDS = [
   "projectManager",
   "projectLinkType",
   "status",
+  "startDate",
+  "endDate",
 ];
 
 const SURVEY_FORM_SCALAR_KEYS = [
@@ -59,6 +64,8 @@ const SURVEY_FORM_SCALAR_KEYS = [
   "notes",
   "projectLinkType",
   "status",
+  "startDate",
+  "endDate",
   "groupProjectId",
 ];
 

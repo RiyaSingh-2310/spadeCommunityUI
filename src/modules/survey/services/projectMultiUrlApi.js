@@ -11,6 +11,12 @@ import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import {
+  createEmptyProjectUrlForm,
+  createProjectUrl,
+  listProjectUrlsByProject,
+  resolveProjectUrlRecordId,
+} from "./projectUrlsApi";
+import {
   mapMultiUrlRecordToRow,
   PROJECT_MULTI_URL_COLUMNS,
   PROJECT_MULTI_URL_CSV_TEMPLATE,
@@ -162,6 +168,86 @@ export async function uploadProjectMultiUrlCsv({ projectId, projectUrlId, file }
     }
   );
   return assertSuccess(data);
+}
+
+function resolveProjectUrlIdFromResponse(response) {
+  const data = response?.data;
+  if (!data || typeof data !== "object") return "";
+
+  const urlInfo = data.urlInfo ?? data.url_info;
+  if (Array.isArray(urlInfo) && urlInfo.length > 0) {
+    return resolveProjectUrlRecordId(urlInfo[0]);
+  }
+  if (urlInfo && typeof urlInfo === "object") {
+    return resolveProjectUrlRecordId(urlInfo);
+  }
+
+  return resolveProjectUrlRecordId(data);
+}
+
+/**
+ * Resolve project id from a create-project API response.
+ * @param {object} response
+ */
+export function resolveCreatedProjectId(response) {
+  const data = response?.data;
+  if (!data) return "";
+  if (typeof data === "object") {
+    return String(data.id ?? data.project_id ?? data.projectId ?? "").trim();
+  }
+  return "";
+}
+
+/**
+ * After project creation, ensure a project URL exists and upload pending CSV files.
+ * @param {{ projectId: string|number, createResponse?: object, files?: File[] }} params
+ */
+export async function uploadPendingMultiUrlCsvFiles({
+  projectId,
+  createResponse = null,
+  files = [],
+}) {
+  const normalizedProjectId = String(projectId ?? "").trim();
+  if (!normalizedProjectId) {
+    throw new ApiError("Project ID is required.");
+  }
+  if (!Array.isArray(files) || files.length === 0) {
+    return { uploaded: 0, projectUrlId: "" };
+  }
+
+  let projectUrlId = resolveProjectUrlIdFromResponse(createResponse);
+
+  if (!projectUrlId) {
+    const listResponse = await listProjectUrlsByProject(normalizedProjectId);
+    const rows = Array.isArray(listResponse?.data) ? listResponse.data : [];
+    if (rows.length > 0) {
+      projectUrlId = resolveProjectUrlRecordId(rows[0]);
+    }
+  }
+
+  if (!projectUrlId) {
+    const urlResponse = await createProjectUrl(
+      normalizedProjectId,
+      createEmptyProjectUrlForm(normalizedProjectId)
+    );
+    projectUrlId = String(urlResponse?.data?.id ?? "").trim();
+  }
+
+  if (!projectUrlId) {
+    throw new ApiError("Unable to create a Project URL for CSV upload.");
+  }
+
+  let uploaded = 0;
+  for (const file of files) {
+    await uploadProjectMultiUrlCsv({
+      projectId: normalizedProjectId,
+      projectUrlId,
+      file,
+    });
+    uploaded += 1;
+  }
+
+  return { uploaded, projectUrlId };
 }
 
 /**

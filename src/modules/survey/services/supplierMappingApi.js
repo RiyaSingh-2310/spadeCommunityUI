@@ -79,6 +79,14 @@ export function mapSupplierMappingToRow(record, index = 0) {
     partnerName: partnerNameRaw || partnerCode || "—",
     quota: pickField(record, ["quota", "Quota"]) ?? "—",
     cpi: pickField(record, ["CPI", "cpi", "cpi_rate"]) ?? "—",
+    linksToAssign:
+      pickField(record, [
+        "LinksToAssign",
+        "links_to_assign",
+        "linksToAssign",
+        "link_count",
+        "LinkCount",
+      ]) ?? "—",
     partnerUrl,
     statusActive,
     isTest: toBoolean(
@@ -98,6 +106,13 @@ export function mapSupplierMappingToDetail(record) {
     partnerName: pickField(record, ["partner_name", "name", "partnerName"]),
     quota: pickField(record, ["quota", "Quota"]),
     cpi: pickField(record, ["CPI", "cpi"]),
+    linksToAssign: pickField(record, [
+      "LinksToAssign",
+      "links_to_assign",
+      "linksToAssign",
+      "link_count",
+      "LinkCount",
+    ]),
     complete: pickField(record, ["CompleteURL", "complete_url", "complete"]),
     terminate: pickField(record, ["TerminateURL", "terminate_url", "terminate"]),
     overQuota: pickField(record, ["OverQuotaURL", "over_quota_url", "overQuota"]),
@@ -105,6 +120,10 @@ export function mapSupplierMappingToDetail(record) {
     surveyClose: pickField(record, ["SurveyCloseURL", "survey_close_url", "surveyClose"]),
     postbackUrl: pickField(record, ["VenderURL", "postback_url", "postbackUrl"]),
     partnerUrl: pickField(record, ["dynamic_url", "vendor_url", "partner_url"]),
+    isTest: toBoolean(
+      pickField(record, ["IsTest", "is_test", "isTest", "test_mode"]),
+      false
+    ),
   };
 }
 
@@ -121,6 +140,10 @@ export function mapSupplierMappingToForm(record) {
     ).trim(),
     quota: detail.quota != null ? String(detail.quota) : "",
     cpi: detail.cpi != null ? String(detail.cpi) : "",
+    linksToAssign:
+      detail.linksToAssign != null && detail.linksToAssign !== ""
+        ? String(detail.linksToAssign)
+        : "",
     statusActive:
       toBoolean(pickField(record, ["status", "Status"]), true) ||
       String(pickField(record, ["status", "Status"]) ?? "")
@@ -150,11 +173,12 @@ export function buildSupplierMappingApiPayload({
   projectUrlId,
   quota,
   cpi,
+  linksToAssign,
   redirects = {},
   statusActive = true,
   isTest = false,
 }) {
-  return {
+  const payload = {
     partnerid: toApiNumber(partnerId),
     projectid: toApiNumber(projectId),
     projectUrlId: toApiNumber(projectUrlId),
@@ -169,6 +193,13 @@ export function buildSupplierMappingApiPayload({
     status: statusActive ? "active" : "inactive",
     IsTest: isTest ? 1 : 0,
   };
+
+  const linksCount = toApiNumber(linksToAssign);
+  if (linksCount != null) {
+    payload.linksToAssign = linksCount;
+  }
+
+  return payload;
 }
 
 /**
@@ -199,6 +230,63 @@ export async function listSupplierMappings({ projectId, projectUrlId } = {}) {
     if (normalizedUrlId && rowUrlId !== normalizedUrlId) return false;
     return true;
   });
+}
+
+function dynamicUrlMatchesDoSurveyToken(dynamicUrl, token) {
+  const url = String(dynamicUrl ?? "").trim();
+  const normalizedToken = String(token ?? "").trim();
+  if (!url || !normalizedToken) return false;
+
+  if (url.includes(`/dosurvey/${normalizedToken}`)) return true;
+
+  try {
+    const parsed = new URL(url, "http://localhost");
+    const segments = parsed.pathname.split("/").filter(Boolean);
+    const pathToken = segments[segments.length - 1];
+    return pathToken === normalizedToken;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Finds a supplier-mapping row whose dynamic_url points at /dosurvey/:token.
+ * Used by the public start page until GET /api/dosurvey/:token is available.
+ */
+export async function findSupplierMappingByDoSurveyToken(token) {
+  const normalizedToken = String(token ?? "").trim();
+  if (!normalizedToken) return null;
+
+  const rows = await listSupplierMappings();
+  return (
+    rows.find((row) =>
+      dynamicUrlMatchesDoSurveyToken(
+        pickField(row, [
+          "dynamic_url",
+          "Dynamic_URL",
+          "partner_url",
+          "supplier_url",
+          "VenderURL",
+          "vendor_url",
+        ]),
+        normalizedToken
+      )
+    ) ?? null
+  );
+}
+
+/** Appends IsTest query flag so the public /dosurvey page can show Test vs Live. */
+export function appendIsTestToPartnerUrl(url, isTest) {
+  const raw = String(url ?? "").trim();
+  if (!raw || !/^https?:\/\//i.test(raw)) return raw;
+
+  try {
+    const parsed = new URL(raw);
+    parsed.searchParams.set("IsTest", isTest ? "1" : "0");
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
 }
 
 /** GET /api/supplier-mapping/:id */

@@ -240,6 +240,8 @@ export function createMockSurvey(payload = {}) {
         : "single",
     Notes: payload.Notes ?? payload.notes ?? "",
     notes: payload.Notes ?? payload.notes ?? "",
+    startDate: payload.startDate ?? payload.Start_Date ?? payload.start_date ?? "",
+    endDate: payload.endDate ?? payload.End_Date ?? payload.end_date ?? "",
     Status: status === "inactive" ? "inactive" : "active",
     status: status === "inactive" ? "inactive" : "active",
     ...buildRedirects(id),

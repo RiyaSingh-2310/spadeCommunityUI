@@ -12,36 +12,15 @@ export const SURVEY_DETAIL_TABS = [
 ];
 
 /**
- * Build Project Details tabs for Single Link vs Multi Link.
- * Same tab set for Admin and Sales Manager (Sales uses read-only mode separately).
- * @param {{
- *   isMultiLink?: boolean,
- *   multiUrlEnabled?: boolean,
- * }} [options]
+ * Build Project Details tabs.
+ * Multi-link CSV upload is available when creating a project (Create Project form).
  */
-export function getSurveyDetailTabs({
-  isMultiLink = false,
-  multiUrlEnabled = false,
-} = {}) {
-  const tabs = [
+export function getSurveyDetailTabs() {
+  return [
     { id: "project-details", label: "Project Information" },
     { id: "project-urls", label: "Project URL" },
     { id: "partner-mapping", label: "Partner Mapping" },
   ];
-
-  if (isMultiLink) {
-    tabs.push({
-      id: "project-multi-url",
-      label: "Multi URL",
-      disabled: !multiUrlEnabled,
-    });
-  }
-
-  // Temporarily hidden per product flow:
-  // tabs.push({ id: "supplier-mapping", label: "Supplier Mapping" });
-  // tabs.push({ id: "project-report", label: "Project Reports" });
-
-  return tabs;
 }
 
 function SurveyDetailsHeader({
@@ -84,7 +63,7 @@ function SurveyDetailsHeader({
                 disabled={isDisabled}
                 title={
                   isDisabled
-                    ? "Save Project URL first to unlock Project Multi URL"
+                    ? "Save Project URL first to unlock this section"
                     : undefined
                 }
                 onClick={() => {

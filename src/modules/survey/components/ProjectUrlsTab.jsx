@@ -24,9 +24,9 @@ import {
   PROJECT_URL_COUNTRY_OPTIONS,
   PROJECT_URL_PRESCREEN_LANGUAGES,
   PROJECT_URL_STATUS_OPTIONS,
-  updateProjectUrlLinkMode,
   updateProjectUrls,
 } from "../services/projectUrlsApi";
+import { listProjectMultiUrls } from "../services/projectMultiUrlApi";
 import {
   areProjectUrlFormsEqual,
   cloneProjectUrlForm,
@@ -52,8 +52,28 @@ const PROJECT_URL_LIST_COLUMNS_BASE = [
   "Description",
   "Country",
   "Language",
-  "Status",
+  "CPI",
+  "LOI",
+  "Start Date",
+  "End Date",
+  "IR",
 ];
+
+const MULTI_LINK_COUNT_COLUMN = "Multi Link Count";
+
+function formatListMetric(value) {
+  const text = String(value ?? "").trim();
+  return text || "—";
+}
+
+function buildMultiLinkCountMap(multiUrlRows = []) {
+  return (Array.isArray(multiUrlRows) ? multiUrlRows : []).reduce((acc, row) => {
+    const urlId = String(row?.projectUrlId ?? "").trim();
+    if (!urlId) return acc;
+    acc[urlId] = (acc[urlId] || 0) + 1;
+    return acc;
+  }, {});
+}
 
 function InteractiveCheckbox({ label, checked, onChange, disabled }) {
   return (
@@ -86,20 +106,38 @@ function normalizeUrlRecord(row, projectFk) {
   });
 }
 
-function toListRow(record) {
+function toListRow(record, { multiLinkCountByUrlId = {} } = {}) {
   const id = record?.id != null && record.id !== "" ? String(record.id) : "";
   const description = String(record?.discussion ?? "").trim() || "—";
   const country = String(record?.country ?? "").trim() || "—";
   const language = String(record?.language ?? "").trim() || "—";
   const status = String(record?.status ?? "").trim() || "Open";
-  const linkMode = String(record?.linkMode ?? "test").trim().toLowerCase();
+  const cpiRate = formatListMetric(record?.cpiRate);
+  const loi = formatListMetric(record?.loi);
+  const startDate = formatListMetric(record?.startDate);
+  const endDate = formatListMetric(record?.endDate);
+  const ir = formatListMetric(record?.ir);
+  const apiMultiLinkCount = formatListMetric(record?.multiLinkCount);
+  const countedMultiLinks = id ? multiLinkCountByUrlId[id] : undefined;
+  const multiLinkCount =
+    apiMultiLinkCount !== "—"
+      ? apiMultiLinkCount
+      : countedMultiLinks != null
+        ? String(countedMultiLinks)
+        : "—";
+
   return {
     id,
     description,
     country,
     language,
+    cpiRate,
+    loi,
+    startDate,
+    endDate,
+    ir,
+    multiLinkCount,
     status,
-    linkMode,
     record,
   };
 }
@@ -184,8 +222,8 @@ function ProjectUrlsTab({
   const [pendingDelete, setPendingDelete] = useState(
     () => getRouteFormState(projectFk, urlView).pendingDelete
   );
+  const [multiLinkCountByUrlId, setMultiLinkCountByUrlId] = useState({});
   const [isDeleting, setIsDeleting] = useState(false);
-  const [linkModeTogglingIds, setLinkModeTogglingIds] = useState(() => new Set());
   const [routeState, setRouteState] = useState({ projectFk, urlView });
   const [loadedEditKey, setLoadedEditKey] = useState("");
   const [editFormReady, setEditFormReady] = useState(false);
@@ -308,16 +346,32 @@ function ProjectUrlsTab({
             Boolean(String(row.loi ?? "").trim()) ||
             Boolean(String(row.country ?? "").trim())
         );
+
+      if (isMultiLink) {
+        try {
+          const multiUrlResponse = await listProjectMultiUrls(projectFk);
+          const multiRows = Array.isArray(multiUrlResponse?.data)
+            ? multiUrlResponse.data
+            : [];
+          setMultiLinkCountByUrlId(buildMultiLinkCountMap(multiRows));
+        } catch {
+          setMultiLinkCountByUrlId({});
+        }
+      } else {
+        setMultiLinkCountByUrlId({});
+      }
+
       setUrlRecords(mapped);
       return mapped;
     } catch (error) {
       toastApiError(error);
       setUrlRecords([]);
+      setMultiLinkCountByUrlId({});
       return [];
     } finally {
       setIsLoading(false);
     }
-  }, [projectFk]);
+  }, [projectFk, isMultiLink]);
 
   useEffect(() => {
     let cancelled = false;
@@ -379,16 +433,16 @@ function ProjectUrlsTab({
   }, [form.language, view, isLoadingEditForm]);
 
   const listRows = useMemo(
-    () => urlRecords.map((record) => toListRow(record)),
-    [urlRecords]
+    () => urlRecords.map((record) => toListRow(record, { multiLinkCountByUrlId })),
+    [urlRecords, multiLinkCountByUrlId]
   );
 
   const listColumns = useMemo(() => {
     const columns = [...PROJECT_URL_LIST_COLUMNS_BASE];
-    if (!isMultiLink) {
-      columns.push("Link Mode");
+    if (isMultiLink) {
+      columns.push(MULTI_LINK_COUNT_COLUMN);
     }
-    columns.push("Action");
+    columns.push("Status", "Action");
     return columns;
   }, [isMultiLink]);
 
@@ -596,55 +650,6 @@ function ProjectUrlsTab({
     }
   };
 
-  const handleLinkModeToggle = async (row) => {
-    if (!canWrite) return;
-
-    const urlRecordId = String(row?.id ?? row?.record?.id ?? "").trim();
-    if (!urlRecordId) {
-      toastApiError("Project URL ID is required to switch link mode.");
-      return;
-    }
-
-    const currentMode = String(row?.linkMode ?? "test").trim().toLowerCase();
-    const nextMode = currentMode === "live" ? "test" : "live";
-
-    if (linkModeTogglingIds.has(urlRecordId)) return;
-
-    setLinkModeTogglingIds((prev) => new Set(prev).add(urlRecordId));
-    setUrlRecords((prev) =>
-      prev.map((record) =>
-        String(record.id) === urlRecordId ? { ...record, linkMode: nextMode } : record
-      )
-    );
-
-    try {
-      const data = await updateProjectUrlLinkMode(urlRecordId, nextMode);
-      toastApiSuccess(data);
-      setUrlRecords((prev) =>
-        prev.map((record) =>
-          String(record.id) === urlRecordId
-            ? { ...record, linkMode: nextMode }
-            : record
-        )
-      );
-    } catch (error) {
-      toastApiError(error);
-      setUrlRecords((prev) =>
-        prev.map((record) =>
-          String(record.id) === urlRecordId
-            ? { ...record, linkMode: currentMode }
-            : record
-        )
-      );
-    } finally {
-      setLinkModeTogglingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(urlRecordId);
-        return next;
-      });
-    }
-  };
-
   if (view === "form" && isEdit && isLoadingEditForm) {
     return (
       <div className="admin-text flex items-center gap-2 py-8 text-sm">
@@ -665,10 +670,7 @@ function ProjectUrlsTab({
           actionLabel={canWrite ? "+ Add Project URL" : undefined}
           onActionClick={canWrite ? openAddForm : undefined}
           columns={listColumns}
-          rows={listRows.map((row) => ({
-            ...row,
-            linkModeToggling: linkModeTogglingIds.has(row.id),
-          }))}
+          rows={listRows}
           rowIdKey="id"
           actionVariant={canWrite ? "edit-delete" : "view-edit"}
           showDeleteAction={canWrite}
@@ -676,14 +678,6 @@ function ProjectUrlsTab({
           onEdit={canWrite ? openEditForm : undefined}
           onDelete={canWrite ? handleDeleteRequest : undefined}
           onView={!canWrite ? openEditForm : undefined}
-          onLinkModeToggle={
-            canWrite && !isMultiLink
-              ? (row) => {
-                  if (row.linkModeToggling) return;
-                  handleLinkModeToggle(row);
-                }
-              : undefined
-          }
           permissionModule="survey"
           isLoading={isLoading}
           emptyMessage="No Project URL records found"
