@@ -84,9 +84,11 @@ function ProjectMultiUrlCsvUploadSection({
   showUploadControls = true,
   showRecordsTable = true,
   deferUpload = false,
+  embedded = false,
   selectedFiles: controlledSelectedFiles,
   onSelectedFilesChange,
   title = "Upload Multi URLs",
+  onBeforeUpload,
 }) {
   const inputClass = getAdminInputClass();
   const fileInputRef = useRef(null);
@@ -206,6 +208,10 @@ function ProjectMultiUrlCsvUploadSection({
     const failures = [];
 
     try {
+      if (typeof onBeforeUpload === "function") {
+        await onBeforeUpload();
+      }
+
       for (const file of selectedFiles) {
         try {
           const data = await uploadProjectMultiUrlCsv({
@@ -286,168 +292,180 @@ function ProjectMultiUrlCsvUploadSection({
     }
   };
 
-  return (
-    <div className="space-y-0">
-      {showUploadControls ? (
-      <TableCard title={title} isDarkMode={isDarkMode}>
-        <div className="space-y-4">
-          {showContextFields ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField label="Project ID">
-                <input
-                  className={inputClass}
-                  value={resolvedProjectId || "—"}
-                  readOnly
-                  disabled
-                />
-              </FormField>
-              <FormField label="Project URL ID">
-                <input
-                  className={inputClass}
-                  value={resolvedProjectUrlId || "—"}
-                  readOnly
-                  disabled
-                />
-              </FormField>
-            </div>
-          ) : null}
-
-          <div className="grid gap-4 md:grid-cols-[1fr_auto_auto_auto] md:items-end">
-            <FormField label="Upload CSV">
-              <input
-                className={inputClass}
-                value={selectedSummary}
-                placeholder="No file selected"
-                readOnly
-                disabled
-              />
-            </FormField>
-            <button
-              type="button"
-              className={secondaryBtnClass}
-              disabled={!canWrite || isUploading}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              Browse Files
-            </button>
+  const uploadControls = (
+    <div className="space-y-4">
+      {showContextFields ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField label="Project ID">
             <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,text/csv"
-              multiple
-              className="hidden"
-              disabled={!canWrite || isUploading}
-              onChange={handleFilesSelected}
+              className={inputClass}
+              value={resolvedProjectId || "—"}
+              readOnly
+              disabled
             />
+          </FormField>
+          <FormField label="Project URL ID">
+            <input
+              className={inputClass}
+              value={resolvedProjectUrlId || "—"}
+              readOnly
+              disabled
+            />
+          </FormField>
+        </div>
+      ) : null}
+
+      <div className="grid gap-4 md:grid-cols-[1fr_auto_auto_auto] md:items-end">
+        <FormField label="Upload CSV">
+          <input
+            className={inputClass}
+            value={selectedSummary}
+            placeholder="No file selected"
+            readOnly
+            disabled
+          />
+        </FormField>
+        <button
+          type="button"
+          className={secondaryBtnClass}
+          disabled={!canWrite || isUploading}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          Browse Files
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,text/csv"
+          multiple
+          className="hidden"
+          disabled={!canWrite || isUploading}
+          onChange={handleFilesSelected}
+        />
+        <button
+          type="button"
+          className={`${secondaryBtnClass} inline-flex items-center justify-center gap-2`}
+          onClick={handleDownloadTemplate}
+          disabled={isDownloadingTemplate || isUploading}
+        >
+          {isDownloadingTemplate ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <Download size={16} />
+          )}
+          {isDownloadingTemplate ? "Downloading..." : "Download CSV Template"}
+        </button>
+        {!deferUpload ? (
+          <button
+            type="button"
+            disabled={
+              !canWrite ||
+              selectedFiles.length === 0 ||
+              isUploading ||
+              !resolvedProjectUrlId
+            }
+            onClick={handleUpload}
+            className={`${primaryBtnClass} inline-flex min-w-[120px] items-center justify-center gap-2`}
+          >
+            {isUploading ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Upload size={16} />
+            )}
+            {isUploading ? "Uploading..." : "Upload"}
+          </button>
+        ) : null}
+      </div>
+
+      {selectedFiles.length > 0 ? (
+        <div className="rounded-xl border border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] px-3 py-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="admin-text text-sm font-semibold">
+              Selected Files ({selectedFiles.length})
+            </p>
             <button
               type="button"
-              className={`${secondaryBtnClass} inline-flex items-center justify-center gap-2`}
-              onClick={handleDownloadTemplate}
-              disabled={isDownloadingTemplate || isUploading}
+              className="admin-text-muted text-xs font-semibold transition hover:text-[var(--admin-danger-text)] disabled:opacity-50"
+              onClick={handleClearFiles}
+              disabled={isUploading}
             >
-              {isDownloadingTemplate ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Download size={16} />
-              )}
-              {isDownloadingTemplate ? "Downloading..." : "Download CSV Template"}
+              Clear all
             </button>
-            {!deferUpload ? (
-              <button
-                type="button"
-                disabled={
-                  !canWrite ||
-                  selectedFiles.length === 0 ||
-                  isUploading ||
-                  !resolvedProjectUrlId
-                }
-                onClick={handleUpload}
-                className={`${primaryBtnClass} inline-flex min-w-[120px] items-center justify-center gap-2`}
-              >
-                {isUploading ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Upload size={16} />
-                )}
-                {isUploading ? "Uploading..." : "Upload"}
-              </button>
-            ) : null}
           </div>
-
-          {selectedFiles.length > 0 ? (
-            <div className="rounded-xl border border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] px-3 py-3">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <p className="admin-text text-sm font-semibold">
-                  Selected Files ({selectedFiles.length})
-                </p>
-                <button
-                  type="button"
-                  className="admin-text-muted text-xs font-semibold transition hover:text-[var(--admin-danger-text)] disabled:opacity-50"
-                  onClick={handleClearFiles}
-                  disabled={isUploading}
+          <ul className="space-y-1.5">
+            {previewFiles.map((file) => {
+              const key = getFileKey(file);
+              return (
+                <li
+                  key={key}
+                  className="admin-text flex items-center justify-between gap-2 text-sm"
                 >
-                  Clear all
-                </button>
-              </div>
-              <ul className="space-y-1.5">
-                {previewFiles.map((file) => {
-                  const key = getFileKey(file);
-                  return (
-                    <li
-                      key={key}
-                      className="admin-text flex items-center justify-between gap-2 text-sm"
-                    >
-                      <span className="min-w-0 truncate" title={file.name}>
-                        {file.name}
-                      </span>
-                      <button
-                        type="button"
-                        className="admin-text-subtle inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition hover:bg-[var(--admin-permissions-row-hover)] hover:text-[var(--admin-danger-text)] disabled:opacity-50"
-                        onClick={() => handleRemoveFile(key)}
-                        disabled={isUploading}
-                        aria-label={`Remove ${file.name}`}
-                        title="Remove"
-                      >
-                        <X size={14} />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-              {hiddenFileCount > 0 ? (
-                <p className="admin-text-muted mt-2 text-xs font-medium">
-                  ...
-                  <br />+{hiddenFileCount} more
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-
-          {deferUpload ? (
-            <p className="admin-text-muted text-sm">
-              Selected CSV files will be uploaded when you save the project.
-            </p>
-          ) : !resolvedProjectUrlId ? (
-            <p className="admin-text-muted text-sm">
-              Save the Project URL first to obtain a Project URL ID before uploading.
+                  <span className="min-w-0 truncate" title={file.name}>
+                    {file.name}
+                  </span>
+                  <button
+                    type="button"
+                    className="admin-text-subtle inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition hover:bg-[var(--admin-permissions-row-hover)] hover:text-[var(--admin-danger-text)] disabled:opacity-50"
+                    onClick={() => handleRemoveFile(key)}
+                    disabled={isUploading}
+                    aria-label={`Remove ${file.name}`}
+                    title="Remove"
+                  >
+                    <X size={14} />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          {hiddenFileCount > 0 ? (
+            <p className="admin-text-muted mt-2 text-xs font-medium">
+              ...
+              <br />+{hiddenFileCount} more
             </p>
           ) : null}
         </div>
-      </TableCard>
+      ) : null}
+
+      {deferUpload ? (
+        <p className="admin-text-muted text-sm">
+          Selected CSV files will be uploaded when you save the Project URL.
+        </p>
+      ) : !resolvedProjectUrlId ? (
+        <p className="admin-text-muted text-sm">
+          Save the Project URL first to obtain a Project URL ID before uploading.
+        </p>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <div className="space-y-0">
+      {showUploadControls ? (
+        embedded ? (
+          uploadControls
+        ) : (
+          <TableCard title={title} isDarkMode={isDarkMode}>
+            {uploadControls}
+          </TableCard>
+        )
       ) : null}
 
       {showRecordsTable && shouldLoadRows ? (
         <>
-          <SectionDivider />
+          {!embedded ? <SectionDivider /> : <div className="mt-5" />}
           {isLoadingRows ? (
             <div className="admin-text flex items-center gap-2 text-sm">
               <Loader2 size={16} className="animate-spin" />
               Loading multi URL records...
             </div>
           ) : rows.length === 0 ? (
-            <TableCard title="Project Multi URL Records" isDarkMode={isDarkMode}>
+            embedded ? (
               <p className="admin-text-muted text-sm">No multi URL records yet.</p>
-            </TableCard>
+            ) : (
+              <TableCard title="Project Multi URL Records" isDarkMode={isDarkMode}>
+                <p className="admin-text-muted text-sm">No multi URL records yet.</p>
+              </TableCard>
+            )
           ) : (
             <SurveyDataTable
               title="Project Multi URL Records"

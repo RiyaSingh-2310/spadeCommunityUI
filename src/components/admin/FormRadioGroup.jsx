@@ -1,7 +1,9 @@
 function FormRadioGroup({ label, name, value, onChange, options, isDarkMode, disabled = false }) {
   return (
     <div>
-      <span className="admin-text mb-2 block text-sm font-semibold">{label}</span>
+      {label ? (
+        <span className="admin-text mb-2 block text-sm font-semibold">{label}</span>
+      ) : null}
       <div className="flex flex-wrap gap-4">
         {options.map((option) => (
           <label

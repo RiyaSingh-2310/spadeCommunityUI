@@ -247,7 +247,7 @@ export function mapSurveyToProjectDetails(survey) {
   const projectCode =
     survey.Project_code ?? survey.survey_id ?? String(survey.id ?? "");
   const linkTypeRaw = survey.Project_Link_Type ?? survey.link_type ?? "";
-  const projectLinkType = apiLinkTypeToForm(linkTypeRaw) || linkTypeRaw || "—";
+  const projectLinkType = apiLinkTypeToForm(linkTypeRaw) || "Single Link";
 
   return {
     id: projectCode,
@@ -822,6 +822,39 @@ export async function updateSurvey(surveyId, form, selectOptions = {}, urlForm =
   }
 
   const normalizedId = normalizeSurveyId(surveyId);
+  const data = await apiRequest(API_ROUTES.projects.update(normalizedId), {
+    method: "PUT",
+    body: payload,
+  });
+  return assertSuccess(data);
+}
+
+/**
+ * PUT /api/projects/:id — update only Project Link Type.
+ * @param {string|number} projectId
+ * @param {string} projectLinkType
+ */
+export async function updateProjectLinkType(projectId, projectLinkType) {
+  const linkType = projectLinkType || "Single Link";
+  const payload = {
+    Project_Link_Type: linkType,
+    link_type: formLinkTypeToApi(linkType),
+  };
+
+  if (USE_SURVEY_MOCK_DATA) {
+    await mockDelay(250);
+    const record = updateMockSurvey(projectId, payload);
+    if (!record) {
+      throw new ApiError("Project not found.", null, 404);
+    }
+    return {
+      success: true,
+      message: "Project link type updated successfully.",
+      data: record,
+    };
+  }
+
+  const normalizedId = normalizeSurveyId(projectId);
   const data = await apiRequest(API_ROUTES.projects.update(normalizedId), {
     method: "PUT",
     body: payload,

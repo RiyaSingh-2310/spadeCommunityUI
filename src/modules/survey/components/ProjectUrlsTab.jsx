@@ -4,6 +4,7 @@ import AdminDatePicker from "../../../components/admin/AdminDatePicker";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
+import FormRadioGroup from "../../../components/admin/FormRadioGroup";
 import NumericInput from "../../../components/admin/NumericInput";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
@@ -26,7 +27,13 @@ import {
   PROJECT_URL_STATUS_OPTIONS,
   updateProjectUrls,
 } from "../services/projectUrlsApi";
-import { listProjectMultiUrls } from "../services/projectMultiUrlApi";
+import {
+  listProjectMultiUrls,
+  uploadPendingMultiUrlCsvFiles,
+} from "../services/projectMultiUrlApi";
+import { updateProjectLinkType } from "../services/surveyApi";
+import { PROJECT_LINK_TYPES } from "../data/surveyFormData";
+import ProjectMultiUrlCsvUploadSection from "./ProjectMultiUrlCsvUploadSection";
 import {
   areProjectUrlFormsEqual,
   cloneProjectUrlForm,
@@ -61,6 +68,16 @@ const PROJECT_URL_LIST_COLUMNS_BASE = [
 
 const MULTI_LINK_COUNT_COLUMN = "Multi Link Count";
 
+function resolveProjectLinkType(value) {
+  const normalized = String(value ?? "")
+    .toLowerCase()
+    .trim();
+  if (!normalized || normalized === "—" || normalized === "-" || normalized === "null") {
+    return "Single Link";
+  }
+  if (normalized.includes("multi")) return "Multi Link";
+  return "Single Link";
+}
 function formatListMetric(value) {
   const text = String(value ?? "").trim();
   return text || "—";
@@ -196,9 +213,14 @@ function ProjectUrlsTab({
   const textareaClass = getAdminTextareaClass();
   const projectFk = project?.recordId ?? surveyId;
   const projectCode = project?.projectCode || project?.surveyId || "";
-  const isMultiLink = String(project?.projectLinkType ?? "")
-    .toLowerCase()
-    .includes("multi");
+  // Always derive the baseline from the project API payload (defaults to Single Link).
+  const projectLinkType = resolveProjectLinkType(project?.projectLinkType);
+  // Temporary UI override only while the user switches radios before save.
+  // When null, the radio selection mirrors the backend value exactly.
+  const [linkTypeOverride, setLinkTypeOverride] = useState(null);
+  const selectedLinkType = linkTypeOverride ?? projectLinkType;
+  const isMultiLink = selectedLinkType === "Multi Link";
+  const projectIsMultiLink = projectLinkType === "Multi Link";
 
   const view =
     urlView === PROJECT_URL_VIEW_IDS.ADD || urlView === PROJECT_URL_VIEW_IDS.EDIT
@@ -223,12 +245,21 @@ function ProjectUrlsTab({
     () => getRouteFormState(projectFk, urlView).pendingDelete
   );
   const [multiLinkCountByUrlId, setMultiLinkCountByUrlId] = useState({});
+  const [multiUrlCsvFiles, setMultiUrlCsvFiles] = useState([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [routeState, setRouteState] = useState({ projectFk, urlView });
   const [loadedEditKey, setLoadedEditKey] = useState("");
   const [editFormReady, setEditFormReady] = useState(false);
   const navigateToListRef = useRef(() => {});
+  const linkTypeSourceKeyRef = useRef(`${projectFk}:${projectLinkType}`);
 
+  // Re-sync from backend whenever the loaded project or its link type changes.
+  const linkTypeSourceKey = `${projectFk}:${projectLinkType}`;
+  if (linkTypeSourceKeyRef.current !== linkTypeSourceKey) {
+    linkTypeSourceKeyRef.current = linkTypeSourceKey;
+    setLinkTypeOverride(null);
+    setMultiUrlCsvFiles([]);
+  }
   const isEdit = urlView === PROJECT_URL_VIEW_IDS.EDIT;
   const isLoadingEditForm = isEdit && Boolean(urlId) && !editFormReady;
 
@@ -256,6 +287,8 @@ function ProjectUrlsTab({
 
   if (routeState.projectFk !== projectFk || routeState.urlView !== urlView) {
     setRouteState({ projectFk, urlView });
+    setLinkTypeOverride(null);
+    setMultiUrlCsvFiles([]);
 
     if (
       urlView === PROJECT_URL_VIEW_IDS.ADD ||
@@ -347,7 +380,7 @@ function ProjectUrlsTab({
             Boolean(String(row.country ?? "").trim())
         );
 
-      if (isMultiLink) {
+      if (projectIsMultiLink) {
         try {
           const multiUrlResponse = await listProjectMultiUrls(projectFk);
           const multiRows = Array.isArray(multiUrlResponse?.data)
@@ -371,7 +404,7 @@ function ProjectUrlsTab({
     } finally {
       setIsLoading(false);
     }
-  }, [projectFk, isMultiLink]);
+  }, [projectFk, projectIsMultiLink]);
 
   useEffect(() => {
     let cancelled = false;
@@ -439,22 +472,49 @@ function ProjectUrlsTab({
 
   const listColumns = useMemo(() => {
     const columns = [...PROJECT_URL_LIST_COLUMNS_BASE];
-    if (isMultiLink) {
+    if (projectIsMultiLink) {
       columns.push(MULTI_LINK_COUNT_COLUMN);
     }
     columns.push("Status", "Action");
     return columns;
-  }, [isMultiLink]);
+  }, [projectIsMultiLink]);
+
+  const isLinkTypeDirty = selectedLinkType !== projectLinkType;
+  const hasPendingMultiUrlCsv = isMultiLink && multiUrlCsvFiles.length > 0;
 
   const isDirty = useMemo(() => {
     if (!isEdit || !initialSnapshot) return false;
-    return !areProjectUrlFormsEqual(form, initialSnapshot);
-  }, [isEdit, initialSnapshot, form]);
+    return (
+      !areProjectUrlFormsEqual(form, initialSnapshot) ||
+      isLinkTypeDirty ||
+      hasPendingMultiUrlCsv
+    );
+  }, [
+    isEdit,
+    initialSnapshot,
+    form,
+    isLinkTypeDirty,
+    hasPendingMultiUrlCsv,
+  ]);
 
   const canSubmit =
     canWrite &&
     !isSaving &&
     (isEdit ? isDirty : isValid);
+
+  const ensureProjectLinkType = useCallback(async () => {
+    if (!projectFk || selectedLinkType === projectLinkType) return null;
+    return updateProjectLinkType(projectFk, selectedLinkType);
+  }, [projectFk, selectedLinkType, projectLinkType]);
+
+  const handleLinkTypeChange = (value) => {
+    const nextType = resolveProjectLinkType(value);
+    // Keep override only when it differs from the backend value.
+    setLinkTypeOverride(nextType === projectLinkType ? null : nextType);
+    if (nextType !== "Multi Link" && multiUrlCsvFiles.length > 0) {
+      setMultiUrlCsvFiles([]);
+    }
+  };
 
   const preScreenerPlaceholder = useMemo(() => {
     if (!form.language) return "Select language in Survey Matrix first";
@@ -553,6 +613,8 @@ function ProjectUrlsTab({
 
     setIsSaving(true);
     try {
+      await ensureProjectLinkType();
+
       const resolvedUrlId = String(
         selectedUrlId || form.id || urlId || ""
       ).trim();
@@ -589,11 +651,28 @@ function ProjectUrlsTab({
             urlId: resolvedUrlId,
           });
 
-      toastApiSuccess(data);
       const savedId =
         data?.data?.id != null
           ? String(data.data.id)
           : resolvedUrlId || selectedUrlId || form.id || "";
+
+      const pendingCsvFiles = isMultiLink ? multiUrlCsvFiles : [];
+      if (pendingCsvFiles.length > 0) {
+        const uploadResult = await uploadPendingMultiUrlCsvFiles({
+          projectId: projectFk,
+          createResponse: data,
+          files: pendingCsvFiles,
+        });
+        setMultiUrlCsvFiles([]);
+        toastApiSuccess({
+          message:
+            uploadResult.uploaded === 1
+              ? "Project URL saved and 1 CSV file uploaded successfully."
+              : `Project URL saved and ${uploadResult.uploaded} CSV file(s) uploaded successfully.`,
+        });
+      } else {
+        toastApiSuccess(data);
+      }
 
       try {
         await loadUrlRecords();
@@ -605,6 +684,7 @@ function ProjectUrlsTab({
         await onSaved?.({
           projectId: projectFk,
           projectUrlId: savedId,
+          projectLinkType: selectedLinkType,
           response: data,
         });
       } catch (parentError) {
@@ -895,9 +975,18 @@ function ProjectUrlsTab({
 
       <SectionDivider />
 
-      {!isMultiLink ? (
-        <>
-          <TableCard title="Survey Links" isDarkMode={isDarkMode}>
+      <TableCard title="Survey Links" isDarkMode={isDarkMode}>
+        <div className="space-y-4">
+          <FormRadioGroup
+            name="projectLinkType"
+            value={selectedLinkType}
+            onChange={handleLinkTypeChange}
+            options={PROJECT_LINK_TYPES}
+            isDarkMode={isDarkMode}
+            disabled={!canWrite || isSaving}
+          />
+
+          {!isMultiLink ? (
             <div className="grid gap-4 sm:grid-cols-1">
               <FormField label="Live Link">
                 <input
@@ -924,11 +1013,28 @@ function ProjectUrlsTab({
                 />
               </FormField>
             </div>
-          </TableCard>
+          ) : (
+            <ProjectMultiUrlCsvUploadSection
+              projectId={projectFk}
+              projectUrlId={selectedUrlId || form.id || urlId}
+              isDarkMode={isDarkMode}
+              canWrite={canWrite && !isSaving}
+              showContextFields={false}
+              showRecordsTable={false}
+              deferUpload={
+                !(selectedUrlId || form.id || urlId) || isLinkTypeDirty
+              }
+              embedded
+              selectedFiles={multiUrlCsvFiles}
+              onSelectedFilesChange={setMultiUrlCsvFiles}
+              onBeforeUpload={ensureProjectLinkType}
+              title="Upload Multi URLs"
+            />
+          )}
+        </div>
+      </TableCard>
 
-          <SectionDivider />
-        </>
-      ) : null}
+      <SectionDivider />
 
       <TableCard title="Project Filters / Security" isDarkMode={isDarkMode}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

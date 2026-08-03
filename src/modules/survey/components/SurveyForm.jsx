@@ -1,13 +1,11 @@
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import AdminDatePicker from "../../../components/admin/AdminDatePicker";
 import FormField from "../../../components/admin/FormField";
-import FormRadioGroup from "../../../components/admin/FormRadioGroup";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { NAME_FIELD_MAX_LENGTH, limitTextInput } from "../../shared/utils/validation";
-import { PROJECT_LINK_TYPES, PROJECT_STATUS_OPTIONS } from "../data/surveyFormData";
-import ProjectMultiUrlCsvUploadSection from "./ProjectMultiUrlCsvUploadSection";
+import { PROJECT_STATUS_OPTIONS } from "../data/surveyFormData";
 
 function SurveyForm({
   form,
@@ -28,16 +26,12 @@ function SurveyForm({
   salesProjectOptions = [],
   /** @deprecated Use salesProjectOptions */
   rfqOptions = [],
-  showMultiUrlCsvUpload = false,
-  multiUrlCsvFiles = [],
-  onMultiUrlCsvFilesChange,
 }) {
   const inputClass = getAdminInputClass();
   const selectClass = `${inputClass} appearance-none`;
   const resolvedSalesProjectOptions = salesProjectOptions.length
     ? salesProjectOptions
     : rfqOptions;
-  const isMultiLink = form.projectLinkType === "Multi Link";
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -197,35 +191,6 @@ function SurveyForm({
             />
           </FormField>
         </div>
-
-        <div className="mt-4">
-          <FormRadioGroup
-            label="Project Link Type"
-            name="projectLinkType"
-            value={form.projectLinkType || "Single Link"}
-            onChange={(value) => {
-              setField("projectLinkType", value);
-              touch("projectLinkType");
-            }}
-            options={PROJECT_LINK_TYPES}
-            isDarkMode={isDarkMode}
-          />
-        </div>
-
-        {showMultiUrlCsvUpload && isMultiLink ? (
-          <div className="mt-4">
-            <ProjectMultiUrlCsvUploadSection
-              isDarkMode={isDarkMode}
-              canWrite={!disabled}
-              showContextFields={false}
-              showRecordsTable={false}
-              deferUpload
-              selectedFiles={multiUrlCsvFiles}
-              onSelectedFilesChange={onMultiUrlCsvFilesChange}
-              title="Upload Multi URL Links"
-            />
-          </div>
-        ) : null}
 
         <div className="mt-4 space-y-4">
           <FormField label="Description">

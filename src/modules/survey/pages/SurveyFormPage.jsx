@@ -17,10 +17,6 @@ import {
   mapSurveyToForm,
   updateSurvey,
 } from "../services/surveyApi";
-import {
-  resolveCreatedProjectId,
-  uploadPendingMultiUrlCsvFiles,
-} from "../services/projectMultiUrlApi";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   areSurveyFormsEqual,
@@ -30,7 +26,6 @@ import {
   SURVEY_FORM_FIELDS,
 } from "../utils/surveyFormValidation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
-import { ApiError } from "../../../services/api/ApiError";
 import {
   getSurveyEditBreadcrumbs,
 } from "../utils/surveyDetailsNavigation";
@@ -49,7 +44,6 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
   const [loadFailed, setLoadFailed] = useState(false);
-  const [multiUrlCsvFiles, setMultiUrlCsvFiles] = useState([]);
   const {
     clientOptions,
     projectManagerOptions,
@@ -279,19 +273,10 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     salesProjectLabel,
   ]);
 
-  useEffect(() => {
-    if (form.projectLinkType !== "Multi Link" && multiUrlCsvFiles.length > 0) {
-      setMultiUrlCsvFiles([]);
-    }
-  }, [form.projectLinkType, multiUrlCsvFiles.length]);
-
   const isDirty = useMemo(() => {
     if (!isEdit || !initialSnapshot) return false;
     return !areSurveyFormsEqual(form, initialSnapshot);
   }, [isEdit, initialSnapshot, form]);
-
-  const hasPendingMultiUrlCsv =
-    form.projectLinkType === "Multi Link" && multiUrlCsvFiles.length > 0;
 
   const canSubmit =
     showSubmit &&
@@ -301,7 +286,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     !isLoadingRecord &&
     !isLoadingOptions &&
     !loadFailed &&
-    (!isEdit || isDirty || hasPendingMultiUrlCsv);
+    (!isEdit || isDirty);
 
   const selectOptions = {
     clientOptions: mergedClientOptions,
@@ -315,60 +300,17 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     if (
       !validateSubmit() ||
       !isSurveyFormSubmittable(form, validationOptions) ||
-      (isEdit && !isDirty && !hasPendingMultiUrlCsv)
+      (isEdit && !isDirty)
     ) {
       return;
     }
 
     setIsSubmitting(true);
     try {
-      if (isEdit) {
-        const data = await updateSurvey(id, form, selectOptions);
-        const pendingCsvFiles = hasPendingMultiUrlCsv ? multiUrlCsvFiles : [];
-
-        if (pendingCsvFiles.length > 0) {
-          const uploadResult = await uploadPendingMultiUrlCsvFiles({
-            projectId: id,
-            createResponse: loadedRecord ? { data: loadedRecord } : data,
-            files: pendingCsvFiles,
-          });
-
-          toastApiSuccess({
-            message:
-              uploadResult.uploaded === 1
-                ? "Project updated and 1 CSV file uploaded successfully."
-                : `Project updated and ${uploadResult.uploaded} CSV file(s) uploaded successfully.`,
-          });
-        } else {
-          toastApiSuccess(data);
-        }
-      } else {
-        const data = await createSurvey(form, selectOptions);
-        const isMultiLink = form.projectLinkType === "Multi Link";
-        const pendingCsvFiles = isMultiLink ? multiUrlCsvFiles : [];
-
-        if (pendingCsvFiles.length > 0) {
-          const projectId = resolveCreatedProjectId(data);
-          if (!projectId) {
-            throw new ApiError("Project was created but the project ID was not returned.");
-          }
-
-          const uploadResult = await uploadPendingMultiUrlCsvFiles({
-            projectId,
-            createResponse: data,
-            files: pendingCsvFiles,
-          });
-
-          toastApiSuccess({
-            message:
-              uploadResult.uploaded === 1
-                ? "Project created and 1 CSV file uploaded successfully."
-                : `Project created and ${uploadResult.uploaded} CSV file(s) uploaded successfully.`,
-          });
-        } else {
-          toastApiSuccess(data);
-        }
-      }
+      const data = isEdit
+        ? await updateSurvey(id, form, selectOptions)
+        : await createSurvey(form, selectOptions);
+      toastApiSuccess(data);
 
       navigate(returnTo ?? "/survey", {
         replace: true,
@@ -463,9 +405,6 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
           projectManagerOptions={mergedProjectManagerOptions}
           salesManagerOptions={mergedSalesManagerOptions}
           salesProjectOptions={mergedSalesProjectOptions}
-          showMultiUrlCsvUpload
-          multiUrlCsvFiles={multiUrlCsvFiles}
-          onMultiUrlCsvFilesChange={setMultiUrlCsvFiles}
         />
 
         <div className="admin-form-actions flex flex-wrap items-center gap-3">
