@@ -61,6 +61,9 @@ export const EditSurveyPage = lazy(() => import("../modules/survey/pages/EditSur
 export const SurveyDetailsPage = lazy(
   () => import("../modules/survey/pages/SurveyDetailsPage")
 );
+export const ProjectReportViewPage = lazy(
+  () => import("../modules/survey/pages/ProjectReportViewPage")
+);
 export const SurveySettingsPage = lazy(
   () => import("../modules/survey/pages/SurveySettingsPage")
 );

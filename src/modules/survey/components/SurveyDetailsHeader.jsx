@@ -2,13 +2,12 @@ import { Loader2 } from "lucide-react";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import { PROJECT_STATUS_OPTIONS } from "../data/surveyDetailsData";
-import { primaryBtnClass } from "./surveyDetailsShared";
+import { primaryBtnClass, secondaryBtnClass } from "./surveyDetailsShared";
 
 export const SURVEY_DETAIL_TABS = [
   { id: "project-details", label: "Project Information" },
   { id: "project-urls", label: "Project URLs" },
   { id: "partner-mapping", label: "Partner Mapping" },
-  { id: "project-report", label: "Project Report" },
 ];
 
 /**
@@ -20,7 +19,6 @@ export function getSurveyDetailTabs() {
     { id: "project-details", label: "Project Information" },
     { id: "project-urls", label: "Project URLs" },
     { id: "partner-mapping", label: "Partner Mapping" },
-    { id: "project-report", label: "Project Report" },
   ];
 }
 
@@ -33,6 +31,8 @@ function SurveyDetailsHeader({
   onStatusUpdate,
   isUpdatingStatus,
   onEditSurvey,
+  onProjectReport,
+  isProjectReportActive = false,
   surveyId,
   tabs = SURVEY_DETAIL_TABS,
   readOnly = false,
@@ -86,6 +86,15 @@ function SurveyDetailsHeader({
         </div>
 
         <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center xl:justify-center">
+          {onProjectReport && (
+            <button
+              type="button"
+              onClick={onProjectReport}
+              className={isProjectReportActive ? primaryBtnClass : secondaryBtnClass}
+            >
+              Project Reports
+            </button>
+          )}
           {allowWrite && (
             <button type="button" onClick={onEditSurvey} className={primaryBtnClass}>
               Edit Project

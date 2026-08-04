@@ -7,6 +7,10 @@ import {
   mapSupplierMappingToRow,
 } from "../services/supplierMappingApi";
 import { primaryBtnClass, secondaryBtnClass } from "./surveyDetailsShared";
+import {
+  openProjectReportView,
+  PROJECT_REPORT_TYPES,
+} from "../utils/projectReportNavigation";
 
 function ReportSection({ title, children, isDarkMode }) {
   return (
@@ -16,7 +20,7 @@ function ReportSection({ title, children, isDarkMode }) {
   );
 }
 
-function ProjectReportTab({ isDarkMode, projectId, projectUrlId }) {
+function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) {
   const [supplierOptions, setSupplierOptions] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
@@ -81,9 +85,29 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId }) {
     return match?.label || selectedSupplier || "Supplier";
   }, [supplierOptions, selectedSupplier]);
 
-  const handleReportAction = (reportType, action) => {
+  const handleViewReport = (reportType, { supplierId } = {}) => {
+    const resolvedProjectId = String(projectId ?? "").trim();
+    if (!resolvedProjectId) {
+      toastApiInfo({ message: "Project id is missing. Unable to open report." });
+      return;
+    }
+
+    if (reportType === PROJECT_REPORT_TYPES.SUPPLIER && !String(supplierId ?? "").trim()) {
+      toastApiInfo({ message: "Select a supplier before viewing the report." });
+      return;
+    }
+
+    openProjectReportView({
+      projectId: resolvedProjectId,
+      reportType,
+      supplierId,
+      projectName,
+    });
+  };
+
+  const handleDownloadReport = (reportType, label) => {
     toastApiInfo({
-      message: `${reportType} — ${action} will be available when the report API is connected.`,
+      message: `${label} — Download will be available when the report API is connected.`,
     });
   };
 
@@ -93,14 +117,14 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId }) {
         <button
           type="button"
           className={secondaryBtnClass}
-          onClick={() => handleReportAction("Project Report", "View")}
+          onClick={() => handleViewReport(PROJECT_REPORT_TYPES.PROJECT)}
         >
           View
         </button>
         <button
           type="button"
           className={primaryBtnClass}
-          onClick={() => handleReportAction("Project Report", "Download")}
+          onClick={() => handleDownloadReport(PROJECT_REPORT_TYPES.PROJECT, "Project Report")}
         >
           Download
         </button>
@@ -110,14 +134,16 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId }) {
         <button
           type="button"
           className={secondaryBtnClass}
-          onClick={() => handleReportAction("Prescreen Report", "View")}
+          onClick={() => handleViewReport(PROJECT_REPORT_TYPES.PRESCREEN)}
         >
           View
         </button>
         <button
           type="button"
           className={primaryBtnClass}
-          onClick={() => handleReportAction("Prescreen Report", "Download")}
+          onClick={() =>
+            handleDownloadReport(PROJECT_REPORT_TYPES.PRESCREEN, "Prescreen Report")
+          }
         >
           Download
         </button>
@@ -147,10 +173,9 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId }) {
               type="button"
               className={secondaryBtnClass}
               onClick={() =>
-                handleReportAction(
-                  `Supplier Report (${selectedSupplierLabel})`,
-                  "View"
-                )
+                handleViewReport(PROJECT_REPORT_TYPES.SUPPLIER, {
+                  supplierId: selectedSupplier,
+                })
               }
             >
               View
@@ -159,9 +184,9 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId }) {
               type="button"
               className={primaryBtnClass}
               onClick={() =>
-                handleReportAction(
-                  `Supplier Report (${selectedSupplierLabel})`,
-                  "Download"
+                handleDownloadReport(
+                  PROJECT_REPORT_TYPES.SUPPLIER,
+                  `Supplier Report (${selectedSupplierLabel})`
                 )
               }
             >

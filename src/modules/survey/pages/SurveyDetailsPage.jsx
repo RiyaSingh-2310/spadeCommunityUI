@@ -59,8 +59,20 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
 
   const visibleTabs = useMemo(() => getSurveyDetailTabs(), []);
 
+  const tabLabels = useMemo(() => {
+    const labels = visibleTabs.reduce((acc, tab) => {
+      acc[tab.id] = tab.label;
+      return acc;
+    }, /** @type {Record<string, string>} */ ({}));
+    labels[SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT] = "Project Reports";
+    return labels;
+  }, [visibleTabs]);
+
   const activeTab = useMemo(() => {
     const requested = parsedSearch.tab;
+    if (requested === SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT) {
+      return SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT;
+    }
     const match = visibleTabs.find((tab) => tab.id === requested && !tab.disabled);
     return match?.id ?? visibleTabs[0]?.id ?? SURVEY_DETAIL_TAB_IDS.PROJECT_DETAILS;
   }, [parsedSearch.tab, visibleTabs]);
@@ -199,11 +211,6 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
   }
 
-  const tabLabels = visibleTabs.reduce((acc, tab) => {
-    acc[tab.id] = tab.label;
-    return acc;
-  }, /** @type {Record<string, string>} */ ({}));
-
   const listPath = salesViewMode
     ? "/sales/projects"
     : isGroupView
@@ -339,6 +346,14 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
     });
   };
 
+  const handleProjectReport = () => {
+    syncSearch({
+      tab: SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT,
+      urlView: PROJECT_URL_VIEW_IDS.LIST,
+      urlId: "",
+    });
+  };
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -359,6 +374,8 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         surveyId={project.projectCode || project.surveyId || project.id}
         tabs={visibleTabs}
         readOnly={salesViewMode}
+        onProjectReport={handleProjectReport}
+        isProjectReportActive={activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT}
         onEditSurvey={() => {
           if (isGroupView) {
             const editTarget = getGroupProjectEditPath(id, groupId, {
@@ -417,6 +434,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
             key={`project-report-${id}`}
             projectId={project?.recordId ?? id}
             projectUrlId={savedProjectUrlId}
+            projectName={project.projectName}
             isDarkMode={isDarkMode}
           />
         )}

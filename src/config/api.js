@@ -145,6 +145,10 @@ export const API_ROUTES = {
     multiUrlCsvTemplate: "/api/projects/multiple-url/csv-template",
     uploadMultiUrls: (id) => `/api/projects/${id}/multiple-url/csv-upload`,
     multiLinkStats: (id) => `/api/projects/${id}/multi-link-stats`,
+    reportList: (id, reportType) =>
+      `/api/projects/${encodeURIComponent(String(id ?? "").trim())}/reports/${encodeURIComponent(String(reportType ?? "").trim())}`,
+    reportDownload: (id, reportType) =>
+      `/api/projects/${encodeURIComponent(String(id ?? "").trim())}/reports/${encodeURIComponent(String(reportType ?? "").trim())}/download`,
   },
   supplierMapping: {
     list: "/api/supplier-mapping/list",

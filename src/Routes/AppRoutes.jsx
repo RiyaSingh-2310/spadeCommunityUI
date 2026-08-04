@@ -90,6 +90,11 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
 
       <Route element={<RequireAuth />}>
         <Route
+          path="/survey/report/view/:projectId"
+          element={withSuspense(Pages.ProjectReportViewPage, { isDarkMode })}
+        />
+
+        <Route
           element={withSuspense(Pages.SurveyResearchPortalLayout, themeProps)}
         >
           <Route path="/survey-research" element={withSuspense(Pages.PortalOverviewPage)} />
