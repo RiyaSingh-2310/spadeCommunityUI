@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Eye, Link2, Loader2, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
 // import NumericInput from "../../../components/admin/NumericInput";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
@@ -10,6 +11,10 @@ import { getPartnerPanelSizes } from "../../../services/partners/partnersApi";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
+import {
+  DEFAULT_DECIMAL_PLACES,
+  getDecimalPlacesError,
+} from "../../shared/utils/numericInputUtils";
 import { getOptionalUrlError, isFormValid } from "../../shared/utils/validation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { mapPartnersToSelectOptions } from "../services/surveyApi";
@@ -103,6 +108,7 @@ function createEmptyPartnerForm() {
 const EMPTY_MULTI_LINK_STATS = {
   totalMultiLinks: 0,
   remainingMultiLinks: 0,
+  completedSurveyCount: 0,
   sampleSize: 0,
   sampleAdded: 0,
   addPartner: true,
@@ -234,6 +240,17 @@ function PartnerMappingTab({
     [partnerOptions, assignedPartnerIds]
   );
 
+  // Edit: allow current partner + any unassigned partners (reassignment without Revoke)
+  const editPartnerOptions = useMemo(
+    () =>
+      partnerOptions.filter(
+        (option) =>
+          String(option.value) === String(form.partnerId) ||
+          !assignedPartnerIds.has(String(option.value))
+      ),
+    [partnerOptions, assignedPartnerIds, form.partnerId]
+  );
+
   const tableColumns = useMemo(() => {
     const columns = [...TABLE_COLUMNS];
     if (isMultiLink) {
@@ -249,7 +266,13 @@ function PartnerMappingTab({
     const next = {};
     if (!form.partnerId) next.partnerId = "Partner is required";
     if (!String(form.quota ?? "").trim()) next.quota = "Partner quota is required";
-    if (!String(form.cpi ?? "").trim()) next.cpi = "CPI is required";
+    {
+      const cpiError = getDecimalPlacesError(form.cpi, "CPI", {
+        required: true,
+        maxDecimals: DEFAULT_DECIMAL_PLACES,
+      });
+      if (cpiError) next.cpi = cpiError;
+    }
 
     // Link to Assign field is temporarily hidden.
     // if (isMultiLink) {
@@ -564,26 +587,27 @@ function PartnerMappingTab({
             ) : null
           }
           footer={
-            <div className="flex flex-wrap items-start gap-x-8 gap-y-3 text-sm">
+            <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-3 text-sm">
               {isMultiLink ? (
-                <div>
-                  <p className="admin-text-muted text-xs font-medium uppercase tracking-wide">
-                    Remaining Multi-Links
-                  </p>
-                  <p className="mt-1 font-semibold text-[var(--admin-danger-text)]">
-                    {multiLinkStats.remainingMultiLinks} /{" "}
-                    {multiLinkStats.totalMultiLinks}
-                  </p>
-                </div>
+                <>
+                  <div>
+                    <p className="admin-text-muted text-xs font-medium uppercase tracking-wide">
+                      Remaining Multi Links
+                    </p>
+                    <p className="mt-1 font-semibold text-[var(--admin-danger-text)]">
+                      {multiLinkStats.remainingMultiLinks}
+                    </p>
+                  </div>
+                  <div className="sm:text-right">
+                    <p className="admin-text-muted text-xs font-medium uppercase tracking-wide">
+                      Completed Surveys
+                    </p>
+                    <p className="admin-text mt-1 font-semibold">
+                      {multiLinkStats.completedSurveyCount}
+                    </p>
+                  </div>
+                </>
               ) : null}
-              {/* <div>
-                <p className="admin-text-muted text-xs font-medium uppercase tracking-wide">
-                  Sample Assigned
-                </p>
-                <p className="admin-text mt-1 font-semibold">
-                  {multiLinkStats.sampleAdded} / {multiLinkStats.sampleSize}
-                </p>
-              </div> */}
             </div>
           }
         />
@@ -613,11 +637,11 @@ function PartnerMappingTab({
                       value={form.partnerId}
                       onChange={handlePartnerChange}
                       options={
-                        formMode === "add" ? addPartnerOptions : partnerOptions
+                        formMode === "add" ? addPartnerOptions : editPartnerOptions
                       }
                       placeholder="Select partner"
                       searchPlaceholder="Search partner..."
-                      disabled={isSubmitting || formMode === "edit"}
+                      disabled={isSubmitting}
                       aria-label="Partner"
                     />
                   </FormField>
@@ -642,13 +666,14 @@ function PartnerMappingTab({
                     required
                     error={showError("cpi") ? errors.cpi : ""}
                   >
-                    <input
+                    <DecimalInput
                       className={inputClass}
                       value={form.cpi}
-                      onChange={(event) =>
-                        setForm((prev) => ({ ...prev, cpi: event.target.value }))
+                      onChange={(value) =>
+                        setForm((prev) => ({ ...prev, cpi: value }))
                       }
                       onBlur={() => touch("cpi")}
+                      decimalPlaces={DEFAULT_DECIMAL_PLACES}
                       disabled={isSubmitting}
                       aria-invalid={Boolean(showError("cpi") && errors.cpi)}
                     />

@@ -2,6 +2,7 @@ import { getRequiredError, isFormValid } from "../../shared/utils/validation";
 import {
   sanitizeDecimal,
   sanitizeInteger,
+  getDecimalPlacesError,
 } from "../../shared/utils/numericInputUtils";
 
 export const PROJECT_URL_NUMERIC_MAX_DIGITS = 6;
@@ -130,13 +131,13 @@ function getIntegerFieldError(value, label, { required = true } = {}) {
 }
 
 function getDecimalFieldError(value, label, { required = true } = {}) {
-  const requiredError = required ? getRequiredError(value, label) : "";
-  if (requiredError) return requiredError;
+  const placesError = getDecimalPlacesError(value, label, {
+    required,
+    maxDecimals: PROJECT_URL_CPI_MAX_DECIMALS,
+  });
+  if (placesError) return placesError;
   const trimmed = String(value ?? "").trim();
   if (!trimmed) return "";
-  // Input controls already restrict digits / one decimal / max 2 places.
-  // Only surface completeness issues that can still occur while typing.
-  if (trimmed.endsWith(".")) return `${label} is incomplete`;
   const [intPart = ""] = trimmed.split(".");
   if (intPart.length > PROJECT_URL_NUMERIC_MAX_DIGITS) {
     return `${label} must be at most ${PROJECT_URL_NUMERIC_MAX_DIGITS} digits`;

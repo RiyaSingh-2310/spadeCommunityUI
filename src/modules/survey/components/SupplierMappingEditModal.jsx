@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, X } from "lucide-react";
+import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
+import { DEFAULT_DECIMAL_PLACES } from "../../shared/utils/numericInputUtils";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getOptionalUrlError, isFormValid } from "../../shared/utils/validation";
 import { SUPPLIER_OPTIONS, getSupplierEditForm } from "../data/surveyDetailsData";
@@ -149,10 +151,11 @@ function SupplierMappingEditModal({ isOpen, onClose, surveyId, supplierCode, onU
             </FormField>
 
             <FormField label="CPI">
-              <input
+              <DecimalInput
                 className={inputClass}
                 value={form.cpi}
-                onChange={(e) => setForm((prev) => ({ ...prev, cpi: e.target.value }))}
+                onChange={(value) => setForm((prev) => ({ ...prev, cpi: value }))}
+                decimalPlaces={DEFAULT_DECIMAL_PLACES}
                 disabled={isSubmitting}
               />
             </FormField>

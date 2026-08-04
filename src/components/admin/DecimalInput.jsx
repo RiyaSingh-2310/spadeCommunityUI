@@ -12,10 +12,16 @@ function DecimalInput({
   onChange,
   className = "",
   decimalPlaces = DEFAULT_DECIMAL_PLACES,
+  onKeyDown,
   ...props
 }) {
   const handleChange = (event) => {
     onChange(sanitizeDecimal(event.target.value, decimalPlaces));
+  };
+
+  const handleKeyDown = (event) => {
+    preventBlockedNumericKeys(event);
+    onKeyDown?.(event);
   };
 
   return (
@@ -26,7 +32,7 @@ function DecimalInput({
       {...props}
       value={value}
       onChange={handleChange}
-      onKeyDown={preventBlockedNumericKeys}
+      onKeyDown={handleKeyDown}
       onPaste={(e) => handleDecimalPaste(e, onChange, decimalPlaces)}
       onWheel={preventWheelValueChange}
       className={`admin-number-input ${className}`}

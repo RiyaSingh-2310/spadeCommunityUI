@@ -42,6 +42,47 @@ export function sanitizeDecimal(raw, maxDecimals = DEFAULT_DECIMAL_PLACES) {
   return trimmedDec.length > 0 ? `${intPart}.${trimmedDec}` : intPart;
 }
 
+/**
+ * Returns true when value is empty, a whole number, or has at most `maxDecimals` places.
+ * Incomplete values ending with "." are invalid.
+ * @param {unknown} value
+ * @param {number} [maxDecimals=DEFAULT_DECIMAL_PLACES]
+ */
+export function isValidDecimalPlaces(value, maxDecimals = DEFAULT_DECIMAL_PLACES) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) return true;
+  if (trimmed.endsWith(".")) return false;
+  if (!/^\d+(\.\d+)?$/.test(trimmed)) return false;
+  const [, decPart = ""] = trimmed.split(".");
+  return decPart.length <= maxDecimals;
+}
+
+/**
+ * Validation error for decimal fields that allow at most `maxDecimals` places.
+ * @param {unknown} value
+ * @param {string} label
+ * @param {{ required?: boolean, maxDecimals?: number }} [options]
+ */
+export function getDecimalPlacesError(
+  value,
+  label,
+  { required = true, maxDecimals = DEFAULT_DECIMAL_PLACES } = {}
+) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) {
+    return required ? `${label} is required` : "";
+  }
+  if (trimmed.endsWith(".")) return `${label} is incomplete`;
+  if (!/^\d+(\.\d+)?$/.test(trimmed)) {
+    return `${label} must be a valid number`;
+  }
+  const [, decPart = ""] = trimmed.split(".");
+  if (decPart.length > maxDecimals) {
+    return `${label} allows at most ${maxDecimals} digits after the decimal`;
+  }
+  return "";
+}
+
 export function preventBlockedNumericKeys(event) {
   if (BLOCKED_NUMERIC_KEYS.includes(event.key)) {
     event.preventDefault();

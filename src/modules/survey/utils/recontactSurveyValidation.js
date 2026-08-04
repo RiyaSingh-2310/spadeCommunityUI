@@ -5,6 +5,10 @@ import {
   getRequiredMaxLengthError,
   isFormValid,
 } from "../../shared/utils/validation";
+import {
+  DEFAULT_DECIMAL_PLACES,
+  getDecimalPlacesError,
+} from "../../shared/utils/numericInputUtils";
 
 function getPositiveNumberError(value, label) {
   const trimmed = String(value ?? "").trim();
@@ -12,6 +16,19 @@ function getPositiveNumberError(value, label) {
     return `${label} is required`;
   }
   const num = Number(trimmed);
+  if (!Number.isFinite(num) || num <= 0) {
+    return `${label} must be a valid number greater than 0`;
+  }
+  return "";
+}
+
+function getPositiveDecimalError(value, label) {
+  const placesError = getDecimalPlacesError(value, label, {
+    required: true,
+    maxDecimals: DEFAULT_DECIMAL_PLACES,
+  });
+  if (placesError) return placesError;
+  const num = Number(String(value ?? "").trim());
   if (!Number.isFinite(num) || num <= 0) {
     return `${label} must be a valid number greater than 0`;
   }
@@ -48,7 +65,7 @@ export function getRecontactSurveyFormErrors(form) {
       form.respondentClickQuota,
       "Respondent Click Quota"
     ),
-    cpi: getPositiveNumberError(form.cpi, "CPI"),
+    cpi: getPositiveDecimalError(form.cpi, "CPI"),
     startDate: getRequiredError(form.startDate, "Start Date"),
     endDate: getRequiredError(form.endDate, "End Date"),
     liveUrl: isSingleLink
@@ -62,9 +79,9 @@ export function getRecontactSurveyFormErrors(form) {
       : "",
   };
 
-  const dateRangeError = getDateRangeError(form.startDate, form.endDate);
-  if (dateRangeError) {
-    errors.endDate = dateRangeError;
+  const rangeError = getDateRangeError(form.startDate, form.endDate);
+  if (rangeError) {
+    errors.endDate = rangeError;
   }
 
   return errors;

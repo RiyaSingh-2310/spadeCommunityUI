@@ -28,6 +28,8 @@ export {
 export {
   sanitizeInteger,
   sanitizeDecimal,
+  isValidDecimalPlaces,
+  getDecimalPlacesError,
   BLOCKED_NUMERIC_KEYS,
   DEFAULT_DECIMAL_PLACES,
   preventBlockedNumericKeys,

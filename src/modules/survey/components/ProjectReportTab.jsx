@@ -1,9 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
-import { getSupplierMappingRows } from "../data/surveyDetailsData";
+import { toastApiError, toastApiInfo } from "../../../services/toast/apiToast";
+import {
+  listSupplierMappings,
+  mapSupplierMappingToRow,
+} from "../services/supplierMappingApi";
 import { primaryBtnClass, secondaryBtnClass } from "./surveyDetailsShared";
-import { toastApiInfo } from "../../../services/toast/apiToast";
 
 function ReportSection({ title, children, isDarkMode }) {
   return (
@@ -13,19 +16,70 @@ function ReportSection({ title, children, isDarkMode }) {
   );
 }
 
-function ProjectReportTab({ isDarkMode }) {
-  const suppliers = useMemo(() => getSupplierMappingRows(), []);
-  const supplierOptions = useMemo(
-    () =>
-      suppliers.map((row) => ({
-        value: row.supplierCode,
-        label: `${row.supplierName} (${row.supplierCode})`,
-      })),
-    [suppliers]
-  );
-  const [selectedSupplier, setSelectedSupplier] = useState(
-    () => suppliers[0]?.supplierCode ?? ""
-  );
+function ProjectReportTab({ isDarkMode, projectId, projectUrlId }) {
+  const [supplierOptions, setSupplierOptions] = useState([]);
+  const [selectedSupplier, setSelectedSupplier] = useState("");
+  const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const resolvedProjectId = String(projectId ?? "").trim();
+    const resolvedProjectUrlId = String(projectUrlId ?? "").trim();
+
+    async function loadSuppliers() {
+      if (!resolvedProjectId || !resolvedProjectUrlId) {
+        setSupplierOptions([]);
+        setSelectedSupplier("");
+        return;
+      }
+
+      setIsLoadingSuppliers(true);
+      try {
+        const records = await listSupplierMappings({
+          projectId: resolvedProjectId,
+          projectUrlId: resolvedProjectUrlId,
+        });
+        if (cancelled) return;
+
+        const options = (Array.isArray(records) ? records : [])
+          .map((record, index) => mapSupplierMappingToRow(record, index))
+          .filter((row) => row?.partnerId || row?.partnerCode)
+          .map((row) => ({
+            value: String(row.partnerId || row.partnerCode),
+            label: [row.partnerName, row.partnerCode]
+              .filter(Boolean)
+              .join(" — ") || String(row.partnerId),
+          }));
+
+        setSupplierOptions(options);
+        setSelectedSupplier((prev) => {
+          if (prev && options.some((option) => option.value === prev)) {
+            return prev;
+          }
+          return options[0]?.value ?? "";
+        });
+      } catch (error) {
+        if (cancelled) return;
+        setSupplierOptions([]);
+        setSelectedSupplier("");
+        toastApiError(error);
+      } finally {
+        if (!cancelled) setIsLoadingSuppliers(false);
+      }
+    }
+
+    loadSuppliers();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, projectUrlId]);
+
+  const selectedSupplierLabel = useMemo(() => {
+    const match = supplierOptions.find(
+      (option) => option.value === selectedSupplier
+    );
+    return match?.label || selectedSupplier || "Supplier";
+  }, [supplierOptions, selectedSupplier]);
 
   const handleReportAction = (reportType, action) => {
     toastApiInfo({
@@ -78,6 +132,12 @@ function ProjectReportTab({ isDarkMode }) {
               value={selectedSupplier}
               onChange={setSelectedSupplier}
               options={supplierOptions}
+              placeholder={
+                isLoadingSuppliers ? "Loading suppliers..." : "Select supplier"
+              }
+              loading={isLoadingSuppliers}
+              loadingLabel="Loading suppliers..."
+              emptyMessage="No suppliers mapped"
               searchPlaceholder="Search supplier..."
               aria-label="Select supplier"
             />
@@ -88,7 +148,7 @@ function ProjectReportTab({ isDarkMode }) {
               className={secondaryBtnClass}
               onClick={() =>
                 handleReportAction(
-                  `Supplier Report (${selectedSupplier})`,
+                  `Supplier Report (${selectedSupplierLabel})`,
                   "View"
                 )
               }
@@ -100,7 +160,7 @@ function ProjectReportTab({ isDarkMode }) {
               className={primaryBtnClass}
               onClick={() =>
                 handleReportAction(
-                  `Supplier Report (${selectedSupplier})`,
+                  `Supplier Report (${selectedSupplierLabel})`,
                   "Download"
                 )
               }

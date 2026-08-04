@@ -6,9 +6,9 @@ import { primaryBtnClass } from "./surveyDetailsShared";
 
 export const SURVEY_DETAIL_TABS = [
   { id: "project-details", label: "Project Information" },
-  { id: "project-urls", label: "Project URL" },
-  // { id: "supplier-mapping", label: "Supplier Mapping" },
-  // { id: "project-report", label: "Project Reports" },
+  { id: "project-urls", label: "Project URLs" },
+  { id: "partner-mapping", label: "Partner Mapping" },
+  { id: "project-report", label: "Project Report" },
 ];
 
 /**
@@ -18,8 +18,9 @@ export const SURVEY_DETAIL_TABS = [
 export function getSurveyDetailTabs() {
   return [
     { id: "project-details", label: "Project Information" },
-    { id: "project-urls", label: "Project URL" },
+    { id: "project-urls", label: "Project URLs" },
     { id: "partner-mapping", label: "Partner Mapping" },
+    { id: "project-report", label: "Project Report" },
   ];
 }
 

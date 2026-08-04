@@ -111,6 +111,11 @@ export function mapMultiLinkStats(raw = {}) {
         source?.remaining_multi_links ??
         source?.remainingMultiLinks
     ),
+    completedSurveyCount: toNumber(
+      source?.completed_survey_count ??
+        source?.completedSurveyCount ??
+        source?.completedSurveys
+    ),
     sampleSize: toNumber(
       source?.sampleSize ?? source?.sample_size
     ),

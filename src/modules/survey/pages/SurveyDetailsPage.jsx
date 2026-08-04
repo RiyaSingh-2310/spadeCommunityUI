@@ -10,10 +10,9 @@ import {
   updateSurveyStatus,
 } from "../services/surveyApi";
 import ProjectDetailsTab from "../components/ProjectDetailsTab";
-// import ProjectReportTab from "../components/ProjectReportTab";
+import ProjectReportTab from "../components/ProjectReportTab";
 import ProjectUrlsTab from "../components/ProjectUrlsTab";
 import PartnerMappingTab from "../components/PartnerMappingTab";
-// import SupplierMappingTab from "../components/SupplierMappingTab";
 import SurveyDetailsHeader, {
   getSurveyDetailTabs,
 } from "../components/SurveyDetailsHeader";
@@ -413,12 +412,14 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
             readOnly={salesViewMode}
           />
         )}
-        {/* {activeTab === "supplier-mapping" && (
-          <SupplierMappingTab surveyId={id} isDarkMode={isDarkMode} />
-        )} */}
-        {/* {activeTab === "project-report" && (
-          <ProjectReportTab isDarkMode={isDarkMode} />
-        )} */}
+        {activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT && (
+          <ProjectReportTab
+            key={`project-report-${id}`}
+            projectId={project?.recordId ?? id}
+            projectUrlId={savedProjectUrlId}
+            isDarkMode={isDarkMode}
+          />
+        )}
       </div>
     </div>
   );
