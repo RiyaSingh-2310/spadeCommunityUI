@@ -94,24 +94,15 @@ function FindUserFilters({
     return map;
   }, [questions]);
 
-  const questionSelectOptions = useMemo(() => {
-    const titleCounts = questions.reduce((counts, question) => {
-      const title = question.question_title;
-      counts.set(title, (counts.get(title) || 0) + 1);
-      return counts;
-    }, new Map());
-
-    return questions.map((question) => {
-      const title = question.question_title;
-      const duplicate = (titleCounts.get(title) || 0) > 1;
-      return {
+  const questionSelectOptions = useMemo(
+    () =>
+      questions.map((question) => ({
         value: question.id,
-        label: duplicate
-          ? `${title} (${question.question_type || "id"} #${question.id})`
-          : title,
-      };
-    });
-  }, [questions]);
+        // Display question title only — never append type (Radio/Dropdown/etc.)
+        label: String(question.question_title ?? "").trim(),
+      })),
+    [questions]
+  );
 
   const updateRow = (id, patch) => {
     onFiltersChange(
