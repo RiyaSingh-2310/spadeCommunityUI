@@ -97,8 +97,7 @@ function FindUserFilters({
   const questionSelectOptions = useMemo(
     () =>
       questions.map((question) => ({
-        value: question.id,
-        // Display question title only — never append type (Radio/Dropdown/etc.)
+        value: String(question.id),
         label: String(question.question_title ?? "").trim(),
       })),
     [questions]
@@ -128,14 +127,10 @@ function FindUserFilters({
     const normalizedId = String(questionId ?? "").trim();
     if (!normalizedId) return;
 
-    // Always load answers from GET /api/find-user/questions/:id/answers
-    const selectedQuestion = questionsById.get(normalizedId);
+    // GET /api/find-user/questions/:id/answers — answers only from this API
     setLoadingAnswersFor(normalizedId);
     try {
-      const options = await getFindUserAnswerOptions(
-        normalizedId,
-        selectedQuestion?.options
-      );
+      const options = await getFindUserAnswerOptions(normalizedId);
       setAnswerOptionsByQuestionId((prev) => {
         const next = new Map(prev);
         next.set(normalizedId, options);

@@ -16,6 +16,22 @@ function assertSuccess(data) {
   return data;
 }
 
+/**
+ * Strips trailing question-type labels from a title if present.
+ * e.g. "Gender (Radio)" → "Gender"
+ * @param {unknown} title
+ * @returns {string}
+ */
+function cleanFindUserQuestionTitle(title) {
+  return String(title ?? "")
+    .trim()
+    .replace(
+      /\s*\((radio|dropdown|textbox|checkbox|number|select|text|textarea|input)\)\s*$/i,
+      ""
+    )
+    .trim();
+}
+
 function extractQuestionList(data) {
   if (!data || typeof data !== "object") return [];
   if (Array.isArray(data.data)) return data.data;
@@ -63,7 +79,8 @@ export function normalizeFindUserQuestionOptions(options) {
 }
 
 /**
- * Maps a Find User question record into the filter question shape.
+ * Maps GET /api/find-user/questions records.
+ * Contract: { id, question_title, question_type, options }
  * @param {object} record
  */
 function mapFindUserQuestion(record) {
@@ -71,13 +88,14 @@ function mapFindUserQuestion(record) {
   const id = record.id ?? record.question_id ?? record.questionId;
   if (id == null || id === "") return null;
 
-  const questionTitle = String(
+  const questionTitle = cleanFindUserQuestionTitle(
     record.question_title ??
       record.questionTitle ??
       record.title ??
       record.label ??
       ""
-  ).trim();
+  );
+  if (!questionTitle) return null;
 
   return {
     id: String(id),
@@ -85,15 +103,13 @@ function mapFindUserQuestion(record) {
     question_type: String(
       record.question_type ?? record.questionType ?? ""
     ).trim(),
-    options: normalizeFindUserQuestionOptions(
-      record.options ?? record.answers
-    ),
-    raw: record,
+    options: normalizeFindUserQuestionOptions(record.options),
   };
 }
 
 /**
- * GET /api/find-user/questions — Panel questionnaire questions for Question Filter.
+ * GET /api/find-user/questions
+ * Panel Questionnaire questions only (never Question Library / Prescreen).
  * @returns {Promise<Array<{
  *   id: string,
  *   question_title: string,
@@ -107,46 +123,58 @@ export async function getFindUserQuestions() {
 
   return extractQuestionList(data)
     .map(mapFindUserQuestion)
-    .filter((question) => question && question.question_title);
+    .filter(Boolean);
 }
 
 /**
- * GET /api/find-user/questions/:questionId/answers — Answer Filter options.
+ * GET /api/find-user/questions/:questionId/answers
+ * Contract: { success, data: { id, question_title, question_type, answers: string[] } }
  * @param {string|number} questionId
- * @param {string[]} [fallbackOptions]
- * @returns {Promise<string[]>}
+ * @returns {Promise<{
+ *   id: string,
+ *   question_title: string,
+ *   question_type: string,
+ *   answers: string[],
+ * }>}
  */
-export async function getFindUserAnswerOptions(
-  questionId,
-  fallbackOptions = []
-) {
+export async function getFindUserQuestionAnswers(questionId) {
   const normalizedId = String(questionId ?? "").trim();
   if (!normalizedId) {
-    return normalizeFindUserQuestionOptions(fallbackOptions);
+    throw new ApiError("Question id is required.", null);
   }
 
-  try {
-    const data = await apiRequest(
-      API_ROUTES.findUser.questionAnswers(normalizedId)
-    );
-    assertSuccess(data);
+  const data = await apiRequest(
+    API_ROUTES.findUser.questionAnswers(normalizedId)
+  );
+  assertSuccess(data);
 
-    const payload =
-      data?.data && typeof data.data === "object" && !Array.isArray(data.data)
-        ? data.data
-        : data;
+  const payload =
+    data?.data && typeof data.data === "object" && !Array.isArray(data.data)
+      ? data.data
+      : data;
 
-    const answers = normalizeFindUserQuestionOptions(
-      payload?.answers ?? payload?.options ?? data?.answers ?? data?.options
-    );
-    if (answers.length > 0) return answers;
-  } catch (error) {
-    const fromFallback = normalizeFindUserQuestionOptions(fallbackOptions);
-    if (fromFallback.length > 0) return fromFallback;
-    throw error;
-  }
+  return {
+    id: String(payload?.id ?? normalizedId),
+    question_title: cleanFindUserQuestionTitle(
+      payload?.question_title ?? payload?.questionTitle ?? ""
+    ),
+    question_type: String(
+      payload?.question_type ?? payload?.questionType ?? ""
+    ).trim(),
+    answers: normalizeFindUserQuestionOptions(
+      payload?.answers ?? payload?.options
+    ),
+  };
+}
 
-  return normalizeFindUserQuestionOptions(fallbackOptions);
+/**
+ * Answer Filter options for a selected question.
+ * @param {string|number} questionId
+ * @returns {Promise<string[]>}
+ */
+export async function getFindUserAnswerOptions(questionId) {
+  const result = await getFindUserQuestionAnswers(questionId);
+  return result.answers;
 }
 
 function extractEmailTemplateList(data) {
