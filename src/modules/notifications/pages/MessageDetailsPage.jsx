@@ -5,19 +5,7 @@ import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import TableCard from "../../../components/admin/TableCard";
 import { getDemoMessageById } from "../data/demoMessages";
 
-function DetailField({ label, children }) {
-  return (
-    <div
-      className="border-t pt-4"
-      style={{ borderColor: "var(--admin-header-surface-border)" }}
-    >
-      <p className="admin-text-subtle mb-1 text-xs font-semibold uppercase tracking-wide">
-        {label}
-      </p>
-      <div className="admin-text text-sm break-words">{children}</div>
-    </div>
-  );
-}
+const SECTION_BORDER = { borderColor: "var(--admin-header-surface-border)" };
 
 function MessageDetailsPage({ isDarkMode }) {
   const { id } = useParams();
@@ -60,43 +48,59 @@ function MessageDetailsPage({ isDarkMode }) {
       />
 
       <TableCard isDarkMode={isDarkMode}>
-        <div className="space-y-0 p-1 sm:p-2">
-          <div className="pb-4">
-            <p className="admin-text-subtle mb-1 text-xs font-semibold uppercase tracking-wide">
-              Name
-            </p>
-            <h2 className="admin-text text-lg font-bold break-words">{message.name}</h2>
+        <div className="p-1 sm:p-2">
+          {/* Sender + Date/Time */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h2 className="admin-text text-lg font-semibold break-words sm:text-xl">
+                {message.name}
+              </h2>
+              <p className="admin-text-muted mt-1 break-all text-sm">
+                {message.email}
+              </p>
+            </div>
+            <div className="shrink-0 text-left sm:text-right">
+              <p className="admin-text text-sm font-semibold">{message.date}</p>
+              <p className="admin-text-muted mt-1 text-sm">{message.time}</p>
+            </div>
           </div>
 
-          <DetailField label="Message ID">
-            <span className="font-medium">{message.id}</span>
-          </DetailField>
+          {/* Subject */}
+          <div className="mt-6 border-t pt-5" style={SECTION_BORDER}>
+            <p className="admin-text-subtle mb-1.5 text-xs font-semibold uppercase tracking-wide">
+              Subject
+            </p>
+            <p className="admin-text text-base font-semibold break-words sm:text-lg">
+              {message.subject}
+            </p>
+          </div>
 
-          <DetailField label="Date">
-            <span className="font-medium">{message.date}</span>
-          </DetailField>
-
-          <DetailField label="Time">
-            <span className="font-medium">{message.time}</span>
-          </DetailField>
-
-          <DetailField label="Subject">
-            <span className="text-base font-semibold">{message.subject}</span>
-          </DetailField>
-
-          <DetailField label="Full Message">
-            <div className="whitespace-pre-wrap leading-relaxed">
-              {message.body || "—"}
+          {/* Message body */}
+          <div className="mt-5 border-t pt-5" style={SECTION_BORDER}>
+            <p className="admin-text-subtle mb-3 text-xs font-semibold uppercase tracking-wide">
+              Message
+            </p>
+            <div
+              className="admin-input rounded-xl border p-4 sm:p-5"
+              style={{
+                borderColor: "var(--admin-input-border)",
+                background: "var(--admin-input-bg)",
+              }}
+            >
+              <div className="admin-text whitespace-pre-wrap break-words text-sm leading-relaxed sm:text-[15px] sm:leading-7">
+                {message.body || "—"}
+              </div>
             </div>
-          </DetailField>
+          </div>
 
+          {/* Actions */}
           <div
-            className="flex flex-wrap items-center justify-end gap-2 border-t pt-4 mt-4"
-            style={{ borderColor: "var(--admin-header-surface-border)" }}
+            className="mt-6 flex flex-wrap items-center justify-end gap-2 border-t pt-5"
+            style={SECTION_BORDER}
           >
             <button
               type="button"
-              className="admin-btn-primary h-10 rounded-xl px-5 text-sm font-semibold transition hover:opacity-90"
+              className="admin-btn-primary h-10 cursor-pointer rounded-xl px-5 text-sm font-semibold transition hover:opacity-90"
             >
               Reply
             </button>
