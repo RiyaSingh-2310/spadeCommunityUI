@@ -1,221 +1,83 @@
-import { API_ROUTES } from "../../../config/api";
-import {
-  extractListTotalFromResponse,
-  safeMapListItems,
-} from "../../shared/utils/listResponse";
-import { appendListQuery } from "../../shared/utils/listQueryParams";
-import {
-  formatActivityLogDate,
-  formatLocaleDateLabel,
-  formatLocaleTimeLabel,
-} from "../../shared/utils/dateTime";
-import { apiRequest } from "../../../services/api/client";
-import { ApiError } from "../../../services/api/ApiError";
-
-function assertSuccess(data) {
-  if (data?.success !== true) {
-    throw new ApiError(data?.message ?? "", data);
-  }
-  return data;
-}
-
-function extractMessageList(data) {
-  if (!data || typeof data !== "object") return [];
-  if (Array.isArray(data.data)) return data.data;
-  if (Array.isArray(data.messages)) return data.messages;
-  if (Array.isArray(data.items)) return data.items;
-  return [];
-}
-
-function parseIsRead(value) {
-  if (value === true || value === 1 || value === "1") return true;
-  if (value === false || value === 0 || value === "0") return false;
-  const normalized = String(value ?? "").trim().toLowerCase();
-  if (["read", "true", "yes", "y"].includes(normalized)) return true;
-  if (["unread", "false", "no", "n"].includes(normalized)) return false;
-  return Boolean(value);
-}
-
 /**
- * @param {object} record
+ * Messages API stubs — static demo data only.
+ * Real backend integration is disabled until the final Messages API is ready.
+ * Do not call network endpoints from this module.
  */
-export function mapMessageRecord(record) {
-  if (!record || typeof record !== "object") return null;
+import {
+  DEMO_MESSAGES,
+  getDemoMessageById,
+} from "../data/demoMessages";
 
-  const id = record.id ?? record.message_id ?? record.messageId;
-  if (id == null || id === "") return null;
-
-  const createdRaw =
-    record.created_at ??
-    record.createdAt ??
-    record.date ??
-    record.datetime ??
-    "";
-
-  const isRead = parseIsRead(
-    record.is_read ?? record.isRead ?? record.read ?? record.status
-  );
-
-  const name = String(
-    record.sender_name ??
-      record.senderName ??
-      record.name ??
-      record.from_name ??
-      ""
-  ).trim();
-
-  const email = String(
-    record.sender_email ??
-      record.senderEmail ??
-      record.email ??
-      record.from_email ??
-      ""
-  ).trim();
-
-  const subject = String(record.subject ?? record.title ?? "").trim();
-  const body = String(
-    record.body ?? record.message ?? record.content ?? record.description ?? ""
-  );
-
-  return {
-    id: String(id),
-    name: name || "—",
-    email: email || "—",
-    subject: subject || "—",
-    body,
-    isRead,
-    createdAt: createdRaw || null,
-    dateTime: createdRaw ? formatActivityLogDate(createdRaw) : "—",
-    date: createdRaw ? formatLocaleDateLabel(createdRaw) : "—",
-    time: createdRaw ? formatLocaleTimeLabel(createdRaw) : "—",
-    // Header notification shape
-    title: subject || "Message",
-    description: body,
-    datetime: createdRaw ? formatActivityLogDate(createdRaw) : "—",
-    read: isRead,
-  };
+function filterMessages(search = "") {
+  const q = String(search ?? "").trim().toLowerCase();
+  if (!q) return [...DEMO_MESSAGES];
+  return DEMO_MESSAGES.filter((msg) => {
+    const haystack = [msg.name, msg.subject, msg.body, msg.id]
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(q);
+  });
 }
 
 /**
- * GET /api/messages/list?page=&limit=&search=
+ * Static list — no /api/messages/list network call.
  */
 export async function getMessages({ page = 1, limit = 10, search = "" } = {}) {
-  const data = await apiRequest(
-    appendListQuery(API_ROUTES.messages.list, { page, limit, search })
-  );
-  assertSuccess(data);
-
-  const records = extractMessageList(data);
-  const items = safeMapListItems(records, mapMessageRecord);
-  const total = extractListTotalFromResponse(data, items.length);
-  const unreadCount = Number(data.unreadCount ?? data.unread_count);
-  const responsePage = Number(data.page);
-  const responseLimit = Number(data.limit ?? data.pageSize);
-  const responseTotalPages = Number(data.totalPages ?? data.total_pages);
+  const filtered = filterMessages(search);
+  const total = filtered.length;
+  const pageSize = limit > 0 ? limit : 10;
+  const safePage = page > 0 ? page : 1;
+  const start = (safePage - 1) * pageSize;
+  const items = filtered.slice(start, start + pageSize);
+  const unreadCount = DEMO_MESSAGES.filter((msg) => !msg.isRead).length;
 
   return {
     success: true,
     items,
     total,
-    page: Number.isFinite(responsePage) && responsePage > 0 ? responsePage : page,
-    pageSize:
-      Number.isFinite(responseLimit) && responseLimit > 0 ? responseLimit : limit,
-    totalPages: Number.isFinite(responseTotalPages)
-      ? Math.max(0, responseTotalPages)
-      : Math.max(1, Math.ceil(total / (limit || 10)) || 1),
-    unreadCount: Number.isFinite(unreadCount) ? unreadCount : undefined,
+    page: safePage,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(total / pageSize) || 1),
+    unreadCount,
   };
 }
 
-/**
- * GET /api/messages/unread-count
- */
 export async function getMessagesUnreadCount() {
-  const data = await apiRequest(API_ROUTES.messages.unreadCount);
-  assertSuccess(data);
-  const unreadCount = Number(data.unreadCount ?? data.unread_count ?? 0);
-  return Number.isFinite(unreadCount) ? unreadCount : 0;
+  return DEMO_MESSAGES.filter((msg) => !msg.isRead).length;
 }
 
-/**
- * GET /api/messages/:id
- */
 export async function getMessage(id) {
-  const normalizedId = String(id ?? "").trim();
-  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
-    throw new ApiError("Message id is required.", null);
-  }
-
-  const data = await apiRequest(API_ROUTES.messages.byId(normalizedId));
-  assertSuccess(data);
-
-  const record = data.data ?? data.message ?? data;
-  const mapped = mapMessageRecord(record);
+  const mapped = getDemoMessageById(id);
   if (!mapped) {
-    throw new ApiError("Message not found!", data);
+    throw new Error("Message not found!");
   }
   return mapped;
 }
 
-/**
- * PATCH /api/messages/:id/read
- */
 export async function markMessageAsRead(id) {
-  const normalizedId = String(id ?? "").trim();
-  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
-    throw new ApiError("Message id is required.", null);
-  }
-
-  const data = await apiRequest(API_ROUTES.messages.markRead(normalizedId), {
-    method: "PATCH",
-  });
-  assertSuccess(data);
-
-  const record = data.data ?? data.message;
-  const mapped = record ? mapMessageRecord(record) : null;
-  const unreadCount = Number(data.unreadCount ?? data.unread_count);
-
+  const item = getDemoMessageById(id);
   return {
     success: true,
-    message: data.message,
-    item: mapped,
-    unreadCount: Number.isFinite(unreadCount) ? unreadCount : undefined,
+    item: item ? { ...item, isRead: true, read: true } : null,
+    unreadCount: DEMO_MESSAGES.filter((msg) => !msg.isRead).length,
   };
 }
 
-/**
- * PATCH /api/messages/read-all
- */
 export async function markAllMessagesAsRead() {
-  const data = await apiRequest(API_ROUTES.messages.readAll, {
-    method: "PATCH",
-  });
-  assertSuccess(data);
-  const unreadCount = Number(data.unreadCount ?? data.unread_count);
   return {
     success: true,
-    message: data.message,
-    unreadCount: Number.isFinite(unreadCount) ? unreadCount : 0,
+    unreadCount: 0,
   };
 }
 
-/**
- * DELETE /api/messages/:id
- */
-export async function deleteMessage(id) {
-  const normalizedId = String(id ?? "").trim();
-  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
-    throw new ApiError("Message id is required.", null);
-  }
-
-  const data = await apiRequest(API_ROUTES.messages.delete(normalizedId), {
-    method: "DELETE",
-  });
-  assertSuccess(data);
-  const unreadCount = Number(data.unreadCount ?? data.unread_count);
+export async function deleteMessage() {
   return {
     success: true,
-    message: data.message,
-    unreadCount: Number.isFinite(unreadCount) ? unreadCount : undefined,
+    unreadCount: DEMO_MESSAGES.filter((msg) => !msg.isRead).length,
   };
+}
+
+/** Kept for compatibility with prior imports; unused by static UI. */
+export function mapMessageRecord(record) {
+  return record && typeof record === "object" ? record : null;
 }

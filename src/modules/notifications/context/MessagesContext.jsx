@@ -2,35 +2,24 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import {
-  AUTH_SESSION_CHANGED_EVENT,
-  getAuthToken,
-} from "../../../services/auth/authStorage";
-import { toastApiError } from "../../../services/toast/apiToast";
-import {
-  deleteMessage as deleteMessageRequest,
-  getMessages,
-  markAllMessagesAsRead as markAllMessagesAsReadRequest,
-  markMessageAsRead as markMessageAsReadRequest,
-} from "../services/messagesApi";
-
-const HEADER_PAGE_SIZE = 20;
+import { getDemoRecentMessages } from "../data/demoMessages";
 
 const MessagesContext = createContext(null);
 
+function countUnread(items) {
+  return items.filter((item) => !item.isRead).length;
+}
+
 export function MessagesProvider({ children }) {
-  const [recentItems, setRecentItems] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [recentItems, setRecentItems] = useState(() => getDemoRecentMessages());
+  const [unreadCount, setUnreadCount] = useState(() =>
+    countUnread(getDemoRecentMessages())
+  );
   const listenersRef = useRef(new Set());
-  const inflightRef = useRef(null);
-  const requestIdRef = useRef(0);
 
   const notifyListingListeners = useCallback(() => {
     listenersRef.current.forEach((listener) => {
@@ -50,113 +39,31 @@ export function MessagesProvider({ children }) {
     };
   }, []);
 
-  const applyUnreadCount = useCallback((nextCount, items = null) => {
-    if (Number.isFinite(Number(nextCount))) {
-      setUnreadCount(Math.max(0, Number(nextCount)));
-      return;
-    }
-    if (Array.isArray(items)) {
-      setUnreadCount(items.filter((item) => !item.isRead).length);
-    }
+  const refreshRecent = useCallback(async () => {
+    const items = getDemoRecentMessages();
+    setRecentItems(items);
+    setUnreadCount(countUnread(items));
+    return { items, unreadCount: countUnread(items) };
   }, []);
-
-  const refreshRecent = useCallback(
-    async ({ silent = false } = {}) => {
-      if (!getAuthToken()) {
-        setRecentItems([]);
-        setUnreadCount(0);
-        setHasLoaded(true);
-        setIsLoading(false);
-        return { items: [], unreadCount: 0 };
-      }
-
-      if (inflightRef.current) {
-        return inflightRef.current;
-      }
-
-      const requestId = ++requestIdRef.current;
-      if (!silent) setIsLoading(true);
-
-      const requestPromise = (async () => {
-        try {
-          const result = await getMessages({
-            page: 1,
-            limit: HEADER_PAGE_SIZE,
-          });
-          if (requestId !== requestIdRef.current) {
-            return result;
-          }
-
-          const items = Array.isArray(result.items) ? result.items : [];
-          setRecentItems(items);
-          applyUnreadCount(result.unreadCount, items);
-          setHasLoaded(true);
-          return result;
-        } catch (error) {
-          if (requestId === requestIdRef.current) {
-            if (!silent) toastApiError(error);
-            setHasLoaded(true);
-          }
-          throw error;
-        } finally {
-          if (requestId === requestIdRef.current) {
-            setIsLoading(false);
-            inflightRef.current = null;
-          }
-        }
-      })();
-
-      inflightRef.current = requestPromise;
-      return requestPromise;
-    },
-    [applyUnreadCount]
-  );
-
-  useEffect(() => {
-    refreshRecent({ silent: true }).catch(() => {});
-
-    const onAuthChange = () => {
-      refreshRecent({ silent: true }).catch(() => {});
-    };
-
-    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, onAuthChange);
-    return () => {
-      window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, onAuthChange);
-    };
-  }, [refreshRecent]);
 
   const markAsRead = useCallback(
     async (id) => {
       const normalizedId = String(id ?? "").trim();
       if (!normalizedId) return null;
 
-      setRecentItems((prev) =>
-        prev.map((item) =>
+      setRecentItems((prev) => {
+        const next = prev.map((item) =>
           String(item.id) === normalizedId
             ? { ...item, isRead: true, read: true }
             : item
-        )
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-
-      try {
-        const result = await markMessageAsReadRequest(normalizedId);
-        if (result.item) {
-          setRecentItems((prev) =>
-            prev.map((item) =>
-              String(item.id) === normalizedId ? { ...item, ...result.item } : item
-            )
-          );
-        }
-        applyUnreadCount(result.unreadCount);
-        notifyListingListeners();
-        return result;
-      } catch (error) {
-        await refreshRecent({ silent: true }).catch(() => {});
-        throw error;
-      }
+        );
+        setUnreadCount(countUnread(next));
+        return next;
+      });
+      notifyListingListeners();
+      return { success: true, item: null };
     },
-    [applyUnreadCount, notifyListingListeners, refreshRecent]
+    [notifyListingListeners]
   );
 
   const markAllAsRead = useCallback(async () => {
@@ -164,53 +71,32 @@ export function MessagesProvider({ children }) {
       prev.map((item) => ({ ...item, isRead: true, read: true }))
     );
     setUnreadCount(0);
-
-    try {
-      const result = await markAllMessagesAsReadRequest();
-      applyUnreadCount(result.unreadCount ?? 0);
-      notifyListingListeners();
-      return result;
-    } catch (error) {
-      await refreshRecent({ silent: true }).catch(() => {});
-      throw error;
-    }
-  }, [applyUnreadCount, notifyListingListeners, refreshRecent]);
+    notifyListingListeners();
+    return { success: true, unreadCount: 0 };
+  }, [notifyListingListeners]);
 
   const removeMessage = useCallback(
     async (id) => {
       const normalizedId = String(id ?? "").trim();
       if (!normalizedId) return null;
 
-      const previous = recentItems;
-      setRecentItems((prev) =>
-        prev.filter((item) => String(item.id) !== normalizedId)
-      );
-      setUnreadCount((prev) => {
-        const removed = previous.find((item) => String(item.id) === normalizedId);
-        if (removed && !removed.isRead) return Math.max(0, prev - 1);
-        return prev;
+      setRecentItems((prev) => {
+        const next = prev.filter((item) => String(item.id) !== normalizedId);
+        setUnreadCount(countUnread(next));
+        return next;
       });
-
-      try {
-        const result = await deleteMessageRequest(normalizedId);
-        applyUnreadCount(result.unreadCount);
-        notifyListingListeners();
-        return result;
-      } catch (error) {
-        setRecentItems(previous);
-        await refreshRecent({ silent: true }).catch(() => {});
-        throw error;
-      }
+      notifyListingListeners();
+      return { success: true };
     },
-    [applyUnreadCount, notifyListingListeners, recentItems, refreshRecent]
+    [notifyListingListeners]
   );
 
   const value = useMemo(
     () => ({
       recentItems,
       unreadCount,
-      isLoading,
-      hasLoaded,
+      isLoading: false,
+      hasLoaded: true,
       refreshRecent,
       markAsRead,
       markAllAsRead,
@@ -220,8 +106,6 @@ export function MessagesProvider({ children }) {
     [
       recentItems,
       unreadCount,
-      isLoading,
-      hasLoaded,
       refreshRecent,
       markAsRead,
       markAllAsRead,
