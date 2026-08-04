@@ -190,6 +190,8 @@ export const API_ROUTES = {
   },
   findUser: {
     questions: "/api/find-user/questions",
+    questionAnswers: (questionId) =>
+      `/api/find-user/questions/${encodeURIComponent(String(questionId ?? "").trim())}/answers`,
     search: (projectId) =>
       `/api/find-user/${encodeURIComponent(String(projectId ?? "").trim())}/search`,
     invite: (projectId) =>

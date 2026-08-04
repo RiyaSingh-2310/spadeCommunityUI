@@ -5,7 +5,7 @@ import SearchableMultiSelect from "../../../../components/admin/SearchableMultiS
 import { getAdminInputClass } from "../../../shared/utils/formStyles";
 import {
   getFindUserAnswerOptions,
-  getFindUserQuestionsByLanguage,
+  getFindUserQuestions,
   normalizeFindUserQuestionOptions,
 } from "../services/findUserApi";
 import { toastApiError } from "../../../../services/toast/apiToast";
@@ -25,6 +25,22 @@ function mapOptionsToSelectOptions(options) {
   }));
 }
 
+function isChoiceQuestionType(questionType) {
+  const type = String(questionType ?? "").trim().toLowerCase();
+  return type === "dropdown" || type === "radio" || type === "select" || type === "checkbox";
+}
+
+function isFreeTextQuestionType(questionType) {
+  const type = String(questionType ?? "").trim().toLowerCase();
+  return (
+    type === "textbox" ||
+    type === "text" ||
+    type === "number" ||
+    type === "input" ||
+    type === "textarea"
+  );
+}
+
 function FindUserFilters({
   filters,
   onFiltersChange,
@@ -33,7 +49,6 @@ function FindUserFilters({
   onSearch,
   isSearching,
   disabled = false,
-  language = "",
 }) {
   const inputClass = getAdminInputClass();
   const [questions, setQuestions] = useState([]);
@@ -42,34 +57,19 @@ function FindUserFilters({
     () => new Map()
   );
   const [loadingAnswersFor, setLoadingAnswersFor] = useState("");
+  const [draftAnswersByRowId, setDraftAnswersByRowId] = useState(() => ({}));
 
   useEffect(() => {
     let cancelled = false;
-    const languageKey = String(language ?? "").trim();
 
     async function loadQuestions() {
-      if (!languageKey) {
-        setQuestions([]);
-        setAnswerOptionsByQuestionId(new Map());
-        setIsLoadingQuestions(false);
-        return;
-      }
-
       setIsLoadingQuestions(true);
       try {
-        const nextQuestions = await getFindUserQuestionsByLanguage(languageKey);
+        // GET /api/find-user/questions — Find User questions only (not Prescreen)
+        const nextQuestions = await getFindUserQuestions();
         if (cancelled) return;
         setQuestions(nextQuestions);
-        setAnswerOptionsByQuestionId(() => {
-          const next = new Map();
-          nextQuestions.forEach((question) => {
-            const options = normalizeFindUserQuestionOptions(question.options);
-            if (options.length > 0) {
-              next.set(String(question.id), options);
-            }
-          });
-          return next;
-        });
+        setAnswerOptionsByQuestionId(new Map());
       } catch (err) {
         if (cancelled) return;
         setQuestions([]);
@@ -84,7 +84,7 @@ function FindUserFilters({
     return () => {
       cancelled = true;
     };
-  }, [language]);
+  }, []);
 
   const questionsById = useMemo(() => {
     const map = new Map();
@@ -94,14 +94,24 @@ function FindUserFilters({
     return map;
   }, [questions]);
 
-  const questionSelectOptions = useMemo(
-    () =>
-      questions.map((question) => ({
+  const questionSelectOptions = useMemo(() => {
+    const titleCounts = questions.reduce((counts, question) => {
+      const title = question.question_title;
+      counts.set(title, (counts.get(title) || 0) + 1);
+      return counts;
+    }, new Map());
+
+    return questions.map((question) => {
+      const title = question.question_title;
+      const duplicate = (titleCounts.get(title) || 0) > 1;
+      return {
         value: question.id,
-        label: question.question_title,
-      })),
-    [questions]
-  );
+        label: duplicate
+          ? `${title} (${question.question_type || "id"} #${question.id})`
+          : title,
+      };
+    });
+  }, [questions]);
 
   const updateRow = (id, patch) => {
     onFiltersChange(
@@ -112,15 +122,22 @@ function FindUserFilters({
   const handleRemoveFilter = (rowId) => {
     if (filters.length <= 1) return;
     onRemoveFilter?.(rowId);
+    setDraftAnswersByRowId((prev) => {
+      if (!(rowId in prev)) return prev;
+      const next = { ...prev };
+      delete next[rowId];
+      return next;
+    });
   };
 
   const handleQuestionChange = async (rowId, questionId) => {
     updateRow(rowId, { questionId, answers: [] });
+    setDraftAnswersByRowId((prev) => ({ ...prev, [rowId]: "" }));
 
     const normalizedId = String(questionId ?? "").trim();
     if (!normalizedId) return;
-    if (answerOptionsByQuestionId.has(normalizedId)) return;
 
+    // Always load answers from GET /api/find-user/questions/:id/answers
     const selectedQuestion = questionsById.get(normalizedId);
     setLoadingAnswersFor(normalizedId);
     try {
@@ -135,6 +152,11 @@ function FindUserFilters({
       });
     } catch (err) {
       toastApiError(err);
+      setAnswerOptionsByQuestionId((prev) => {
+        const next = new Map(prev);
+        next.set(normalizedId, []);
+        return next;
+      });
     } finally {
       setLoadingAnswersFor((current) =>
         current === normalizedId ? "" : current
@@ -142,12 +164,30 @@ function FindUserFilters({
     }
   };
 
-  const canSearch = filters.every(
+  const addFreeTextAnswer = (rowId) => {
+    const draft = String(draftAnswersByRowId[rowId] ?? "").trim();
+    if (!draft) return;
+    const row = filters.find((item) => item.id === rowId);
+    const current = Array.isArray(row?.answers) ? row.answers : [];
+    if (current.includes(draft)) {
+      setDraftAnswersByRowId((prev) => ({ ...prev, [rowId]: "" }));
+      return;
+    }
+    updateRow(rowId, { answers: [...current, draft] });
+    setDraftAnswersByRowId((prev) => ({ ...prev, [rowId]: "" }));
+  };
+
+  // Search is enabled when every non-empty filter row is complete, and at least one is valid.
+  const completeFilters = filters.filter(
     (row) => row.questionId && Array.isArray(row.answers) && row.answers.length > 0
   );
-  const languageMissing = !String(language ?? "").trim();
-  const filtersDisabled =
-    disabled || isSearching || isLoadingQuestions || languageMissing;
+  const hasIncompleteFilter = filters.some(
+    (row) =>
+      (row.questionId && (!Array.isArray(row.answers) || row.answers.length === 0)) ||
+      (!row.questionId && Array.isArray(row.answers) && row.answers.length > 0)
+  );
+  const canSearch = completeFilters.length > 0 && !hasIncompleteFilter;
+  const filtersDisabled = disabled || isSearching || isLoadingQuestions;
   const canDeleteFilters = filters.length > 1;
 
   return (
@@ -157,34 +197,41 @@ function FindUserFilters({
           ? questionsById.get(String(row.questionId))
           : null;
         const cachedAnswers =
-          answerOptionsByQuestionId.get(String(row.questionId)) ??
-          selectedQuestion?.options ??
-          [];
+          answerOptionsByQuestionId.get(String(row.questionId)) ?? [];
         const answerOptions = mapOptionsToSelectOptions(cachedAnswers);
         const isLoadingAnswers =
           Boolean(row.questionId) &&
           loadingAnswersFor === String(row.questionId);
         const hasAnswerOptions = answerOptions.length > 0;
+        const useFreeTextAnswers =
+          Boolean(row.questionId) &&
+          !isLoadingAnswers &&
+          !hasAnswerOptions &&
+          (isFreeTextQuestionType(selectedQuestion?.question_type) ||
+            !isChoiceQuestionType(selectedQuestion?.question_type));
         const answersUnavailable =
           Boolean(row.questionId) &&
           !isLoadingQuestions &&
           !isLoadingAnswers &&
-          !hasAnswerOptions;
+          !hasAnswerOptions &&
+          isChoiceQuestionType(selectedQuestion?.question_type) &&
+          !isFreeTextQuestionType(selectedQuestion?.question_type);
         const selectedAnswers = Array.isArray(row.answers) ? row.answers : [];
+        const draftAnswer = draftAnswersByRowId[row.id] ?? "";
 
         let answerPlaceholder = "Select question first";
         if (answersUnavailable) {
           answerPlaceholder = "No answers available";
         } else if (isLoadingAnswers) {
           answerPlaceholder = "Loading answers...";
+        } else if (useFreeTextAnswers) {
+          answerPlaceholder = "Type an answer and press Add";
         } else if (row.questionId) {
           answerPlaceholder = "Select Answer(s)";
         }
 
         let questionPlaceholder = "Select Question";
-        if (languageMissing) {
-          questionPlaceholder = "Project URL language required";
-        } else if (isLoadingQuestions) {
+        if (isLoadingQuestions) {
           questionPlaceholder = "Loading questions...";
         }
 
@@ -221,24 +268,62 @@ function FindUserFilters({
               <label className="admin-text mb-2 block text-sm font-semibold">
                 Answer Filter
               </label>
-              <SearchableMultiSelect
-                inputClass={inputClass}
-                value={selectedAnswers}
-                onChange={(answers) => updateRow(row.id, { answers })}
-                options={answerOptions}
-                placeholder={answerPlaceholder}
-                disabled={
-                  disabled ||
-                  isSearching ||
-                  !row.questionId ||
-                  answersUnavailable ||
-                  isLoadingAnswers
-                }
-                emptyMessage="No answers available"
-                searchPlaceholder="Search answer..."
-                searchable
-                aria-label="Select answer filter"
-              />
+
+              {useFreeTextAnswers ? (
+                <div className="flex gap-2">
+                  <input
+                    className={inputClass}
+                    value={draftAnswer}
+                    onChange={(event) =>
+                      setDraftAnswersByRowId((prev) => ({
+                        ...prev,
+                        [row.id]: event.target.value,
+                      }))
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        addFreeTextAnswer(row.id);
+                      }
+                    }}
+                    placeholder={answerPlaceholder}
+                    disabled={disabled || isSearching || !row.questionId}
+                    aria-label="Enter answer filter"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addFreeTextAnswer(row.id)}
+                    disabled={
+                      disabled ||
+                      isSearching ||
+                      !row.questionId ||
+                      !String(draftAnswer).trim()
+                    }
+                    className="admin-btn-cancel inline-flex h-11 shrink-0 items-center rounded-xl px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Add
+                  </button>
+                </div>
+              ) : (
+                <SearchableMultiSelect
+                  inputClass={inputClass}
+                  value={selectedAnswers}
+                  onChange={(answers) => updateRow(row.id, { answers })}
+                  options={answerOptions}
+                  placeholder={answerPlaceholder}
+                  disabled={
+                    disabled ||
+                    isSearching ||
+                    !row.questionId ||
+                    answersUnavailable ||
+                    isLoadingAnswers
+                  }
+                  emptyMessage="No answers available"
+                  searchPlaceholder="Search answer..."
+                  searchable
+                  aria-label="Select answer filter"
+                />
+              )}
 
               {selectedAnswers.length > 0 ? (
                 <div className="mt-2 flex flex-wrap items-center gap-2">

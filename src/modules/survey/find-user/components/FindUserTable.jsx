@@ -8,13 +8,12 @@ const COLUMNS = [
   "S.No",
   "",
   "Name",
-  "Email Address",
-  "Mobile Number",
-  "Pre-Screen Completed",
-  "Joining Date",
+  "Email",
+  "Balance",
   "Invite Status",
   "Earned Points",
-  "Message",
+  "Joined Date",
+  "Matched Answers",
   "Status",
 ];
 
@@ -117,15 +116,15 @@ function FindUserTable({
                   </td>
                   <td className="admin-text whitespace-nowrap">{user.name}</td>
                   <td className="admin-text whitespace-nowrap">{user.email}</td>
-                  <td className="admin-text whitespace-nowrap">{user.mobile}</td>
-                  <td className="admin-text whitespace-nowrap">
-                    {user.preScreenCompleted}
-                  </td>
-                  <td className="admin-text whitespace-nowrap">{user.joiningDate}</td>
+                  <td className="admin-text whitespace-nowrap">{user.balance}</td>
                   <td className="admin-text whitespace-nowrap">{user.inviteStatus}</td>
                   <td className="admin-text whitespace-nowrap">{user.earnedPoints}</td>
-                  <td className="admin-text-muted max-w-[160px] truncate" title={user.message}>
-                    {user.message || "—"}
+                  <td className="admin-text whitespace-nowrap">{user.joiningDate}</td>
+                  <td
+                    className="admin-text max-w-[240px] truncate"
+                    title={user.matchedAnswers}
+                  >
+                    {user.matchedAnswers || "—"}
                   </td>
                   <td className="admin-text whitespace-nowrap">
                     <span

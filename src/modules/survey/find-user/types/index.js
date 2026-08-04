@@ -11,22 +11,22 @@
  * @property {string} [panelistId]
  * @property {string} name
  * @property {string} email
- * @property {string} mobile
- * @property {"Yes" | "No"} preScreenCompleted
- * @property {string} joiningDate
- * @property {string} [invitedAt]
- * @property {"Invited" | "Not Invited" | "Opened" | "Completed"} inviteStatus
+ * @property {number} balance
+ * @property {string} inviteStatus
  * @property {number} earnedPoints
- * @property {string} message
- * @property {"Active" | "Inactive"} status
+ * @property {string} joiningDate
+ * @property {string} matchedAnswers
+ * @property {string} [invitedAt]
+ * @property {string} [message]
+ * @property {"Active" | "Inactive" | string} status
  */
 
 /**
  * @typedef {Object} FindUserQuestion
  * @property {string} id
  * @property {string} question_title
- * @property {string} [question_text]
- * @property {string[] | null} options
+ * @property {string} [question_type]
+ * @property {string[]} [options]
  */
 
 export {};

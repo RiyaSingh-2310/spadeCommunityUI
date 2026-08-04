@@ -5,14 +5,9 @@ import {
 } from "../../../shared/utils/listResponse";
 import { appendListQuery } from "../../../shared/utils/listQueryParams";
 import { formatSurveyListDate } from "../../../shared/utils/dateTime";
-import { apiStatusToFormValue } from "../../../shared/utils/statusLabels";
+import { apiStatusToFormValue, normalizeStatusKey } from "../../../shared/utils/statusLabels";
 import { apiRequest } from "../../../../services/api/client";
 import { ApiError } from "../../../../services/api/ApiError";
-import {
-  getQuestionsByLanguage,
-  getRecord as getQuestionLibraryRecord,
-} from "../../../../services/question-library/questionLibraryApi";
-import { listProjectUrlsByProject } from "../../services/projectUrlsApi";
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -30,7 +25,7 @@ function extractQuestionList(data) {
 }
 
 /**
- * Normalizes question options from the Question Library / Find User APIs.
+ * Normalizes question options / answer values from the Find User APIs.
  * @param {unknown} options
  * @returns {string[]}
  */
@@ -60,6 +55,7 @@ export function normalizeFindUserQuestionOptions(options) {
           opt.value ??
           opt.option_text ??
           opt.optionText ??
+          opt.answer ??
           ""
       ).trim();
     })
@@ -67,7 +63,7 @@ export function normalizeFindUserQuestionOptions(options) {
 }
 
 /**
- * Maps a Question Library record into the Find User question filter shape.
+ * Maps a Find User question record into the filter question shape.
  * @param {object} record
  */
 function mapFindUserQuestion(record) {
@@ -89,34 +85,15 @@ function mapFindUserQuestion(record) {
     question_type: String(
       record.question_type ?? record.questionType ?? ""
     ).trim(),
-    options: normalizeFindUserQuestionOptions(record.options),
+    options: normalizeFindUserQuestionOptions(
+      record.options ?? record.answers
+    ),
     raw: record,
   };
 }
 
 /**
- * Resolves Project URL language for a project (first URL config).
- * @param {string|number} projectId
- * @returns {Promise<string>}
- */
-export async function getProjectUrlLanguageForFindUser(projectId) {
-  const normalizedId = String(projectId ?? "").trim();
-  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
-    return "";
-  }
-
-  const response = await listProjectUrlsByProject(normalizedId);
-  const rows = Array.isArray(response?.data) ? response.data : [];
-  for (const row of rows) {
-    const language = String(row?.language ?? "").trim();
-    if (language) return language;
-  }
-  return "";
-}
-
-/**
- * Question Filter options from Question Library, filtered by Project URL language.
- * @param {string} language
+ * GET /api/find-user/questions — Panel questionnaire questions for Question Filter.
  * @returns {Promise<Array<{
  *   id: string,
  *   question_title: string,
@@ -124,49 +101,96 @@ export async function getProjectUrlLanguageForFindUser(projectId) {
  *   options: string[],
  * }>>}
  */
-export async function getFindUserQuestionsByLanguage(language) {
-  const languageKey = String(language ?? "").trim();
-  if (!languageKey) return [];
-
-  const records = await getQuestionsByLanguage(languageKey);
-  return (Array.isArray(records) ? records : [])
-    .map(mapFindUserQuestion)
-    .filter((question) => question && question.question_title);
-}
-
-/**
- * Loads answer options for a Question Library question.
- * Prefers options already present on the question; falls back to GET by id.
- * @param {string|number} questionId
- * @param {string[]} [fallbackOptions]
- * @returns {Promise<string[]>}
- */
-export async function getFindUserAnswerOptions(questionId, fallbackOptions = []) {
-  const fromFallback = normalizeFindUserQuestionOptions(fallbackOptions);
-  if (fromFallback.length > 0) return fromFallback;
-
-  const normalizedId = String(questionId ?? "").trim();
-  if (!normalizedId) return [];
-
-  try {
-    const record = await getQuestionLibraryRecord(normalizedId);
-    return normalizeFindUserQuestionOptions(record?.options);
-  } catch {
-    return [];
-  }
-}
-
-/**
- * @deprecated Prefer getFindUserQuestionsByLanguage with Project URL language.
- * GET /api/find-user/questions
- */
 export async function getFindUserQuestions() {
   const data = await apiRequest(API_ROUTES.findUser.questions);
   assertSuccess(data);
 
   return extractQuestionList(data)
     .map(mapFindUserQuestion)
-    .filter(Boolean);
+    .filter((question) => question && question.question_title);
+}
+
+/**
+ * GET /api/find-user/questions/:questionId/answers — Answer Filter options.
+ * @param {string|number} questionId
+ * @param {string[]} [fallbackOptions]
+ * @returns {Promise<string[]>}
+ */
+export async function getFindUserAnswerOptions(
+  questionId,
+  fallbackOptions = []
+) {
+  const normalizedId = String(questionId ?? "").trim();
+  if (!normalizedId) {
+    return normalizeFindUserQuestionOptions(fallbackOptions);
+  }
+
+  try {
+    const data = await apiRequest(
+      API_ROUTES.findUser.questionAnswers(normalizedId)
+    );
+    assertSuccess(data);
+
+    const payload =
+      data?.data && typeof data.data === "object" && !Array.isArray(data.data)
+        ? data.data
+        : data;
+
+    const answers = normalizeFindUserQuestionOptions(
+      payload?.answers ?? payload?.options ?? data?.answers ?? data?.options
+    );
+    if (answers.length > 0) return answers;
+  } catch (error) {
+    const fromFallback = normalizeFindUserQuestionOptions(fallbackOptions);
+    if (fromFallback.length > 0) return fromFallback;
+    throw error;
+  }
+
+  return normalizeFindUserQuestionOptions(fallbackOptions);
+}
+
+function extractEmailTemplateList(data) {
+  if (!data || typeof data !== "object") return [];
+  if (Array.isArray(data.data)) return data.data;
+  if (Array.isArray(data.templates)) return data.templates;
+  if (Array.isArray(data.items)) return data.items;
+  return [];
+}
+
+/**
+ * GET /api/email-templates/list — Email Template dropdown options for Find User invite.
+ * @returns {Promise<Array<{ value: string, label: string }>>}
+ */
+export async function listFindUserEmailTemplateOptions() {
+  const data = await apiRequest(
+    appendListQuery(API_ROUTES.emailTemplates.list, {
+      page: 1,
+      limit: 100,
+    })
+  );
+  assertSuccess(data);
+
+  return extractEmailTemplateList(data)
+    .filter((template) => {
+      if (!template || typeof template !== "object") return false;
+      if (template.id == null || template.id === "") return false;
+      const statusKey = normalizeStatusKey(template.status);
+      return !statusKey || statusKey === "active";
+    })
+    .map((template) => {
+      const label = String(
+        template.title ??
+          template.template_key ??
+          template.templateKey ??
+          template.slug ??
+          ""
+      ).trim();
+
+      return {
+        value: String(template.id),
+        label: label || `Template #${template.id}`,
+      };
+    });
 }
 
 function extractSearchList(data) {
@@ -176,18 +200,6 @@ function extractSearchList(data) {
   if (Array.isArray(data.items)) return data.items;
   if (Array.isArray(data.records)) return data.records;
   return [];
-}
-
-function mapYesNo(value) {
-  if (value === true || value === 1 || value === "1") return "Yes";
-  if (value === false || value === 0 || value === "0") return "No";
-  const normalized = String(value ?? "").trim().toLowerCase();
-  if (["yes", "y", "true", "completed"].includes(normalized)) return "Yes";
-  if (["no", "n", "false", "pending", "incomplete"].includes(normalized)) {
-    return "No";
-  }
-  const raw = String(value ?? "").trim();
-  return raw || "—";
 }
 
 function displayOrDash(value) {
@@ -204,6 +216,43 @@ function formatInviteStatus(value) {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join(" ");
+}
+
+/**
+ * Formats matched_answers from search response for table display.
+ * @param {unknown} matchedAnswers
+ * @returns {string}
+ */
+function formatMatchedAnswers(matchedAnswers) {
+  if (!Array.isArray(matchedAnswers) || matchedAnswers.length === 0) return "—";
+
+  const parts = matchedAnswers
+    .map((item) => {
+      if (item == null) return "";
+      if (typeof item === "string" || typeof item === "number") {
+        return String(item).trim();
+      }
+      if (typeof item !== "object") return "";
+
+      const title = String(
+        item.question_title ?? item.questionTitle ?? item.question ?? ""
+      ).trim();
+      const answer = String(
+        item.answer ?? item.answers ?? item.value ?? ""
+      ).trim();
+
+      if (title && answer) return `${title}: ${answer}`;
+      return answer || title;
+    })
+    .filter(Boolean);
+
+  return parts.length > 0 ? parts.join("; ") : "—";
+}
+
+function toDisplayNumber(value, fallback = 0) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.round(num * 100) / 100;
 }
 
 /**
@@ -228,17 +277,11 @@ function mapFindUserSearchRecord(record) {
     record.userId ??
     id;
 
-  const mobile =
-    record.mobile ??
-    record.mobile_number ??
-    record.mobileNumber ??
-    record.phone ??
-    record.contact_no ??
-    "";
-
   const joiningRaw =
     record.joiningDate ??
     record.joining_date ??
+    record.joined_date ??
+    record.joinedDate ??
     record.created_at ??
     record.createdAt ??
     "";
@@ -250,14 +293,16 @@ function mapFindUserSearchRecord(record) {
     record.inviteDate ??
     "";
 
+  const balanceRaw =
+    record.balance ??
+    record.balance_point ??
+    record.balancePoint ??
+    null;
   const earnedPointsRaw =
     record.earned_points ??
     record.earnedPoints ??
-    record.balance_point ??
-    record.balancePoint ??
     record.reward_points ??
-    0;
-  const earnedPointsNum = Number(earnedPointsRaw);
+    null;
 
   const messageRaw = record.message ?? record.invite_message ?? "";
   const message =
@@ -270,13 +315,7 @@ function mapFindUserSearchRecord(record) {
     email: displayOrDash(
       record.email ?? record.emailAddress ?? record.email_address
     ),
-    mobile: mobile !== "" && mobile != null ? String(mobile) : "—",
-    preScreenCompleted: mapYesNo(
-      record.preScreenCompleted ??
-        record.pre_screen_completed ??
-        record.prescreenCompleted ??
-        record.questionnaire
-    ),
+    balance: toDisplayNumber(balanceRaw, 0),
     joiningDate: joiningRaw
       ? formatSurveyListDate(joiningRaw) || displayOrDash(joiningRaw)
       : "—",
@@ -289,9 +328,13 @@ function mapFindUserSearchRecord(record) {
         record.invitation_status ??
         "not_invited"
     ),
-    earnedPoints: Number.isFinite(earnedPointsNum)
-      ? Math.round(earnedPointsNum * 100) / 100
-      : 0,
+    earnedPoints: toDisplayNumber(
+      earnedPointsRaw != null ? earnedPointsRaw : balanceRaw,
+      0
+    ),
+    matchedAnswers: formatMatchedAnswers(
+      record.matched_answers ?? record.matchedAnswers
+    ),
     message,
     status: apiStatusToFormValue(record.status),
   };
@@ -299,7 +342,7 @@ function mapFindUserSearchRecord(record) {
 
 /**
  * Builds search filters for POST /api/find-user/:id/search.
- * Multiple answers for one question become `answer: string[]`.
+ * Contract: [{ question_id: number, answers: string[] }, ...]
  * @param {{ questionId: string, answers?: string[], answer?: string|string[] }[]} filters
  */
 export function buildFindUserSearchFilters(filters = []) {
@@ -320,7 +363,7 @@ export function buildFindUserSearchFilters(filters = []) {
 
       return {
         question_id: questionId,
-        answer: answers.length === 1 ? answers[0] : answers,
+        answers,
       };
     })
     .filter(Boolean);
