@@ -3,6 +3,12 @@ import { useLocation, useNavigate, useParams, useSearchParams } from "react-rout
 import { Loader2 } from "lucide-react";
 import PublicQuestionnaireLayout from "../../public-questionnaire/layout/PublicQuestionnaireLayout";
 import SurveyEmptyState from "../../public-questionnaire/components/SurveyEmptyState";
+import PartnerUrlOtpVerificationModal from "../../survey/components/PartnerUrlOtpVerificationModal";
+import {
+  clearPartnerUrlVerifyContext,
+  getPartnerUrlOtpSessionKey,
+  readPartnerUrlVerifyContext,
+} from "../../survey/utils/partnerUrlVerifyContext";
 import DoSurveyHero from "../components/DoSurveyHero";
 import { fetchDoSurveyStartDetails, startDoSurvey } from "../services/doSurveyApi";
 import {
@@ -49,9 +55,37 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const [startError, setStartError] = useState("");
   const [isStarting, setIsStarting] = useState(false);
 
+  const [verifyContext, setVerifyContext] = useState(null);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+
   useEffect(() => {
     setIsSearchReady(true);
   }, [location.search, searchParams]);
+
+  // After destination page mounts, open Verify Your Email when arriving from Partner Mapping.
+  useEffect(() => {
+    const ctx = readPartnerUrlVerifyContext({ token });
+    if (!ctx?.mappingId && !ctx?.returnPath) {
+      setVerifyContext(null);
+      setShowVerifyModal(false);
+      setIsEmailVerified(true);
+      return;
+    }
+
+    const sessionKey = getPartnerUrlOtpSessionKey(ctx.mappingId);
+    if (sessionKey && sessionStorage.getItem(sessionKey) === "1") {
+      setVerifyContext(ctx);
+      setIsEmailVerified(true);
+      setShowVerifyModal(false);
+      clearPartnerUrlVerifyContext();
+      return;
+    }
+
+    setVerifyContext(ctx);
+    setIsEmailVerified(false);
+    setShowVerifyModal(true);
+  }, [token]);
 
   // Read IsTest once, then remove it from the address bar.
   useEffect(() => {
@@ -87,6 +121,8 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
 
   const hasValidUid = respondentUid != null;
   const showUidError = !isLoading && isSearchReady && !hasValidUid;
+  const requiresEmailVerification = Boolean(verifyContext) && !isEmailVerified;
+  const contentLocked = requiresEmailVerification;
 
   useEffect(() => {
     let cancelled = false;
@@ -142,6 +178,8 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const errorVariant = classifyDoSurveyError(loadError);
 
   async function handleStartSurvey() {
+    if (contentLocked) return;
+
     const actionUid =
       resolveRespondentUid(searchParams, location.search) ??
       (typeof window !== "undefined"
@@ -174,6 +212,29 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     }
   }
 
+  const handleVerifyBack = () => {
+    setShowVerifyModal(false);
+    const returnPath = String(verifyContext?.returnPath ?? "").trim();
+    clearPartnerUrlVerifyContext();
+    setVerifyContext(null);
+
+    if (returnPath) {
+      navigate(returnPath, { replace: true });
+      return;
+    }
+    navigate(-1);
+  };
+
+  const handleVerified = () => {
+    setIsEmailVerified(true);
+    setShowVerifyModal(false);
+    clearPartnerUrlVerifyContext();
+  };
+
+  const sessionKey = getPartnerUrlOtpSessionKey(verifyContext?.mappingId);
+
+  const pageReady = !isLoading && isSearchReady && urlSanitized;
+
   return (
     <PublicQuestionnaireLayout isDarkMode={isDarkMode} onToggleTheme={onToggleTheme}>
       {isLoading || !isSearchReady || !urlSanitized ? (
@@ -183,53 +244,69 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
         </div>
       ) : null}
 
-      {!isLoading && isSearchReady && urlSanitized && !survey ? (
-        <SurveyEmptyState
-          variant={errorVariant}
-          description={loadError || undefined}
-        />
-      ) : null}
-
-      {!isLoading && isSearchReady && urlSanitized && survey && !hasStarted ? (
-        <>
-          <DoSurveyHero
-            survey={survey}
-            onStart={handleStartSurvey}
-            disabled={showUidError}
-            isStarting={isStarting}
+      <div
+        className={contentLocked ? "pointer-events-none select-none" : undefined}
+        aria-hidden={contentLocked || undefined}
+      >
+        {pageReady && !survey ? (
+          <SurveyEmptyState
+            variant={errorVariant}
+            description={loadError || undefined}
           />
-          {showUidError ? (
-            <p className="pq-hero-error" role="alert">
-              Missing or invalid uid in the link. Use a URL like{" "}
-              <code className="text-xs">/dosurvey/{token}?uid=your-respondent-id</code>
-            </p>
-          ) : null}
-          {startError ? (
-            <p className="pq-hero-error" role="alert">
-              {startError}
-            </p>
-          ) : null}
-        </>
-      ) : null}
+        ) : null}
 
-      {!isLoading && isSearchReady && urlSanitized && survey && hasStarted ? (
-        <div className="pq-card pq-state-card pq-empty-state">
-          <h1 className="pq-empty-title">Survey starting soon</h1>
-          <p className="pq-empty-description">
-            {startMessage ||
-              "Your session has been recorded. The full survey experience will load here once the backend API is connected."}
-          </p>
-          <p className="admin-text-subtle mt-4 text-sm">
-            Token: <span className="font-mono">{survey.meta?.previewLabel || token}</span>
-            {respondentUid ? (
-              <>
-                {" "}
-                · Respondent: <span className="font-mono">{respondentUid}</span>
-              </>
+        {pageReady && survey && !hasStarted ? (
+          <>
+            <DoSurveyHero
+              survey={survey}
+              onStart={handleStartSurvey}
+              disabled={showUidError || contentLocked}
+              isStarting={isStarting}
+            />
+            {showUidError ? (
+              <p className="pq-hero-error" role="alert">
+                Missing or invalid uid in the link. Use a URL like{" "}
+                <code className="text-xs">/dosurvey/{token}?uid=your-respondent-id</code>
+              </p>
             ) : null}
-          </p>
-        </div>
-      ) : null}
+            {startError ? (
+              <p className="pq-hero-error" role="alert">
+                {startError}
+              </p>
+            ) : null}
+          </>
+        ) : null}
+
+        {pageReady && survey && hasStarted ? (
+          <div className="pq-card pq-state-card pq-empty-state">
+            <h1 className="pq-empty-title">Survey starting soon</h1>
+            <p className="pq-empty-description">
+              {startMessage ||
+                "Your session has been recorded. The full survey experience will load here once the backend API is connected."}
+            </p>
+            <p className="admin-text-subtle mt-4 text-sm">
+              Token: <span className="font-mono">{survey.meta?.previewLabel || token}</span>
+              {respondentUid ? (
+                <>
+                  {" "}
+                  · Respondent: <span className="font-mono">{respondentUid}</span>
+                </>
+              ) : null}
+            </p>
+          </div>
+        ) : null}
+      </div>
+
+      <PartnerUrlOtpVerificationModal
+        isOpen={showVerifyModal && requiresEmailVerification && pageReady}
+        onCancel={handleVerifyBack}
+        cancelLabel="Back"
+        showBackIcon
+        partnerUrl={verifyContext?.partnerUrl || location.pathname}
+        mappingId={verifyContext?.mappingId}
+        sessionStorageKey={sessionKey}
+        onVerified={handleVerified}
+      />
     </PublicQuestionnaireLayout>
   );
 }

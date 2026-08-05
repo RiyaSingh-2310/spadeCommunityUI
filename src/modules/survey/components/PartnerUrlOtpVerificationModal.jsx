@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { toastApiError, toastApiInfo, toastApiSuccess } from "../../../services/toast/apiToast";
 import { sendPartnerUrlOtp, verifyPartnerUrlOtp } from "../services/partnerUrlOtpApi";
@@ -11,6 +11,8 @@ function PartnerUrlOtpVerificationModal({
   mappingId,
   sessionStorageKey,
   onVerified,
+  cancelLabel = "Back",
+  showBackIcon = true,
 }) {
   const inputClass = getAdminInputClass();
 
@@ -23,11 +25,12 @@ function PartnerUrlOtpVerificationModal({
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
-  const canSend = useMemo(() => identifier.trim().length > 0 && !isSending && !isResending, [
-    identifier,
-    isSending,
-    isResending,
-  ]);
+  const canSend = useMemo(
+    () => identifier.trim().length > 0 && !isSending && !isResending,
+    [identifier, isSending, isResending]
+  );
+
+  const isBusy = isSending || isVerifying || isResending;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -64,7 +67,6 @@ function PartnerUrlOtpVerificationModal({
         partnerUrl,
       });
 
-      // Mock-only: show OTP so UI can be tested before backend wiring.
       if (resp?.mockOtp) {
         toastApiInfo(`Mock OTP sent: ${resp.mockOtp}`);
       }
@@ -139,30 +141,45 @@ function PartnerUrlOtpVerificationModal({
 
   if (!isOpen) return null;
 
+  const backButton = (
+    <button
+      type="button"
+      onClick={onCancel}
+      disabled={isBusy}
+      className={`${getAdminCancelButtonClass("modal")} inline-flex items-center justify-center gap-1.5`}
+    >
+      {showBackIcon ? <ArrowLeft size={16} strokeWidth={2} aria-hidden /> : null}
+      {cancelLabel}
+    </button>
+  );
+
   return (
     <div className="admin-modal-overlay fixed inset-0 z-[250] flex items-center justify-center p-4">
-      <button
-        type="button"
-        className="admin-header-overlay absolute inset-0 cursor-pointer"
-        aria-label="Close OTP verification"
-        onClick={onCancel}
-        disabled={isSending || isVerifying || isResending}
-      />
+      <div className="admin-header-overlay absolute inset-0" aria-hidden />
 
       <div
         className="admin-header-surface admin-modal-panel relative z-10 w-full max-w-md rounded-2xl border p-5 shadow-2xl"
         role="dialog"
         aria-modal="true"
+        aria-labelledby="partner-url-verify-title"
       >
         {step === 1 ? (
           <>
-            <h2 className="admin-text mb-2 text-lg font-semibold">Verify Your Email</h2>
+            <h2
+              id="partner-url-verify-title"
+              className="admin-text mb-2 text-lg font-semibold"
+            >
+              Verify Your Email
+            </h2>
             <p className="admin-text-muted mb-4 text-sm">
               Enter your email ID or UID to receive an OTP.
             </p>
 
             <div className="space-y-4">
-              <label className="admin-text-muted text-xs font-semibold uppercase tracking-wide" htmlFor="partner-url-identifier">
+              <label
+                className="admin-text-muted text-xs font-semibold uppercase tracking-wide"
+                htmlFor="partner-url-identifier"
+              >
                 Email ID or UID
               </label>
               <input
@@ -178,21 +195,17 @@ function PartnerUrlOtpVerificationModal({
                 aria-invalid={Boolean(error)}
               />
               {error ? (
-                <p className="admin-text mt-0.5 text-sm" style={{ color: "var(--admin-danger-text)" }}>
+                <p
+                  className="admin-text mt-0.5 text-sm"
+                  style={{ color: "var(--admin-danger-text)" }}
+                >
                   {error}
                 </p>
               ) : null}
             </div>
 
-            <div className="admin-modal-actions mt-5 flex flex-wrap items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={onCancel}
-                disabled={isSending || isResending}
-                className={getAdminCancelButtonClass("modal")}
-              >
-                Cancel
-              </button>
+            <div className="admin-modal-actions mt-5 flex flex-wrap items-center justify-between gap-2">
+              {backButton}
               <button
                 type="button"
                 onClick={handleContinue}
@@ -206,13 +219,21 @@ function PartnerUrlOtpVerificationModal({
           </>
         ) : (
           <>
-            <h2 className="admin-text mb-2 text-lg font-semibold">Verify OTP</h2>
+            <h2
+              id="partner-url-verify-title"
+              className="admin-text mb-2 text-lg font-semibold"
+            >
+              Verify OTP
+            </h2>
             <p className="admin-text-muted mb-4 text-sm">
               Enter the OTP sent to your email/UID.
             </p>
 
             <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <label className="admin-text-muted text-xs font-semibold uppercase tracking-wide" htmlFor="partner-url-otp">
+              <label
+                className="admin-text-muted text-xs font-semibold uppercase tracking-wide"
+                htmlFor="partner-url-otp"
+              >
                 OTP
               </label>
               <input
@@ -230,29 +251,39 @@ function PartnerUrlOtpVerificationModal({
                 maxLength={6}
               />
               {error ? (
-                <p className="admin-text mt-0.5 text-sm" style={{ color: "var(--admin-danger-text)" }}>
+                <p
+                  className="admin-text mt-0.5 text-sm"
+                  style={{ color: "var(--admin-danger-text)" }}
+                >
                   {error}
                 </p>
               ) : null}
 
-              <div className="admin-modal-actions flex flex-wrap items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={isSending || isResending || isVerifying}
-                  className={getAdminCancelButtonClass("modal")}
-                >
-                  {isResending ? <Loader2 size={16} className="animate-spin" /> : null}
-                  Resend OTP
-                </button>
-                <button
-                  type="submit"
-                  disabled={isVerifying || otp.trim().length !== 6}
-                  className="admin-btn-primary inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isVerifying ? <Loader2 size={16} className="animate-spin" /> : null}
-                  Verify OTP
-                </button>
+              <div className="admin-modal-actions flex flex-wrap items-center justify-between gap-2 pt-2">
+                {backButton}
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={isBusy}
+                    className={getAdminCancelButtonClass("modal")}
+                  >
+                    {isResending ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : null}
+                    Resend OTP
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isVerifying || otp.trim().length !== 6}
+                    className="admin-btn-primary inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isVerifying ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : null}
+                    Verify OTP
+                  </button>
+                </div>
               </div>
             </form>
           </>
@@ -263,4 +294,3 @@ function PartnerUrlOtpVerificationModal({
 }
 
 export default PartnerUrlOtpVerificationModal;
-

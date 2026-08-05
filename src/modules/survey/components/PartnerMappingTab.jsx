@@ -30,6 +30,11 @@ import {
   updateSupplierMappingTestMode,
 } from "../services/supplierMappingApi";
 import { getProjectMultiLinkStats } from "../services/projectMultiUrlApi";
+import {
+  getPartnerUrlOtpSessionKey,
+  stashPartnerUrlVerifyContext,
+  toSameOriginNavigateTarget,
+} from "../utils/partnerUrlVerifyContext";
 import PartnerMappingViewModal from "./PartnerMappingViewModal";
 import {
   primaryBtnClass,
@@ -142,31 +147,45 @@ function PartnerMappingTab({
   const [viewTarget, setViewTarget] = useState(null);
   const [togglingRowId, setTogglingRowId] = useState("");
 
-  const getOtpSessionKey = (mappingIdValue) =>
-    mappingIdValue ? `partnerUrlOtpVerified:${String(mappingIdValue)}` : "";
-
   const openPartnerUrlWithOtp = useCallback(
     ({ mappingId, partnerUrl, isTest = false }) => {
       const rawPartnerUrl = String(partnerUrl ?? "").trim();
       if (!rawPartnerUrl) return;
 
       const resolvedPartnerUrl = appendIsTestToPartnerUrl(rawPartnerUrl, isTest);
-      const sessionKey = getOtpSessionKey(mappingId);
-      if (sessionKey && sessionStorage.getItem(sessionKey) === "1") {
-        window.open(resolvedPartnerUrl, "_blank", "noopener,noreferrer");
+      const returnPath = `${location.pathname}${location.search}${location.hash}`;
+      const sessionKey = getPartnerUrlOtpSessionKey(mappingId);
+      const alreadyVerified =
+        Boolean(sessionKey) && sessionStorage.getItem(sessionKey) === "1";
+
+      setViewTarget(null);
+
+      // Already verified this session — open destination without modal.
+      if (alreadyVerified) {
+        const target = toSameOriginNavigateTarget(resolvedPartnerUrl);
+        if (target) {
+          navigate(target);
+        } else {
+          window.open(resolvedPartnerUrl, "_blank", "noopener,noreferrer");
+        }
         return;
       }
 
-      // Navigate first — verification modal lives on the destination page.
-      setViewTarget(null);
-      navigate("/survey/partner-url/verify", {
-        state: {
-          mappingId,
-          partnerUrl: rawPartnerUrl,
-          isTest: Boolean(isTest),
-          returnPath: `${location.pathname}${location.search}${location.hash}`,
-        },
+      // Route first: stash context, then navigate to Partner URL destination.
+      // Modal opens only after DoSurveyStartPage mounts.
+      stashPartnerUrlVerifyContext({
+        mappingId,
+        returnPath,
+        partnerUrl: resolvedPartnerUrl,
       });
+
+      const target = toSameOriginNavigateTarget(resolvedPartnerUrl);
+      if (target) {
+        navigate(target);
+        return;
+      }
+
+      window.location.assign(resolvedPartnerUrl);
     },
     [navigate, location.pathname, location.search, location.hash]
   );
