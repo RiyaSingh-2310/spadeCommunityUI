@@ -5,9 +5,12 @@ import PublicQuestionnaireLayout from "../../public-questionnaire/layout/PublicQ
 import SurveyEmptyState from "../../public-questionnaire/components/SurveyEmptyState";
 import PartnerUrlOtpVerificationModal from "../../survey/components/PartnerUrlOtpVerificationModal";
 import {
+  PARTNER_MAPPING_ID_QUERY_KEY,
+  PARTNER_VERIFY_QUERY_KEY,
   clearPartnerUrlVerifyContext,
-  getPartnerUrlOtpSessionKey,
-  readPartnerUrlVerifyContext,
+  isPartnerUrlOtpVerified,
+  markPartnerUrlOtpVerified,
+  readPartnerVerifyIntentFromSearch,
 } from "../../survey/utils/partnerUrlVerifyContext";
 import DoSurveyHero from "../components/DoSurveyHero";
 import { fetchDoSurveyStartDetails, startDoSurvey } from "../services/doSurveyApi";
@@ -17,6 +20,7 @@ import {
 } from "../utils/doSurveyHelpers";
 
 const IS_TEST_QUERY_KEYS = ["IsTest", "isTest", "is_test"];
+const VERIFY_QUERY_KEYS = [PARTNER_VERIFY_QUERY_KEY, PARTNER_MAPPING_ID_QUERY_KEY];
 
 function readIsTestFromSearch(search) {
   const query = String(search ?? "").startsWith("?")
@@ -58,38 +62,58 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const [verifyContext, setVerifyContext] = useState(null);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verifyIntentResolved, setVerifyIntentResolved] = useState(false);
 
   useEffect(() => {
     setIsSearchReady(true);
   }, [location.search, searchParams]);
 
-  // After destination page mounts, open Verify Your Email when arriving from Partner Mapping.
+  /**
+   * Read partnerVerify=1 from the URL (set when Partner Mapping opens a new tab).
+   * Must run before/with URL sanitize so we capture intent before params are stripped.
+   */
   useEffect(() => {
-    const ctx = readPartnerUrlVerifyContext({ token });
-    if (!ctx?.mappingId && !ctx?.returnPath) {
+    if (!isSearchReady || verifyIntentResolved) return;
+
+    const intent = readPartnerVerifyIntentFromSearch(searchParams, location.search);
+    if (!intent) {
       setVerifyContext(null);
       setShowVerifyModal(false);
       setIsEmailVerified(true);
+      setVerifyIntentResolved(true);
       return;
     }
 
-    const sessionKey = getPartnerUrlOtpSessionKey(ctx.mappingId);
-    if (sessionKey && sessionStorage.getItem(sessionKey) === "1") {
-      setVerifyContext(ctx);
+    const mappingId = intent.mappingId;
+    if (mappingId && isPartnerUrlOtpVerified(mappingId)) {
+      setVerifyContext(intent);
       setIsEmailVerified(true);
       setShowVerifyModal(false);
+      setVerifyIntentResolved(true);
       clearPartnerUrlVerifyContext();
       return;
     }
 
-    setVerifyContext(ctx);
+    setVerifyContext({
+      ...intent,
+      partnerUrl: `${location.pathname}${location.search}`,
+      token: String(token ?? "").trim(),
+    });
     setIsEmailVerified(false);
     setShowVerifyModal(true);
-  }, [token]);
+    setVerifyIntentResolved(true);
+  }, [
+    isSearchReady,
+    verifyIntentResolved,
+    searchParams,
+    location.search,
+    location.pathname,
+    token,
+  ]);
 
-  // Read IsTest once, then remove it from the address bar.
+  // Strip IsTest + partnerVerify params from the address bar after capture.
   useEffect(() => {
-    if (!isSearchReady || urlSanitized) return;
+    if (!isSearchReady || !verifyIntentResolved || urlSanitized) return;
 
     const params = new URLSearchParams(location.search);
     const captured = readIsTestFromSearch(location.search);
@@ -97,9 +121,21 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       setIsTestHint(captured);
     }
 
-    const hadIsTest = IS_TEST_QUERY_KEYS.some((key) => params.has(key));
-    if (hadIsTest) {
-      IS_TEST_QUERY_KEYS.forEach((key) => params.delete(key));
+    let changed = false;
+    IS_TEST_QUERY_KEYS.forEach((key) => {
+      if (params.has(key)) {
+        params.delete(key);
+        changed = true;
+      }
+    });
+    VERIFY_QUERY_KEYS.forEach((key) => {
+      if (params.has(key)) {
+        params.delete(key);
+        changed = true;
+      }
+    });
+
+    if (changed) {
       const nextSearch = params.toString();
       navigate(
         {
@@ -111,7 +147,14 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     }
 
     setUrlSanitized(true);
-  }, [isSearchReady, urlSanitized, location.pathname, location.search, navigate]);
+  }, [
+    isSearchReady,
+    verifyIntentResolved,
+    urlSanitized,
+    location.pathname,
+    location.search,
+    navigate,
+  ]);
 
   const respondentUid = useMemo(
     () => resolveRespondentUid(searchParams, location.search),
@@ -212,28 +255,21 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     }
   }
 
-  const handleVerifyBack = () => {
+  const handleVerifyClose = () => {
     setShowVerifyModal(false);
-    const returnPath = String(verifyContext?.returnPath ?? "").trim();
-    clearPartnerUrlVerifyContext();
-    setVerifyContext(null);
-
-    if (returnPath) {
-      navigate(returnPath, { replace: true });
-      return;
-    }
-    navigate(-1);
   };
 
   const handleVerified = () => {
+    markPartnerUrlOtpVerified(verifyContext?.mappingId);
     setIsEmailVerified(true);
     setShowVerifyModal(false);
     clearPartnerUrlVerifyContext();
   };
 
-  const sessionKey = getPartnerUrlOtpSessionKey(verifyContext?.mappingId);
-
   const pageReady = !isLoading && isSearchReady && urlSanitized;
+  // Open modal as soon as verify intent is known — do not wait on survey API.
+  const modalOpen =
+    showVerifyModal && requiresEmailVerification && verifyIntentResolved;
 
   return (
     <PublicQuestionnaireLayout isDarkMode={isDarkMode} onToggleTheme={onToggleTheme}>
@@ -298,13 +334,10 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       </div>
 
       <PartnerUrlOtpVerificationModal
-        isOpen={showVerifyModal && requiresEmailVerification && pageReady}
-        onCancel={handleVerifyBack}
-        cancelLabel="Back"
-        showBackIcon
+        isOpen={modalOpen}
+        onClose={handleVerifyClose}
         partnerUrl={verifyContext?.partnerUrl || location.pathname}
         mappingId={verifyContext?.mappingId}
-        sessionStorageKey={sessionKey}
         onVerified={handleVerified}
       />
     </PublicQuestionnaireLayout>

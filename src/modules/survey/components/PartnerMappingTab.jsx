@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { Eye, ExternalLink, Link2, Loader2, Pencil } from "lucide-react";
 import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
@@ -31,9 +31,10 @@ import {
 } from "../services/supplierMappingApi";
 import { getProjectMultiLinkStats } from "../services/projectMultiUrlApi";
 import {
-  getPartnerUrlOtpSessionKey,
-  stashPartnerUrlVerifyContext,
-  toSameOriginNavigateTarget,
+  appendPartnerVerifyParams,
+  clearPartnerUrlVerifyContext,
+  isPartnerUrlOtpVerified,
+  stashPartnerUrlReturnPath,
 } from "../utils/partnerUrlVerifyContext";
 import PartnerMappingViewModal from "./PartnerMappingViewModal";
 import {
@@ -125,7 +126,6 @@ function PartnerMappingTab({
   isDarkMode,
   readOnly = false,
 }) {
-  const navigate = useNavigate();
   const location = useLocation();
   const { canWrite } = useModulePermission("survey");
   const allowWrite = canWrite && !readOnly;
@@ -152,42 +152,24 @@ function PartnerMappingTab({
       const rawPartnerUrl = String(partnerUrl ?? "").trim();
       if (!rawPartnerUrl) return;
 
-      const resolvedPartnerUrl = appendIsTestToPartnerUrl(rawPartnerUrl, isTest);
+      const withTest = appendIsTestToPartnerUrl(rawPartnerUrl, isTest);
       const returnPath = `${location.pathname}${location.search}${location.hash}`;
-      const sessionKey = getPartnerUrlOtpSessionKey(mappingId);
-      const alreadyVerified =
-        Boolean(sessionKey) && sessionStorage.getItem(sessionKey) === "1";
+      const alreadyVerified = isPartnerUrlOtpVerified(mappingId);
 
       setViewTarget(null);
+      clearPartnerUrlVerifyContext();
 
-      // Already verified this session — open destination without modal.
-      if (alreadyVerified) {
-        const target = toSameOriginNavigateTarget(resolvedPartnerUrl);
-        if (target) {
-          navigate(target);
-        } else {
-          window.open(resolvedPartnerUrl, "_blank", "noopener,noreferrer");
-        }
-        return;
+      let destinationUrl = withTest;
+      if (!alreadyVerified) {
+        stashPartnerUrlReturnPath(mappingId, returnPath);
+        // Pass verify intent in the URL so the NEW tab can open the modal
+        // (sessionStorage is per-tab and does not work with target=_blank + noopener).
+        destinationUrl = appendPartnerVerifyParams(withTest, { mappingId });
       }
 
-      // Route first: stash context, then navigate to Partner URL destination.
-      // Modal opens only after DoSurveyStartPage mounts.
-      stashPartnerUrlVerifyContext({
-        mappingId,
-        returnPath,
-        partnerUrl: resolvedPartnerUrl,
-      });
-
-      const target = toSameOriginNavigateTarget(resolvedPartnerUrl);
-      if (target) {
-        navigate(target);
-        return;
-      }
-
-      window.location.assign(resolvedPartnerUrl);
+      window.open(destinationUrl, "_blank", "noopener,noreferrer");
     },
-    [navigate, location.pathname, location.search, location.hash]
+    [location.pathname, location.search, location.hash]
   );
 
   const loadMultiLinkStats = useCallback(async () => {
