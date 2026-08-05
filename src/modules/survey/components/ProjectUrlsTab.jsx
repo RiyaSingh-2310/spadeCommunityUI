@@ -249,11 +249,12 @@ function ProjectUrlsTab({
   const [multiLinkCountByUrlId, setMultiLinkCountByUrlId] = useState({});
   const [multiUrlCsvFiles, setMultiUrlCsvFiles] = useState([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [cloneTarget, setCloneTarget] = useState(null);
+  const [isCloning, setIsCloning] = useState(false);
   const [routeState, setRouteState] = useState({ projectFk, urlView });
   const [loadedEditKey, setLoadedEditKey] = useState("");
   const [editFormReady, setEditFormReady] = useState(false);
   const navigateToListRef = useRef(() => {});
-  const cloneSeedRef = useRef(null);
   const linkTypeSourceKeyRef = useRef(`${projectFk}:${projectLinkType}`);
 
   // Re-sync from backend whenever the loaded project or its link type changes.
@@ -297,21 +298,11 @@ function ProjectUrlsTab({
       urlView === PROJECT_URL_VIEW_IDS.ADD ||
       urlView === PROJECT_URL_VIEW_IDS.LIST
     ) {
-      const cloneSeed = cloneSeedRef.current;
-      cloneSeedRef.current = null;
-
-      if (urlView === PROJECT_URL_VIEW_IDS.ADD && cloneSeed) {
-        setSelectedUrlId("");
-        setForm(cloneSeed);
-        setInitialSnapshot(cloneProjectUrlForm(cloneSeed));
-        setPendingDelete(null);
-      } else {
-        const nextFormState = getRouteFormState(projectFk, urlView);
-        setSelectedUrlId(nextFormState.selectedUrlId);
-        setForm(nextFormState.form);
-        setInitialSnapshot(nextFormState.initialSnapshot);
-        setPendingDelete(nextFormState.pendingDelete);
-      }
+      const nextFormState = getRouteFormState(projectFk, urlView);
+      setSelectedUrlId(nextFormState.selectedUrlId);
+      setForm(nextFormState.form);
+      setInitialSnapshot(nextFormState.initialSnapshot);
+      setPendingDelete(nextFormState.pendingDelete);
       setLoadedEditKey("");
       setEditFormReady(false);
       resetValidation();
@@ -610,27 +601,9 @@ function ProjectUrlsTab({
     });
   };
 
-  const openCloneForm = (row) => {
-    if (!canWrite) return;
-    const record =
-      row?.record ?? urlRecords.find((item) => String(item.id) === String(row?.id));
-    const source = normalizeUrlRecord(record ?? row, projectFk);
-    cloneSeedRef.current = normalizeProjectUrlFormForState({
-      ...cloneProjectUrlForm(source),
-      id: "",
-      projectUrlCode: "",
-      projectId: String(projectFk ?? ""),
-      addedBy: "—",
-      addedOn: "—",
-      updatedBy: "—",
-      updatedOn: "—",
-      deletedBy: "—",
-      deletedOn: "—",
-    });
-    onViewChange?.({
-      urlView: PROJECT_URL_VIEW_IDS.ADD,
-      urlId: "",
-    });
+  const handleCloneRequest = (row) => {
+    if (!canWrite || isCloning) return;
+    setCloneTarget(row);
   };
 
   const closeForm = () => {
@@ -729,6 +702,46 @@ function ProjectUrlsTab({
     }
   };
 
+  const handleCloneConfirm = async () => {
+    const record =
+      cloneTarget?.record ??
+      urlRecords.find((item) => String(item.id) === String(cloneTarget?.id));
+
+    if (!record) {
+      setCloneTarget(null);
+      return;
+    }
+
+    setIsCloning(true);
+    setCloneTarget(null);
+
+    try {
+      await ensureProjectLinkType();
+
+      const sourceForm = normalizeUrlRecord(record, projectFk);
+      const isMultiLink = selectedLinkType === "Multi Link";
+
+      const payloadForm = {
+        ...sourceForm,
+        id: "",
+        projectUrlCode: "",
+        projectId: String(projectFk ?? ""),
+      };
+
+      const data = await createProjectUrl(projectFk, payloadForm, {
+        isMultiLink,
+        csvFiles: [],
+      });
+
+      toastApiSuccess(data);
+      await loadUrlRecords();
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsCloning(false);
+    }
+  };
+
   const handleDeleteRequest = (row) => {
     setPendingDelete(row);
   };
@@ -786,7 +799,7 @@ function ProjectUrlsTab({
           showDeleteAction={canWrite}
           statusAsText
           onEdit={canWrite ? openEditForm : undefined}
-          onClone={canWrite ? openCloneForm : undefined}
+          onClone={canWrite ? handleCloneRequest : undefined}
           onDelete={canWrite ? handleDeleteRequest : undefined}
           onView={!canWrite ? openEditForm : undefined}
           permissionModule="survey"
@@ -804,6 +817,23 @@ function ProjectUrlsTab({
             }}
             onConfirm={handleDeleteConfirm}
             isDeleting={isDeleting}
+          />
+        ) : null}
+
+        {canWrite ? (
+          <DeleteConfirmModal
+            isOpen={Boolean(cloneTarget)}
+            onCancel={() => {
+              if (isCloning) return;
+              setCloneTarget(null);
+            }}
+            onConfirm={handleCloneConfirm}
+            isDeleting={isCloning}
+            title="Clone Project URL"
+            message="Are you sure you want to clone this project URL?"
+            confirmLabel="Clone"
+            confirmingLabel="Cloning..."
+            confirmClassName="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#10a950] px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           />
         ) : null}
       </>

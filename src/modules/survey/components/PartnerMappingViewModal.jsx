@@ -15,6 +15,7 @@ function PartnerMappingViewModal({
   mappingId,
   partnerName,
   isMultiLink = false,
+  onPartnerUrlClick,
 }) {
   const [detail, setDetail] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -121,9 +122,26 @@ function PartnerMappingViewModal({
               <DetailField
                 label="Partner URL"
                 value={
-                  <ReadOnlyUrl
-                    url={appendIsTestToPartnerUrl(detail.partnerUrl, detail.isTest)}
-                  />
+                  onPartnerUrlClick ? (
+                    <button
+                      type="button"
+                      className="admin-text break-all text-sm font-medium text-[var(--admin-success-text)] hover:underline"
+                      onClick={() =>
+                        onPartnerUrlClick({
+                          mappingId,
+                          partnerUrl: detail.partnerUrl,
+                          isTest: detail.isTest,
+                        })
+                      }
+                      title={appendIsTestToPartnerUrl(detail.partnerUrl, detail.isTest)}
+                    >
+                      {appendIsTestToPartnerUrl(detail.partnerUrl, detail.isTest)}
+                    </button>
+                  ) : (
+                    <ReadOnlyUrl
+                      url={appendIsTestToPartnerUrl(detail.partnerUrl, detail.isTest)}
+                    />
+                  )
                 }
               />
             </DetailGrid>

@@ -174,8 +174,6 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
           "ID",
           "Project Name",
           "Client",
-          "URL Minimum Start Date",
-          "URL Maximum Start Date",
           "LOI",
           "IR",
           "Start Date",

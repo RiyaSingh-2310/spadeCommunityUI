@@ -14,8 +14,6 @@ const LIST_COLUMNS = [
   "IR",
   "Start Date",
   "End Date",
-  "URL Minimum Start Date",
-  "URL Maximum Start Date",
   "Status",
   "Action",
 ];

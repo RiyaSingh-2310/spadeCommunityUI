@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Eye, Link2, Loader2, Pencil } from "lucide-react";
+import { Eye, ExternalLink, Link2, Loader2, Pencil } from "lucide-react";
 import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
 // import NumericInput from "../../../components/admin/NumericInput";
@@ -34,8 +34,8 @@ import {
   primaryBtnClass,
   secondaryBtnClass,
   SurveyDataTable,
-  TruncatedUrl,
 } from "./surveyDetailsShared";
+import PartnerUrlOtpVerificationModal from "./PartnerUrlOtpVerificationModal";
 
 const TABLE_COLUMNS = [
   "#",
@@ -139,6 +139,26 @@ function PartnerMappingTab({
   const [partnerOptionsSource, setPartnerOptionsSource] = useState([]);
   const [viewTarget, setViewTarget] = useState(null);
   const [togglingRowId, setTogglingRowId] = useState("");
+  const [otpTarget, setOtpTarget] = useState(null);
+
+  const getOtpSessionKey = (mappingIdValue) =>
+    mappingIdValue ? `partnerUrlOtpVerified:${String(mappingIdValue)}` : "";
+
+  const openPartnerUrlWithOtp = useCallback(
+    ({ mappingId, partnerUrl, isTest = false }) => {
+      const resolvedPartnerUrl = appendIsTestToPartnerUrl(partnerUrl, isTest);
+
+      const sessionKey = getOtpSessionKey(mappingId);
+      if (sessionKey && sessionStorage.getItem(sessionKey) === "1") {
+        window.open(resolvedPartnerUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      setOtpTarget({ mappingId, partnerUrl: resolvedPartnerUrl, sessionKey });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sessionStorage/open behavior is stable
+    []
+  );
 
   const loadMultiLinkStats = useCallback(async () => {
     if (!projectId) {
@@ -459,14 +479,29 @@ function PartnerMappingTab({
       return `${row.sno}.`;
     }
     if (col === "Partner URL") {
-      return row.partnerUrl
-        ? (
-            <TruncatedUrl
-              url={appendIsTestToPartnerUrl(row.partnerUrl, row.isTest)}
-              maxWidthClass="max-w-[180px] sm:max-w-[280px]"
-            />
-          )
-        : "—";
+      const resolvedUrl = row.partnerUrl
+        ? appendIsTestToPartnerUrl(row.partnerUrl, row.isTest)
+        : "";
+      if (!resolvedUrl) return "—";
+
+      return (
+        <button
+          type="button"
+          onClick={() =>
+            openPartnerUrlWithOtp({
+              mappingId: row.id,
+              partnerUrl: row.partnerUrl,
+              isTest: row.isTest,
+            })
+          }
+          className="admin-text inline-flex max-w-full items-center gap-1.5 text-[var(--admin-primary-color)] hover:underline max-w-[180px] sm:max-w-[280px]"
+          title={resolvedUrl}
+          aria-label="Open partner survey"
+        >
+          <span className="min-w-0 truncate">{resolvedUrl}</span>
+          <ExternalLink size={14} className="shrink-0 opacity-70" aria-hidden />
+        </button>
+      );
     }
     if (col === "Status") {
       const rowId = String(row.id);
@@ -758,6 +793,22 @@ function PartnerMappingTab({
         mappingId={viewTarget?.mappingId}
         partnerName={viewTarget?.partnerName}
         isMultiLink={isMultiLink}
+        onPartnerUrlClick={({ partnerUrl, isTest, mappingId }) =>
+          openPartnerUrlWithOtp({ mappingId, partnerUrl, isTest })
+        }
+      />
+
+      <PartnerUrlOtpVerificationModal
+        isOpen={Boolean(otpTarget)}
+        onCancel={() => setOtpTarget(null)}
+        partnerUrl={otpTarget?.partnerUrl}
+        mappingId={otpTarget?.mappingId}
+        sessionStorageKey={otpTarget?.sessionKey}
+        onVerified={() => {
+          const url = otpTarget?.partnerUrl;
+          setOtpTarget(null);
+          if (url) window.open(url, "_blank", "noopener,noreferrer");
+        }}
       />
     </>
   );

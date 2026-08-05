@@ -98,8 +98,6 @@ function SurveyPage({ isDarkMode }) {
           "Client",
           "Start Date",
           "End Date",
-          "URL Minimum Start Date",
-          "URL Maximum Start Date",
           "Status",
           "Action",
         ]}
