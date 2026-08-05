@@ -257,6 +257,10 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
 
   const handleVerifyClose = () => {
     setShowVerifyModal(false);
+    // Close this Partner URL tab only — no redirect/navigation.
+    window.setTimeout(() => {
+      window.close();
+    }, 0);
   };
 
   const handleVerified = () => {

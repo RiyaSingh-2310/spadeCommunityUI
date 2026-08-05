@@ -167,7 +167,9 @@ function PartnerMappingTab({
         destinationUrl = appendPartnerVerifyParams(withTest, { mappingId });
       }
 
-      window.open(destinationUrl, "_blank", "noopener,noreferrer");
+      // Open in a new tab (script-opened so Close ✕ can call window.close()).
+      // Avoid "noopener" here — some browsers then block window.close() on that tab.
+      window.open(destinationUrl, "_blank");
     },
     [location.pathname, location.search, location.hash]
   );

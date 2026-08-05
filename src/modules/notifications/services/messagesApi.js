@@ -129,7 +129,7 @@ export function mapMessageRecord(record) {
     replies,
     // Notification drawer fields
     title: subject,
-    description: body.trim() || email,
+    description: body.trim() || subject || email,
     datetime: dateTime,
     read: isRead,
   };

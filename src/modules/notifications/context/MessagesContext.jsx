@@ -78,7 +78,7 @@ export function MessagesProvider({ children }) {
       try {
         result = await markMessageAsRead(normalizedId);
       } catch {
-        // Keep optimistic UI update even if dedicated mark-read endpoint is unavailable.
+        // Dedicated mark-read endpoint may be unavailable; keep optimistic UI.
         result = { success: true, optimistic: true };
       }
 
@@ -118,7 +118,7 @@ export function MessagesProvider({ children }) {
     notifyListingListeners();
 
     // Re-sync from list so badge/drawer match backend after PATCH /read-all
-    refreshRecent({ silent: true }).catch(() => {});
+    await refreshRecent({ silent: true }).catch(() => {});
 
     return result;
   }, [notifyListingListeners, refreshRecent]);
@@ -137,9 +137,11 @@ export function MessagesProvider({ children }) {
       });
 
       notifyListingListeners();
+      // Keep drawer/badge in sync with server after delete
+      refreshRecent({ silent: true }).catch(() => {});
       return result;
     },
-    [notifyListingListeners]
+    [notifyListingListeners, refreshRecent]
   );
 
   const value = useMemo(
