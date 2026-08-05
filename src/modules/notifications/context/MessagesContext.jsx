@@ -2,27 +2,30 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import {
-  deleteDemoMessage,
-  getDemoRecentMessages,
-  markDemoMessageAsRead,
-} from "../data/demoMessages";
+  deleteMessage,
+  getMessages,
+  markAllMessagesAsRead,
+  markMessageAsRead,
+} from "../services/messagesApi";
 
 const MessagesContext = createContext(null);
+const RECENT_LIMIT = 100;
 
 function countUnread(items) {
-  return items.filter((item) => !item.isRead).length;
+  return (Array.isArray(items) ? items : []).filter((item) => !item.isRead).length;
 }
 
 export function MessagesProvider({ children }) {
-  const [recentItems, setRecentItems] = useState(() => getDemoRecentMessages());
-  const [unreadCount, setUnreadCount] = useState(() =>
-    countUnread(getDemoRecentMessages())
-  );
+  const [recentItems, setRecentItems] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const listenersRef = useRef(new Set());
 
   const notifyListingListeners = useCallback(() => {
@@ -43,52 +46,98 @@ export function MessagesProvider({ children }) {
     };
   }, []);
 
-  const refreshRecent = useCallback(async () => {
-    const items = getDemoRecentMessages();
-    setRecentItems(items);
-    setUnreadCount(countUnread(items));
-    return { items, unreadCount: countUnread(items) };
+  const refreshRecent = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setIsLoading(true);
+    try {
+      // Unread badge + drawer both source from GET /api/messages/list + is_read
+      const list = await getMessages({ page: 1, limit: RECENT_LIMIT });
+      const items = Array.isArray(list.items) ? list.items : [];
+      const nextUnread = countUnread(items);
+
+      setRecentItems(items);
+      setUnreadCount(nextUnread);
+      setHasLoaded(true);
+      return { items, unreadCount: nextUnread };
+    } finally {
+      if (!silent) setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    refreshRecent({ silent: true }).catch(() => {
+      setHasLoaded(true);
+    });
+  }, [refreshRecent]);
 
   const markAsRead = useCallback(
     async (id) => {
       const normalizedId = String(id ?? "").trim();
       if (!normalizedId) return null;
 
-      markDemoMessageAsRead(normalizedId);
-      const items = getDemoRecentMessages();
-      setRecentItems(items);
-      setUnreadCount(countUnread(items));
+      let result = null;
+      try {
+        result = await markMessageAsRead(normalizedId);
+      } catch {
+        // Keep optimistic UI update even if dedicated mark-read endpoint is unavailable.
+        result = { success: true, optimistic: true };
+      }
+
+      setRecentItems((prev) => {
+        const next = prev.map((item) =>
+          String(item.id) === normalizedId
+            ? {
+                ...item,
+                isRead: true,
+                read: true,
+                readStatus: "Read",
+              }
+            : item
+        );
+        setUnreadCount(countUnread(next));
+        return next;
+      });
+
       notifyListingListeners();
-      return { success: true, item: getDemoRecentMessages().find(
-        (item) => String(item.id) === normalizedId
-      ) ?? null };
+      return result;
     },
     [notifyListingListeners]
   );
 
   const markAllAsRead = useCallback(async () => {
-    getDemoRecentMessages().forEach((item) => {
-      markDemoMessageAsRead(item.id);
-    });
-    const items = getDemoRecentMessages();
-    setRecentItems(items);
+    const result = await markAllMessagesAsRead();
+
+    setRecentItems((prev) =>
+      prev.map((item) => ({
+        ...item,
+        isRead: true,
+        read: true,
+        readStatus: "Read",
+      }))
+    );
     setUnreadCount(0);
     notifyListingListeners();
-    return { success: true, unreadCount: 0 };
-  }, [notifyListingListeners]);
+
+    // Re-sync from list so badge/drawer match backend after PATCH /read-all
+    refreshRecent({ silent: true }).catch(() => {});
+
+    return result;
+  }, [notifyListingListeners, refreshRecent]);
 
   const removeMessage = useCallback(
     async (id) => {
       const normalizedId = String(id ?? "").trim();
       if (!normalizedId) return null;
 
-      deleteDemoMessage(normalizedId);
-      const items = getDemoRecentMessages();
-      setRecentItems(items);
-      setUnreadCount(countUnread(items));
+      const result = await deleteMessage(normalizedId);
+
+      setRecentItems((prev) => {
+        const next = prev.filter((item) => String(item.id) !== normalizedId);
+        setUnreadCount(countUnread(next));
+        return next;
+      });
+
       notifyListingListeners();
-      return { success: true };
+      return result;
     },
     [notifyListingListeners]
   );
@@ -97,8 +146,8 @@ export function MessagesProvider({ children }) {
     () => ({
       recentItems,
       unreadCount,
-      isLoading: false,
-      hasLoaded: true,
+      isLoading,
+      hasLoaded,
       refreshRecent,
       markAsRead,
       markAllAsRead,
@@ -108,6 +157,8 @@ export function MessagesProvider({ children }) {
     [
       recentItems,
       unreadCount,
+      isLoading,
+      hasLoaded,
       refreshRecent,
       markAsRead,
       markAllAsRead,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Eye, ExternalLink, Link2, Loader2, Pencil } from "lucide-react";
 import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
@@ -35,7 +36,6 @@ import {
   secondaryBtnClass,
   SurveyDataTable,
 } from "./surveyDetailsShared";
-import PartnerUrlOtpVerificationModal from "./PartnerUrlOtpVerificationModal";
 
 const TABLE_COLUMNS = [
   "#",
@@ -120,6 +120,8 @@ function PartnerMappingTab({
   isDarkMode,
   readOnly = false,
 }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { canWrite } = useModulePermission("survey");
   const allowWrite = canWrite && !readOnly;
   const inputClass = getAdminInputClass();
@@ -139,25 +141,34 @@ function PartnerMappingTab({
   const [partnerOptionsSource, setPartnerOptionsSource] = useState([]);
   const [viewTarget, setViewTarget] = useState(null);
   const [togglingRowId, setTogglingRowId] = useState("");
-  const [otpTarget, setOtpTarget] = useState(null);
 
   const getOtpSessionKey = (mappingIdValue) =>
     mappingIdValue ? `partnerUrlOtpVerified:${String(mappingIdValue)}` : "";
 
   const openPartnerUrlWithOtp = useCallback(
     ({ mappingId, partnerUrl, isTest = false }) => {
-      const resolvedPartnerUrl = appendIsTestToPartnerUrl(partnerUrl, isTest);
+      const rawPartnerUrl = String(partnerUrl ?? "").trim();
+      if (!rawPartnerUrl) return;
 
+      const resolvedPartnerUrl = appendIsTestToPartnerUrl(rawPartnerUrl, isTest);
       const sessionKey = getOtpSessionKey(mappingId);
       if (sessionKey && sessionStorage.getItem(sessionKey) === "1") {
         window.open(resolvedPartnerUrl, "_blank", "noopener,noreferrer");
         return;
       }
 
-      setOtpTarget({ mappingId, partnerUrl: resolvedPartnerUrl, sessionKey });
+      // Navigate first — verification modal lives on the destination page.
+      setViewTarget(null);
+      navigate("/survey/partner-url/verify", {
+        state: {
+          mappingId,
+          partnerUrl: rawPartnerUrl,
+          isTest: Boolean(isTest),
+          returnPath: `${location.pathname}${location.search}${location.hash}`,
+        },
+      });
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sessionStorage/open behavior is stable
-    []
+    [navigate, location.pathname, location.search, location.hash]
   );
 
   const loadMultiLinkStats = useCallback(async () => {
@@ -796,19 +807,6 @@ function PartnerMappingTab({
         onPartnerUrlClick={({ partnerUrl, isTest, mappingId }) =>
           openPartnerUrlWithOtp({ mappingId, partnerUrl, isTest })
         }
-      />
-
-      <PartnerUrlOtpVerificationModal
-        isOpen={Boolean(otpTarget)}
-        onCancel={() => setOtpTarget(null)}
-        partnerUrl={otpTarget?.partnerUrl}
-        mappingId={otpTarget?.mappingId}
-        sessionStorageKey={otpTarget?.sessionKey}
-        onVerified={() => {
-          const url = otpTarget?.partnerUrl;
-          setOtpTarget(null);
-          if (url) window.open(url, "_blank", "noopener,noreferrer");
-        }}
       />
     </>
   );

@@ -114,6 +114,9 @@ export const MessagesPage = lazy(() => import("../modules/notifications/pages/Me
 export const MessageDetailsPage = lazy(
   () => import("../modules/notifications/pages/MessageDetailsPage")
 );
+export const PartnerUrlVerifyPage = lazy(
+  () => import("../modules/survey/pages/PartnerUrlVerifyPage")
+);
 export const PendingRewardsPage = lazy(
   () => import("../modules/reward-points/pages/PendingRewardsPage")
 );

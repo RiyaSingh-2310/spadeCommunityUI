@@ -156,7 +156,7 @@ function PartnerUrlOtpVerificationModal({
       >
         {step === 1 ? (
           <>
-            <h2 className="admin-text mb-2 text-lg font-semibold">Verify Your Identity</h2>
+            <h2 className="admin-text mb-2 text-lg font-semibold">Verify Your Email</h2>
             <p className="admin-text-muted mb-4 text-sm">
               Enter your email ID or UID to receive an OTP.
             </p>

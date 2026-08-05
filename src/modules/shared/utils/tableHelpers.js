@@ -2,6 +2,9 @@ const COLUMN_KEY_MAP = {
   "S.No": "sno",
   "S. No.": "sno",
   Name: "name",
+  "Sender Name": "name",
+  "Sender Email": "email",
+  "Read Status": "readStatus",
   Country: "country",
   "Email Subject": "emailSubject",
   "Sales Manager": "salesManager",
@@ -133,6 +136,8 @@ const NOWRAP_DATA_KEYS = new Set([
   "endDate",
   "multiLinkCount",
   "name",
+  "email",
+  "readStatus",
   "client",
   "adminName",
   "adminEmail",
@@ -153,6 +158,8 @@ export function getColumnKey(columnLabel) {
 
 const VALUE_FALLBACKS = {
   emailAddress: ["email"],
+  name: ["senderName"],
+  email: ["senderEmail"],
   mobileNumber: ["mobile"],
   emailTitle: ["title"],
   description: ["content"],

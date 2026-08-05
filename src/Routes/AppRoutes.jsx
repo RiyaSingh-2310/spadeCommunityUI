@@ -216,6 +216,10 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
             element={withSuspense(Pages.AddPrescreenPage, { isDarkMode })}
           />
           <Route path="/survey" element={withSuspense(Pages.SurveyPage, { isDarkMode })} />
+          <Route
+            path="/survey/partner-url/verify"
+            element={withSuspense(Pages.PartnerUrlVerifyPage, { isDarkMode })}
+          />
           <Route path="/survey/add" element={withSuspense(Pages.AddSurveyPage, { isDarkMode })} />
           <Route
             path="/survey/:id/find-user"

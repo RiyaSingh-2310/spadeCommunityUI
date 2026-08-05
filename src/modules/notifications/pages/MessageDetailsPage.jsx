@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Clock, Reply, Trash2 } from "lucide-react";
+import { Calendar, Clock, Reply, Trash2 } from "lucide-react";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import TableCard from "../../../components/admin/TableCard";
+import TableLoadingSkeleton from "../../../components/admin/TableLoadingSkeleton";
 import Avatar from "../../../components/shared/Avatar";
-import { toastApiInfo } from "../../../services/toast/apiToast";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import MessageReplyModal from "../components/MessageReplyModal";
 import { useMessages } from "../context/MessagesContext";
-import { getDemoMessageById } from "../data/demoMessages";
+import { getMessage, replyToMessage } from "../services/messagesApi";
 
 const MESSAGES_PATH = "/notifications/messages";
 const SECTION_BORDER = { borderColor: "var(--admin-header-surface-border)" };
@@ -16,15 +18,84 @@ function MessageDetailsPage({ isDarkMode }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { markAsRead, removeMessage } = useMessages();
-  const message = getDemoMessageById(id);
+  const [message, setMessage] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isReplyOpen, setIsReplyOpen] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   const goBack = () => navigate(MESSAGES_PATH);
 
-  useEffect(() => {
-    if (!id) return;
-    markAsRead(id);
+  const loadMessage = useCallback(async ({ silent = false } = {}) => {
+    const normalizedId = String(id ?? "").trim();
+    if (!normalizedId) {
+      setMessage(null);
+      setLoadError("Message not found.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!silent) {
+      setIsLoading(true);
+      setLoadError("");
+    }
+    try {
+      const data = await getMessage(normalizedId);
+      setMessage(data);
+      setLoadError("");
+      if (!data.isRead) {
+        markAsRead(normalizedId)
+          .then(() => {
+            setMessage((prev) =>
+              prev
+                ? { ...prev, isRead: true, read: true, readStatus: "Read" }
+                : prev
+            );
+          })
+          .catch(() => {});
+      }
+    } catch (error) {
+      if (!silent) {
+        setMessage(null);
+        const messageText =
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to load message.";
+        setLoadError(messageText);
+        toastApiError(error);
+      } else {
+        toastApiError(error);
+      }
+    } finally {
+      if (!silent) setIsLoading(false);
+    }
   }, [id, markAsRead]);
+
+  useEffect(() => {
+    loadMessage();
+  }, [loadMessage]);
+
+  const handleReplySubmit = useCallback(
+    async (replyBody) => {
+      const normalizedId = String(id ?? "").trim();
+      if (!normalizedId) return;
+
+      setIsReplying(true);
+      try {
+        const data = await replyToMessage(normalizedId, { replyBody });
+        toastApiSuccess(data);
+        setIsReplyOpen(false);
+        await loadMessage({ silent: true });
+      } catch (error) {
+        toastApiError(error);
+      } finally {
+        setIsReplying(false);
+      }
+    },
+    [id, loadMessage]
+  );
 
   const pageHeader = (
     <AdminPageHeader
@@ -34,24 +105,34 @@ function MessageDetailsPage({ isDarkMode }) {
         { label: "View Message" },
       ]}
       isDarkMode={isDarkMode}
-      // rightContent={
-      //   <button
-      //     type="button"
-      //     onClick={goBack}
-      //     className="admin-btn-primary inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-xl px-4 text-sm font-semibold"
-      //   >
-      //     <ArrowLeft size={16} strokeWidth={2} aria-hidden />
-      //     Back
-      //   </button>
-      // }
     />
   );
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        {pageHeader}
+        <TableCard isDarkMode={isDarkMode}>
+          <div className="p-4">
+            <TableLoadingSkeleton rowCount={4} />
+          </div>
+        </TableCard>
+      </div>
+    );
+  }
 
   if (!message) {
     return (
       <div className="space-y-6">
         {pageHeader}
-        <p className="admin-text-muted text-sm">Message not found.</p>
+        <p className="admin-text-muted text-sm">{loadError || "Message not found."}</p>
+        <button
+          type="button"
+          onClick={goBack}
+          className="admin-btn-primary inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold"
+        >
+          Back to Messages
+        </button>
       </div>
     );
   }
@@ -62,16 +143,15 @@ function MessageDetailsPage({ isDarkMode }) {
 
       <TableCard isDarkMode={isDarkMode}>
         <div className="p-2 sm:p-3 lg:p-4">
-          {/* Sender + Date/Time */}
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-start gap-3.5 sm:gap-4">
               <Avatar name={message.name} size="profile" />
               <div className="min-w-0 pt-0.5">
                 <h2 className="admin-text text-lg font-bold break-words sm:text-xl">
-                  {message.name}
+                  {message.name || "—"}
                 </h2>
                 <p className="admin-text-muted mt-1 break-all text-sm">
-                  {message.email}
+                  {message.email || "—"}
                 </p>
               </div>
             </div>
@@ -98,39 +178,67 @@ function MessageDetailsPage({ isDarkMode }) {
             </div>
           </div>
 
-          {/* Subject */}
           <div className="mt-6 border-t pt-5" style={SECTION_BORDER}>
             <p className="admin-text-subtle mb-1.5 text-xs font-semibold uppercase tracking-wide">
               Subject
             </p>
             <p className="admin-text text-base font-bold break-words sm:text-lg">
-              {message.subject}
+              {message.subject || "—"}
             </p>
           </div>
 
-          {/* Message body */}
           <div className="mt-5 border-t pt-5" style={SECTION_BORDER}>
             <p className="admin-text-subtle mb-3 text-xs font-semibold uppercase tracking-wide">
               Message
             </p>
             <div className="admin-text whitespace-pre-wrap break-words text-sm leading-7 sm:text-[15px] sm:leading-8">
-              {message.body || "—"}
+              {message.body?.trim() ? message.body : "—"}
             </div>
           </div>
 
-          {/* Actions — bottom left */}
+          {Array.isArray(message.replies) && message.replies.length > 0 ? (
+            <div className="mt-5 border-t pt-5" style={SECTION_BORDER}>
+              <p className="admin-text-subtle mb-3 text-xs font-semibold uppercase tracking-wide">
+                Replies
+              </p>
+              <ul className="space-y-4">
+                {message.replies.map((reply) => (
+                  <li
+                    key={reply.id ?? `${reply.dateTime}-${reply.name}`}
+                    className="rounded-xl border p-3 sm:p-4"
+                    style={SECTION_BORDER}
+                  >
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="admin-text text-sm font-semibold break-words">
+                          {reply.name || "—"}
+                        </p>
+                        {reply.email ? (
+                          <p className="admin-text-muted mt-0.5 break-all text-xs">
+                            {reply.email}
+                          </p>
+                        ) : null}
+                      </div>
+                      <p className="admin-text-subtle shrink-0 text-xs">
+                        {reply.dateTime || reply.date || "—"}
+                      </p>
+                    </div>
+                    <p className="admin-text mt-3 whitespace-pre-wrap break-words text-sm leading-7">
+                      {reply.body?.trim() ? reply.body : "—"}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           <div
             className="mt-8 flex flex-wrap items-center justify-start gap-2.5 border-t pt-5"
             style={SECTION_BORDER}
           >
             <button
               type="button"
-              onClick={() =>
-                toastApiInfo({
-                  message:
-                    "Reply will be available when the Messages API is connected.",
-                })
-              }
+              onClick={() => setIsReplyOpen(true)}
               className="admin-btn-primary inline-flex h-10 items-center justify-center gap-2 px-5"
             >
               <Reply size={16} strokeWidth={2} aria-hidden />
@@ -148,13 +256,36 @@ function MessageDetailsPage({ isDarkMode }) {
         </div>
       </TableCard>
 
+      <MessageReplyModal
+        isOpen={isReplyOpen}
+        isSubmitting={isReplying}
+        recipientName={message.name}
+        onCancel={() => {
+          if (isReplying) return;
+          setIsReplyOpen(false);
+        }}
+        onSubmit={handleReplySubmit}
+      />
+
       <DeleteConfirmModal
         isOpen={isDeleteOpen}
-        onCancel={() => setIsDeleteOpen(false)}
-        onConfirm={async () => {
+        isDeleting={isDeleting}
+        onCancel={() => {
+          if (isDeleting) return;
           setIsDeleteOpen(false);
-          await removeMessage(id);
-          navigate(MESSAGES_PATH);
+        }}
+        onConfirm={async () => {
+          setIsDeleting(true);
+          try {
+            const data = await removeMessage(id);
+            toastApiSuccess(data);
+            setIsDeleteOpen(false);
+            navigate(MESSAGES_PATH, { state: { refresh: true } });
+          } catch (error) {
+            toastApiError(error);
+          } finally {
+            setIsDeleting(false);
+          }
         }}
         title="Delete Message"
         message="Are you sure you want to delete this message?"
