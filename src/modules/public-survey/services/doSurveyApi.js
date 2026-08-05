@@ -180,8 +180,14 @@ export async function fetchDoSurveyStartDetails(token, { uid, isTest } = {}) {
     }
     return mapDoSurveyStartDetails(record, { token: normalizedToken, uid });
   } catch (error) {
-    if (import.meta.env.PROD && error instanceof ApiError) {
-      throw error;
+    // Never serve mock survey details in production — respondents must see a real error.
+    if (import.meta.env.PROD) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(
+        error?.message ||
+          "Unable to load this survey. Please try again later.",
+        null
+      );
     }
 
     const fromMapping = await resolveStartDetailsFromSupplierMapping(

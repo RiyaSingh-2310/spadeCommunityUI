@@ -36,7 +36,6 @@ function FindUserPage({ isDarkMode }) {
   const [emailTemplate, setEmailTemplate] = useState("");
   const [emailTemplateOptions, setEmailTemplateOptions] = useState([]);
   const [isLoadingEmailTemplates, setIsLoadingEmailTemplates] = useState(false);
-  const [selectAll, setSelectAll] = useState(false);
   const [showInvitedModal, setShowInvitedModal] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
 
@@ -91,7 +90,6 @@ function FindUserPage({ isDarkMode }) {
 
     setActiveFilters(valid);
     setSelectedIds(new Set());
-    setSelectAll(false);
     reset();
     setSearchVersion((version) => version + 1);
   };
@@ -113,18 +111,23 @@ function FindUserPage({ isDarkMode }) {
       else next.add(normalizedId);
       return next;
     });
-    setSelectAll(false);
   };
 
+  // Select-all applies to the current page only; selections from other pages are kept.
   const handleSelectAll = (checked) => {
-    setSelectAll(checked);
-    if (checked) {
-      setSelectedIds(
-        new Set(users.map((user) => getUserSelectionId(user)).filter(Boolean))
-      );
-    } else {
-      setSelectedIds(new Set());
-    }
+    const pageIds = users
+      .map((user) => getUserSelectionId(user))
+      .filter(Boolean);
+
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        pageIds.forEach((id) => next.add(id));
+      } else {
+        pageIds.forEach((id) => next.delete(id));
+      }
+      return next;
+    });
   };
 
   const allVisibleSelected = useMemo(
@@ -134,7 +137,6 @@ function FindUserPage({ isDarkMode }) {
     [users, selectedIds]
   );
 
-  const effectiveSelectAll = selectAll || allVisibleSelected;
   const inviteEnabled =
     selectedIds.size > 0 && Boolean(emailTemplate) && !isInviting;
 
@@ -149,7 +151,6 @@ function FindUserPage({ isDarkMode }) {
       });
       toastApiSuccess(data);
       setSelectedIds(new Set());
-      setSelectAll(false);
       refresh();
     } catch (err) {
       toastApiError(err);
@@ -189,7 +190,7 @@ function FindUserPage({ isDarkMode }) {
 
       <TableCard isDarkMode={isDarkMode}>
         <FindUserToolbar
-          selectAll={effectiveSelectAll}
+          selectAll={allVisibleSelected}
           onSelectAllChange={handleSelectAll}
           emailTemplate={emailTemplate}
           onEmailTemplateChange={setEmailTemplate}
@@ -210,7 +211,7 @@ function FindUserPage({ isDarkMode }) {
         selectedIds={selectedIds}
         onToggleRow={handleToggleRow}
         onToggleAll={handleSelectAll}
-        selectAll={effectiveSelectAll}
+        selectAll={allVisibleSelected}
         isLoading={isLoading}
         hasSearched={hasSearched}
         isDarkMode={isDarkMode}

@@ -116,6 +116,24 @@ export function getDemoMessageById(id) {
   return DEMO_MESSAGES.find((msg) => String(msg.id) === normalizedId) ?? null;
 }
 
+/** Marks a demo message as read (mutates in-memory store until Messages API is ready). */
+export function markDemoMessageAsRead(id) {
+  const message = getDemoMessageById(id);
+  if (!message) return null;
+  message.isRead = true;
+  return message;
+}
+
+/** Removes a demo message from the in-memory store. */
+export function deleteDemoMessage(id) {
+  const normalizedId = String(id ?? "").trim();
+  if (!normalizedId) return false;
+  const index = DEMO_MESSAGES.findIndex((msg) => String(msg.id) === normalizedId);
+  if (index < 0) return false;
+  DEMO_MESSAGES.splice(index, 1);
+  return true;
+}
+
 /** Shape used by the header notification drawer. */
 export function getDemoRecentMessages() {
   return DEMO_MESSAGES.map((msg) => ({

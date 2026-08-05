@@ -67,9 +67,8 @@ function SystemSettingsTab({ isDarkMode }) {
 
   useEffect(() => {
     setForm((prev) => ({ ...prev, themePreference }));
-    setInitialSnapshot((prev) =>
-      prev ? { ...prev, themePreference } : prev
-    );
+    // Do not sync initialSnapshot — theme-only changes must keep the form dirty
+    // so Save can POST themePreference to system settings.
   }, [themePreference]);
 
   const isDirty = useMemo(() => {

@@ -6,7 +6,11 @@ import {
   useRef,
   useState,
 } from "react";
-import { getDemoRecentMessages } from "../data/demoMessages";
+import {
+  deleteDemoMessage,
+  getDemoRecentMessages,
+  markDemoMessageAsRead,
+} from "../data/demoMessages";
 
 const MessagesContext = createContext(null);
 
@@ -51,25 +55,24 @@ export function MessagesProvider({ children }) {
       const normalizedId = String(id ?? "").trim();
       if (!normalizedId) return null;
 
-      setRecentItems((prev) => {
-        const next = prev.map((item) =>
-          String(item.id) === normalizedId
-            ? { ...item, isRead: true, read: true }
-            : item
-        );
-        setUnreadCount(countUnread(next));
-        return next;
-      });
+      markDemoMessageAsRead(normalizedId);
+      const items = getDemoRecentMessages();
+      setRecentItems(items);
+      setUnreadCount(countUnread(items));
       notifyListingListeners();
-      return { success: true, item: null };
+      return { success: true, item: getDemoRecentMessages().find(
+        (item) => String(item.id) === normalizedId
+      ) ?? null };
     },
     [notifyListingListeners]
   );
 
   const markAllAsRead = useCallback(async () => {
-    setRecentItems((prev) =>
-      prev.map((item) => ({ ...item, isRead: true, read: true }))
-    );
+    getDemoRecentMessages().forEach((item) => {
+      markDemoMessageAsRead(item.id);
+    });
+    const items = getDemoRecentMessages();
+    setRecentItems(items);
     setUnreadCount(0);
     notifyListingListeners();
     return { success: true, unreadCount: 0 };
@@ -80,11 +83,10 @@ export function MessagesProvider({ children }) {
       const normalizedId = String(id ?? "").trim();
       if (!normalizedId) return null;
 
-      setRecentItems((prev) => {
-        const next = prev.filter((item) => String(item.id) !== normalizedId);
-        setUnreadCount(countUnread(next));
-        return next;
-      });
+      deleteDemoMessage(normalizedId);
+      const items = getDemoRecentMessages();
+      setRecentItems(items);
+      setUnreadCount(countUnread(items));
       notifyListingListeners();
       return { success: true };
     },

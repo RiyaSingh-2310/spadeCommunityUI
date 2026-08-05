@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
 import { resetPassword } from "../services/auth/authApi";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
-import { PASSWORD_FIELD_MAX_LENGTH } from "../modules/shared/utils/validation";
+import { PASSWORD_FIELD_MAX_LENGTH, getPasswordError, getConfirmPasswordError } from "../modules/shared/utils/validation";
 
 function ResetPassword({ isDarkMode, onToggleTheme }) {
   const navigate = useNavigate();
@@ -28,37 +28,18 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
     }
   }, [email, otp, navigate]);
 
-  const passwordsMatch =
-    password.trim().length > 0 && password === confirmPassword;
+  const passwordError = getPasswordError(password);
+  const confirmPasswordError = getConfirmPasswordError(password, confirmPassword);
 
-  const showPasswordError = touched.password && password.trim().length === 0;
+  const showPasswordError = touched.password && Boolean(passwordError);
   const showConfirmPasswordError =
-    touched.confirmPassword && confirmPassword.trim().length === 0;
-  const showMismatchError =
-    touched.confirmPassword &&
-    confirmPassword.trim().length > 0 &&
-    password !== confirmPassword;
-  const showPasswordLengthError =
-    touched.password && password.length > PASSWORD_FIELD_MAX_LENGTH;
-  const showConfirmPasswordLengthError =
-    touched.confirmPassword && confirmPassword.length > PASSWORD_FIELD_MAX_LENGTH;
-  const showPasswordTrimError = touched.password && password !== password.trim();
-  const showConfirmPasswordTrimError =
-    touched.confirmPassword && confirmPassword !== confirmPassword.trim();
+    touched.confirmPassword && Boolean(confirmPasswordError);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setTouched({ password: true, confirmPassword: true });
 
-    if (
-      !password.trim() ||
-      !confirmPassword.trim() ||
-      !passwordsMatch ||
-      password.length > PASSWORD_FIELD_MAX_LENGTH ||
-      confirmPassword.length > PASSWORD_FIELD_MAX_LENGTH ||
-      password !== password.trim() ||
-      confirmPassword !== confirmPassword.trim()
-    ) {
+    if (passwordError || confirmPasswordError) {
       return;
     }
 
@@ -150,17 +131,7 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
             </button>
           </div>
           {showPasswordError && (
-            <p className="mt-1.5 text-xs text-[#de3d3d]">New Password is required.</p>
-          )}
-          {showPasswordLengthError && (
-            <p className="mt-1.5 text-xs text-[#de3d3d]">
-              New Password must be at most {PASSWORD_FIELD_MAX_LENGTH} characters.
-            </p>
-          )}
-          {showPasswordTrimError && (
-            <p className="mt-1.5 text-xs text-[#de3d3d]">
-              New Password cannot start or end with spaces.
-            </p>
+            <p className="mt-1.5 text-xs text-[#de3d3d]">{passwordError}</p>
           )}
         </div>
 
@@ -175,7 +146,7 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
           </label>
           <div
             className={`kh-input-shell flex h-[52px] items-center rounded-2xl border px-4 transition-all duration-200 ${
-              showConfirmPasswordError || showMismatchError
+              showConfirmPasswordError
                 ? "border-[#de3d3d] focus-within:border-[#de3d3d] focus-within:ring-2 focus-within:ring-[#de3d3d]/20"
                 : isDarkMode
                   ? "border-[#344662] bg-[#101a2a] focus-within:border-[#24b86b] focus-within:ring-2 focus-within:ring-[#24b86b]/20"
@@ -220,22 +191,7 @@ function ResetPassword({ isDarkMode, onToggleTheme }) {
             </button>
           </div>
           {showConfirmPasswordError && (
-            <p className="mt-1.5 text-xs text-[#de3d3d]">
-              Confirm Password is required.
-            </p>
-          )}
-          {showConfirmPasswordLengthError && (
-            <p className="mt-1.5 text-xs text-[#de3d3d]">
-              Confirm Password must be at most {PASSWORD_FIELD_MAX_LENGTH} characters.
-            </p>
-          )}
-          {showConfirmPasswordTrimError && (
-            <p className="mt-1.5 text-xs text-[#de3d3d]">
-              Confirm Password cannot start or end with spaces.
-            </p>
-          )}
-          {showMismatchError && (
-            <p className="mt-1.5 text-xs text-[#de3d3d]">Passwords must match.</p>
+            <p className="mt-1.5 text-xs text-[#de3d3d]">{confirmPasswordError}</p>
           )}
         </div>
 

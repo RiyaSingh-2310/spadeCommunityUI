@@ -1,67 +1,115 @@
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import AdminPageHeader from "../../../components/admin/AdminPageHeader";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  Calendar,
+  ChevronRight,
+  Clock,
+  Reply,
+  Trash2,
+} from "lucide-react";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import TableCard from "../../../components/admin/TableCard";
+import Avatar from "../../../components/shared/Avatar";
+import { toastApiInfo } from "../../../services/toast/apiToast";
+import { useMessages } from "../context/MessagesContext";
 import { getDemoMessageById } from "../data/demoMessages";
 
+const MESSAGES_PATH = "/notifications/messages";
 const SECTION_BORDER = { borderColor: "var(--admin-header-surface-border)" };
+
+function MessageDetailsHeader({ onBack }) {
+  return (
+    <div className="mb-6 flex flex-col gap-4 sm:mb-7 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
+        <nav className="admin-text-muted flex flex-wrap items-center gap-1 text-xs">
+          <Link
+            to={MESSAGES_PATH}
+            className="font-medium text-[var(--admin-primary-color)] transition-colors hover:opacity-80"
+          >
+            Messages
+          </Link>
+          <ChevronRight size={12} className="admin-text-subtle" aria-hidden />
+          <span className="admin-text font-medium">View Message</span>
+        </nav>
+        <h1 className="admin-text admin-page-title mt-2 text-xl leading-[1.2] tracking-[-0.015em] sm:text-2xl lg:text-[28px]">
+          Message Details
+        </h1>
+      </div>
+      <button
+        type="button"
+        onClick={onBack}
+        className="admin-btn-primary inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-xl px-4 text-sm font-semibold"
+      >
+        <ArrowLeft size={16} strokeWidth={2} aria-hidden />
+        Back
+      </button>
+    </div>
+  );
+}
 
 function MessageDetailsPage({ isDarkMode }) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { markAsRead, removeMessage } = useMessages();
   const message = getDemoMessageById(id);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+  const goBack = () => navigate(MESSAGES_PATH);
+
+  useEffect(() => {
+    if (!id) return;
+    markAsRead(id);
+  }, [id, markAsRead]);
 
   if (!message) {
     return (
       <div className="space-y-6">
-        <AdminPageHeader
-          title="View Message"
-          isDarkMode={isDarkMode}
-          breadcrumbs={[
-            { label: "Messages", to: "/notifications/messages" },
-            { label: "View Message" },
-          ]}
-        />
+        <MessageDetailsHeader onBack={goBack} />
         <p className="admin-text-muted text-sm">Message not found.</p>
-        <button
-          type="button"
-          onClick={() => navigate("/notifications/messages")}
-          className="admin-btn-primary h-11 rounded-xl px-5 text-sm font-semibold"
-        >
-          Back to Messages
-        </button>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader
-        title="View Message"
-        isDarkMode={isDarkMode}
-        breadcrumbs={[
-          { label: "Messages", to: "/notifications/messages" },
-          { label: "View Message" },
-        ]}
-      />
+      <MessageDetailsHeader onBack={goBack} />
 
       <TableCard isDarkMode={isDarkMode}>
-        <div className="p-1 sm:p-2">
+        <div className="p-2 sm:p-3 lg:p-4">
           {/* Sender + Date/Time */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <h2 className="admin-text text-lg font-semibold break-words sm:text-xl">
-                {message.name}
-              </h2>
-              <p className="admin-text-muted mt-1 break-all text-sm">
-                {message.email}
-              </p>
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3.5 sm:gap-4">
+              <Avatar name={message.name} size="profile" />
+              <div className="min-w-0 pt-0.5">
+                <h2 className="admin-text text-lg font-bold break-words sm:text-xl">
+                  {message.name}
+                </h2>
+                <p className="admin-text-muted mt-1 break-all text-sm">
+                  {message.email}
+                </p>
+              </div>
             </div>
-            <div className="shrink-0 text-left sm:text-right">
-              <p className="admin-text text-sm font-semibold">{message.date}</p>
-              <p className="admin-text-muted mt-1 text-sm">{message.time}</p>
+
+            <div className="flex shrink-0 flex-col gap-2 text-left sm:items-end sm:text-right">
+              <div className="admin-text inline-flex items-center gap-2 text-sm font-medium">
+                <Calendar
+                  size={15}
+                  strokeWidth={2}
+                  className="admin-text-muted shrink-0"
+                  aria-hidden
+                />
+                <span>{message.date}</span>
+              </div>
+              <div className="admin-text-muted inline-flex items-center gap-2 text-sm">
+                <Clock
+                  size={15}
+                  strokeWidth={2}
+                  className="shrink-0"
+                  aria-hidden
+                />
+                <span>{message.time}</span>
+              </div>
             </div>
           </div>
 
@@ -70,7 +118,7 @@ function MessageDetailsPage({ isDarkMode }) {
             <p className="admin-text-subtle mb-1.5 text-xs font-semibold uppercase tracking-wide">
               Subject
             </p>
-            <p className="admin-text text-base font-semibold break-words sm:text-lg">
+            <p className="admin-text text-base font-bold break-words sm:text-lg">
               {message.subject}
             </p>
           </div>
@@ -80,35 +128,35 @@ function MessageDetailsPage({ isDarkMode }) {
             <p className="admin-text-subtle mb-3 text-xs font-semibold uppercase tracking-wide">
               Message
             </p>
-            <div
-              className="admin-input rounded-xl border p-4 sm:p-5"
-              style={{
-                borderColor: "var(--admin-input-border)",
-                background: "var(--admin-input-bg)",
-              }}
-            >
-              <div className="admin-text whitespace-pre-wrap break-words text-sm leading-relaxed sm:text-[15px] sm:leading-7">
-                {message.body || "—"}
-              </div>
+            <div className="admin-text whitespace-pre-wrap break-words text-sm leading-7 sm:text-[15px] sm:leading-8">
+              {message.body || "—"}
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Actions — bottom left */}
           <div
-            className="mt-6 flex flex-wrap items-center justify-end gap-2 border-t pt-5"
+            className="mt-8 flex flex-wrap items-center justify-start gap-2.5 border-t pt-5"
             style={SECTION_BORDER}
           >
             <button
               type="button"
-              className="admin-btn-primary h-10 cursor-pointer rounded-xl px-5 text-sm font-semibold transition hover:opacity-90"
+              onClick={() =>
+                toastApiInfo({
+                  message:
+                    "Reply will be available when the Messages API is connected.",
+                })
+              }
+              className="admin-btn-primary inline-flex h-10 items-center justify-center gap-2 px-5"
             >
+              <Reply size={16} strokeWidth={2} aria-hidden />
               Reply
             </button>
             <button
               type="button"
               onClick={() => setIsDeleteOpen(true)}
-              className="flex h-10 cursor-pointer items-center justify-center rounded-xl bg-[var(--admin-danger-text)] px-5 text-sm font-semibold text-white transition hover:opacity-90"
+              className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[var(--admin-danger-text)] bg-transparent px-5 text-sm font-semibold text-[var(--admin-danger-text)] transition hover:bg-[var(--admin-danger-text)]/10"
             >
+              <Trash2 size={16} strokeWidth={2} aria-hidden />
               Delete
             </button>
           </div>
@@ -118,9 +166,10 @@ function MessageDetailsPage({ isDarkMode }) {
       <DeleteConfirmModal
         isOpen={isDeleteOpen}
         onCancel={() => setIsDeleteOpen(false)}
-        onConfirm={() => {
+        onConfirm={async () => {
           setIsDeleteOpen(false);
-          navigate("/notifications/messages");
+          await removeMessage(id);
+          navigate(MESSAGES_PATH);
         }}
         title="Delete Message"
         message="Are you sure you want to delete this message?"

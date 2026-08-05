@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Eye, Link2, Loader2, Pencil } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
 // import NumericInput from "../../../components/admin/NumericInput";
@@ -124,7 +123,6 @@ function PartnerMappingTab({
   const { canWrite } = useModulePermission("survey");
   const allowWrite = canWrite && !readOnly;
   const inputClass = getAdminInputClass();
-  const navigate = useNavigate();
   const resolvedProjectUrlId = String(projectUrlId ?? "").trim();
   const isMultiLink = String(projectLinkType ?? "")
     .toLowerCase()
@@ -400,7 +398,6 @@ function PartnerMappingTab({
     }
 
     setIsSubmitting(true);
-    const isCreate = formMode === "add";
     try {
       const data =
         formMode === "edit" && form.mappingId
@@ -408,12 +405,6 @@ function PartnerMappingTab({
           : await createSupplierMapping(payload);
 
       toastApiSuccess(data);
-
-      if (isCreate) {
-        navigate(0);
-        return;
-      }
-
       resetForm();
       await loadMappings();
     } catch (error) {
@@ -543,7 +534,10 @@ function PartnerMappingTab({
   };
 
   const canSubmit = isFormValid(errors) && !isSubmitting && !isFormLoading;
-  const showAddPartner = allowWrite && multiLinkStats.addPartner;
+  // Multi-link-stats.addPartner is remainingMultiLinkCount > 0 (backend).
+  // Single Link has no multi-URL pool, so that flag is always false — ignore it.
+  const showAddPartner =
+    allowWrite && (!isMultiLink || multiLinkStats.addPartner);
 
   if (!resolvedProjectUrlId) {
     return (

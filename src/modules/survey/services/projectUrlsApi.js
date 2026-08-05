@@ -1084,7 +1084,11 @@ export async function getSurveyGroupOptionsForLanguage(language) {
       return { success: true, data: options };
     }
   } catch {
-    // Fall through to mock options.
+    // Fall through to empty options in production; mock options in development only.
+  }
+
+  if (import.meta.env.PROD) {
+    return { success: true, data: [] };
   }
 
   await delay(120);

@@ -32,12 +32,14 @@ function PartnerMappingViewModal({
         if (!cancelled) setDetail(mapSupplierMappingToDetail(data));
       })
       .catch((err) => {
-        if (!cancelled) toastApiError(err);
+        if (!cancelled) {
+          setDetail(null);
+          toastApiError(err);
+        }
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
       });
-
     return () => {
       cancelled = true;
     };
@@ -99,6 +101,14 @@ function PartnerMappingViewModal({
                   value={detail.linksToAssign ?? "—"}
                 />
               ) : null}
+              <DetailField
+                label="Status"
+                value={detail.statusActive ? "Active" : "Inactive"}
+              />
+              <DetailField
+                label="Is Test?"
+                value={detail.isTest ? "Yes" : "No"}
+              />
               <DetailField label="Complete" value={detail.complete} />
               <DetailField label="Terminate" value={detail.terminate} />
               <DetailField label="Over Quota" value={detail.overQuota} />
@@ -117,6 +127,11 @@ function PartnerMappingViewModal({
                 }
               />
             </DetailGrid>
+          )}
+          {!isLoading && !detail && (
+            <p className="admin-text-muted py-8 text-center text-sm">
+              Failed to load partner mapping details.
+            </p>
           )}
         </div>
 

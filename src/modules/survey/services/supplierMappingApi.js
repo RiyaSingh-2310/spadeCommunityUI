@@ -120,6 +120,11 @@ export function mapSupplierMappingToDetail(record) {
     surveyClose: pickField(record, ["SurveyCloseURL", "survey_close_url", "surveyClose"]),
     postbackUrl: pickField(record, ["VenderURL", "postback_url", "postbackUrl"]),
     partnerUrl: pickField(record, ["dynamic_url", "vendor_url", "partner_url"]),
+    statusActive:
+      toBoolean(pickField(record, ["status", "Status"]), true) ||
+      String(pickField(record, ["status", "Status"]) ?? "")
+        .trim()
+        .toLowerCase() === "active",
     isTest: toBoolean(
       pickField(record, ["IsTest", "is_test", "isTest", "test_mode"]),
       false
@@ -230,12 +235,13 @@ export async function listSupplierMappings({ projectId, projectUrlId } = {}) {
   if (!normalizedUrlId) return rows;
 
   // Backend has no projectUrlId query filter — narrow client-side after projectid filter.
+  // Require an exact match so mappings without projectUrlId do not leak across URL tabs.
   return rows.filter((row) => {
     const rowUrlId = String(
       pickField(row, ["projectUrlId", "project_url_id", "projecturlid", "ProjectUrlId"]) ??
         ""
     ).trim();
-    return !rowUrlId || rowUrlId === normalizedUrlId;
+    return rowUrlId === normalizedUrlId;
   });
 }
 
@@ -285,12 +291,18 @@ export async function findSupplierMappingByDoSurveyToken(token) {
 /** Appends IsTest query flag so the public /dosurvey page can show Test vs Live. */
 export function appendIsTestToPartnerUrl(url, isTest) {
   const raw = String(url ?? "").trim();
-  if (!raw || !/^https?:\/\//i.test(raw)) return raw;
+  if (!raw) return raw;
 
   try {
-    const parsed = new URL(raw);
+    const isAbsolute = /^https?:\/\//i.test(raw);
+    const base =
+      typeof window !== "undefined" && window.location?.origin
+        ? window.location.origin
+        : "https://spade-community.com";
+    const parsed = isAbsolute ? new URL(raw) : new URL(raw, base);
     parsed.searchParams.set("IsTest", isTest ? "1" : "0");
-    return parsed.toString();
+    if (isAbsolute) return parsed.toString();
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
   } catch {
     return raw;
   }
