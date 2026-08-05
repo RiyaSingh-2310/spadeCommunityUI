@@ -173,7 +173,9 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
         columns={[
           "ID",
           "Project Name",
-          "Client Code",
+          "Client",
+          "URL Minimum Start Date",
+          "URL Maximum Start Date",
           "LOI",
           "IR",
           "Start Date",

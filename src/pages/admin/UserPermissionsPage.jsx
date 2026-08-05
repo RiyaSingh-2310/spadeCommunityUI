@@ -81,7 +81,7 @@ function UserPermissionsPage({ isDarkMode }) {
 
   if (loadFailed) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <AdminPageHeader
           title="Manage Permissions"
           breadcrumbs={[

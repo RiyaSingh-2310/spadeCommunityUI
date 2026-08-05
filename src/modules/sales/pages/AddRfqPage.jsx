@@ -370,7 +370,7 @@ function AddRfqPage({ isDarkMode }) {
 
   if (isEdit && loadFailed) {
     return (
-      <div className="space-y-5">
+      <div className="space-y-6">
         <AdminPageHeader
           title="Edit RFQ"
           breadcrumbs={[
@@ -394,7 +394,7 @@ function AddRfqPage({ isDarkMode }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <AdminPageHeader
         title={isEdit ? "Edit RFQ" : "Add RFQ"}
         breadcrumbs={[

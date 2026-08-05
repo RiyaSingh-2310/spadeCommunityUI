@@ -179,6 +179,7 @@ export function createEmptyProjectUrlForm(projectId = "") {
   return {
     id: "",
     projectId: projectId ? String(projectId) : "",
+    projectUrlCode: "",
     clientProjectId: "",
     clientUrl: "",
     discussion: "",
@@ -229,6 +230,9 @@ export function mapProjectUrlToForm(record) {
   return {
     id: record.id != null ? String(record.id) : "",
     projectId: record.projectId != null ? String(record.projectId) : "",
+    projectUrlCode: String(
+      record.projectUrlCode ?? record.project_url_code ?? record.urlCode ?? ""
+    ).trim(),
     clientProjectId: record.clientProjectId ?? "",
     clientUrl: record.clientUrl ?? "",
     discussion: record.discussion ?? "",
@@ -331,6 +335,16 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
   return mapProjectUrlToForm({
     id: resolveUrlRecordId(urlInfo),
     projectId: urlInfo.project_id ?? projectRecord?.id ?? projectId,
+    projectUrlCode: String(
+      pickUrlInfoField(urlInfo, [
+        "project_url_code",
+        "Project_URL_Code",
+        "projectUrlCode",
+        "url_code",
+        "Url_Code",
+        "urlCode",
+      ]) ?? ""
+    ).trim(),
     discussion:
       pickUrlInfoField(urlInfo, ["description", "Description"]) ??
       pickUrlInfoField(projectRecord, ["description", "Description"]) ??

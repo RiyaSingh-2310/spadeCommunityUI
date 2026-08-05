@@ -36,6 +36,7 @@ function ModuleListingActionCell({
   onFindUser,
   onUserSurveyData,
   onSurveyClone,
+  onClone,
   onPdfDownload,
   onApprove,
   onReject,
@@ -209,6 +210,7 @@ function ModuleListingActionCell({
           isDarkMode={isDarkMode}
           showDelete={canShowDelete}
           onEdit={canShowEdit ? () => handleEdit(row, globalIdx) : undefined}
+          onClone={allowWrite && onClone ? () => onClone(row, globalIdx) : undefined}
           onDelete={canShowDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}
         />
       </div>
@@ -267,6 +269,7 @@ function ModuleListingActionCell({
       isDarkMode={isDarkMode}
       showDelete={canShowDelete}
       onEdit={canShowEdit ? () => handleEdit(row, globalIdx) : undefined}
+      onClone={allowWrite && onClone ? () => onClone(row, globalIdx) : undefined}
       onDelete={canShowDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}
     />
     </td>

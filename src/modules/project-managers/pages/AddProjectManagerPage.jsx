@@ -205,7 +205,7 @@ function AddProjectManagerPage({ isDarkMode }) {
 
   if (isEdit && loadFailed) {
     return (
-      <div className="space-y-5">
+      <div className="space-y-6">
         <AdminPageHeader
           title="Edit Project Manager"
           breadcrumbs={[
@@ -229,7 +229,7 @@ function AddProjectManagerPage({ isDarkMode }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <AdminPageHeader
         title={isEdit ? "Edit Project Manager" : "Add Project Manager"}
         breadcrumbs={[

@@ -9,11 +9,13 @@ import { getRecords } from "../../survey/services/surveyApi";
 const LIST_COLUMNS = [
   "ID",
   "Project Name",
-  "Client Code",
+  "Client",
   "LOI",
   "IR",
   "Start Date",
   "End Date",
+  "URL Minimum Start Date",
+  "URL Maximum Start Date",
   "Status",
   "Action",
 ];

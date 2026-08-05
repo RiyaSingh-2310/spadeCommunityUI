@@ -55,6 +55,7 @@ import {
 
 const PROJECT_URL_LIST_COLUMNS_BASE = [
   "ID",
+  "Project URL Code",
   "Description",
   "Country",
   "Language",
@@ -124,6 +125,7 @@ function normalizeUrlRecord(row, projectFk) {
 
 function toListRow(record, { multiLinkCountByUrlId = {} } = {}) {
   const id = record?.id != null && record.id !== "" ? String(record.id) : "";
+  const projectUrlCode = formatListMetric(record?.projectUrlCode);
   const description = String(record?.discussion ?? "").trim() || "—";
   const country = String(record?.country ?? "").trim() || "—";
   const language = String(record?.language ?? "").trim() || "—";
@@ -144,6 +146,7 @@ function toListRow(record, { multiLinkCountByUrlId = {} } = {}) {
 
   return {
     id,
+    projectUrlCode,
     description,
     country,
     language,
@@ -250,6 +253,7 @@ function ProjectUrlsTab({
   const [loadedEditKey, setLoadedEditKey] = useState("");
   const [editFormReady, setEditFormReady] = useState(false);
   const navigateToListRef = useRef(() => {});
+  const cloneSeedRef = useRef(null);
   const linkTypeSourceKeyRef = useRef(`${projectFk}:${projectLinkType}`);
 
   // Re-sync from backend whenever the loaded project or its link type changes.
@@ -293,11 +297,21 @@ function ProjectUrlsTab({
       urlView === PROJECT_URL_VIEW_IDS.ADD ||
       urlView === PROJECT_URL_VIEW_IDS.LIST
     ) {
-      const nextFormState = getRouteFormState(projectFk, urlView);
-      setSelectedUrlId(nextFormState.selectedUrlId);
-      setForm(nextFormState.form);
-      setInitialSnapshot(nextFormState.initialSnapshot);
-      setPendingDelete(nextFormState.pendingDelete);
+      const cloneSeed = cloneSeedRef.current;
+      cloneSeedRef.current = null;
+
+      if (urlView === PROJECT_URL_VIEW_IDS.ADD && cloneSeed) {
+        setSelectedUrlId("");
+        setForm(cloneSeed);
+        setInitialSnapshot(cloneProjectUrlForm(cloneSeed));
+        setPendingDelete(null);
+      } else {
+        const nextFormState = getRouteFormState(projectFk, urlView);
+        setSelectedUrlId(nextFormState.selectedUrlId);
+        setForm(nextFormState.form);
+        setInitialSnapshot(nextFormState.initialSnapshot);
+        setPendingDelete(nextFormState.pendingDelete);
+      }
       setLoadedEditKey("");
       setEditFormReady(false);
       resetValidation();
@@ -596,6 +610,29 @@ function ProjectUrlsTab({
     });
   };
 
+  const openCloneForm = (row) => {
+    if (!canWrite) return;
+    const record =
+      row?.record ?? urlRecords.find((item) => String(item.id) === String(row?.id));
+    const source = normalizeUrlRecord(record ?? row, projectFk);
+    cloneSeedRef.current = normalizeProjectUrlFormForState({
+      ...cloneProjectUrlForm(source),
+      id: "",
+      projectUrlCode: "",
+      projectId: String(projectFk ?? ""),
+      addedBy: "—",
+      addedOn: "—",
+      updatedBy: "—",
+      updatedOn: "—",
+      deletedBy: "—",
+      deletedOn: "—",
+    });
+    onViewChange?.({
+      urlView: PROJECT_URL_VIEW_IDS.ADD,
+      urlId: "",
+    });
+  };
+
   const closeForm = () => {
     navigateToList();
   };
@@ -749,6 +786,7 @@ function ProjectUrlsTab({
           showDeleteAction={canWrite}
           statusAsText
           onEdit={canWrite ? openEditForm : undefined}
+          onClone={canWrite ? openCloneForm : undefined}
           onDelete={canWrite ? handleDeleteRequest : undefined}
           onView={!canWrite ? openEditForm : undefined}
           permissionModule="survey"
@@ -802,6 +840,14 @@ function ProjectUrlsTab({
             <input
               className={inputClass}
               value={projectCode}
+              readOnly
+              disabled
+            />
+          </FormField>
+          <FormField label="Project URL Code">
+            <input
+              className={inputClass}
+              value={form.projectUrlCode || "—"}
               readOnly
               disabled
             />

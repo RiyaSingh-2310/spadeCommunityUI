@@ -1,13 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  Calendar,
-  ChevronRight,
-  Clock,
-  Reply,
-  Trash2,
-} from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Calendar, Clock, Reply, Trash2 } from "lucide-react";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import TableCard from "../../../components/admin/TableCard";
 import Avatar from "../../../components/shared/Avatar";
@@ -17,36 +11,6 @@ import { getDemoMessageById } from "../data/demoMessages";
 
 const MESSAGES_PATH = "/notifications/messages";
 const SECTION_BORDER = { borderColor: "var(--admin-header-surface-border)" };
-
-function MessageDetailsHeader({ onBack }) {
-  return (
-    <div className="mb-6 flex flex-col gap-4 sm:mb-7 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0">
-        <nav className="admin-text-muted flex flex-wrap items-center gap-1 text-xs">
-          <Link
-            to={MESSAGES_PATH}
-            className="font-medium text-[var(--admin-primary-color)] transition-colors hover:opacity-80"
-          >
-            Messages
-          </Link>
-          <ChevronRight size={12} className="admin-text-subtle" aria-hidden />
-          <span className="admin-text font-medium">View Message</span>
-        </nav>
-        <h1 className="admin-text admin-page-title mt-2 text-xl leading-[1.2] tracking-[-0.015em] sm:text-2xl lg:text-[28px]">
-          Message Details
-        </h1>
-      </div>
-      <button
-        type="button"
-        onClick={onBack}
-        className="admin-btn-primary inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-xl px-4 text-sm font-semibold"
-      >
-        <ArrowLeft size={16} strokeWidth={2} aria-hidden />
-        Back
-      </button>
-    </div>
-  );
-}
 
 function MessageDetailsPage({ isDarkMode }) {
   const { id } = useParams();
@@ -62,10 +26,31 @@ function MessageDetailsPage({ isDarkMode }) {
     markAsRead(id);
   }, [id, markAsRead]);
 
+  const pageHeader = (
+    <AdminPageHeader
+      title="Message Details"
+      breadcrumbs={[
+        { label: "Messages", to: MESSAGES_PATH },
+        { label: "View Message" },
+      ]}
+      isDarkMode={isDarkMode}
+      // rightContent={
+      //   <button
+      //     type="button"
+      //     onClick={goBack}
+      //     className="admin-btn-primary inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-xl px-4 text-sm font-semibold"
+      //   >
+      //     <ArrowLeft size={16} strokeWidth={2} aria-hidden />
+      //     Back
+      //   </button>
+      // }
+    />
+  );
+
   if (!message) {
     return (
       <div className="space-y-6">
-        <MessageDetailsHeader onBack={goBack} />
+        {pageHeader}
         <p className="admin-text-muted text-sm">Message not found.</p>
       </div>
     );
@@ -73,7 +58,7 @@ function MessageDetailsPage({ isDarkMode }) {
 
   return (
     <div className="space-y-6">
-      <MessageDetailsHeader onBack={goBack} />
+      {pageHeader}
 
       <TableCard isDarkMode={isDarkMode}>
         <div className="p-2 sm:p-3 lg:p-4">

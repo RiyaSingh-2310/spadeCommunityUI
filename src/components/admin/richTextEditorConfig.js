@@ -17,7 +17,7 @@ const TINYMCE_PLUGINS = [
 ].join(" ");
 
 const TINYMCE_TOOLBAR =
-  "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist | outdent indent | link table tabledelete | tableprops tablerowprops tablecellprops | tableinsertrowbefore tableinsertrowafter tabledeleterow | tableinsertcolbefore tableinsertcolafter tabledeletecol | removeformat | fullscreen | htmlEmbed";
+  "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist | outdent indent | link | table | tabledelete tableprops tablerowprops tablecellprops | tableinsertrowbefore tableinsertrowafter tabledeleterow | tableinsertcolbefore tableinsertcolafter tabledeletecol | removeformat | fullscreen | htmlEmbed";
 
 const CONTENT_STYLE =
   "body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; margin: 8px; }";
@@ -34,15 +34,23 @@ export function createTinyMceInit({
 } = {}) {
   return {
     height,
-    menubar: false,
+    menubar: "table",
     branding: false,
     promotion: false,
     statusbar: false,
     resize: true,
+    toolbar_mode: "wrap",
     skin: isDarkMode ? "oxide-dark" : "oxide",
     content_css: isDarkMode ? "dark" : "default",
     plugins: TINYMCE_PLUGINS,
     toolbar: TINYMCE_TOOLBAR,
+    menu: {
+      table: {
+        title: "Table",
+        items:
+          "inserttable | cell row column | advtablesort | tableprops deletetable",
+      },
+    },
     block_formats:
       "Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4; Heading 5=h5; Heading 6=h6",
     font_family_formats:

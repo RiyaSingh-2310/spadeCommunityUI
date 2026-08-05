@@ -237,7 +237,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
 
   if (isEdit && loadFailed) {
     return (
-      <div className="space-y-5">
+      <div className="space-y-6">
         <AdminPageHeader
           title="Edit Client User"
           breadcrumbs={[
