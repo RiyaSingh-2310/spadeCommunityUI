@@ -6,7 +6,7 @@ import {
   formValueToApiStatus,
 } from "../../modules/shared/utils/statusLabels";
 import { apiRequest } from "../api/client";
-import { downloadCsvExport } from "../api/csvExport";
+import { buildDatedExportFilename, downloadCsvExport } from "../api/csvExport";
 import { ApiError } from "../api/ApiError";
 import { formatLocaleDateTime } from "../../modules/shared/utils/dateTime";
 
@@ -517,6 +517,6 @@ export async function deleteRecord(id) {
 /** GET /api/questionnaire-group/export/csv */
 export async function exportQuestionnaireGroupCsv() {
   return downloadCsvExport(API_ROUTES.questionnaireGroup.exportCsv, {
-    defaultFilename: "questionnaire-groups.csv",
+    defaultFilename: buildDatedExportFilename("questionnaire-groups"),
   });
 }

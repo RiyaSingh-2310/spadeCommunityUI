@@ -13,6 +13,7 @@ export {
   encryptValue,
   isEncryptedValue,
 } from "./encryption";
+export { sanitizeHtml } from "./sanitizeHtml";
 export { useFlashMessage } from "../hooks/useFlashMessage";
 export { useListingPageActions } from "../hooks/useListingPageActions";
 export { debounce, SEARCH_DEBOUNCE_MS } from "./debounce";

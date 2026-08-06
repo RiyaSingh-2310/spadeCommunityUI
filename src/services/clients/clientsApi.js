@@ -4,7 +4,7 @@ import { getDefaultPhoneCountryCode } from "../../modules/shared/data/phoneCount
 import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
 import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import { apiRequest } from "../api/client";
-import { downloadCsvExport } from "../api/csvExport";
+import { buildDatedExportFilename, downloadCsvExport } from "../api/csvExport";
 import { ApiError } from "../api/ApiError";
 import {
   apiStatusToFormValue,
@@ -214,7 +214,7 @@ export async function deleteRecord(id) {
 /** GET /api/clients/export/csv */
 export async function exportClientsCsv() {
   return downloadCsvExport(API_ROUTES.clients.exportCsv, {
-    defaultFilename: "clients.csv",
+    defaultFilename: buildDatedExportFilename("clients"),
   });
 }
 

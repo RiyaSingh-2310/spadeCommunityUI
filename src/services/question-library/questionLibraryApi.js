@@ -7,7 +7,7 @@ import {
 } from "../../modules/shared/utils/statusLabels";
 import { normalizeSearchQuery } from "../../modules/shared/utils/searchQuery";
 import { apiRequest } from "../api/client";
-import { downloadCsvExport } from "../api/csvExport";
+import { buildDatedExportFilename, downloadCsvExport } from "../api/csvExport";
 import { ApiError } from "../api/ApiError";
 import { formatLocaleDateTime } from "../../modules/shared/utils/dateTime";
 
@@ -477,7 +477,7 @@ export async function deleteRecord(id) {
 /** GET /api/question-library/export/csv */
 export async function exportQuestionLibraryCsv() {
   return downloadCsvExport(API_ROUTES.questionLibrary.exportCsv, {
-    defaultFilename: "question-library.csv",
+    defaultFilename: buildDatedExportFilename("question-library"),
   });
 }
 

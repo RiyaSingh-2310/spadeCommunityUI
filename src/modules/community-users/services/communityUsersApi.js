@@ -1,6 +1,7 @@
 import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
+import { downloadCsvExport, buildDatedExportFilename } from "../../../services/api/csvExport";
 import {
   extractListTotalFromResponse,
   safeMapListItems,
@@ -15,7 +16,6 @@ import { formatSurveyListDate } from "../../shared/utils/dateTime";
 import {
   getCommunityUserById,
 } from "../data/communityUsersStore";
-import { downloadPanelistsData } from "../utils/downloadPanelistsData";
 import { normalizeRewardLogEntry } from "../utils/rewardLogUtils";
 
 const LIST_LOAD_ERROR_MESSAGE = "Unable to load panelists. Please try again later.";
@@ -412,6 +412,8 @@ export async function getUserRewardLogs(
   userId,
   { page = 1, limit = 10, search, filters } = {}
 ) {
+  // TODO(backend): Replace communityUsersStore mock with a real reward-log
+  // endpoint (e.g. GET /api/panelist/:id/reward-logs) and remove the store.
   const user = getCommunityUserById(userId);
   if (!user) {
     return { items: [], total: 0, count: 0, user: null };
@@ -520,22 +522,16 @@ export async function bulkResendInvite(ids) {
 }
 
 /**
- * Mock panelist download (API-ready).
- * Replace body with a real download endpoint when available.
- * @param {object|object[]} panelistOrList
+ * GET /api/panelist/export/csv — full dataset export (server-backed).
+ * Selection/row args from the listing UI are ignored; the backend owns the export set.
+ *
+ * TODO(backend): Implement GET /api/panelist/export/csv.
+ * Optional: accept `ids` query for selected-row export when the UI passes them.
  */
-export async function downloadPanelists(panelistOrList) {
-  await new Promise((resolve) => setTimeout(resolve, 180));
-  const result = downloadPanelistsData(panelistOrList);
-  const count = result.count;
-  return {
-    success: true,
-    message:
-      count === 1
-        ? "Panelist data downloaded successfully."
-        : `${count} panelist record(s) downloaded successfully.`,
-    data: result,
-  };
+export async function downloadPanelists() {
+  return downloadCsvExport(API_ROUTES.panelist.exportCsv, {
+    defaultFilename: buildDatedExportFilename("panelists-export"),
+  });
 }
 
 export { toListingRow } from "../data/communityUsersStore";

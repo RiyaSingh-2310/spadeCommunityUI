@@ -1,5 +1,8 @@
 /**
  * Mock store for project_multiple_Url records.
+ * TODO(backend): Remove when projectMultiUrlApi.js is fully API-backed and
+ * no longer imports this store for fallbacks.
+ *
  * Aligns with DB: id, project_id, Live_Link, VenderURL, Venderid_Userid, UserType, Status
  * plus project_url_id (required by upload API / UI).
  */

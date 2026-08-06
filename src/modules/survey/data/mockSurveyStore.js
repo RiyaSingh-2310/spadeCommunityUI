@@ -1,6 +1,7 @@
 /**
  * Temporary in-memory project mock store.
- * Replace with real API calls in surveyApi.js when endpoints are ready.
+ * TODO(backend): Remove once surveyApi.js no longer needs mock fallbacks
+ * (USE_SURVEY_MOCK_DATA is currently false; live APIs are primary).
  */
 
 const MOCK_DELAY_MS = 280;

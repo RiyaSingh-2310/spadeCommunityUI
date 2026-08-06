@@ -8,7 +8,7 @@ import {
 } from "../../modules/shared/utils/statusLabels";
 import { encryptValue } from "../../modules/shared/utils/encryption";
 import { apiRequest } from "../api/client";
-import { downloadCsvExport } from "../api/csvExport";
+import { buildDatedExportFilename, downloadCsvExport } from "../api/csvExport";
 import { ApiError } from "../api/ApiError";
 
 function isApiSuccess(data) {
@@ -227,6 +227,6 @@ export async function deleteProjectManager(id) {
 /** GET /api/projectmanager/export/csv */
 export async function exportProjectManagersCsv() {
   return downloadCsvExport(API_ROUTES.projectManagers.exportCsv, {
-    defaultFilename: "project-managers.csv",
+    defaultFilename: buildDatedExportFilename("project-managers"),
   });
 }

@@ -5,6 +5,7 @@ import TableCard from "../../../components/admin/TableCard";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
+// TODO(backend): Replace mock store lookup with panelist detail API.
 import { getCommunityUserById } from "../data/communityUsersStore";
 import RewardLogFilterPanel from "../components/RewardLogFilterPanel";
 import { getUserRewardLogs } from "../services/communityUsersApi";

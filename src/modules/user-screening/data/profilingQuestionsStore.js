@@ -1,3 +1,9 @@
+/**
+ * Local fixture / helper data for profiling questions & languages.
+ * TODO(backend): Migrate remaining consumers to screening / question-library
+ * APIs and delete unused mock generators from this module.
+ */
+
 const STORAGE_KEY = "profiling-questions";
 
 export const QUESTION_TYPES = [

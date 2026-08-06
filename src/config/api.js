@@ -10,6 +10,9 @@ export const API_ROUTES = {
     verifyOtp: "/api/admin/verify-otp",
     resetPassword: "/api/admin/reset-password",
     changePassword: "/api/admin/change-password",
+    // TODO(backend): Confirm path + body/response for refresh-token exchange.
+    // Expected: POST with { refreshToken }; returns { data: { token, refreshToken? } }.
+    refreshToken: "/api/admin/refresh-token",
     all: "/api/admin/all",
     byId: (id) => `/api/admin/${id}`,
     create: "/api/admin/add-user",
@@ -196,6 +199,9 @@ export const API_ROUTES = {
     updateStatus: (id) => `/api/panelist/${id}/status`,
     resendInvite: (id) => `/api/panelist/${id}/resend-invite`,
     bulkInvite: "/api/panelist/bulk-invite",
+    // TODO(backend): Implement GET /api/panelist/export/csv (CSV download with
+    // Content-Disposition filename + UTF-8 BOM recommended for Excel).
+    exportCsv: "/api/panelist/export/csv",
   },
   emailTemplates: {
     list: "/api/email-templates/list",
@@ -216,6 +222,9 @@ export const API_ROUTES = {
   },
   invoice: {
     settings: "/api/invoice/settings",
+    // TODO(backend): Implement GET /api/invoice/:id/pdf returning application/pdf.
+    downloadPdf: (id) =>
+      `/api/invoice/${encodeURIComponent(String(id ?? "").trim())}/pdf`,
   },
   rewardSettings: {
     get: "/api/reward-settings/get",
@@ -260,9 +269,19 @@ export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.trim()?.replace(/\/$/, "") ||
   DEFAULT_API_BASE_URL;
 
+/**
+ * Optional static Bearer for pre-auth endpoints (login / forgot-password).
+ * M4: This value is public in the Vite bundle — not a real secret. Prefer
+ * server-side rate limiting / CAPTCHA. Leave empty unless the backend requires it.
+ */
 export const API_LOGIN_BEARER_TOKEN =
   import.meta.env.VITE_API_LOGIN_BEARER_TOKEN?.trim() ?? "";
 
+/**
+ * Dev-only API request/response console logging.
+ * M7: Gated by import.meta.env.DEV so production `vite build` never enables it.
+ * Do not deploy with `vite build --mode development` or ship .env.development values.
+ */
 export const API_DEBUG =
   import.meta.env.DEV && import.meta.env.VITE_API_DEBUG === "true";
 

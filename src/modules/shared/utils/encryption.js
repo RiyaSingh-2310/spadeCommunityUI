@@ -1,8 +1,20 @@
 import CryptoJS from "crypto-js";
 
 /**
- * Client-side AES encryption matching backend `utils/cryptoHelper.js`.
- * Format: `${ivHex}:${ciphertext}` (double AES-CBC with ENCRYPTION_KEY1 then KEY2).
+ * Client-side AES "encryption" matching backend `utils/cryptoHelper.js`.
+ * Format: `${ivHex}:${ciphertext}` (double AES-CBC with KEY1 then KEY2).
+ *
+ * SECURITY NOTE (C3):
+ * VITE_ENCRYPTION_KEY1/2 are bundled into public JS by Vite — anyone can
+ * read them from the deployed app. This is NOT confidentiality; it only
+ * matches a legacy backend contract. Real transport security is HTTPS/TLS.
+ *
+ * TODO(backend): Accept plaintext passwords over TLS and remove this scheme.
+ * Until then, keep encrypting so login/reset continue to work.
+ *
+ * L1 — IV reuse: both AES passes currently share one IV (backend decrypt
+ * expects a single IV in the wire format). Using distinct IVs requires a
+ * coordinated backend format change (e.g. `iv1:iv2:ciphertext`).
  */
 
 const ENCRYPTION_KEY1_HEX =
@@ -52,6 +64,7 @@ export function encryptValue(text) {
     );
   }
 
+  // Shared IV required by current backend wire format (see L1 note above).
   const iv = CryptoJS.lib.WordArray.random(16);
   const encrypted1 = CryptoJS.AES.encrypt(value, ENCRYPTION_KEY1, {
     iv,

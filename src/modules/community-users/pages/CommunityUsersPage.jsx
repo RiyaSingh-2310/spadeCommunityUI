@@ -199,12 +199,12 @@ function CommunityUsersPage({ isDarkMode }) {
   }, [isDownloading]);
 
   const handleBulkDownloadConfirm = useCallback(async () => {
-    const selectedRows = users.filter((user) => selectedRowIds.has(String(user.id)));
-    if (selectedRows.length === 0 || isDownloading) return;
+    if (selectedRowIds.size === 0 || isDownloading) return;
 
     setIsDownloading(true);
     try {
-      const data = await downloadPanelists(selectedRows);
+      // Server export returns the full dataset until backend supports `ids` filter.
+      const data = await downloadPanelists();
       setBulkDownloadOpen(false);
       toastApiSuccess(data);
     } catch (error) {
@@ -212,7 +212,7 @@ function CommunityUsersPage({ isDarkMode }) {
     } finally {
       setIsDownloading(false);
     }
-  }, [users, selectedRowIds, isDownloading]);
+  }, [selectedRowIds, isDownloading]);
 
   const handleRowDownload = useCallback(
     async (row) => {
@@ -220,7 +220,8 @@ function CommunityUsersPage({ isDarkMode }) {
 
       setIsDownloading(true);
       try {
-        const data = await downloadPanelists(row);
+        // Server export returns the full dataset until backend supports `ids` filter.
+        const data = await downloadPanelists();
         toastApiSuccess(data);
       } catch (error) {
         toastApiError(error);

@@ -1,3 +1,8 @@
+/**
+ * Survey Research portal fixture data.
+ * TODO(backend): Replace with live survey-research / analytics APIs before launch.
+ */
+
 export const WORKFLOW_STEPS = [
   { id: "pre-screener", label: "Pre-Screener" },
   { id: "eligibility", label: "Eligibility Check" },

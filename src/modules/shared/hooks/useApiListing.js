@@ -41,6 +41,7 @@ export function useApiListing({
     setIsLoading(true);
     setRows([]);
     setListError("");
+    let keepLoadingForPageCorrection = false;
 
     try {
       const normalizedSearch = normalizeSearchQuery(search);
@@ -60,6 +61,8 @@ export function useApiListing({
       const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
 
       if (items.length === 0 && currentPage > 1 && total > 0) {
+        // Keep isLoading true; the currentPage update will re-fetch immediately (M5).
+        keepLoadingForPageCorrection = true;
         setCurrentPage((prev) => Math.max(1, Math.min(prev, totalPages) - 1));
         return;
       }
@@ -68,6 +71,7 @@ export function useApiListing({
       setTotalRecords(total);
 
       if (currentPage > totalPages) {
+        keepLoadingForPageCorrection = true;
         setCurrentPage(totalPages);
       }
     } catch (error) {
@@ -83,7 +87,10 @@ export function useApiListing({
       setRows([]);
       setTotalRecords(0);
     } finally {
-      if (requestId === fetchRequestIdRef.current) {
+      if (
+        requestId === fetchRequestIdRef.current &&
+        !keepLoadingForPageCorrection
+      ) {
         setIsLoading(false);
       }
     }

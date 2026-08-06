@@ -1,7 +1,7 @@
 /**
  * Temporary Project URLs mock data.
- * Supports multiple URL configs per project (country / language).
- * Easy to swap for real API integration later.
+ * TODO(backend): Remove when projectUrlsApi.js mock fallbacks are deleted
+ * (USE_PROJECT_URLS_MOCK is currently false; live APIs are primary).
  */
 
 export const PROJECT_URL_STATUS_OPTIONS = ["Open", "Closed", "On Hold"];

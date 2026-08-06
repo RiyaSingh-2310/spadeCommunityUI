@@ -1,8 +1,12 @@
+import { useCallback } from "react";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useListingPageActions } from "../../shared/hooks/useListingPageActions";
 import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { downloadInvoicePdf } from "../utils/downloadInvoicePdf";
 
+// TODO(backend): Replace fixture rows with GET /api/invoice/list (or equivalent)
+// once invoice listing is implemented server-side.
 const CLIENTS = ["Alpha Corp", "Beta Labs", "Gamma Tech", "Delta Works"];
 const PROJECTS = [
   "Brand Tracker Q2",
@@ -30,6 +34,15 @@ function InvoiceListPage({ isDarkMode }) {
     columnLabel: "Project Name",
   });
 
+  const handlePdfDownload = useCallback(async (row) => {
+    try {
+      const data = await downloadInvoicePdf(row);
+      toastApiSuccess(data);
+    } catch (error) {
+      toastApiError(error);
+    }
+  }, []);
+
   return (
     <ModuleListingPage
       isDarkMode={isDarkMode}
@@ -54,7 +67,7 @@ function InvoiceListPage({ isDarkMode }) {
       rowIdKey="id"
       actionVariant="pdf-download"
       showDeleteAction={false}
-      onPdfDownload={downloadInvoicePdf}
+      onPdfDownload={handlePdfDownload}
       onStatusToggle={onStatusToggle}
       permissionModule="invoices"
       searchFields={[

@@ -1,3 +1,9 @@
+/**
+ * Local fixture data for Community Users reward logs / listing helpers.
+ * TODO(backend): Replace getCommunityUserById / reward log usage with real
+ * panelist detail + reward-history APIs, then delete this store.
+ */
+
 const STORAGE_KEY = "community-users";
 
 const PROFILING_QUESTIONS = [

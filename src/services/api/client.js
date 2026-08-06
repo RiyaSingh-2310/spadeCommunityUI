@@ -1,6 +1,7 @@
 import axios from "axios";
 import { API_DEBUG, API_LOGIN_BEARER_TOKEN, buildApiUrl } from "../../config/api";
 import { getAuthToken } from "../auth/authStorage";
+import { tryRefreshAuthSession } from "../auth/refreshSession";
 import {
   forceLogoutAfterSessionExpired,
   isSessionExpiredHandled,
@@ -8,7 +9,6 @@ import {
 } from "../auth/sessionExpiry";
 import { ApiError } from "./ApiError";
 
-const MAX_UNAUTHORIZED_RETRIES = 3;
 const DEFAULT_REQUEST_TIMEOUT_MS = 30000;
 
 const HTTP_STATUS_MESSAGES = {
@@ -177,6 +177,10 @@ function toNetworkApiError(error) {
  * Central HTTP helper used by all service modules.
  * Preserves the previous fetch-based contract (returns parsed body, throws ApiError).
  *
+ * On 401 for authenticated requests: attempts one refresh-token exchange, then
+ * retries the original request once. Blind multi-retries with the same expired
+ * token were removed (H1).
+ *
  * @param {string} path Path starting with /api/...
  * @param {{
  *   method?: string,
@@ -186,6 +190,7 @@ function toNetworkApiError(error) {
  *   skipSessionExpiryOn401?: boolean,
  *   headers?: Record<string, string>,
  *   responseType?: import('axios').ResponseType,
+ *   _retriedAfterRefresh?: boolean,
  * }} [options]
  */
 export async function apiRequest(path, options = {}) {
@@ -199,6 +204,7 @@ export async function apiRequest(path, options = {}) {
     skipSessionExpiryOn401 = false,
     headers: extraHeaders = {},
     responseType = "json",
+    _retriedAfterRefresh = false,
   } = options;
 
   if (auth && isSessionExpiredHandled()) {
@@ -222,6 +228,7 @@ export async function apiRequest(path, options = {}) {
     }
     headers.Authorization = `Bearer ${token}`;
   } else if (loginBearer && API_LOGIN_BEARER_TOKEN) {
+    // M4: token is public in the bundle — only send when backend requires it.
     headers.Authorization = `Bearer ${API_LOGIN_BEARER_TOKEN}`;
   }
 
@@ -235,56 +242,43 @@ export async function apiRequest(path, options = {}) {
     data: hasBody ? body : undefined,
   };
 
-  const maxAttempts = auth ? 1 + MAX_UNAUTHORIZED_RETRIES : 1;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    if (auth && isSessionExpiredHandled()) {
-      throw new ApiError(SESSION_EXPIRED_MESSAGE, null, 401, { sessionExpired: true });
+  try {
+    const response = await axiosInstance.request(requestConfig);
+    return response.data;
+  } catch (error) {
+    if (!error.response) {
+      throw toNetworkApiError(error);
     }
 
-    try {
-      const response = await axiosInstance.request(requestConfig);
-      return response.data;
-    } catch (error) {
-      if (!error.response) {
-        throw toNetworkApiError(error);
+    const status = error.response.status;
+    const { data, rawText } = normalizeErrorPayload(error.response.data);
+
+    if (status === 401 && auth) {
+      if (skipSessionExpiryOn401) {
+        throw new ApiError(
+          extractErrorMessage(error.response, data, rawText) || SESSION_EXPIRED_MESSAGE,
+          data,
+          401
+        );
       }
 
-      const status = error.response.status;
-      const { data, rawText } = normalizeErrorPayload(error.response.data);
-
-      if (status === 401 && auth) {
-        if (skipSessionExpiryOn401) {
-          throw new ApiError(
-            extractErrorMessage(error.response, data, rawText) || SESSION_EXPIRED_MESSAGE,
-            data,
-            401
-          );
+      if (!_retriedAfterRefresh) {
+        const refreshed = await tryRefreshAuthSession();
+        if (refreshed) {
+          return apiRequest(path, { ...options, _retriedAfterRefresh: true });
         }
-
-        if (attempt < maxAttempts) {
-          if (API_DEBUG) {
-            console.warn(
-              `[API] 401 Unauthorized — retry ${attempt}/${MAX_UNAUTHORIZED_RETRIES}:`,
-              path
-            );
-          }
-          continue;
-        }
-
-        forceLogoutAfterSessionExpired();
-        throw new ApiError(SESSION_EXPIRED_MESSAGE, data, 401, { sessionExpired: true });
       }
 
-      const message = extractErrorMessage(error.response, data, rawText);
-      if (API_DEBUG) {
-        console.error("[API] Error status:", status);
-        console.error("[API] Error message:", message);
-        console.error("[API] Error body:", data ?? rawText);
-      }
-      throw new ApiError(message, data, status);
+      forceLogoutAfterSessionExpired();
+      throw new ApiError(SESSION_EXPIRED_MESSAGE, data, 401, { sessionExpired: true });
     }
+
+    const message = extractErrorMessage(error.response, data, rawText);
+    if (API_DEBUG) {
+      console.error("[API] Error status:", status);
+      console.error("[API] Error message:", message);
+      console.error("[API] Error body:", data ?? rawText);
+    }
+    throw new ApiError(message, data, status);
   }
-
-  throw new ApiError(SESSION_EXPIRED_MESSAGE, null, 401, { sessionExpired: true });
 }

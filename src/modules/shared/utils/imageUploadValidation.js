@@ -1,3 +1,11 @@
+/**
+ * Client-side image upload checks (extension, declared MIME, size).
+ *
+ * M6: These checks are UX-only and trivially spoofable. The backend must
+ * independently validate magic bytes / file signatures, enforce size limits,
+ * and re-encode or strip metadata before storing uploads.
+ */
+
 /** Maximum image upload size: 500 KB */
 export const IMAGE_UPLOAD_MAX_SIZE_BYTES = 500 * 1024;
 

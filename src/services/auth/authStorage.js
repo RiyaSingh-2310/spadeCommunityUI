@@ -1,7 +1,6 @@
 import { prepareAdminSessionUser } from "../../modules/permissions/permissionsUtils";
 import {
   getUserDisplayName,
-  getUserInitials,
   normalizeAdminUser,
 } from "../../modules/shared/utils/userAvatar";
 import { clearLoginRole, saveLoginRole } from "./loginRole";
@@ -27,6 +26,12 @@ function notifyAuthSessionChanged() {
 }
 
 /**
+ * Persist auth session in localStorage.
+ *
+ * H3: localStorage is readable by any page JS (XSS blast radius). Primary
+ * mitigation is sanitizing HTML (C1). Longer-term, prefer httpOnly Secure
+ * cookies for access/refresh tokens if the backend can support them.
+ *
  * @param {{ token: string, refreshToken?: string, admin?: object | null, loginRole?: string }} session
  */
 export function saveAuthSession({ token, refreshToken, admin, loginRole }) {
@@ -104,21 +109,6 @@ export function getAdminUser() {
   } catch {
     return null;
   }
-}
-
-/** @deprecated Prefer getAdminUser() fields or getUserInitials(firstName, lastName) */
-export function getAdminInitials(nameOrAdmin) {
-  if (nameOrAdmin && typeof nameOrAdmin === "object") {
-    return getUserInitials(nameOrAdmin.firstName, nameOrAdmin.lastName);
-  }
-  const name = typeof nameOrAdmin === "string" ? nameOrAdmin : "";
-  if (!name?.trim()) return "A";
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  if (parts.length >= 2) {
-    return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
-  }
-  return "A";
 }
 
 export function getAdminDisplayName(admin = getAdminUser()) {

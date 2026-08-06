@@ -9,6 +9,7 @@ import {
   getSalesLogListWithDetails,
   mapSalesProjectToForm,
 } from "../../../services/sales/salesProjectsApi";
+import { sanitizeHtml } from "../../shared/utils/sanitizeHtml";
 
 function RichTextContent({ html }) {
   const content = String(html ?? "").trim();
@@ -19,7 +20,7 @@ function RichTextContent({ html }) {
   return (
     <div
       className="admin-html-content admin-text max-w-none text-sm leading-relaxed [&_a]:text-[#10a950] [&_a]:underline [&_li]:ml-5 [&_ol]:list-decimal [&_p]:mb-2 [&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-[var(--admin-border)] [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-[var(--admin-border)] [&_th]:bg-[var(--admin-permissions-table-head-bg)] [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_ul]:list-disc"
-      dangerouslySetInnerHTML={{ __html: content }}
+      dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
     />
   );
 }
