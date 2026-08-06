@@ -152,7 +152,7 @@ export async function listProjectMultiUrls(projectId, projectUrlId = "") {
   const filterUrlId = String(projectUrlId ?? "").trim();
   if (filterUrlId) {
     rows = rows.filter(
-      (row) => !row.projectUrlId || String(row.projectUrlId) === filterUrlId
+      (row) => String(row.projectUrlId ?? "") === filterUrlId
     );
   }
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { CheckCheck, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toastApiError } from "../../services/toast/apiToast";
+import { toastApiError, toastApiSuccess } from "../../services/toast/apiToast";
 import { useMessages } from "../../modules/notifications/context/MessagesContext";
 
 function NotificationDrawer({ isOpen, onClose }) {
@@ -38,7 +38,8 @@ function NotificationDrawer({ isOpen, onClose }) {
 
   const handleMarkAllAsRead = async () => {
     try {
-      await markAllAsRead();
+      const data = await markAllAsRead();
+      toastApiSuccess(data);
     } catch (error) {
       toastApiError(error);
     }

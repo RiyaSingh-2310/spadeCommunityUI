@@ -82,7 +82,14 @@ function CommunityUserDetailsPage({ isDarkMode }) {
   if (!user) {
     return (
       <div className="space-y-6">
-        <AdminPageHeader title="User Details" isDarkMode={isDarkMode} />
+        <AdminPageHeader
+          title="User Details"
+          breadcrumbs={[
+            { label: "Panelist", to: "/community-users" },
+            { label: "User Details" },
+          ]}
+          isDarkMode={isDarkMode}
+        />
         <p className="admin-text-muted text-sm">
           {isLoadingUser ? "Loading user details..." : "User not found."}
         </p>

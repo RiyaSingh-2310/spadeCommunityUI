@@ -9,7 +9,7 @@ import { getRecords } from "../../survey/services/surveyApi";
 const LIST_COLUMNS = [
   "ID",
   "Project Name",
-  "Client Code",
+  "Client",
   "LOI",
   "IR",
   "Start Date",

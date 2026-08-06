@@ -157,6 +157,8 @@ export function mapSurveyToRow(project) {
   const projectCode = project?.Project_code ?? project?.survey_id ?? "";
   const projectName = project?.Project_Name ?? project?.project_name ?? "";
   const clientName = project?.Clients ?? project?.client_name ?? "";
+  const clientDisplay =
+    formatClientCodeDisplay(project?.client_code, clientName) || clientName || "—";
   const urlInfo = getPrimaryUrlInfo(project);
   const startDate = pickField(
     urlInfo,
@@ -167,6 +169,16 @@ export function mapSurveyToRow(project) {
     urlInfo,
     ["End_Date", "end_date", "endDate"],
     project?.End_Date ?? project?.end_date ?? project?.endDate
+  );
+  const urlMinStartDate = pickField(
+    project,
+    ["min_start_date", "minStartDate", "url_min_start_date", "urlMinStartDate"],
+    null
+  );
+  const urlMaxStartDate = pickField(
+    project,
+    ["max_start_date", "maxStartDate", "url_max_start_date", "urlMaxStartDate"],
+    null
   );
   const status = project?.Status ?? project?.status;
   const loi = project?.LOI ?? project?.loi;
@@ -180,12 +192,15 @@ export function mapSurveyToRow(project) {
     projectCode: projectCode || "",
     recordId: project?.id,
     projectName,
-    clientCode: formatClientCodeDisplay(project?.client_code, clientName) || clientName || "—",
+    client: clientDisplay,
+    clientCode: clientDisplay,
     clientName,
     projectManagerName: project?.Project_Manager ?? project?.project_manager_name ?? "",
     partnerNames: project?.partner_names ?? "",
     startDate: formatSurveyListDate(startDate),
     endDate: formatSurveyListDate(endDate),
+    urlMinStartDate: formatSurveyListDate(urlMinStartDate),
+    urlMaxStartDate: formatSurveyListDate(urlMaxStartDate),
     loi: loi != null && loi !== "" ? String(loi) : "—",
     ir: ir != null && ir !== "" ? String(ir) : "—",
     sampleSize: sampleSize != null && sampleSize !== "" ? String(sampleSize) : "—",

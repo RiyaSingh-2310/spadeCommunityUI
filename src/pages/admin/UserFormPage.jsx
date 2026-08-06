@@ -223,7 +223,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
 
   if (isEdit && loadFailed) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <AdminPageHeader
           title="Edit Admin User"
           breadcrumbs={[

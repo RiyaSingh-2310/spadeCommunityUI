@@ -166,7 +166,14 @@ function EditCommunityUserPage({ isDarkMode }) {
   if (loadFailed || !initialSnapshot) {
     return (
       <div className="space-y-6">
-        <AdminPageHeader title="Edit User Details" isDarkMode={isDarkMode} />
+        <AdminPageHeader
+          title="Edit User Details"
+          breadcrumbs={[
+            { label: "Panelist", to: "/community-users" },
+            { label: "Edit User Details" },
+          ]}
+          isDarkMode={isDarkMode}
+        />
         <p className="admin-text-muted text-sm">User not found.</p>
         <button
           type="button"

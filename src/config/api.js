@@ -231,6 +231,8 @@ export const API_ROUTES = {
     byId: (id) => `/api/messages/${encodeURIComponent(String(id ?? "").trim())}`,
     markRead: (id) =>
       `/api/messages/${encodeURIComponent(String(id ?? "").trim())}/read`,
+    reply: (id) =>
+      `/api/messages/${encodeURIComponent(String(id ?? "").trim())}/reply`,
     delete: (id) =>
       `/api/messages/${encodeURIComponent(String(id ?? "").trim())}`,
   },

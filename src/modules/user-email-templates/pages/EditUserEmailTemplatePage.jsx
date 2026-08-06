@@ -146,7 +146,14 @@ function EditUserEmailTemplatePage({ isDarkMode }) {
   if (loadFailed || !initialSnapshot) {
     return (
       <div className="space-y-6">
-        <AdminPageHeader title="Edit User Email Template" isDarkMode={isDarkMode} />
+        <AdminPageHeader
+          title="Edit User Email Template"
+          breadcrumbs={[
+            { label: "User Email Templates", to: "/user-email-templates" },
+            { label: "Edit User Email Template" },
+          ]}
+          isDarkMode={isDarkMode}
+        />
         <p className="admin-text-muted text-sm">Template not found.</p>
         <button
           type="button"

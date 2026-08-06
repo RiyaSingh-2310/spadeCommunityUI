@@ -356,10 +356,7 @@ function mapFindUserSearchRecord(record) {
         record.invitation_status ??
         "not_invited"
     ),
-    earnedPoints: toDisplayNumber(
-      earnedPointsRaw != null ? earnedPointsRaw : balanceRaw,
-      0
-    ),
+    earnedPoints: toDisplayNumber(earnedPointsRaw, 0),
     matchedAnswers: formatMatchedAnswers(
       record.matched_answers ?? record.matchedAnswers
     ),

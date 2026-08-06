@@ -153,6 +153,7 @@ export function shouldShowListingActionColumn({
   onFindUser,
   onUserSurveyData,
   onSurveyClone,
+  onClone,
   onPdfDownload,
   onApprove,
   onReject,
@@ -192,6 +193,7 @@ export function shouldShowListingActionColumn({
         onFindUser ||
         onUserSurveyData ||
         onSurveyClone ||
+        onClone ||
         onPdfDownload ||
         onApprove ||
         onReject ||

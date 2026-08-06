@@ -1,22 +1,56 @@
 import { API_ROUTES } from "../../../config/api";
+import { ApiError } from "../../../services/api/ApiError";
+import { apiRequest } from "../../../services/api/client";
 import {
   extractListTotalFromResponse,
   safeMapListItems,
 } from "../../shared/utils/listResponse";
 import { appendListQuery } from "../../shared/utils/listQueryParams";
 import {
-  formatActivityLogDate,
-  formatLocaleDateLabel,
+  formatLocaleDateTime,
   formatLocaleTimeLabel,
+  formatSurveyListDate,
 } from "../../shared/utils/dateTime";
-import { apiRequest } from "../../../services/api/client";
-import { ApiError } from "../../../services/api/ApiError";
 
-function assertSuccess(data) {
-  if (data?.success !== true) {
-    throw new ApiError(data?.message ?? "", data);
+function assertSuccess(data, fallbackMessage = "Unable to load messages.") {
+  if (data?.success !== true && data?.success !== "true") {
+    throw new ApiError(data?.message ?? fallbackMessage, data);
   }
   return data;
+}
+
+function toNumber(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function coerceText(value, fallback = "") {
+  const text = String(value ?? "").trim();
+  return text || fallback;
+}
+
+function normalizeMessageId(id) {
+  const normalizedId = String(id ?? "").trim();
+  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
+    throw new ApiError("Invalid message id.", null);
+  }
+  return normalizedId;
+}
+
+function isReadFlag(value) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1" || normalized === "yes") {
+      return true;
+    }
+    if (normalized === "false" || normalized === "0" || normalized === "no") {
+      return false;
+    }
+  }
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return numeric === 1;
+  return Boolean(value);
 }
 
 function extractMessageList(data) {
@@ -27,130 +61,163 @@ function extractMessageList(data) {
   return [];
 }
 
-function parseIsRead(value) {
-  if (value === true || value === 1 || value === "1") return true;
-  if (value === false || value === 0 || value === "0") return false;
-  const normalized = String(value ?? "").trim().toLowerCase();
-  if (["read", "true", "yes", "y"].includes(normalized)) return true;
-  if (["unread", "false", "no", "n"].includes(normalized)) return false;
-  return Boolean(value);
+function extractMessageRecord(data) {
+  if (!data || typeof data !== "object") return null;
+  if (data.data && typeof data.data === "object" && !Array.isArray(data.data)) {
+    return data.data;
+  }
+  if (data.message && typeof data.message === "object") {
+    return data.message;
+  }
+  if (data.id != null) return data;
+  return null;
 }
 
-/**
- * @param {object} record
- */
+function mapReplyRecord(reply) {
+  if (!reply || typeof reply !== "object") return null;
+  const createdAt = reply.created_at ?? reply.createdAt ?? "";
+  return {
+    id: reply.id,
+    name: coerceText(reply.sender_name ?? reply.senderName ?? reply.name),
+    email: coerceText(reply.sender_email ?? reply.senderEmail ?? reply.email),
+    body: String(reply.body ?? reply.message ?? reply.content ?? ""),
+    date: formatSurveyListDate(createdAt),
+    time: formatLocaleTimeLabel(createdAt),
+    dateTime: formatLocaleDateTime(createdAt),
+    createdAtRaw: createdAt,
+  };
+}
+
+/** Maps an API message record to the Messages UI shape. */
 export function mapMessageRecord(record) {
   if (!record || typeof record !== "object") return null;
 
-  const id = record.id ?? record.message_id ?? record.messageId;
-  if (id == null || id === "") return null;
-
-  const createdRaw =
-    record.created_at ??
-    record.createdAt ??
-    record.date ??
-    record.datetime ??
-    "";
-
-  const isRead = parseIsRead(
-    record.is_read ?? record.isRead ?? record.read ?? record.status
+  const createdAt = record.created_at ?? record.createdAt ?? "";
+  const updatedAt = record.updated_at ?? record.updatedAt ?? "";
+  const isRead = isReadFlag(record.is_read ?? record.isRead ?? record.read);
+  const name = coerceText(record.sender_name ?? record.senderName ?? record.name);
+  const email = coerceText(
+    record.sender_email ?? record.senderEmail ?? record.email
   );
-
-  const name = String(
-    record.sender_name ??
-      record.senderName ??
-      record.name ??
-      record.from_name ??
-      ""
-  ).trim();
-
-  const email = String(
-    record.sender_email ??
-      record.senderEmail ??
-      record.email ??
-      record.from_email ??
-      ""
-  ).trim();
-
-  const subject = String(record.subject ?? record.title ?? "").trim();
-  const body = String(
-    record.body ?? record.message ?? record.content ?? record.description ?? ""
-  );
+  const subject = coerceText(record.subject);
+  const rawBody = record.body ?? record.message ?? record.content ?? "";
+  const body = typeof rawBody === "string" ? rawBody : String(rawBody);
+  const date = formatSurveyListDate(createdAt);
+  const time = formatLocaleTimeLabel(createdAt);
+  const dateTime = formatLocaleDateTime(createdAt);
+  const replies = Array.isArray(record.replies)
+    ? record.replies.map(mapReplyRecord).filter(Boolean)
+    : [];
 
   return {
-    id: String(id),
-    name: name || "—",
-    email: email || "—",
-    subject: subject || "—",
+    id: record.id,
+    name,
+    email,
+    senderName: name,
+    senderEmail: email,
+    subject,
     body,
+    date,
+    time,
+    dateTime,
     isRead,
-    createdAt: createdRaw || null,
-    dateTime: createdRaw ? formatActivityLogDate(createdRaw) : "—",
-    date: createdRaw ? formatLocaleDateLabel(createdRaw) : "—",
-    time: createdRaw ? formatLocaleTimeLabel(createdRaw) : "—",
-    // Header notification shape
-    title: subject || "Message",
-    description: body,
-    datetime: createdRaw ? formatActivityLogDate(createdRaw) : "—",
+    readStatus: isRead ? "Read" : "Unread",
+    createdAtRaw: createdAt,
+    updatedAtRaw: updatedAt,
+    recipientAdminId: record.recipient_admin_id ?? record.recipientAdminId ?? null,
+    deletedAt: record.deleted_at ?? record.deletedAt ?? null,
+    replies,
+    // Notification drawer fields
+    title: subject,
+    description: body.trim() || subject || email,
+    datetime: dateTime,
     read: isRead,
   };
 }
 
+function messageMatchesSearch(item, search) {
+  const query = String(search ?? "").trim().toLowerCase();
+  if (!query) return true;
+  const haystack = [
+    item?.name,
+    item?.email,
+    item?.subject,
+    item?.body,
+    item?.id,
+    item?.readStatus,
+  ]
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(query);
+}
+
 /**
- * GET /api/messages/list?page=&limit=&search=
+ * GET /api/messages/list
+ * @param {{ page?: number, limit?: number, search?: string }} [params]
  */
 export async function getMessages({ page = 1, limit = 10, search = "" } = {}) {
-  const data = await apiRequest(
-    appendListQuery(API_ROUTES.messages.list, { page, limit, search })
-  );
+  const normalizedSearch = String(search ?? "").trim();
+  const path = appendListQuery(API_ROUTES.messages.list, {
+    page,
+    limit,
+    search: normalizedSearch,
+  });
+  const data = await apiRequest(path);
   assertSuccess(data);
 
-  const records = extractMessageList(data);
-  const items = safeMapListItems(records, mapMessageRecord);
+  const rawItems = extractMessageList(data);
+  let items = safeMapListItems(rawItems, mapMessageRecord);
+
+  // Frontend filter fallback when backend ignores `search`.
+  if (normalizedSearch) {
+    const filtered = items.filter((item) =>
+      messageMatchesSearch(item, normalizedSearch)
+    );
+    if (filtered.length !== items.length) {
+      items = filtered;
+    }
+  }
+
   const total = extractListTotalFromResponse(data, items.length);
-  const unreadCount = Number(data.unreadCount ?? data.unread_count);
-  const responsePage = Number(data.page);
-  const responseLimit = Number(data.limit ?? data.pageSize);
-  const responseTotalPages = Number(data.totalPages ?? data.total_pages);
+  const safePage = toNumber(data?.page, page);
+  const pageSize = toNumber(data?.limit, limit);
+  const totalPages = toNumber(
+    data?.totalPages,
+    Math.max(1, Math.ceil(total / (pageSize || 10)) || 1)
+  );
+  // Unread badge source: list `is_read` (per product requirement).
+  const unreadCount = items.filter((item) => !item.isRead).length;
 
   return {
     success: true,
     items,
     total,
-    page: Number.isFinite(responsePage) && responsePage > 0 ? responsePage : page,
-    pageSize:
-      Number.isFinite(responseLimit) && responseLimit > 0 ? responseLimit : limit,
-    totalPages: Number.isFinite(responseTotalPages)
-      ? Math.max(0, responseTotalPages)
-      : Math.max(1, Math.ceil(total / (limit || 10)) || 1),
-    unreadCount: Number.isFinite(unreadCount) ? unreadCount : undefined,
+    page: safePage,
+    pageSize,
+    limit: pageSize,
+    totalPages,
+    unreadCount,
   };
 }
 
-/**
- * GET /api/messages/unread-count
- */
-export async function getMessagesUnreadCount() {
-  const data = await apiRequest(API_ROUTES.messages.unreadCount);
-  assertSuccess(data);
-  const unreadCount = Number(data.unreadCount ?? data.unread_count ?? 0);
-  return Number.isFinite(unreadCount) ? unreadCount : 0;
+/** Alias used by listing pages via useApiListing. */
+export async function getRecords(params) {
+  return getMessages(params);
 }
 
-/**
- * GET /api/messages/:id
- */
+/** GET /api/messages/unread-count — derived from list `is_read` when dedicated endpoint is unused */
+export async function getMessagesUnreadCount() {
+  const list = await getMessages({ page: 1, limit: 100 });
+  return list.items.filter((item) => !item.isRead).length;
+}
+
+/** GET /api/messages/:id — full message detail including body and replies */
 export async function getMessage(id) {
-  const normalizedId = String(id ?? "").trim();
-  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
-    throw new ApiError("Message id is required.", null);
-  }
-
+  const normalizedId = normalizeMessageId(id);
   const data = await apiRequest(API_ROUTES.messages.byId(normalizedId));
-  assertSuccess(data);
+  assertSuccess(data, "Message not found!");
 
-  const record = data.data ?? data.message ?? data;
-  const mapped = mapMessageRecord(record);
+  const mapped = mapMessageRecord(extractMessageRecord(data));
   if (!mapped) {
     throw new ApiError("Message not found!", data);
   }
@@ -158,64 +225,79 @@ export async function getMessage(id) {
 }
 
 /**
- * PATCH /api/messages/:id/read
+ * Mark a single message as read.
+ * Tries PATCH /api/messages/:id/read when available; otherwise returns optimistic result.
  */
 export async function markMessageAsRead(id) {
-  const normalizedId = String(id ?? "").trim();
-  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
-    throw new ApiError("Message id is required.", null);
+  const normalizedId = normalizeMessageId(id);
+  try {
+    const data = await apiRequest(API_ROUTES.messages.markRead(normalizedId), {
+      method: "PATCH",
+    });
+    assertSuccess(data, "Unable to mark message as read.");
+
+    const mapped = mapMessageRecord(extractMessageRecord(data));
+    return {
+      success: true,
+      item: mapped ? { ...mapped, isRead: true, read: true } : null,
+      unreadCount: toNumber(data?.unreadCount ?? data?.unread_count, undefined),
+      ...data,
+    };
+  } catch (error) {
+    // Backend may mark-as-read on detail view instead of a dedicated endpoint.
+    if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
+      return { success: true, item: null, optimistic: true };
+    }
+    throw error;
   }
-
-  const data = await apiRequest(API_ROUTES.messages.markRead(normalizedId), {
-    method: "PATCH",
-  });
-  assertSuccess(data);
-
-  const record = data.data ?? data.message;
-  const mapped = record ? mapMessageRecord(record) : null;
-  const unreadCount = Number(data.unreadCount ?? data.unread_count);
-
-  return {
-    success: true,
-    message: data.message,
-    item: mapped,
-    unreadCount: Number.isFinite(unreadCount) ? unreadCount : undefined,
-  };
 }
 
-/**
- * PATCH /api/messages/read-all
- */
+/** PATCH /api/messages/read-all */
 export async function markAllMessagesAsRead() {
   const data = await apiRequest(API_ROUTES.messages.readAll, {
     method: "PATCH",
   });
-  assertSuccess(data);
-  const unreadCount = Number(data.unreadCount ?? data.unread_count);
+  assertSuccess(data, "Unable to mark all messages as read.");
   return {
     success: true,
-    message: data.message,
-    unreadCount: Number.isFinite(unreadCount) ? unreadCount : 0,
+    unreadCount: 0,
+    ...data,
   };
 }
 
 /**
- * DELETE /api/messages/:id
+ * POST /api/messages/:id/reply
+ * @param {string|number} id
+ * @param {{ replyBody?: string, reply_body?: string }} payload
  */
-export async function deleteMessage(id) {
-  const normalizedId = String(id ?? "").trim();
-  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
-    throw new ApiError("Message id is required.", null);
+export async function replyToMessage(id, payload = {}) {
+  const normalizedId = normalizeMessageId(id);
+  const replyBody = String(
+    payload.replyBody ?? payload.reply_body ?? ""
+  ).trim();
+
+  if (!replyBody) {
+    throw new ApiError("Reply message is required.", null);
   }
 
+  const data = await apiRequest(API_ROUTES.messages.reply(normalizedId), {
+    method: "POST",
+    body: { reply_body: replyBody },
+  });
+  assertSuccess(data, "Unable to send reply.");
+  return data;
+}
+
+/** DELETE /api/messages/:id */
+export async function deleteMessage(id) {
+  const normalizedId = normalizeMessageId(id);
   const data = await apiRequest(API_ROUTES.messages.delete(normalizedId), {
     method: "DELETE",
   });
-  assertSuccess(data);
-  const unreadCount = Number(data.unreadCount ?? data.unread_count);
+  assertSuccess(data, "Unable to delete message.");
   return {
     success: true,
-    message: data.message,
-    unreadCount: Number.isFinite(unreadCount) ? unreadCount : undefined,
+    unreadCount: toNumber(data?.unreadCount ?? data?.unread_count, undefined),
+    ...data,
   };
 }

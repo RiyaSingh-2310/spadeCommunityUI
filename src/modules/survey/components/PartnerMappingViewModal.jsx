@@ -15,6 +15,7 @@ function PartnerMappingViewModal({
   mappingId,
   partnerName,
   isMultiLink = false,
+  onPartnerUrlClick,
 }) {
   const [detail, setDetail] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,12 +33,14 @@ function PartnerMappingViewModal({
         if (!cancelled) setDetail(mapSupplierMappingToDetail(data));
       })
       .catch((err) => {
-        if (!cancelled) toastApiError(err);
+        if (!cancelled) {
+          setDetail(null);
+          toastApiError(err);
+        }
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
       });
-
     return () => {
       cancelled = true;
     };
@@ -99,6 +102,14 @@ function PartnerMappingViewModal({
                   value={detail.linksToAssign ?? "—"}
                 />
               ) : null}
+              <DetailField
+                label="Status"
+                value={detail.statusActive ? "Active" : "Inactive"}
+              />
+              <DetailField
+                label="Is Test?"
+                value={detail.isTest ? "Yes" : "No"}
+              />
               <DetailField label="Complete" value={detail.complete} />
               <DetailField label="Terminate" value={detail.terminate} />
               <DetailField label="Over Quota" value={detail.overQuota} />
@@ -111,12 +122,34 @@ function PartnerMappingViewModal({
               <DetailField
                 label="Partner URL"
                 value={
-                  <ReadOnlyUrl
-                    url={appendIsTestToPartnerUrl(detail.partnerUrl, detail.isTest)}
-                  />
+                  onPartnerUrlClick ? (
+                    <button
+                      type="button"
+                      className="admin-text break-all text-sm font-medium text-[var(--admin-success-text)] hover:underline"
+                      onClick={() =>
+                        onPartnerUrlClick({
+                          mappingId,
+                          partnerUrl: detail.partnerUrl,
+                          isTest: detail.isTest,
+                        })
+                      }
+                      title={appendIsTestToPartnerUrl(detail.partnerUrl, detail.isTest)}
+                    >
+                      {appendIsTestToPartnerUrl(detail.partnerUrl, detail.isTest)}
+                    </button>
+                  ) : (
+                    <ReadOnlyUrl
+                      url={appendIsTestToPartnerUrl(detail.partnerUrl, detail.isTest)}
+                    />
+                  )
                 }
               />
             </DetailGrid>
+          )}
+          {!isLoading && !detail && (
+            <p className="admin-text-muted py-8 text-center text-sm">
+              Failed to load partner mapping details.
+            </p>
           )}
         </div>
 

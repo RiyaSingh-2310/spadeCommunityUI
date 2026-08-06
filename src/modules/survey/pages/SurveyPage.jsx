@@ -95,7 +95,7 @@ function SurveyPage({ isDarkMode }) {
         columns={[
           "ID",
           "Project Name",
-          "Client Code",
+          "Client",
           "Start Date",
           "End Date",
           "Status",

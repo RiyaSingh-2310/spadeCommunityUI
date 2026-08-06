@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Eye, Link2, Loader2, Pencil } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { Eye, ExternalLink, Link2, Loader2, Pencil } from "lucide-react";
 import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
 // import NumericInput from "../../../components/admin/NumericInput";
@@ -30,12 +30,17 @@ import {
   updateSupplierMappingTestMode,
 } from "../services/supplierMappingApi";
 import { getProjectMultiLinkStats } from "../services/projectMultiUrlApi";
+import {
+  appendPartnerVerifyParams,
+  clearPartnerUrlVerifyContext,
+  isPartnerUrlOtpVerified,
+  stashPartnerUrlReturnPath,
+} from "../utils/partnerUrlVerifyContext";
 import PartnerMappingViewModal from "./PartnerMappingViewModal";
 import {
   primaryBtnClass,
   secondaryBtnClass,
   SurveyDataTable,
-  TruncatedUrl,
 } from "./surveyDetailsShared";
 
 const TABLE_COLUMNS = [
@@ -121,10 +126,10 @@ function PartnerMappingTab({
   isDarkMode,
   readOnly = false,
 }) {
+  const location = useLocation();
   const { canWrite } = useModulePermission("survey");
   const allowWrite = canWrite && !readOnly;
   const inputClass = getAdminInputClass();
-  const navigate = useNavigate();
   const resolvedProjectUrlId = String(projectUrlId ?? "").trim();
   const isMultiLink = String(projectLinkType ?? "")
     .toLowerCase()
@@ -141,6 +146,33 @@ function PartnerMappingTab({
   const [partnerOptionsSource, setPartnerOptionsSource] = useState([]);
   const [viewTarget, setViewTarget] = useState(null);
   const [togglingRowId, setTogglingRowId] = useState("");
+
+  const openPartnerUrlWithOtp = useCallback(
+    ({ mappingId, partnerUrl, isTest = false }) => {
+      const rawPartnerUrl = String(partnerUrl ?? "").trim();
+      if (!rawPartnerUrl) return;
+
+      const withTest = appendIsTestToPartnerUrl(rawPartnerUrl, isTest);
+      const returnPath = `${location.pathname}${location.search}${location.hash}`;
+      const alreadyVerified = isPartnerUrlOtpVerified(mappingId);
+
+      setViewTarget(null);
+      clearPartnerUrlVerifyContext();
+
+      let destinationUrl = withTest;
+      if (!alreadyVerified) {
+        stashPartnerUrlReturnPath(mappingId, returnPath);
+        // Pass verify intent in the URL so the NEW tab can open the modal
+        // (sessionStorage is per-tab and does not work with target=_blank + noopener).
+        destinationUrl = appendPartnerVerifyParams(withTest, { mappingId });
+      }
+
+      // Open in a new tab (script-opened so Close ✕ can call window.close()).
+      // Avoid "noopener" here — some browsers then block window.close() on that tab.
+      window.open(destinationUrl, "_blank");
+    },
+    [location.pathname, location.search, location.hash]
+  );
 
   const loadMultiLinkStats = useCallback(async () => {
     if (!projectId) {
@@ -400,7 +432,6 @@ function PartnerMappingTab({
     }
 
     setIsSubmitting(true);
-    const isCreate = formMode === "add";
     try {
       const data =
         formMode === "edit" && form.mappingId
@@ -408,12 +439,6 @@ function PartnerMappingTab({
           : await createSupplierMapping(payload);
 
       toastApiSuccess(data);
-
-      if (isCreate) {
-        navigate(0);
-        return;
-      }
-
       resetForm();
       await loadMappings();
     } catch (error) {
@@ -468,14 +493,29 @@ function PartnerMappingTab({
       return `${row.sno}.`;
     }
     if (col === "Partner URL") {
-      return row.partnerUrl
-        ? (
-            <TruncatedUrl
-              url={appendIsTestToPartnerUrl(row.partnerUrl, row.isTest)}
-              maxWidthClass="max-w-[180px] sm:max-w-[280px]"
-            />
-          )
-        : "—";
+      const resolvedUrl = row.partnerUrl
+        ? appendIsTestToPartnerUrl(row.partnerUrl, row.isTest)
+        : "";
+      if (!resolvedUrl) return "—";
+
+      return (
+        <button
+          type="button"
+          onClick={() =>
+            openPartnerUrlWithOtp({
+              mappingId: row.id,
+              partnerUrl: row.partnerUrl,
+              isTest: row.isTest,
+            })
+          }
+          className="admin-text inline-flex max-w-full items-center gap-1.5 text-[var(--admin-primary-color)] hover:underline max-w-[180px] sm:max-w-[280px]"
+          title={resolvedUrl}
+          aria-label="Open partner survey"
+        >
+          <span className="min-w-0 truncate">{resolvedUrl}</span>
+          <ExternalLink size={14} className="shrink-0 opacity-70" aria-hidden />
+        </button>
+      );
     }
     if (col === "Status") {
       const rowId = String(row.id);
@@ -543,7 +583,10 @@ function PartnerMappingTab({
   };
 
   const canSubmit = isFormValid(errors) && !isSubmitting && !isFormLoading;
-  const showAddPartner = allowWrite && multiLinkStats.addPartner;
+  // Multi-link-stats.addPartner is remainingMultiLinkCount > 0 (backend).
+  // Single Link has no multi-URL pool, so that flag is always false — ignore it.
+  const showAddPartner =
+    allowWrite && (!isMultiLink || multiLinkStats.addPartner);
 
   if (!resolvedProjectUrlId) {
     return (
@@ -764,6 +807,9 @@ function PartnerMappingTab({
         mappingId={viewTarget?.mappingId}
         partnerName={viewTarget?.partnerName}
         isMultiLink={isMultiLink}
+        onPartnerUrlClick={({ partnerUrl, isTest, mappingId }) =>
+          openPartnerUrlWithOtp({ mappingId, partnerUrl, isTest })
+        }
       />
     </>
   );

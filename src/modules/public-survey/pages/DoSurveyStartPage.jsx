@@ -3,6 +3,15 @@ import { useLocation, useNavigate, useParams, useSearchParams } from "react-rout
 import { Loader2 } from "lucide-react";
 import PublicQuestionnaireLayout from "../../public-questionnaire/layout/PublicQuestionnaireLayout";
 import SurveyEmptyState from "../../public-questionnaire/components/SurveyEmptyState";
+import PartnerUrlOtpVerificationModal from "../../survey/components/PartnerUrlOtpVerificationModal";
+import {
+  PARTNER_MAPPING_ID_QUERY_KEY,
+  PARTNER_VERIFY_QUERY_KEY,
+  clearPartnerUrlVerifyContext,
+  isPartnerUrlOtpVerified,
+  markPartnerUrlOtpVerified,
+  readPartnerVerifyIntentFromSearch,
+} from "../../survey/utils/partnerUrlVerifyContext";
 import DoSurveyHero from "../components/DoSurveyHero";
 import { fetchDoSurveyStartDetails, startDoSurvey } from "../services/doSurveyApi";
 import {
@@ -11,6 +20,7 @@ import {
 } from "../utils/doSurveyHelpers";
 
 const IS_TEST_QUERY_KEYS = ["IsTest", "isTest", "is_test"];
+const VERIFY_QUERY_KEYS = [PARTNER_VERIFY_QUERY_KEY, PARTNER_MAPPING_ID_QUERY_KEY];
 
 function readIsTestFromSearch(search) {
   const query = String(search ?? "").startsWith("?")
@@ -49,13 +59,61 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const [startError, setStartError] = useState("");
   const [isStarting, setIsStarting] = useState(false);
 
+  const [verifyContext, setVerifyContext] = useState(null);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verifyIntentResolved, setVerifyIntentResolved] = useState(false);
+
   useEffect(() => {
     setIsSearchReady(true);
   }, [location.search, searchParams]);
 
-  // Read IsTest once, then remove it from the address bar.
+  /**
+   * Read partnerVerify=1 from the URL (set when Partner Mapping opens a new tab).
+   * Must run before/with URL sanitize so we capture intent before params are stripped.
+   */
   useEffect(() => {
-    if (!isSearchReady || urlSanitized) return;
+    if (!isSearchReady || verifyIntentResolved) return;
+
+    const intent = readPartnerVerifyIntentFromSearch(searchParams, location.search);
+    if (!intent) {
+      setVerifyContext(null);
+      setShowVerifyModal(false);
+      setIsEmailVerified(true);
+      setVerifyIntentResolved(true);
+      return;
+    }
+
+    const mappingId = intent.mappingId;
+    if (mappingId && isPartnerUrlOtpVerified(mappingId)) {
+      setVerifyContext(intent);
+      setIsEmailVerified(true);
+      setShowVerifyModal(false);
+      setVerifyIntentResolved(true);
+      clearPartnerUrlVerifyContext();
+      return;
+    }
+
+    setVerifyContext({
+      ...intent,
+      partnerUrl: `${location.pathname}${location.search}`,
+      token: String(token ?? "").trim(),
+    });
+    setIsEmailVerified(false);
+    setShowVerifyModal(true);
+    setVerifyIntentResolved(true);
+  }, [
+    isSearchReady,
+    verifyIntentResolved,
+    searchParams,
+    location.search,
+    location.pathname,
+    token,
+  ]);
+
+  // Strip IsTest + partnerVerify params from the address bar after capture.
+  useEffect(() => {
+    if (!isSearchReady || !verifyIntentResolved || urlSanitized) return;
 
     const params = new URLSearchParams(location.search);
     const captured = readIsTestFromSearch(location.search);
@@ -63,9 +121,21 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       setIsTestHint(captured);
     }
 
-    const hadIsTest = IS_TEST_QUERY_KEYS.some((key) => params.has(key));
-    if (hadIsTest) {
-      IS_TEST_QUERY_KEYS.forEach((key) => params.delete(key));
+    let changed = false;
+    IS_TEST_QUERY_KEYS.forEach((key) => {
+      if (params.has(key)) {
+        params.delete(key);
+        changed = true;
+      }
+    });
+    VERIFY_QUERY_KEYS.forEach((key) => {
+      if (params.has(key)) {
+        params.delete(key);
+        changed = true;
+      }
+    });
+
+    if (changed) {
       const nextSearch = params.toString();
       navigate(
         {
@@ -77,7 +147,14 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     }
 
     setUrlSanitized(true);
-  }, [isSearchReady, urlSanitized, location.pathname, location.search, navigate]);
+  }, [
+    isSearchReady,
+    verifyIntentResolved,
+    urlSanitized,
+    location.pathname,
+    location.search,
+    navigate,
+  ]);
 
   const respondentUid = useMemo(
     () => resolveRespondentUid(searchParams, location.search),
@@ -87,6 +164,8 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
 
   const hasValidUid = respondentUid != null;
   const showUidError = !isLoading && isSearchReady && !hasValidUid;
+  const requiresEmailVerification = Boolean(verifyContext) && !isEmailVerified;
+  const contentLocked = requiresEmailVerification;
 
   useEffect(() => {
     let cancelled = false;
@@ -142,6 +221,8 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const errorVariant = classifyDoSurveyError(loadError);
 
   async function handleStartSurvey() {
+    if (contentLocked) return;
+
     const actionUid =
       resolveRespondentUid(searchParams, location.search) ??
       (typeof window !== "undefined"
@@ -174,6 +255,26 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     }
   }
 
+  const handleVerifyClose = () => {
+    setShowVerifyModal(false);
+    // Close this Partner URL tab only — no redirect/navigation.
+    window.setTimeout(() => {
+      window.close();
+    }, 0);
+  };
+
+  const handleVerified = () => {
+    markPartnerUrlOtpVerified(verifyContext?.mappingId);
+    setIsEmailVerified(true);
+    setShowVerifyModal(false);
+    clearPartnerUrlVerifyContext();
+  };
+
+  const pageReady = !isLoading && isSearchReady && urlSanitized;
+  // Open modal as soon as verify intent is known — do not wait on survey API.
+  const modalOpen =
+    showVerifyModal && requiresEmailVerification && verifyIntentResolved;
+
   return (
     <PublicQuestionnaireLayout isDarkMode={isDarkMode} onToggleTheme={onToggleTheme}>
       {isLoading || !isSearchReady || !urlSanitized ? (
@@ -183,53 +284,66 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
         </div>
       ) : null}
 
-      {!isLoading && isSearchReady && urlSanitized && !survey ? (
-        <SurveyEmptyState
-          variant={errorVariant}
-          description={loadError || undefined}
-        />
-      ) : null}
-
-      {!isLoading && isSearchReady && urlSanitized && survey && !hasStarted ? (
-        <>
-          <DoSurveyHero
-            survey={survey}
-            onStart={handleStartSurvey}
-            disabled={showUidError}
-            isStarting={isStarting}
+      <div
+        className={contentLocked ? "pointer-events-none select-none" : undefined}
+        aria-hidden={contentLocked || undefined}
+      >
+        {pageReady && !survey ? (
+          <SurveyEmptyState
+            variant={errorVariant}
+            description={loadError || undefined}
           />
-          {showUidError ? (
-            <p className="pq-hero-error" role="alert">
-              Missing or invalid uid in the link. Use a URL like{" "}
-              <code className="text-xs">/dosurvey/{token}?uid=your-respondent-id</code>
-            </p>
-          ) : null}
-          {startError ? (
-            <p className="pq-hero-error" role="alert">
-              {startError}
-            </p>
-          ) : null}
-        </>
-      ) : null}
+        ) : null}
 
-      {!isLoading && isSearchReady && urlSanitized && survey && hasStarted ? (
-        <div className="pq-card pq-state-card pq-empty-state">
-          <h1 className="pq-empty-title">Survey starting soon</h1>
-          <p className="pq-empty-description">
-            {startMessage ||
-              "Your session has been recorded. The full survey experience will load here once the backend API is connected."}
-          </p>
-          <p className="admin-text-subtle mt-4 text-sm">
-            Token: <span className="font-mono">{survey.meta?.previewLabel || token}</span>
-            {respondentUid ? (
-              <>
-                {" "}
-                · Respondent: <span className="font-mono">{respondentUid}</span>
-              </>
+        {pageReady && survey && !hasStarted ? (
+          <>
+            <DoSurveyHero
+              survey={survey}
+              onStart={handleStartSurvey}
+              disabled={showUidError || contentLocked}
+              isStarting={isStarting}
+            />
+            {showUidError ? (
+              <p className="pq-hero-error" role="alert">
+                Missing or invalid uid in the link. Use a URL like{" "}
+                <code className="text-xs">/dosurvey/{token}?uid=your-respondent-id</code>
+              </p>
             ) : null}
-          </p>
-        </div>
-      ) : null}
+            {startError ? (
+              <p className="pq-hero-error" role="alert">
+                {startError}
+              </p>
+            ) : null}
+          </>
+        ) : null}
+
+        {pageReady && survey && hasStarted ? (
+          <div className="pq-card pq-state-card pq-empty-state">
+            <h1 className="pq-empty-title">Survey starting soon</h1>
+            <p className="pq-empty-description">
+              {startMessage ||
+                "Your session has been recorded. The full survey experience will load here once the backend API is connected."}
+            </p>
+            <p className="admin-text-subtle mt-4 text-sm">
+              Token: <span className="font-mono">{survey.meta?.previewLabel || token}</span>
+              {respondentUid ? (
+                <>
+                  {" "}
+                  · Respondent: <span className="font-mono">{respondentUid}</span>
+                </>
+              ) : null}
+            </p>
+          </div>
+        ) : null}
+      </div>
+
+      <PartnerUrlOtpVerificationModal
+        isOpen={modalOpen}
+        onClose={handleVerifyClose}
+        partnerUrl={verifyContext?.partnerUrl || location.pathname}
+        mappingId={verifyContext?.mappingId}
+        onVerified={handleVerified}
+      />
     </PublicQuestionnaireLayout>
   );
 }

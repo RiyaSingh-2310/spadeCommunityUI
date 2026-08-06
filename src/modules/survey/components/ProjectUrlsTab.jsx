@@ -55,6 +55,7 @@ import {
 
 const PROJECT_URL_LIST_COLUMNS_BASE = [
   "ID",
+  "Project URL Code",
   "Description",
   "Country",
   "Language",
@@ -124,6 +125,7 @@ function normalizeUrlRecord(row, projectFk) {
 
 function toListRow(record, { multiLinkCountByUrlId = {} } = {}) {
   const id = record?.id != null && record.id !== "" ? String(record.id) : "";
+  const projectUrlCode = formatListMetric(record?.projectUrlCode);
   const description = String(record?.discussion ?? "").trim() || "—";
   const country = String(record?.country ?? "").trim() || "—";
   const language = String(record?.language ?? "").trim() || "—";
@@ -144,6 +146,7 @@ function toListRow(record, { multiLinkCountByUrlId = {} } = {}) {
 
   return {
     id,
+    projectUrlCode,
     description,
     country,
     language,
@@ -246,6 +249,8 @@ function ProjectUrlsTab({
   const [multiLinkCountByUrlId, setMultiLinkCountByUrlId] = useState({});
   const [multiUrlCsvFiles, setMultiUrlCsvFiles] = useState([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [cloneTarget, setCloneTarget] = useState(null);
+  const [isCloning, setIsCloning] = useState(false);
   const [routeState, setRouteState] = useState({ projectFk, urlView });
   const [loadedEditKey, setLoadedEditKey] = useState("");
   const [editFormReady, setEditFormReady] = useState(false);
@@ -596,6 +601,11 @@ function ProjectUrlsTab({
     });
   };
 
+  const handleCloneRequest = (row) => {
+    if (!canWrite || isCloning) return;
+    setCloneTarget(row);
+  };
+
   const closeForm = () => {
     navigateToList();
   };
@@ -692,6 +702,46 @@ function ProjectUrlsTab({
     }
   };
 
+  const handleCloneConfirm = async () => {
+    const record =
+      cloneTarget?.record ??
+      urlRecords.find((item) => String(item.id) === String(cloneTarget?.id));
+
+    if (!record) {
+      setCloneTarget(null);
+      return;
+    }
+
+    setIsCloning(true);
+    setCloneTarget(null);
+
+    try {
+      await ensureProjectLinkType();
+
+      const sourceForm = normalizeUrlRecord(record, projectFk);
+      const isMultiLink = selectedLinkType === "Multi Link";
+
+      const payloadForm = {
+        ...sourceForm,
+        id: "",
+        projectUrlCode: "",
+        projectId: String(projectFk ?? ""),
+      };
+
+      const data = await createProjectUrl(projectFk, payloadForm, {
+        isMultiLink,
+        csvFiles: [],
+      });
+
+      toastApiSuccess(data);
+      await loadUrlRecords();
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsCloning(false);
+    }
+  };
+
   const handleDeleteRequest = (row) => {
     setPendingDelete(row);
   };
@@ -749,6 +799,7 @@ function ProjectUrlsTab({
           showDeleteAction={canWrite}
           statusAsText
           onEdit={canWrite ? openEditForm : undefined}
+          onClone={canWrite ? handleCloneRequest : undefined}
           onDelete={canWrite ? handleDeleteRequest : undefined}
           onView={!canWrite ? openEditForm : undefined}
           permissionModule="survey"
@@ -766,6 +817,23 @@ function ProjectUrlsTab({
             }}
             onConfirm={handleDeleteConfirm}
             isDeleting={isDeleting}
+          />
+        ) : null}
+
+        {canWrite ? (
+          <DeleteConfirmModal
+            isOpen={Boolean(cloneTarget)}
+            onCancel={() => {
+              if (isCloning) return;
+              setCloneTarget(null);
+            }}
+            onConfirm={handleCloneConfirm}
+            isDeleting={isCloning}
+            title="Clone Project URL"
+            message="Are you sure you want to clone this project URL?"
+            confirmLabel="Clone"
+            confirmingLabel="Cloning..."
+            confirmClassName="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#10a950] px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           />
         ) : null}
       </>
@@ -802,6 +870,14 @@ function ProjectUrlsTab({
             <input
               className={inputClass}
               value={projectCode}
+              readOnly
+              disabled
+            />
+          </FormField>
+          <FormField label="Project URL Code">
+            <input
+              className={inputClass}
+              value={form.projectUrlCode || "—"}
               readOnly
               disabled
             />

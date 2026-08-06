@@ -204,7 +204,7 @@ function AddSalesManagerPage({ isDarkMode }) {
 
   if (isEdit && loadFailed) {
     return (
-      <div className="space-y-5">
+      <div className="space-y-6">
         <AdminPageHeader
           title="Edit Sales Manager"
           breadcrumbs={[
@@ -228,7 +228,7 @@ function AddSalesManagerPage({ isDarkMode }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <AdminPageHeader
         title={isEdit ? "Edit Sales Manager" : "Add Sales Manager"}
         breadcrumbs={[

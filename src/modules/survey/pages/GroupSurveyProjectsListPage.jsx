@@ -173,7 +173,7 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
         columns={[
           "ID",
           "Project Name",
-          "Client Code",
+          "Client",
           "LOI",
           "IR",
           "Start Date",

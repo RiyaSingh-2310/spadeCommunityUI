@@ -1,4 +1,4 @@
-import { getRequiredError, isFormValid } from "../../shared/utils/validation";
+import { getDateRangeError, getRequiredError, isFormValid } from "../../shared/utils/validation";
 import {
   sanitizeDecimal,
   sanitizeInteger,
@@ -193,7 +193,9 @@ export function getProjectUrlFormErrors(form) {
     cpiRate: getDecimalFieldError(form.cpiRate, "CPI"),
     sampleSize: getIntegerFieldError(form.sampleSize, "Sample Size"),
     startDate: getRequiredError(form.startDate, "Start Date"),
-    endDate: getRequiredError(form.endDate, "End Date"),
+    endDate:
+      getRequiredError(form.endDate, "End Date") ||
+      getDateRangeError(form.startDate, form.endDate),
     preScreenerId: form.preScreen
       ? getRequiredError(preScreenerId, "Pre-Screen Group")
       : "",

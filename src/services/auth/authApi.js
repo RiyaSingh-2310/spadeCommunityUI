@@ -109,7 +109,18 @@ export async function loginAdmin(credentials) {
     logAuthDebug("Login", "Response data", data);
   } catch (error) {
     logAuthError("Login", error);
-    throw new ApiError("Invalid Credentials", error?.data ?? null, error?.status ?? 401);
+    const message =
+      error instanceof ApiError && error.message
+        ? error.message
+        : error?.message || "Unable to sign in. Please try again.";
+    const isCredentialFailure =
+      error?.status === 401 ||
+      /invalid|credential|unauthorized|password|email/i.test(String(message));
+    throw new ApiError(
+      isCredentialFailure ? "Invalid Credentials" : message,
+      error?.data ?? null,
+      error?.status ?? 401
+    );
   }
 
   const mapped = mapLoginResponse(data);
