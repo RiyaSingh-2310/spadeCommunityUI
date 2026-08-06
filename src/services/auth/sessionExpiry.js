@@ -1,4 +1,5 @@
 import toast from "../toast/toast";
+import { notifyPartnerUrlTabsAdminLogout } from "../../modules/survey/utils/partnerUrlTabSync";
 import { clearAuthSession } from "./authStorage";
 
 export const SESSION_EXPIRED_MESSAGE =
@@ -39,6 +40,7 @@ export function forceLogoutAfterSessionExpired() {
   if (sessionExpiredHandled) return;
   sessionExpiredHandled = true;
 
+  notifyPartnerUrlTabsAdminLogout();
   clearAuthSession();
 
   if (typeof window === "undefined") return;

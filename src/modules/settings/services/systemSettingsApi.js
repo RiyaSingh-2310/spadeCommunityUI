@@ -4,12 +4,12 @@ import { ApiError } from "../../../services/api/ApiError";
 import {
   DEFAULT_NOTIFICATION_SETTINGS,
   DEFAULT_SYSTEM_SETTINGS,
+  getSystemSettings,
   saveNotificationSettings,
   saveSystemSettings,
 } from "../utils/settingsStorage";
 import {
   normalizeThemePreference,
-  toApiThemePreference,
 } from "../utils/themePreference";
 
 const NOTIFICATION_SETTINGS_SECTION = "notification_preferences";
@@ -121,23 +121,6 @@ function mapNotificationSettingsFromApi(fields = {}) {
   };
 }
 
-function toApiSystemPayload(settings) {
-  const sessionTimeout = Number(settings.sessionTimeout);
-  const rememberMeDays = Number(settings.rememberMeDuration);
-
-  return {
-    application_name: String(settings.applicationName ?? "").trim(),
-    default_language: String(settings.defaultLanguage ?? "").trim(),
-    date_format: String(settings.dateFormat ?? "").trim(),
-    time_format: String(settings.timeFormat ?? "").trim(),
-    theme_preference: toApiThemePreference(settings.themePreference),
-    two_factor_auth: settings.twoFactorAuth ? 1 : 0,
-    login_alerts: settings.loginAlerts ? 1 : 0,
-    session_timeout_minutes: Number.isFinite(sessionTimeout) ? sessionTimeout : undefined,
-    remember_me_days: Number.isFinite(rememberMeDays) ? rememberMeDays : undefined,
-  };
-}
-
 function toApiNotificationPayload(settings) {
   return {
     emailNotifications: String(Boolean(settings.emailNotifications)),
@@ -169,35 +152,29 @@ function isNotFoundError(error) {
 }
 
 /**
- * Loads system settings from GET /api/system-settings.
- * Falls back to defaults when settings have not been created yet.
+ * Loads system settings from local storage only.
+ * GET /api/system-settings is intentionally not called.
  */
 export async function fetchSystemSettings() {
-  try {
-    const data = await apiRequest(API_ROUTES.systemSettings.get);
-    assertSuccess(data);
-    const mapped = mapSystemSettingsFromApi(data?.data ?? {});
-    saveSystemSettings(mapped);
-    return mapped;
-  } catch (error) {
-    if (isNotFoundError(error)) {
-      return { ...DEFAULT_SYSTEM_SETTINGS };
-    }
-    throw error;
-  }
+  const mapped = mapSystemSettingsFromApi(getSystemSettings());
+  return mapped;
 }
 
-/** PUT /api/system-settings — update system settings. */
+/**
+ * Persists system settings to local storage only.
+ * PUT /api/system-settings is intentionally not called.
+ */
 export async function updateSystemSettings(settings) {
-  const payload = toApiSystemPayload(settings);
-  const data = await apiRequest(API_ROUTES.systemSettings.update, {
-    method: "PUT",
-    body: payload,
+  const mapped = mapSystemSettingsFromApi({
+    ...getSystemSettings(),
+    ...(settings && typeof settings === "object" ? settings : {}),
   });
-  const response = assertSuccess(data);
-  const mapped = mapSystemSettingsFromApi(response?.data ?? payload);
   saveSystemSettings(mapped);
-  return response;
+  return {
+    success: true,
+    message: "System settings saved successfully.",
+    data: mapped,
+  };
 }
 
 /**

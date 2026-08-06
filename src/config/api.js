@@ -16,12 +16,14 @@ export const API_ROUTES = {
     update: (id) => `/api/admin/updateadmin/${id}`,
     updatePermissions: (id) => `/api/admin/permissions/${id}`,
     delete: (id) => `/api/admin/delete/${id}`,
+    exportCsv: "/api/admin/export/csv",
   },
   clients: {
     list: "/api/clients/all",
     create: "/api/clients/add",
     update: (id) => `/api/clients/update/${id}`,
     delete: (id) => `/api/clients/delete/${id}`,
+    exportCsv: "/api/clients/export/csv",
   },
   countries: {
     list: "/api/countries/list",
@@ -33,6 +35,7 @@ export const API_ROUTES = {
     create: "/api/partner/add",
     update: (id) => `/api/partner/${id}`,
     delete: (id) => `/api/admin/partner/${id}`,
+    exportCsv: "/api/partner/export/csv",
   },
   projectManagers: {
     list: "/api/projectmanager/list",
@@ -43,6 +46,7 @@ export const API_ROUTES = {
     update: (id) => `/api/projectmanager/${id}`,
     updateStatus: (id) => `/api/projectmanager/${id}/status`,
     delete: (id) => `/api/projectmanager/${id}`,
+    exportCsv: "/api/projectmanager/export/csv",
   },
   salesProjects: {
     list: "/api/sales/project/list",
@@ -64,6 +68,7 @@ export const API_ROUTES = {
     update: (id) => `/api/salesmanager/${id}`,
     updateStatus: (id) => `/api/salesmanager/status/${id}`,
     delete: (id) => `/api/salesmanager/${id}`,
+    exportCsv: "/api/salesmanager/export/csv",
   },
   questionaire: {
     create: "/api/questionaire/createQuestionaire",
@@ -96,6 +101,7 @@ export const API_ROUTES = {
     updateStatus: (id) => `/api/question-library/${id}/status`,
     sortOrder: "/api/question-library/sort-order",
     delete: (id) => `/api/question-library/${id}`,
+    exportCsv: "/api/question-library/export/csv",
   },
   questionnaireGroup: {
     list: "/api/questionnaire-group/list",
@@ -106,6 +112,7 @@ export const API_ROUTES = {
     delete: (id) => `/api/questionnaire-group/${id}`,
     publicQuestions: (id) => `/api/questionnaire-group/public/${id}/questions`,
     publicSubmit: (id) => `/api/questionnaire-group/public/${id}/submit`,
+    exportCsv: "/api/questionnaire-group/export/csv",
   },
   survey: {
     list: "/api/survey/list",
@@ -161,6 +168,10 @@ export const API_ROUTES = {
     byToken: (token) => `/api/dosurvey/${encodeURIComponent(String(token ?? "").trim())}`,
     start: (token) =>
       `/api/dosurvey/${encodeURIComponent(String(token ?? "").trim())}/start`,
+  },
+  surveyAccess: {
+    sendOtp: "/api/survey-access/send-otp",
+    verifyOtp: "/api/survey-access/verify-otp",
   },
   groupSurvey: {
     list: "/api/survey/groupproject/list",
@@ -242,10 +253,6 @@ export const API_ROUTES = {
       `/api/homepage/${encodeURIComponent(String(section ?? "").trim())}`,
     updateSection: (section) =>
       `/api/homepage/${encodeURIComponent(String(section ?? "").trim())}`,
-  },
-  systemSettings: {
-    get: "/api/system-settings",
-    update: "/api/system-settings",
   },
 };
 

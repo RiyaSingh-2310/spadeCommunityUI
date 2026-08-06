@@ -11,6 +11,7 @@ import {
   formValueToApiStatus,
 } from "../../shared/utils/statusLabels";
 import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
+import { formatSurveyListDate } from "../../shared/utils/dateTime";
 import {
   getCommunityUserById,
 } from "../data/communityUsersStore";
@@ -151,7 +152,7 @@ export function mapPanelistToListingRow(panelist) {
     rewardPoints: panelist?.balance_point ?? panelist?.balancePoint ?? "—",
     joiningDate: formatPanelistDate(panelist?.created_at ?? panelist?.createdAt),
     ipAddress: panelist?.ip_address ?? panelist?.ipAddress ?? "—",
-    createdAt: panelist?.created_at ?? panelist?.createdAt ?? "",
+    createdAt: formatSurveyListDate(panelist?.created_at ?? panelist?.createdAt),
     photo: panelist?.photo ?? panelist?.image ?? null,
   };
 }

@@ -24,6 +24,7 @@ const LIST_COLUMNS = [
   "Name",
   "Email Address",
   "Mobile Number",
+  "Created At",
   "Status",
   "Action",
 ];

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
+import { useCsvExport } from "../../shared/hooks/useCsvExport";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
@@ -10,6 +11,7 @@ import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   deleteProjectManager,
+  exportProjectManagersCsv,
   getRecords,
   updateProjectManagerStatus,
 } from "../../../services/projectManagers/projectManagersApi";
@@ -84,6 +86,9 @@ function ProjectManagersPage({ isDarkMode }) {
     }
   };
 
+  const exportCsv = useCallback(() => exportProjectManagersCsv(), []);
+  const { isExporting, downloadCsv } = useCsvExport(exportCsv);
+
   return (
     <div className="space-y-4">
       <ModuleListingPage
@@ -92,6 +97,9 @@ function ProjectManagersPage({ isDarkMode }) {
         searchPlaceholder="Search project managers..."
         actionLabel="Add Project Manager"
         onActionClick={() => navigate("/project-managers/add")}
+        csvExportLabel="Download CSV"
+        onCsvExportClick={downloadCsv}
+        isCsvExporting={isExporting}
         columns={LIST_COLUMNS}
         rows={sortedRows}
         sortableColumns={sortableColumns}

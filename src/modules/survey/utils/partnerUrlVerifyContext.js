@@ -1,12 +1,10 @@
 /**
  * Partner URL email-verification handoff.
  *
- * Root cause of the modal-not-opening bug:
- * `sessionStorage` is per-tab. Opening with `window.open(..., "noopener")`
- * creates a tab that cannot read context stashed by Partner Mapping.
- *
- * Fix: pass verify intent via URL query params (visible to the new tab),
- * and store the verified flag in `localStorage` (shared across tabs).
+ * Intent is passed via URL query params when Partner Mapping opens a new tab.
+ * Pending verification is also stashed in `sessionStorage` (same tab) so the
+ * modal survives refresh / remount after URL params are sanitized.
+ * Verified flag lives in `localStorage` (shared across tabs).
  */
 
 export const PARTNER_VERIFY_QUERY_KEY = "partnerVerify";
@@ -14,6 +12,7 @@ export const PARTNER_MAPPING_ID_QUERY_KEY = "mappingId";
 
 const VERIFIED_PREFIX = "partnerUrlOtpVerified:";
 const RETURN_PATH_PREFIX = "partnerUrlVerifyReturn:";
+const PENDING_VERIFY_KEY = "partnerUrlVerifyPending";
 
 function extractDoSurveyTokenFromUrl(partnerUrl) {
   const raw = String(partnerUrl ?? "").trim();
@@ -149,6 +148,63 @@ export function readPartnerVerifyIntentFromSearch(searchParams, search = "") {
   };
 }
 
+/**
+ * Persist pending verify intent for this browser tab so the modal can reopen
+ * after refresh, remount, or URL sanitize that strips partnerVerify params.
+ * @param {{ mappingId?: string, partnerUrl?: string, token?: string, returnPath?: string }} context
+ */
+export function stashPartnerUrlVerifyPending(context) {
+  if (typeof sessionStorage === "undefined") return;
+  const mappingId = String(context?.mappingId ?? "").trim();
+  if (!mappingId) return;
+  try {
+    sessionStorage.setItem(
+      PENDING_VERIFY_KEY,
+      JSON.stringify({
+        mappingId,
+        partnerUrl: String(context?.partnerUrl ?? "").trim(),
+        token: String(context?.token ?? "").trim(),
+        returnPath:
+          String(context?.returnPath ?? "").trim() ||
+          readPartnerUrlReturnPath(mappingId),
+      })
+    );
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+/** @returns {{ mappingId: string, partnerUrl: string, token: string, returnPath: string } | null} */
+export function readPartnerUrlVerifyPending() {
+  if (typeof sessionStorage === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(PENDING_VERIFY_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const mappingId = String(parsed?.mappingId ?? "").trim();
+    if (!mappingId) return null;
+    return {
+      mappingId,
+      partnerUrl: String(parsed?.partnerUrl ?? "").trim(),
+      token: String(parsed?.token ?? "").trim(),
+      returnPath:
+        String(parsed?.returnPath ?? "").trim() ||
+        readPartnerUrlReturnPath(mappingId),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function clearPartnerUrlVerifyPending() {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.removeItem(PENDING_VERIFY_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 /** @deprecated Prefer URL params; kept for transitional reads during sanitize. */
 export function readPartnerUrlVerifyContext({ token } = {}) {
   void token;
@@ -156,7 +212,7 @@ export function readPartnerUrlVerifyContext({ token } = {}) {
 }
 
 export function clearPartnerUrlVerifyContext() {
-  // No-op for legacy sessionStorage key cleanup
+  clearPartnerUrlVerifyPending();
   if (typeof sessionStorage === "undefined") return;
   try {
     sessionStorage.removeItem("partnerUrlVerifyContext");

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Route, Routes, useParams } from "react-router-dom";
+import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import PageLoader from "../components/shared/PageLoader";
 import GuestOnly from "../components/auth/GuestOnly";
 import RequireAuth from "../components/auth/RequireAuth";
@@ -126,6 +126,7 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
 
         <Route element={<AdminLayout isDarkMode={isDarkMode} onToggleTheme={onToggleTheme} />}>
           <Route path="/" element={withSuspense(Pages.DashboardPage, { isDarkMode })} />
+          <Route path="/dashboard" element={<Navigate to="/" replace />} />
           <Route path="/users" element={withSuspense(Pages.UsersPage, { isDarkMode })} />
           <Route
             path="/users/add"
@@ -378,8 +379,16 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
             path="/system-email/edit/:id"
             element={<EditEmailTemplateRoute isDarkMode={isDarkMode} />}
           />
+          {/* Invalid / unknown routes → Dashboard */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
+
+        {/* Catch unmatched authenticated routes outside AdminLayout */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
+
+      {/* Unauthenticated unknown paths → auth (RequireAuth handles session); fallback to dashboard path */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

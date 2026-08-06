@@ -1,5 +1,6 @@
 import { API_ROUTES } from "../../config/api";
 import { apiRequest } from "../api/client";
+import { downloadCsvExport } from "../api/csvExport";
 import { ApiError } from "../api/ApiError";
 import {
   buildPermissionsPayload,
@@ -295,4 +296,11 @@ export async function deleteRecord(id) {
   });
 
   return assertSuccess(data);
+}
+
+/** GET /api/admin/export/csv */
+export async function exportAdminUsersCsv() {
+  return downloadCsvExport(API_ROUTES.admin.exportCsv, {
+    defaultFilename: "admin-users.csv",
+  });
 }

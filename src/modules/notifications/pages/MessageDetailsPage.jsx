@@ -17,7 +17,7 @@ const SECTION_BORDER = { borderColor: "var(--admin-header-surface-border)" };
 function MessageDetailsPage({ isDarkMode }) {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { markAsRead, removeMessage } = useMessages();
+  const { markAsRead, removeMessage, refreshRecent } = useMessages();
   const [message, setMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -30,7 +30,7 @@ function MessageDetailsPage({ isDarkMode }) {
 
   const loadMessage = useCallback(async ({ silent = false } = {}) => {
     const normalizedId = String(id ?? "").trim();
-    if (!normalizedId) {
+    if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
       setMessage(null);
       setLoadError("Message not found.");
       setIsLoading(false);
@@ -45,7 +45,8 @@ function MessageDetailsPage({ isDarkMode }) {
       const data = await getMessage(normalizedId);
       setMessage(data);
       setLoadError("");
-      if (!data.isRead) {
+      // Backend marks read on GET detail; sync drawer/badge/list optimistically.
+      if (data && !data.isRead) {
         markAsRead(normalizedId)
           .then(() => {
             setMessage((prev) =>
@@ -88,13 +89,14 @@ function MessageDetailsPage({ isDarkMode }) {
         toastApiSuccess(data);
         setIsReplyOpen(false);
         await loadMessage({ silent: true });
+        refreshRecent?.({ silent: true })?.catch?.(() => {});
       } catch (error) {
         toastApiError(error);
       } finally {
         setIsReplying(false);
       }
     },
-    [id, loadMessage]
+    [id, loadMessage, refreshRecent]
   );
 
   const pageHeader = (
@@ -125,17 +127,27 @@ function MessageDetailsPage({ isDarkMode }) {
     return (
       <div className="space-y-6">
         {pageHeader}
-        <p className="admin-text-muted text-sm">{loadError || "Message not found."}</p>
-        <button
-          type="button"
-          onClick={goBack}
-          className="admin-btn-primary inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold"
-        >
-          Back to Messages
-        </button>
+        <TableCard isDarkMode={isDarkMode}>
+          <div className="flex flex-col items-start gap-4 p-4 sm:p-6">
+            <p className="admin-text-muted text-sm">
+              {loadError || "Message not found."}
+            </p>
+            <button
+              type="button"
+              onClick={goBack}
+              className="admin-btn-primary inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold"
+            >
+              Back to Messages
+            </button>
+          </div>
+        </TableCard>
       </div>
     );
   }
+
+  const replies = Array.isArray(message.replies) ? message.replies : [];
+  const bodyText =
+    typeof message.body === "string" ? message.body : String(message.body ?? "");
 
   return (
     <div className="space-y-6">
@@ -145,7 +157,7 @@ function MessageDetailsPage({ isDarkMode }) {
         <div className="p-2 sm:p-3 lg:p-4">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-start gap-3.5 sm:gap-4">
-              <Avatar name={message.name} size="profile" />
+              <Avatar name={message.name || "—"} size="profile" />
               <div className="min-w-0 pt-0.5">
                 <h2 className="admin-text text-lg font-bold break-words sm:text-xl">
                   {message.name || "—"}
@@ -164,7 +176,7 @@ function MessageDetailsPage({ isDarkMode }) {
                   className="admin-text-muted shrink-0"
                   aria-hidden
                 />
-                <span>{message.date}</span>
+                <span>{message.date || "—"}</span>
               </div>
               <div className="admin-text-muted inline-flex items-center gap-2 text-sm">
                 <Clock
@@ -173,7 +185,7 @@ function MessageDetailsPage({ isDarkMode }) {
                   className="shrink-0"
                   aria-hidden
                 />
-                <span>{message.time}</span>
+                <span>{message.time || "—"}</span>
               </div>
             </div>
           </div>
@@ -192,42 +204,48 @@ function MessageDetailsPage({ isDarkMode }) {
               Message
             </p>
             <div className="admin-text whitespace-pre-wrap break-words text-sm leading-7 sm:text-[15px] sm:leading-8">
-              {message.body?.trim() ? message.body : "—"}
+              {bodyText.trim() ? bodyText : "—"}
             </div>
           </div>
 
-          {Array.isArray(message.replies) && message.replies.length > 0 ? (
+          {replies.length > 0 ? (
             <div className="mt-5 border-t pt-5" style={SECTION_BORDER}>
               <p className="admin-text-subtle mb-3 text-xs font-semibold uppercase tracking-wide">
                 Replies
               </p>
               <ul className="space-y-4">
-                {message.replies.map((reply) => (
-                  <li
-                    key={reply.id ?? `${reply.dateTime}-${reply.name}`}
-                    className="rounded-xl border p-3 sm:p-4"
-                    style={SECTION_BORDER}
-                  >
-                    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <p className="admin-text text-sm font-semibold break-words">
-                          {reply.name || "—"}
-                        </p>
-                        {reply.email ? (
-                          <p className="admin-text-muted mt-0.5 break-all text-xs">
-                            {reply.email}
+                {replies.map((reply, index) => {
+                  const replyBody =
+                    typeof reply?.body === "string"
+                      ? reply.body
+                      : String(reply?.body ?? "");
+                  return (
+                    <li
+                      key={reply?.id ?? `${reply?.dateTime}-${reply?.name}-${index}`}
+                      className="rounded-xl border p-3 sm:p-4"
+                      style={SECTION_BORDER}
+                    >
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="admin-text text-sm font-semibold break-words">
+                            {reply?.name || "—"}
                           </p>
-                        ) : null}
+                          {reply?.email ? (
+                            <p className="admin-text-muted mt-0.5 break-all text-xs">
+                              {reply.email}
+                            </p>
+                          ) : null}
+                        </div>
+                        <p className="admin-text-subtle shrink-0 text-xs">
+                          {reply?.dateTime || reply?.date || "—"}
+                        </p>
                       </div>
-                      <p className="admin-text-subtle shrink-0 text-xs">
-                        {reply.dateTime || reply.date || "—"}
+                      <p className="admin-text mt-3 whitespace-pre-wrap break-words text-sm leading-7">
+                        {replyBody.trim() ? replyBody : "—"}
                       </p>
-                    </div>
-                    <p className="admin-text mt-3 whitespace-pre-wrap break-words text-sm leading-7">
-                      {reply.body?.trim() ? reply.body : "—"}
-                    </p>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ) : null}

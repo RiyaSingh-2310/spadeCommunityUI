@@ -13,6 +13,7 @@ import {
   sanitizePhoneDigits,
 } from "../../modules/shared/utils/phoneValidation";
 import { apiRequest } from "../api/client";
+import { downloadCsvExport } from "../api/csvExport";
 import { ApiError } from "../api/ApiError";
 import { formatLocaleDateTime } from "../../modules/shared/utils/dateTime";
 import { encryptValue } from "../../modules/shared/utils/encryption";
@@ -489,4 +490,11 @@ export async function deleteRecord(id) {
   });
 
   return assertSuccess(data);
+}
+
+/** GET /api/partner/export/csv */
+export async function exportPartnersCsv() {
+  return downloadCsvExport(API_ROUTES.partners.exportCsv, {
+    defaultFilename: "partners.csv",
+  });
 }

@@ -78,9 +78,18 @@ function mapReplyRecord(reply) {
   const createdAt = reply.created_at ?? reply.createdAt ?? "";
   return {
     id: reply.id,
-    name: coerceText(reply.sender_name ?? reply.senderName ?? reply.name),
+    name: coerceText(
+      reply.sender_name ??
+        reply.senderName ??
+        reply.name ??
+        reply.replied_by_name ??
+        reply.admin_name ??
+        (reply.replied_by != null ? `Admin #${reply.replied_by}` : "")
+    ),
     email: coerceText(reply.sender_email ?? reply.senderEmail ?? reply.email),
-    body: String(reply.body ?? reply.message ?? reply.content ?? ""),
+    body: String(
+      reply.body ?? reply.reply_body ?? reply.replyBody ?? reply.message ?? reply.content ?? ""
+    ),
     date: formatSurveyListDate(createdAt),
     time: formatLocaleTimeLabel(createdAt),
     dateTime: formatLocaleDateTime(createdAt),
@@ -226,7 +235,9 @@ export async function getMessage(id) {
 
 /**
  * Mark a single message as read.
- * Tries PATCH /api/messages/:id/read when available; otherwise returns optimistic result.
+ * Prefer PATCH /api/messages/:id/read when available.
+ * Backend currently marks read on GET /api/messages/:id — treat missing mark-read
+ * endpoint as optimistic success so UI never blocks.
  */
 export async function markMessageAsRead(id) {
   const normalizedId = normalizeMessageId(id);
@@ -244,8 +255,11 @@ export async function markMessageAsRead(id) {
       ...data,
     };
   } catch (error) {
-    // Backend may mark-as-read on detail view instead of a dedicated endpoint.
-    if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
+    // Dedicated mark-read route may be absent; detail GET already marks as read.
+    if (
+      error instanceof ApiError &&
+      (error.status === 404 || error.status === 405 || error.status === 501)
+    ) {
       return { success: true, item: null, optimistic: true };
     }
     throw error;

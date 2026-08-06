@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
+import { useCsvExport } from "../../shared/hooks/useCsvExport";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
@@ -11,6 +12,7 @@ import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast
 import {
   clearPartnerDetailCache,
   deleteRecord,
+  exportPartnersCsv,
   getRecords,
   updatePartnerStatus,
 } from "../../../services/partners/partnersApi";
@@ -105,6 +107,9 @@ function PartnersPage({ isDarkMode }) {
     }
   };
 
+  const exportCsv = useCallback(() => exportPartnersCsv(), []);
+  const { isExporting, downloadCsv } = useCsvExport(exportCsv);
+
   return (
     <div className="space-y-4">
       <ModuleListingPage
@@ -113,6 +118,9 @@ function PartnersPage({ isDarkMode }) {
         searchPlaceholder="Search partners..."
         actionLabel="Add Partner"
         onActionClick={() => navigate("/partners/add")}
+        csvExportLabel="Download CSV"
+        onCsvExportClick={downloadCsv}
+        isCsvExporting={isExporting}
         columns={LIST_COLUMNS}
         rows={sortedRows}
         sortableColumns={sortableColumns}

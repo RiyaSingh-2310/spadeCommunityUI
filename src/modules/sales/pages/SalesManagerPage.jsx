@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
+import { useCsvExport } from "../../shared/hooks/useCsvExport";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
@@ -11,6 +12,7 @@ import { isAuthenticated } from "../../../services/auth/authStorage";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   deleteSalesManager,
+  exportSalesManagersCsv,
   getRecords,
   updateSalesManagerStatus,
 } from "../../../services/sales/salesManagersApi";
@@ -93,6 +95,9 @@ function SalesManagerPage({ isDarkMode }) {
     }
   };
 
+  const exportCsv = useCallback(() => exportSalesManagersCsv(), []);
+  const { isExporting, downloadCsv } = useCsvExport(exportCsv);
+
   return (
     <div className="space-y-4">
       <ModuleListingPage
@@ -101,6 +106,9 @@ function SalesManagerPage({ isDarkMode }) {
         searchPlaceholder="Search sales managers..."
         actionLabel="Add Sales Manager"
         onActionClick={() => navigate("/sales/sales-manager/add")}
+        csvExportLabel="Download CSV"
+        onCsvExportClick={downloadCsv}
+        isCsvExporting={isExporting}
         columns={LIST_COLUMNS}
         rows={sortedRows}
         sortableColumns={sortableColumns}

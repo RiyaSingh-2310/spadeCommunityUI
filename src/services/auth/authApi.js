@@ -5,6 +5,7 @@ import {
   buildApiUrl,
 } from "../../config/api";
 import { encryptValue } from "../../modules/shared/utils/encryption";
+import { notifyPartnerUrlTabsAdminLogout } from "../../modules/survey/utils/partnerUrlTabSync";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
 import { LOGIN_ROLES } from "./loginRole";
@@ -181,6 +182,8 @@ export async function logoutAdmin() {
  */
 export async function performLogout(navigate) {
   const result = await logoutAdmin();
+  // Close Partner URL tabs immediately (window refs + cross-tab broadcast).
+  notifyPartnerUrlTabsAdminLogout();
   clearAuthSession();
   if (result.success) {
     toastApiSuccess(result);

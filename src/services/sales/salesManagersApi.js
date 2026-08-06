@@ -8,6 +8,7 @@ import {
 } from "../../modules/shared/utils/statusLabels";
 import { encryptValue } from "../../modules/shared/utils/encryption";
 import { apiRequest } from "../api/client";
+import { downloadCsvExport } from "../api/csvExport";
 import { ApiError } from "../api/ApiError";
 
 function isApiSuccess(data) {
@@ -217,4 +218,11 @@ export async function deleteSalesManager(id) {
   });
 
   return assertSuccess(data);
+}
+
+/** GET /api/salesmanager/export/csv */
+export async function exportSalesManagersCsv() {
+  return downloadCsvExport(API_ROUTES.salesManagers.exportCsv, {
+    defaultFilename: "sales-managers.csv",
+  });
 }

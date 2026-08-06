@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ExternalLink, Minus, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ExternalLink, Loader2, Minus, Plus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DebouncedSearchInput from "../../../components/admin/DebouncedSearchInput";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
@@ -60,6 +60,12 @@ function ModuleListingPage({
   onActionClick,
   secondaryActionLabel,
   onSecondaryActionClick,
+  /** Optional CSV export — rendered after the Add button. */
+  csvExportLabel = "Download CSV",
+  onCsvExportClick,
+  isCsvExporting = false,
+  csvExportDisabled = false,
+  showCsvExport = false,
   columns = [],
   rows = [],
   showStatus = true,
@@ -287,6 +293,9 @@ function ModuleListingPage({
   const showAddButton = Boolean(onActionClick && allowWrite);
   const showSecondaryAction = Boolean(
     onSecondaryActionClick && secondaryActionLabel && allowWrite
+  );
+  const showCsvExportButton = Boolean(
+    csvExportLabel && (showCsvExport || onCsvExportClick)
   );
 
   const safeRows = (Array.isArray(rows) ? rows : []).filter(Boolean);
@@ -646,7 +655,7 @@ function ModuleListingPage({
             maxWidthClass="lg:max-w-[340px]"
           />
         )}
-        {(toolbarEnd || showSecondaryAction || showAddButton) && (
+        {(toolbarEnd || showSecondaryAction || showAddButton || showCsvExportButton) && (
           <div className="flex w-full shrink-0 flex-wrap items-center justify-stretch gap-2.5 sm:justify-end lg:w-auto">
             {toolbarEnd}
             {showSecondaryAction && (
@@ -665,6 +674,24 @@ function ModuleListingPage({
                 className="admin-btn-primary w-full shrink-0 sm:w-auto"
               >
                 {actionLabel}
+              </button>
+            )}
+            {showCsvExportButton && (
+              <button
+                type="button"
+                onClick={onCsvExportClick}
+                disabled={isCsvExporting || csvExportDisabled || !onCsvExportClick}
+                className="admin-btn-cancel inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
+                title={
+                  csvExportDisabled || !onCsvExportClick
+                    ? "CSV export is not available for this module yet."
+                    : undefined
+                }
+              >
+                {isCsvExporting ? (
+                  <Loader2 size={16} className="animate-spin" aria-hidden />
+                ) : null}
+                {isCsvExporting ? "Downloading..." : csvExportLabel}
               </button>
             )}
           </div>

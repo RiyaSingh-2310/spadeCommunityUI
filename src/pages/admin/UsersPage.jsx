@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../modules/shared/components/ModuleListingPage";
 import { useApiListing } from "../../modules/shared/hooks/useApiListing";
+import { useCsvExport } from "../../modules/shared/hooks/useCsvExport";
 import { useFlashMessage } from "../../modules/shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../modules/shared/hooks/useListingRefresh";
 import { useNameColumnSort } from "../../modules/shared/hooks/useNameColumnSort";
@@ -11,6 +12,7 @@ import { toastApiError, toastApiSuccess } from "../../services/toast/apiToast";
 import { getAdminUser } from "../../services/auth/authStorage";
 import {
   deleteRecord,
+  exportAdminUsersCsv,
   formStatusToApiStatus,
   getRecords,
   updateRecord,
@@ -109,6 +111,9 @@ function UsersPage({ isDarkMode }) {
     navigate(`/users/${encodeURIComponent(String(userId))}/permissions`);
   };
 
+  const exportCsv = useCallback(() => exportAdminUsersCsv(), []);
+  const { isExporting, downloadCsv } = useCsvExport(exportCsv);
+
   return (
     <div className="space-y-4">
       <ModuleListingPage
@@ -117,6 +122,9 @@ function UsersPage({ isDarkMode }) {
         searchPlaceholder="Search by name or email..."
         actionLabel="Add User"
         onActionClick={() => navigate("/users/add")}
+        csvExportLabel="Download CSV"
+        onCsvExportClick={downloadCsv}
+        isCsvExporting={isExporting}
         columns={LIST_COLUMNS}
         rows={sortedRows}
         sortableColumns={sortableColumns}

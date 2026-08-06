@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../modules/shared/components/ModuleListingPage";
 import { useApiListing } from "../../modules/shared/hooks/useApiListing";
+import { useCsvExport } from "../../modules/shared/hooks/useCsvExport";
 import { useFlashMessage } from "../../modules/shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../modules/shared/hooks/useListingRefresh";
 import { useNameColumnSort } from "../../modules/shared/hooks/useNameColumnSort";
@@ -10,6 +11,7 @@ import { DEFAULT_PAGE_SIZE } from "../../modules/shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../services/toast/apiToast";
 import {
   deleteRecord,
+  exportClientsCsv,
   getRecords,
   updateClientStatus,
 } from "../../services/clients/clientsApi";
@@ -97,6 +99,9 @@ function ClientsPage({ isDarkMode }) {
     }
   };
 
+  const exportCsv = useCallback(() => exportClientsCsv(), []);
+  const { isExporting, downloadCsv } = useCsvExport(exportCsv);
+
   return (
     <div className="space-y-4">
       <ModuleListingPage
@@ -105,6 +110,9 @@ function ClientsPage({ isDarkMode }) {
         searchPlaceholder="Search clients..."
         actionLabel="Add Client User"
         onActionClick={() => navigate("/clients/add")}
+        csvExportLabel="Download CSV"
+        onCsvExportClick={downloadCsv}
+        isCsvExporting={isExporting}
         columns={LIST_COLUMNS}
         rows={sortedRows}
         sortableColumns={sortableColumns}

@@ -36,6 +36,10 @@ import {
   isPartnerUrlOtpVerified,
   stashPartnerUrlReturnPath,
 } from "../utils/partnerUrlVerifyContext";
+import {
+  notePartnerUrlTabOpening,
+  registerPartnerUrlWindow,
+} from "../utils/partnerUrlTabSync";
 import PartnerMappingViewModal from "./PartnerMappingViewModal";
 import {
   primaryBtnClass,
@@ -169,7 +173,10 @@ function PartnerMappingTab({
 
       // Open in a new tab (script-opened so Close ✕ can call window.close()).
       // Avoid "noopener" here — some browsers then block window.close() on that tab.
-      window.open(destinationUrl, "_blank");
+      // Register the window so Admin logout can close Partner URL tabs.
+      notePartnerUrlTabOpening(destinationUrl);
+      const partnerTab = window.open(destinationUrl, "_blank");
+      registerPartnerUrlWindow(partnerTab);
     },
     [location.pathname, location.search, location.hash]
   );

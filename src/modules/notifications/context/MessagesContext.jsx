@@ -16,6 +16,7 @@ import {
 
 const MessagesContext = createContext(null);
 const RECENT_LIMIT = 100;
+const NOTIFICATION_POLL_INTERVAL_MS = 60_000;
 
 function countUnread(items) {
   return (Array.isArray(items) ? items : []).filter((item) => !item.isRead).length;
@@ -64,9 +65,22 @@ export function MessagesProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    refreshRecent({ silent: true }).catch(() => {
-      setHasLoaded(true);
-    });
+    let cancelled = false;
+
+    const poll = () => {
+      refreshRecent({ silent: true }).catch(() => {
+        if (!cancelled) setHasLoaded(true);
+      });
+    };
+
+    // Initial load + single interval (cleared on unmount / logout leaving AdminLayout).
+    poll();
+    const intervalId = window.setInterval(poll, NOTIFICATION_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
   }, [refreshRecent]);
 
   const markAsRead = useCallback(

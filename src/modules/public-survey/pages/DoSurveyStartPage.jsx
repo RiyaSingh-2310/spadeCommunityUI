@@ -8,16 +8,23 @@ import {
   PARTNER_MAPPING_ID_QUERY_KEY,
   PARTNER_VERIFY_QUERY_KEY,
   clearPartnerUrlVerifyContext,
+  clearPartnerUrlVerifyPending,
   isPartnerUrlOtpVerified,
-  markPartnerUrlOtpVerified,
+  readPartnerUrlVerifyPending,
   readPartnerVerifyIntentFromSearch,
+  stashPartnerUrlVerifyPending,
 } from "../../survey/utils/partnerUrlVerifyContext";
+import {
+  claimPartnerUrlTabAsAdminOpened,
+  subscribePartnerUrlTabAdminLogout,
+} from "../../survey/utils/partnerUrlTabSync";
 import DoSurveyHero from "../components/DoSurveyHero";
 import { fetchDoSurveyStartDetails, startDoSurvey } from "../services/doSurveyApi";
 import {
   classifyDoSurveyError,
   resolveRespondentUid,
 } from "../utils/doSurveyHelpers";
+import { clearSurveyAccessTempToken } from "../../survey/services/partnerUrlOtpApi";
 
 const IS_TEST_QUERY_KEYS = ["IsTest", "isTest", "is_test"];
 const VERIFY_QUERY_KEYS = [PARTNER_VERIFY_QUERY_KEY, PARTNER_MAPPING_ID_QUERY_KEY];
@@ -69,14 +76,47 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   }, [location.search, searchParams]);
 
   /**
-   * Read partnerVerify=1 from the URL (set when Partner Mapping opens a new tab).
-   * Must run before/with URL sanitize so we capture intent before params are stripped.
+   * Mark this tab when opened from Admin Partner Mapping, then close on Admin logout.
+   */
+  useEffect(() => {
+    const urlIntent = readPartnerVerifyIntentFromSearch(
+      searchParams,
+      location.search
+    );
+    const pendingIntent = readPartnerUrlVerifyPending();
+    claimPartnerUrlTabAsAdminOpened({
+      token,
+      hasAdminVerifyIntent: Boolean(
+        urlIntent?.mappingId || pendingIntent?.mappingId
+      ),
+    });
+
+    return subscribePartnerUrlTabAdminLogout(() => {
+      window.setTimeout(() => {
+        window.close();
+      }, 0);
+    });
+    // searchKey covers searchParams / location.search changes without object identity churn.
+  }, [token, searchKey, searchParams, location.search]);
+
+  /**
+   * Resolve partner email-verification intent from:
+   * 1) URL params (partnerVerify=1&mappingId=...) set when Partner Mapping opens a tab
+   * 2) sessionStorage pending stash (survives refresh / remount after sanitize)
+   *
+   * Modal stays open until OTP success or Close (✕) — not on refresh/re-render/nav.
    */
   useEffect(() => {
     if (!isSearchReady || verifyIntentResolved) return;
 
-    const intent = readPartnerVerifyIntentFromSearch(searchParams, location.search);
-    if (!intent) {
+    const urlIntent = readPartnerVerifyIntentFromSearch(
+      searchParams,
+      location.search
+    );
+    const pendingIntent = readPartnerUrlVerifyPending();
+    const intent = urlIntent || pendingIntent;
+
+    if (!intent?.mappingId) {
       setVerifyContext(null);
       setShowVerifyModal(false);
       setIsEmailVerified(true);
@@ -85,8 +125,8 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     }
 
     const mappingId = intent.mappingId;
-    if (mappingId && isPartnerUrlOtpVerified(mappingId)) {
-      setVerifyContext(intent);
+    if (isPartnerUrlOtpVerified(mappingId)) {
+      setVerifyContext(null);
       setIsEmailVerified(true);
       setShowVerifyModal(false);
       setVerifyIntentResolved(true);
@@ -94,11 +134,18 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       return;
     }
 
-    setVerifyContext({
+    const partnerUrl =
+      String(intent.partnerUrl ?? "").trim() ||
+      `${location.pathname}${location.search}`;
+    const nextContext = {
       ...intent,
-      partnerUrl: `${location.pathname}${location.search}`,
-      token: String(token ?? "").trim(),
-    });
+      mappingId,
+      partnerUrl,
+      token: String(intent.token ?? token ?? "").trim(),
+    };
+
+    stashPartnerUrlVerifyPending(nextContext);
+    setVerifyContext(nextContext);
     setIsEmailVerified(false);
     setShowVerifyModal(true);
     setVerifyIntentResolved(true);
@@ -111,7 +158,46 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     token,
   ]);
 
-  // Strip IsTest + partnerVerify params from the address bar after capture.
+  /**
+   * Re-assert modal visibility whenever pending verification still exists.
+   * Covers remounts, refresh, and in-app navigations that return to this page.
+   */
+  useEffect(() => {
+    if (!verifyIntentResolved || isEmailVerified) return;
+
+    const pending = readPartnerUrlVerifyPending();
+    if (!pending?.mappingId) return;
+    if (isPartnerUrlOtpVerified(pending.mappingId)) {
+      clearPartnerUrlVerifyContext();
+      setIsEmailVerified(true);
+      setShowVerifyModal(false);
+      setVerifyContext(null);
+      return;
+    }
+
+    if (!showVerifyModal || !verifyContext) {
+      setVerifyContext((prev) => prev || {
+        ...pending,
+        partnerUrl:
+          pending.partnerUrl || `${location.pathname}${location.search}`,
+        token: pending.token || String(token ?? "").trim(),
+      });
+      setShowVerifyModal(true);
+      setIsEmailVerified(false);
+    }
+  }, [
+    verifyIntentResolved,
+    isEmailVerified,
+    showVerifyModal,
+    verifyContext,
+    location.pathname,
+    location.search,
+    token,
+  ]);
+
+  // Strip IsTest from the address bar after capture.
+  // Keep partnerVerify params while verification is pending so refresh reopens the modal;
+  // they are removed on verify success or Close.
   useEffect(() => {
     if (!isSearchReady || !verifyIntentResolved || urlSanitized) return;
 
@@ -128,12 +214,16 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
         changed = true;
       }
     });
-    VERIFY_QUERY_KEYS.forEach((key) => {
-      if (params.has(key)) {
-        params.delete(key);
-        changed = true;
-      }
-    });
+
+    // Only strip verify params once the user has completed or dismissed verification.
+    if (isEmailVerified || !showVerifyModal) {
+      VERIFY_QUERY_KEYS.forEach((key) => {
+        if (params.has(key)) {
+          params.delete(key);
+          changed = true;
+        }
+      });
+    }
 
     if (changed) {
       const nextSearch = params.toString();
@@ -154,6 +244,8 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     location.pathname,
     location.search,
     navigate,
+    isEmailVerified,
+    showVerifyModal,
   ]);
 
   const respondentUid = useMemo(
@@ -163,9 +255,17 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   );
 
   const hasValidUid = respondentUid != null;
-  const showUidError = !isLoading && isSearchReady && !hasValidUid;
-  const requiresEmailVerification = Boolean(verifyContext) && !isEmailVerified;
-  const contentLocked = requiresEmailVerification;
+  const requiresEmailVerification =
+    Boolean(verifyContext) && !isEmailVerified;
+  const contentLocked =
+    !verifyIntentResolved || requiresEmailVerification;
+  const showUidError =
+    !contentLocked && !isLoading && isSearchReady && urlSanitized && !hasValidUid;
+  const canLoadPartnerApis =
+    isSearchReady &&
+    urlSanitized &&
+    verifyIntentResolved &&
+    !requiresEmailVerification;
 
   useEffect(() => {
     let cancelled = false;
@@ -209,14 +309,30 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       }
     }
 
-    if (isSearchReady && urlSanitized) {
-      load();
+    // Partner / survey APIs must wait until email verification succeeds.
+    if (!canLoadPartnerApis) {
+      if (requiresEmailVerification) {
+        setIsLoading(false);
+        setSurvey(null);
+        setLoadError("");
+      }
+      return () => {
+        cancelled = true;
+      };
     }
+
+    load();
 
     return () => {
       cancelled = true;
     };
-  }, [token, isSearchReady, urlSanitized, respondentUid, isTestHint]);
+  }, [
+    token,
+    canLoadPartnerApis,
+    requiresEmailVerification,
+    respondentUid,
+    isTestHint,
+  ]);
 
   const errorVariant = classifyDoSurveyError(loadError);
 
@@ -230,9 +346,7 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
         : null);
 
     if (actionUid == null) {
-      setStartError(
-        "Missing or invalid uid in the link. Partners should replace [identifier] with a respondent id."
-      );
+      setStartError("Missing or Invalid UID in Link");
       return;
     }
 
@@ -255,29 +369,68 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     }
   }
 
+  const stripVerifyParamsFromUrl = () => {
+    const params = new URLSearchParams(location.search);
+    let changed = false;
+    VERIFY_QUERY_KEYS.forEach((key) => {
+      if (params.has(key)) {
+        params.delete(key);
+        changed = true;
+      }
+    });
+    if (!changed) return;
+    const nextSearch = params.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : "",
+      },
+      { replace: true }
+    );
+  };
+
   const handleVerifyClose = () => {
+    clearSurveyAccessTempToken();
+    clearPartnerUrlVerifyPending();
+    clearPartnerUrlVerifyContext();
     setShowVerifyModal(false);
+    setVerifyContext(null);
+    stripVerifyParamsFromUrl();
     // Close this Partner URL tab only — no redirect/navigation.
     window.setTimeout(() => {
       window.close();
     }, 0);
   };
 
-  const handleVerified = () => {
-    markPartnerUrlOtpVerified(verifyContext?.mappingId);
-    setIsEmailVerified(true);
-    setShowVerifyModal(false);
+  /**
+   * After OTP success the backend returns vendorUrl — redirect this tab there.
+   * Do not load Partner/survey APIs on the gateway page.
+   */
+  const handleVerified = (result) => {
+    const vendorUrl = String(result?.vendorUrl ?? "").trim();
+    clearSurveyAccessTempToken();
+    clearPartnerUrlVerifyPending();
     clearPartnerUrlVerifyContext();
+    setShowVerifyModal(false);
+
+    if (!vendorUrl) {
+      setIsEmailVerified(false);
+      return;
+    }
+
+    // Final survey destination — leave the Partner URL gateway immediately.
+    window.location.assign(vendorUrl);
   };
 
-  const pageReady = !isLoading && isSearchReady && urlSanitized;
+  const pageReady =
+    !contentLocked && !isLoading && isSearchReady && urlSanitized;
   // Open modal as soon as verify intent is known — do not wait on survey API.
   const modalOpen =
     showVerifyModal && requiresEmailVerification && verifyIntentResolved;
 
   return (
     <PublicQuestionnaireLayout isDarkMode={isDarkMode} onToggleTheme={onToggleTheme}>
-      {isLoading || !isSearchReady || !urlSanitized ? (
+      {!contentLocked && (isLoading || !isSearchReady || !urlSanitized) ? (
         <div className="pq-card pq-state-card pq-loading-card" aria-busy="true" aria-live="polite">
           <Loader2 className="pq-loading-spinner" size={32} aria-hidden />
           <p className="pq-loading-text">Preparing your survey...</p>
@@ -305,8 +458,7 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
             />
             {showUidError ? (
               <p className="pq-hero-error" role="alert">
-                Missing or invalid uid in the link. Use a URL like{" "}
-                <code className="text-xs">/dosurvey/{token}?uid=your-respondent-id</code>
+                Missing or Invalid UID in Link
               </p>
             ) : null}
             {startError ? (
