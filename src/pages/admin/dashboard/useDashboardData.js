@@ -4,19 +4,12 @@ import {
   isManagerLoginRole,
   isSalesLoginRole,
 } from "../../../services/auth/loginRole";
-import { getRecords as getUserRecords } from "../../../services/users/usersApi";
-import { getRecords as getClientRecords } from "../../../services/clients/clientsApi";
-import { getRecords as getPartnerRecords } from "../../../services/partners/partnersApi";
-import { getRecords as getProjectManagerRecords } from "../../../services/projectManagers/projectManagersApi";
+import { getDashboardSummary } from "../../../services/dashboard/dashboardApi";
 import { getRecords as getRfqRecords } from "../../../services/sales/salesProjectsApi";
 import { getRecords as getSurveyRecords } from "../../../modules/survey/services/surveyApi";
 import { getRecords as getGroupSurveyRecords } from "../../../modules/survey/services/groupSurveyApi";
 import { MAX_API_LIST_LIMIT } from "../../../modules/shared/utils/listQueryParams";
-import {
-  buildMonthlySeries,
-  fetchWithFallback,
-  normalizeStatus,
-} from "./dashboardUtils";
+import { buildMonthlySeries, normalizeStatus } from "./dashboardUtils";
 
 const DASHBOARD_LIST_LIMIT = MAX_API_LIST_LIMIT;
 
@@ -39,14 +32,51 @@ const EMPTY_DASHBOARD = {
   logs: [],
 };
 
+const EMPTY_SUMMARY = {
+  totals: {
+    totalUsers: 0,
+    totalClients: 0,
+    totalPartners: 0,
+    totalProjectManagers: 0,
+  },
+  surveyStatus: { active: 0, closed: 0, draft: 0, paused: 0 },
+  surveyTrend: [],
+  rfqStatus: { won: 0, lost: 0, pending: 0 },
+  rfqTrend: [],
+  userTrend: [],
+  usersByCountry: [],
+  revenue: {
+    totalRevenue: 0,
+    monthlyRevenue: 0,
+    pendingInvoiceAmount: 0,
+    paidInvoiceAmount: 0,
+  },
+  invoiceStats: {
+    paid: 0,
+    pending: 0,
+    overdue: 0,
+    paidAmount: 0,
+    pendingAmount: 0,
+  },
+  clientsOverview: { total: 0, active: 0, inactive: 0 },
+  partnersOverview: { total: 0, active: 0, inactive: 0 },
+  rewardStats: {
+    pending: 0,
+    completed: 0,
+    redeemedPoints: 0,
+    totalRequests: 0,
+  },
+  rewardTrend: [],
+};
+
 export function useDashboardData({ enabled = true } = {}) {
   const isSales = isSalesLoginRole();
   const isManager = isManagerLoginRole();
-  const useScopedDashboard = isSales || isManager;
   const [dashboard, setDashboard] = useState({
     ...EMPTY_DASHBOARD,
     loading: Boolean(enabled),
   });
+  const [summary, setSummary] = useState(EMPTY_SUMMARY);
 
   useEffect(() => {
     if (!enabled) {
@@ -65,6 +95,7 @@ export function useDashboardData({ enabled = true } = {}) {
           ]);
 
           if (cancelled) return;
+          setSummary(EMPTY_SUMMARY);
           setDashboard({
             ...EMPTY_DASHBOARD,
             loading: false,
@@ -81,6 +112,7 @@ export function useDashboardData({ enabled = true } = {}) {
           ]);
 
           if (cancelled) return;
+          setSummary(EMPTY_SUMMARY);
           setDashboard({
             ...EMPTY_DASHBOARD,
             loading: false,
@@ -90,52 +122,17 @@ export function useDashboardData({ enabled = true } = {}) {
           return;
         }
 
-        const [
-          userData,
-          clientData,
-          partnerData,
-          pmData,
-          rfqData,
-          surveyData,
-          invoiceData,
-          rewardData,
-          logData,
-        ] = await Promise.all([
-          getUserRecords({ page: 1, limit: DASHBOARD_LIST_LIMIT }),
-          getClientRecords({ page: 1, limit: DASHBOARD_LIST_LIMIT }),
-          getPartnerRecords({ page: 1, limit: DASHBOARD_LIST_LIMIT }),
-          getProjectManagerRecords({ page: 1, limit: DASHBOARD_LIST_LIMIT }),
-          getRfqRecords({ page: 1, limit: 5 }),
-          getSurveyRecords({ page: 1, limit: DASHBOARD_LIST_LIMIT }),
-          fetchWithFallback(["/api/invoice/list", "/api/invoices/list"]),
-          fetchWithFallback([
-            "/api/reward/list",
-            "/api/rewards/list",
-            "/api/reward-points/list",
-          ]),
-          fetchWithFallback([
-            "/api/log-activity/list",
-            "/api/log/activity/list",
-            "/api/activity/list",
-          ]),
-        ]);
+        const summaryData = await getDashboardSummary();
 
         if (cancelled) return;
+        setSummary(summaryData);
         setDashboard({
           ...EMPTY_DASHBOARD,
           loading: false,
-          users: asArray(userData.items),
-          clients: asArray(clientData.items),
-          partners: asArray(partnerData.items),
-          projectManagers: asArray(pmData.items),
-          rfqs: asArray(rfqData.items),
-          surveys: asArray(surveyData.items),
-          invoices: asArray(invoiceData.items),
-          rewards: asArray(rewardData.items),
-          logs: asArray(logData.items),
         });
       } catch {
         if (cancelled) return;
+        setSummary(EMPTY_SUMMARY);
         setDashboard((prev) => ({ ...prev, loading: false }));
       }
     };
@@ -143,9 +140,11 @@ export function useDashboardData({ enabled = true } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [enabled, isSales, isManager, useScopedDashboard]);
+  }, [enabled, isSales, isManager]);
 
   const surveyStatus = useMemo(() => {
+    if (!isSales && !isManager) return summary.surveyStatus;
+
     const result = { active: 0, closed: 0, draft: 0, paused: 0 };
     asArray(dashboard.surveys).forEach((s) => {
       const st = normalizeStatus(s.status);
@@ -155,9 +154,11 @@ export function useDashboardData({ enabled = true } = {}) {
       else if (st.includes("pause")) result.paused += 1;
     });
     return result;
-  }, [dashboard.surveys]);
+  }, [dashboard.surveys, isManager, isSales, summary.surveyStatus]);
 
   const rfqStatus = useMemo(() => {
+    if (!isSales && !isManager) return summary.rfqStatus;
+
     const result = { won: 0, lost: 0, pending: 0 };
     asArray(dashboard.rfqs).forEach((rfq) => {
       const st = normalizeStatus(rfq.status);
@@ -166,79 +167,26 @@ export function useDashboardData({ enabled = true } = {}) {
       else result.pending += 1;
     });
     return result;
-  }, [dashboard.rfqs]);
+  }, [dashboard.rfqs, isManager, isSales, summary.rfqStatus]);
 
   const usersByCountry = useMemo(() => {
-    const map = new Map();
-    asArray(dashboard.users).forEach((u) => {
-      const country = String(u.country ?? "Unknown").trim() || "Unknown";
-      map.set(country, (map.get(country) ?? 0) + 1);
-    });
-    return [...map.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([label, value], idx) => ({
-        label,
-        value,
-        color: ["#10a950", "#0e7f3f", "#3ecf7f", "#6ddfa0", "#9ceec2"][idx],
-      }));
-  }, [dashboard.users]);
+    if (!isSales && !isManager) return summary.usersByCountry;
+    return [];
+  }, [isManager, isSales, summary.usersByCountry]);
 
   const invoiceStats = useMemo(() => {
-    const stats = {
-      total: 0,
-      paid: 0,
-      pending: 0,
-      overdue: 0,
-      paidAmount: 0,
-      pendingAmount: 0,
-    };
-    asArray(dashboard.invoices).forEach((inv) => {
-      const amount = Number(inv.amount ?? inv.grossAmount ?? inv.total ?? 0) || 0;
-      const status = normalizeStatus(inv.status);
-      stats.total += 1;
-      if (status.includes("paid")) {
-        stats.paid += 1;
-        stats.paidAmount += amount;
-      } else if (status.includes("overdue")) {
-        stats.overdue += 1;
-        stats.pendingAmount += amount;
-      } else {
-        stats.pending += 1;
-        stats.pendingAmount += amount;
-      }
-    });
-    return stats;
-  }, [dashboard.invoices]);
+    if (!isSales && !isManager) return summary.invoiceStats;
+    return EMPTY_SUMMARY.invoiceStats;
+  }, [isManager, isSales, summary.invoiceStats]);
 
   const rewardStats = useMemo(() => {
-    const rewards = asArray(dashboard.rewards);
-    const stats = {
-      pending: 0,
-      completed: 0,
-      redeemedPoints: 0,
-      totalRequests: rewards.length,
-    };
-    rewards.forEach((r) => {
-      const status = normalizeStatus(r.status);
-      const points = Number(r.redeem_points ?? r.points ?? 0) || 0;
-      if (status.includes("pending")) stats.pending += 1;
-      if (status.includes("complete")) stats.completed += 1;
-      if (status.includes("complete") || status.includes("approved")) {
-        stats.redeemedPoints += points;
-      }
-    });
-    return stats;
-  }, [dashboard.rewards]);
+    if (!isSales && !isManager) return summary.rewardStats;
+    return EMPTY_SUMMARY.rewardStats;
+  }, [isManager, isSales, summary.rewardStats]);
 
-  const users = asArray(dashboard.users);
-  const clients = asArray(dashboard.clients);
-  const partners = asArray(dashboard.partners);
-  const projectManagers = asArray(dashboard.projectManagers);
   const surveys = asArray(dashboard.surveys);
   const groupSurveys = asArray(dashboard.groupSurveys);
   const rfqs = asArray(dashboard.rfqs);
-  const rewards = asArray(dashboard.rewards);
 
   const kpiRows = isManager
     ? [
@@ -263,30 +211,53 @@ export function useDashboardData({ enabled = true } = {}) {
       ]
     : [
         [
-          { icon: Users, label: "Total Users", value: users.length },
-          { icon: UserCog, label: "Total Clients", value: clients.length },
-          { icon: Handshake, label: "Total Partners", value: partners.length },
+          {
+            icon: Users,
+            label: "Total Users",
+            value: summary.totals.totalUsers,
+          },
+          {
+            icon: UserCog,
+            label: "Total Clients",
+            value: summary.totals.totalClients,
+          },
+          {
+            icon: Handshake,
+            label: "Total Partners",
+            value: summary.totals.totalPartners,
+          },
           {
             icon: ClipboardList,
             label: "Total Project Managers",
-            value: projectManagers.length,
+            value: summary.totals.totalProjectManagers,
           },
         ],
       ];
+
+  const surveyTrend =
+    !isSales && !isManager
+      ? summary.surveyTrend
+      : buildMonthlySeries(surveys, "createdAt");
+  const rfqTrend =
+    !isSales && !isManager
+      ? summary.rfqTrend
+      : buildMonthlySeries(rfqs, "createdAt");
+  const userTrend = !isSales && !isManager ? summary.userTrend : [];
+  const rewardTrend = !isSales && !isManager ? summary.rewardTrend : [];
 
   return {
     isSales,
     isManager,
     dashboard: {
       ...dashboard,
-      users,
-      clients,
-      partners,
-      projectManagers,
+      users: asArray(dashboard.users),
+      clients: asArray(dashboard.clients),
+      partners: asArray(dashboard.partners),
+      projectManagers: asArray(dashboard.projectManagers),
       surveys,
       groupSurveys,
       rfqs,
-      rewards,
+      rewards: asArray(dashboard.rewards),
       invoices: asArray(dashboard.invoices),
       logs: asArray(dashboard.logs),
     },
@@ -294,14 +265,17 @@ export function useDashboardData({ enabled = true } = {}) {
     rfqStatus,
     usersByCountry,
     invoiceStats,
+    revenue: summary.revenue,
+    clientsOverview: summary.clientsOverview,
+    partnersOverview: summary.partnersOverview,
     rewardStats,
     kpiRows,
     latestSurveys: surveys.slice(0, 5),
     latestGroupSurveys: groupSurveys.slice(0, 5),
     latestRfqs: rfqs.slice(0, 5),
-    surveyTrend: buildMonthlySeries(surveys, "createdAt"),
-    rfqTrend: buildMonthlySeries(rfqs, "createdAt"),
-    userTrend: buildMonthlySeries(users, "createdAt"),
-    rewardTrend: buildMonthlySeries(rewards, "created_at"),
+    surveyTrend,
+    rfqTrend,
+    userTrend,
+    rewardTrend,
   };
 }

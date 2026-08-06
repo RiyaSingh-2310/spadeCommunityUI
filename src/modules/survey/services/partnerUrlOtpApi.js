@@ -211,13 +211,9 @@ export async function verifyPartnerUrlOtp({ otp, tempToken } = {}) {
   });
   assertSuccess(data, "Unable to verify OTP.");
 
+  // Vendor URL is optional — after OTP the gateway shows Start Survey;
+  // the live survey URL is resolved later via /api/survey/link.
   const vendorUrl = extractVendorUrl(data);
-  if (!vendorUrl) {
-    throw new ApiError(
-      "Vendor URL missing from verification response.",
-      data
-    );
-  }
 
   clearSurveyAccessTempToken();
 

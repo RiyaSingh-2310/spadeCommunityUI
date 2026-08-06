@@ -1,6 +1,6 @@
 /**
  * Public do-survey API layer.
- * Replace mock implementation with real endpoints once backend contract is finalized.
+ * Partner URL start flow: activity → pre-screen check → survey link redirect.
  */
 
 import { API_ROUTES } from "../../../config/api";
@@ -29,6 +29,23 @@ function pickField(record, keys) {
     if (value !== undefined && value !== null && value !== "") return value;
   }
   return undefined;
+}
+
+function coerceText(value) {
+  return String(value ?? "").trim();
+}
+
+/**
+ * Partner URL APIs may run with an admin session (opened from Partner Mapping)
+ * or as a public gateway. Prefer auth when a token exists; never force logout.
+ */
+function partnerSurveyRequestOptions(extra = {}) {
+  const hasToken = Boolean(getAuthToken());
+  return {
+    auth: hasToken,
+    skipSessionExpiryOn401: true,
+    ...extra,
+  };
 }
 
 /** Maps supplier-mapping `IsTest` (0/1) to boolean — same rules as Partner Mapping tab. */
@@ -212,25 +229,227 @@ export async function fetchDoSurveyStartDetails(token, { uid, isTest } = {}) {
 }
 
 /**
- * POST /api/dosurvey/:token/start (planned)
- * Records respondent entry and returns the next survey URL or session payload.
+ * POST /api/survey/activity
+ * Creates an activity record before the survey begins.
  */
-export async function startDoSurvey(token, { uid } = {}) {
-  const normalizedToken = String(token ?? "").trim();
+export async function storeSurveyActivity({ token, uid } = {}) {
+  const normalizedToken = coerceText(token);
+  const normalizedUid = coerceText(uid);
+
   if (!normalizedToken) {
-    throw new Error("Invalid survey link. Please check the URL and try again.");
+    throw new ApiError("Missing survey token.", null);
+  }
+  if (!normalizedUid) {
+    throw new ApiError("Missing or Invalid UID in Link", null);
   }
 
-  // TODO: wire to API_ROUTES.doSurvey.start(token) with auth: false
-  await delay(MOCK_LOAD_DELAY_MS);
+  const data = await apiRequest(API_ROUTES.survey.activity, {
+    ...partnerSurveyRequestOptions({ method: "POST" }),
+    body: {
+      token: normalizedToken,
+      uid: normalizedUid,
+    },
+  });
+  assertSuccess(data);
+  return data;
+}
+
+function mapPrescreenQuestion(record) {
+  if (!record || typeof record !== "object") return null;
+  const id = pickField(record, ["id", "question_id", "questionId"]);
+  if (id == null) return null;
+
+  const optionsRaw = record.options;
+  const options = Array.isArray(optionsRaw)
+    ? optionsRaw.map((option) => {
+        if (typeof option === "string" || typeof option === "number") {
+          return String(option);
+        }
+        if (option && typeof option === "object") {
+          return (
+            option.label ??
+            option.value ??
+            option.option ??
+            option.name ??
+            String(option.id ?? "")
+          );
+        }
+        return String(option ?? "");
+      })
+    : [];
+
+  return {
+    id,
+    questionText: coerceText(
+      pickField(record, [
+        "question_title",
+        "questionTitle",
+        "question_text",
+        "questionText",
+        "title",
+      ])
+    ),
+    questionType: coerceText(
+      pickField(record, ["question_type", "questionType", "type"])
+    ),
+    options,
+    rightAnswer: pickField(record, [
+      "right_answer",
+      "rightAnswer",
+      "correct_answer",
+      "correctAnswer",
+    ]),
+    required: true,
+  };
+}
+
+/**
+ * Maps GET /api/survey/prescreen response into UI-ready shape.
+ */
+export function mapSurveyPrescreenResponse(data) {
+  const required =
+    data?.required === true ||
+    data?.required === 1 ||
+    data?.required === "true" ||
+    data?.required === "1";
+
+  const payload =
+    data?.data && typeof data.data === "object" && !Array.isArray(data.data)
+      ? data.data
+      : data;
+
+  const questionsRaw = Array.isArray(payload?.questions) ? payload.questions : [];
+  const questions = questionsRaw.map(mapPrescreenQuestion).filter(Boolean);
+
+  return {
+    required,
+    message: coerceText(data?.message),
+    surveyTitle: coerceText(
+      pickField(payload, [
+        "surveyTitle",
+        "survey_title",
+        "PreScreenName",
+        "preScreenName",
+      ])
+    ),
+    language: formatLanguageForUi(
+      pickField(payload, ["language", "Language"])
+    ),
+    preScreenId: pickField(payload, [
+      "PreScreenid",
+      "PreScreenId",
+      "preScreenerId",
+      "pre_screen_id",
+    ]),
+    questions,
+    raw: data,
+  };
+}
+
+/**
+ * GET /api/survey/prescreen?token=<partner_token>
+ */
+export async function fetchSurveyPrescreen(token) {
+  const normalizedToken = coerceText(token);
+  if (!normalizedToken) {
+    throw new ApiError("Missing survey token.", null);
+  }
+
+  const path = `${API_ROUTES.survey.prescreen}?token=${encodeURIComponent(normalizedToken)}`;
+  const data = await apiRequest(path, partnerSurveyRequestOptions());
+  assertSuccess(data);
+  return mapSurveyPrescreenResponse(data);
+}
+
+/**
+ * Extract redirect URL from GET /api/survey/link response.
+ * Prefer survey_url; fall back to Live_Link.
+ */
+export function extractSurveyRedirectUrl(data) {
+  if (!data || typeof data !== "object") return "";
+
+  const payload =
+    data.data && typeof data.data === "object" && !Array.isArray(data.data)
+      ? data.data
+      : data;
+
+  return coerceText(
+    pickField(payload, [
+      "survey_url",
+      "surveyUrl",
+      "Survey_URL",
+      "Live_Link",
+      "live_link",
+      "LiveLink",
+      "liveLink",
+    ])
+  );
+}
+
+/**
+ * GET /api/survey/link?token=<partner_token>&uid=<partner_uid>
+ */
+export async function fetchSurveyLink({ token, uid } = {}) {
+  const normalizedToken = coerceText(token);
+  const normalizedUid = coerceText(uid);
+
+  if (!normalizedToken) {
+    throw new ApiError("Missing survey token.", null);
+  }
+  if (!normalizedUid) {
+    throw new ApiError("Missing or Invalid UID in Link", null);
+  }
+
+  const params = new URLSearchParams({
+    token: normalizedToken,
+    uid: normalizedUid,
+  });
+  const path = `${API_ROUTES.survey.link}?${params.toString()}`;
+  const data = await apiRequest(path, partnerSurveyRequestOptions());
+  assertSuccess(data);
+
+  const surveyUrl = extractSurveyRedirectUrl(data);
+  if (!surveyUrl) {
+    throw new ApiError(
+      "Survey URL missing from response. Please try again.",
+      data
+    );
+  }
 
   return {
     success: true,
-    message: "Survey session started.",
-    data: {
-      token: normalizedToken,
-      respondentUid: uid,
-      nextUrl: null,
-    },
+    message: coerceText(data?.message) || "Survey link fetched successfully!",
+    surveyUrl,
+    liveLink: coerceText(
+      pickField(
+        data?.data && typeof data.data === "object" ? data.data : data,
+        ["Live_Link", "live_link", "LiveLink", "liveLink"]
+      )
+    ),
+    data: data?.data ?? data,
+  };
+}
+
+/**
+ * Start Survey orchestration:
+ * 1) POST /api/survey/activity
+ * 2) GET /api/survey/prescreen
+ * Returns either { prescreenRequired: true, prescreen } or { prescreenRequired: false }
+ * so the page can render pre-screen or continue to the survey link.
+ */
+export async function initiateSurveyStart({ token, uid } = {}) {
+  await storeSurveyActivity({ token, uid });
+  const prescreen = await fetchSurveyPrescreen(token);
+
+  if (prescreen.required) {
+    return {
+      prescreenRequired: true,
+      prescreen,
+    };
+  }
+
+  return {
+    prescreenRequired: false,
+    prescreen,
   };
 }

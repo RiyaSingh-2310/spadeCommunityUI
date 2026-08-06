@@ -7,7 +7,7 @@ import { useModulePermission } from "../../modules/permissions/useModulePermissi
 import { formatDashboardDate, formatDashboardTime } from "../../modules/shared/utils/dateTime";
 import { formatStatusLabel } from "../../modules/shared/utils/statusLabels";
 import { BarsChart, DonutChart, PolylineChart, SummaryCard } from "./dashboard/dashboardCharts";
-import { isStatus, STATUS_ACTIVE, TABLE_HEAD } from "./dashboard/dashboardUtils";
+import { TABLE_HEAD } from "./dashboard/dashboardUtils";
 import { useDashboardData } from "./dashboard/useDashboardData";
 
 function DashboardPage({ isDarkMode }) {
@@ -24,6 +24,9 @@ function DashboardPage({ isDarkMode }) {
     rfqStatus,
     usersByCountry,
     invoiceStats,
+    revenue,
+    clientsOverview,
+    partnersOverview,
     rewardStats,
     kpiRows,
     latestSurveys,
@@ -367,14 +370,18 @@ function DashboardPage({ isDarkMode }) {
           <div className="grid gap-4 lg:grid-cols-2">
             <TableCard title="Revenue Summary" isDarkMode={isDarkMode}>
               <div className="grid gap-3 sm:grid-cols-2">
+                <SummaryCard icon={Wallet} label="Total Revenue" value={revenue.totalRevenue} />
+                <SummaryCard icon={Wallet} label="Monthly Revenue" value={revenue.monthlyRevenue} />
                 <SummaryCard
                   icon={Wallet}
-                  label="Total Revenue"
-                  value={invoiceStats.paidAmount + invoiceStats.pendingAmount}
+                  label="Pending Invoice Amount"
+                  value={revenue.pendingInvoiceAmount}
                 />
-                <SummaryCard icon={Wallet} label="Monthly Revenue" value={invoiceStats.paidAmount} />
-                <SummaryCard icon={Wallet} label="Pending Invoice Amount" value={invoiceStats.pendingAmount} />
-                <SummaryCard icon={Wallet} label="Paid Invoice Amount" value={invoiceStats.paidAmount} />
+                <SummaryCard
+                  icon={Wallet}
+                  label="Paid Invoice Amount"
+                  value={revenue.paidInvoiceAmount}
+                />
               </div>
             </TableCard>
             <TableCard title="Invoice Status Distribution" isDarkMode={isDarkMode}>
@@ -391,31 +398,27 @@ function DashboardPage({ isDarkMode }) {
           <div className="grid gap-4 lg:grid-cols-2">
             <TableCard title="Client Overview" isDarkMode={isDarkMode}>
               <div className="grid gap-3 sm:grid-cols-3">
-                <SummaryCard icon={UserCog} label="Total Clients" value={dashboard.clients.length} />
-                <SummaryCard
-                  icon={UserCog}
-                  label="Active Clients"
-                  value={dashboard.clients.filter((c) => isStatus(c.status, STATUS_ACTIVE)).length}
-                />
+                <SummaryCard icon={UserCog} label="Total Clients" value={clientsOverview.total} />
+                <SummaryCard icon={UserCog} label="Active Clients" value={clientsOverview.active} />
                 <SummaryCard
                   icon={UserCog}
                   label="Inactive Clients"
-                  value={dashboard.clients.filter((c) => !isStatus(c.status, STATUS_ACTIVE)).length}
+                  value={clientsOverview.inactive}
                 />
               </div>
             </TableCard>
             <TableCard title="Partner Overview" isDarkMode={isDarkMode}>
               <div className="grid gap-3 sm:grid-cols-3">
-                <SummaryCard icon={Handshake} label="Total Partners" value={dashboard.partners.length} />
+                <SummaryCard icon={Handshake} label="Total Partners" value={partnersOverview.total} />
                 <SummaryCard
                   icon={Handshake}
                   label="Active Partners"
-                  value={dashboard.partners.filter((p) => isStatus(p.status, STATUS_ACTIVE)).length}
+                  value={partnersOverview.active}
                 />
                 <SummaryCard
                   icon={Handshake}
                   label="Inactive Partners"
-                  value={dashboard.partners.filter((p) => !isStatus(p.status, STATUS_ACTIVE)).length}
+                  value={partnersOverview.inactive}
                 />
               </div>
             </TableCard>

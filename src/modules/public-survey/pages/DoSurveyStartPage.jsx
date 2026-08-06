@@ -10,6 +10,7 @@ import {
   clearPartnerUrlVerifyContext,
   clearPartnerUrlVerifyPending,
   isPartnerUrlOtpVerified,
+  markPartnerUrlOtpVerified,
   readPartnerUrlVerifyPending,
   readPartnerVerifyIntentFromSearch,
   stashPartnerUrlVerifyPending,
@@ -19,7 +20,12 @@ import {
   subscribePartnerUrlTabAdminLogout,
 } from "../../survey/utils/partnerUrlTabSync";
 import DoSurveyHero from "../components/DoSurveyHero";
-import { fetchDoSurveyStartDetails, startDoSurvey } from "../services/doSurveyApi";
+import PreScreenQuestionnaire from "../components/PreScreenQuestionnaire";
+import {
+  fetchDoSurveyStartDetails,
+  fetchSurveyLink,
+  initiateSurveyStart,
+} from "../services/doSurveyApi";
 import {
   classifyDoSurveyError,
   resolveRespondentUid,
@@ -61,10 +67,14 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const [survey, setSurvey] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [hasStarted, setHasStarted] = useState(false);
-  const [startMessage, setStartMessage] = useState("");
   const [startError, setStartError] = useState("");
   const [isStarting, setIsStarting] = useState(false);
+
+  const [prescreen, setPrescreen] = useState(null);
+  const [showPrescreen, setShowPrescreen] = useState(false);
+  const [isSubmittingPrescreen, setIsSubmittingPrescreen] = useState(false);
+  const [prescreenError, setPrescreenError] = useState("");
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const [verifyContext, setVerifyContext] = useState(null);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
@@ -281,10 +291,13 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
 
       setIsLoading(true);
       setLoadError("");
-      setHasStarted(false);
-      setStartMessage("");
       setStartError("");
       setIsStarting(false);
+      setPrescreen(null);
+      setShowPrescreen(false);
+      setPrescreenError("");
+      setIsSubmittingPrescreen(false);
+      setIsRedirecting(false);
 
       try {
         const data = await fetchDoSurveyStartDetails(normalizedToken, {
@@ -336,36 +349,98 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
 
   const errorVariant = classifyDoSurveyError(loadError);
 
-  async function handleStartSurvey() {
-    if (contentLocked) return;
-
-    const actionUid =
+  function getActionUid() {
+    return (
       resolveRespondentUid(searchParams, location.search) ??
       (typeof window !== "undefined"
         ? resolveRespondentUid(null, window.location.search)
-        : null);
+        : null)
+    );
+  }
 
+  function getPartnerToken() {
+    return String(token ?? "").trim();
+  }
+
+  async function redirectToSurveyLink(actionUid) {
+    setIsRedirecting(true);
+    const result = await fetchSurveyLink({
+      token: getPartnerToken(),
+      uid: actionUid,
+    });
+    const surveyUrl = String(result?.surveyUrl ?? "").trim();
+    if (!surveyUrl) {
+      throw new Error("Survey URL missing from response. Please try again.");
+    }
+    window.location.assign(surveyUrl);
+  }
+
+  async function handleStartSurvey() {
+    if (contentLocked || isStarting || isSubmittingPrescreen || isRedirecting) {
+      return;
+    }
+
+    const actionUid = getActionUid();
     if (actionUid == null) {
       setStartError("Missing or Invalid UID in Link");
       return;
     }
 
+    const partnerToken = getPartnerToken();
+    if (!partnerToken) {
+      setStartError("Missing survey token. Please use a valid partner survey link.");
+      return;
+    }
+
     setStartError("");
+    setPrescreenError("");
     setIsStarting(true);
 
     try {
-      const result = await startDoSurvey(token, { uid: actionUid });
-      setStartMessage(
-        String(result?.message ?? "").trim() || "Survey session started successfully."
-      );
-      setHasStarted(true);
+      const result = await initiateSurveyStart({
+        token: partnerToken,
+        uid: actionUid,
+      });
+
+      if (result.prescreenRequired) {
+        setPrescreen(result.prescreen);
+        setShowPrescreen(true);
+        setIsStarting(false);
+        return;
+      }
+
+      await redirectToSurveyLink(actionUid);
     } catch (error) {
       setStartError(
         String(error?.message ?? "").trim() ||
           "Unable to start the survey right now. Please try again."
       );
-    } finally {
       setIsStarting(false);
+      setIsRedirecting(false);
+    }
+  }
+
+  async function handlePrescreenSubmit() {
+    if (isSubmittingPrescreen || isRedirecting || isStarting) return;
+
+    const actionUid = getActionUid();
+    if (actionUid == null) {
+      setPrescreenError("Missing or Invalid UID in Link");
+      return;
+    }
+
+    setPrescreenError("");
+    setIsSubmittingPrescreen(true);
+
+    try {
+      await redirectToSurveyLink(actionUid);
+    } catch (error) {
+      setPrescreenError(
+        String(error?.message ?? "").trim() ||
+          "Unable to load the survey link. Please try again."
+      );
+      setIsSubmittingPrescreen(false);
+      setIsRedirecting(false);
     }
   }
 
@@ -403,23 +478,21 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   };
 
   /**
-   * After OTP success the backend returns vendorUrl — redirect this tab there.
-   * Do not load Partner/survey APIs on the gateway page.
+   * After OTP success, stay on the gateway and unlock Start Survey.
+   * Do not redirect to the live survey yet — that happens after activity/prescreen/link.
    */
-  const handleVerified = (result) => {
-    const vendorUrl = String(result?.vendorUrl ?? "").trim();
+  const handleVerified = () => {
+    const mappingId = verifyContext?.mappingId;
     clearSurveyAccessTempToken();
     clearPartnerUrlVerifyPending();
     clearPartnerUrlVerifyContext();
-    setShowVerifyModal(false);
-
-    if (!vendorUrl) {
-      setIsEmailVerified(false);
-      return;
+    if (mappingId) {
+      markPartnerUrlOtpVerified(mappingId);
     }
-
-    // Final survey destination — leave the Partner URL gateway immediately.
-    window.location.assign(vendorUrl);
+    setShowVerifyModal(false);
+    setVerifyContext(null);
+    setIsEmailVerified(true);
+    stripVerifyParamsFromUrl();
   };
 
   const pageReady =
@@ -428,12 +501,21 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const modalOpen =
     showVerifyModal && requiresEmailVerification && verifyIntentResolved;
 
+  const flowBusy = isStarting || isSubmittingPrescreen || isRedirecting;
+
   return (
     <PublicQuestionnaireLayout isDarkMode={isDarkMode} onToggleTheme={onToggleTheme}>
       {!contentLocked && (isLoading || !isSearchReady || !urlSanitized) ? (
         <div className="pq-card pq-state-card pq-loading-card" aria-busy="true" aria-live="polite">
           <Loader2 className="pq-loading-spinner" size={32} aria-hidden />
           <p className="pq-loading-text">Preparing your survey...</p>
+        </div>
+      ) : null}
+
+      {!contentLocked && isRedirecting && !showPrescreen ? (
+        <div className="pq-card pq-state-card pq-loading-card" aria-busy="true" aria-live="polite">
+          <Loader2 className="pq-loading-spinner" size={32} aria-hidden />
+          <p className="pq-loading-text">Opening your survey...</p>
         </div>
       ) : null}
 
@@ -448,13 +530,22 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
           />
         ) : null}
 
-        {pageReady && survey && !hasStarted ? (
+        {pageReady && survey && showPrescreen && prescreen ? (
+          <PreScreenQuestionnaire
+            prescreen={prescreen}
+            onSubmit={handlePrescreenSubmit}
+            isSubmitting={isSubmittingPrescreen || isRedirecting}
+            submitError={prescreenError}
+          />
+        ) : null}
+
+        {pageReady && survey && !showPrescreen && !isRedirecting ? (
           <>
             <DoSurveyHero
               survey={survey}
               onStart={handleStartSurvey}
-              disabled={showUidError || contentLocked}
-              isStarting={isStarting}
+              disabled={showUidError || contentLocked || flowBusy}
+              isStarting={isStarting || isRedirecting}
             />
             {showUidError ? (
               <p className="pq-hero-error" role="alert">
@@ -467,25 +558,6 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
               </p>
             ) : null}
           </>
-        ) : null}
-
-        {pageReady && survey && hasStarted ? (
-          <div className="pq-card pq-state-card pq-empty-state">
-            <h1 className="pq-empty-title">Survey starting soon</h1>
-            <p className="pq-empty-description">
-              {startMessage ||
-                "Your session has been recorded. The full survey experience will load here once the backend API is connected."}
-            </p>
-            <p className="admin-text-subtle mt-4 text-sm">
-              Token: <span className="font-mono">{survey.meta?.previewLabel || token}</span>
-              {respondentUid ? (
-                <>
-                  {" "}
-                  · Respondent: <span className="font-mono">{respondentUid}</span>
-                </>
-              ) : null}
-            </p>
-          </div>
         ) : null}
       </div>
 

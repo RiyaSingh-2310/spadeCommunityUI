@@ -134,6 +134,12 @@ export const API_ROUTES = {
     recontactCreate: "/api/survey/recontact/add",
     recontactSupplierDetails: (surveyId) =>
       `/api/survey/recontact/${encodeURIComponent(surveyId)}/supplier-details`,
+    /** Partner URL gateway — store activity before survey start. */
+    activity: "/api/survey/activity",
+    /** Partner URL gateway — check whether pre-screen is required. */
+    prescreen: "/api/survey/prescreen",
+    /** Partner URL gateway — resolve live survey redirect URL. */
+    link: "/api/survey/link",
   },
   projects: {
     list: "/api/projects/list",
@@ -262,6 +268,9 @@ export const API_ROUTES = {
       `/api/homepage/${encodeURIComponent(String(section ?? "").trim())}`,
     updateSection: (section) =>
       `/api/homepage/${encodeURIComponent(String(section ?? "").trim())}`,
+  },
+  dashboard: {
+    summary: "/api/dashboard/summary",
   },
 };
 
