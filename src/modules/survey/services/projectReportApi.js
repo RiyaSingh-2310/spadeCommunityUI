@@ -225,3 +225,50 @@ export async function fetchProjectReportList({
     limit,
   };
 }
+
+function triggerBlobDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildReportDownloadFilename(reportType, projectId) {
+  const stamp = new Date().toISOString().slice(0, 10);
+  return `${normalizeProjectReportType(reportType)}-report-${projectId}-${stamp}.csv`;
+}
+
+/**
+ * @param {{
+ *   projectId: string|number,
+ *   reportType?: string,
+ *   supplierId?: string|number,
+ * }} params
+ */
+export async function downloadProjectReport({
+  projectId,
+  reportType,
+  supplierId,
+} = {}) {
+  const resolvedProjectId = String(projectId ?? "").trim();
+  if (!resolvedProjectId) {
+    throw new ApiError("Project id is required.", null);
+  }
+
+  const normalizedType = normalizeProjectReportType(reportType);
+  const basePath = API_ROUTES.projects.reportDownload(resolvedProjectId, normalizedType);
+  const url = appendListQuery(basePath, {
+    extra: supplierId ? { supplierId: String(supplierId).trim() } : {},
+  });
+
+  const blob = await apiRequest(url, { responseType: "blob" });
+  if (!(blob instanceof Blob)) {
+    throw new ApiError("Unable to download report.", null);
+  }
+
+  triggerBlobDownload(blob, buildReportDownloadFilename(normalizedType, resolvedProjectId));
+}

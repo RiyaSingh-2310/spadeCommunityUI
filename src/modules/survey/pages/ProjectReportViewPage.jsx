@@ -69,18 +69,14 @@ function ProjectReportViewPageContent({ isDarkMode }) {
       <div className="mx-auto w-full max-w-[1600px] space-y-6">
         <header className="space-y-2 text-center">
           <h1 className="admin-text text-xl font-bold sm:text-2xl">{pageTitle}</h1>
-          {projectId ? (
-            <p className="admin-text-muted text-sm">Project ID: {projectId}</p>
-          ) : null}
         </header>
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-start">
           <DebouncedSearchInput
             value={searchQuery}
             onChange={setSearchQuery}
             onDebouncedChange={handleSearch}
-            placeholder="Search report..."
-            isDarkMode={isDarkMode}
+            placeholder="Search..."
             aria-label="Search report"
             maxWidthClass="w-full sm:max-w-xs"
           />
