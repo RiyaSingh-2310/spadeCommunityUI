@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { toastApiError, toastApiInfo } from "../../../services/toast/apiToast";
@@ -6,7 +6,12 @@ import {
   listSupplierMappings,
   mapSupplierMappingToRow,
 } from "../services/supplierMappingApi";
+import { downloadProjectReport } from "../services/projectReportApi";
 import { primaryBtnClass, secondaryBtnClass } from "./surveyDetailsShared";
+import {
+  openProjectReportView,
+  PROJECT_REPORT_TYPES,
+} from "../utils/projectReportNavigation";
 
 function ReportSection({ title, children, isDarkMode }) {
   return (
@@ -16,10 +21,11 @@ function ReportSection({ title, children, isDarkMode }) {
   );
 }
 
-function ProjectReportTab({ isDarkMode, projectId, projectUrlId }) {
+function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) {
   const [supplierOptions, setSupplierOptions] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
+  const [downloadingType, setDownloadingType] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -74,17 +80,50 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId }) {
     };
   }, [projectId, projectUrlId]);
 
-  const selectedSupplierLabel = useMemo(() => {
-    const match = supplierOptions.find(
-      (option) => option.value === selectedSupplier
-    );
-    return match?.label || selectedSupplier || "Supplier";
-  }, [supplierOptions, selectedSupplier]);
+  const handleViewReport = (reportType, { supplierId } = {}) => {
+    const resolvedProjectId = String(projectId ?? "").trim();
+    if (!resolvedProjectId) {
+      toastApiInfo({ message: "Project id is missing. Unable to open report." });
+      return;
+    }
 
-  const handleReportAction = (reportType, action) => {
-    toastApiInfo({
-      message: `${reportType} — ${action} will be available when the report API is connected.`,
+    if (reportType === PROJECT_REPORT_TYPES.SUPPLIER && !String(supplierId ?? "").trim()) {
+      toastApiInfo({ message: "Select a supplier before viewing the report." });
+      return;
+    }
+
+    openProjectReportView({
+      projectId: resolvedProjectId,
+      reportType,
+      supplierId,
+      projectName,
     });
+  };
+
+  const handleDownloadReport = async (reportType, { supplierId } = {}) => {
+    const resolvedProjectId = String(projectId ?? "").trim();
+    if (!resolvedProjectId) {
+      toastApiInfo({ message: "Project id is missing. Unable to download report." });
+      return;
+    }
+
+    if (reportType === PROJECT_REPORT_TYPES.SUPPLIER && !String(supplierId ?? "").trim()) {
+      toastApiInfo({ message: "Select a supplier before downloading the report." });
+      return;
+    }
+
+    setDownloadingType(reportType);
+    try {
+      await downloadProjectReport({
+        projectId: resolvedProjectId,
+        reportType,
+        supplierId,
+      });
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setDownloadingType("");
+    }
   };
 
   return (
@@ -93,16 +132,17 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId }) {
         <button
           type="button"
           className={secondaryBtnClass}
-          onClick={() => handleReportAction("Project Report", "View")}
+          onClick={() => handleViewReport(PROJECT_REPORT_TYPES.PROJECT)}
         >
           View
         </button>
         <button
           type="button"
           className={primaryBtnClass}
-          onClick={() => handleReportAction("Project Report", "Download")}
+          disabled={downloadingType === PROJECT_REPORT_TYPES.PROJECT}
+          onClick={() => handleDownloadReport(PROJECT_REPORT_TYPES.PROJECT)}
         >
-          Download
+          {downloadingType === PROJECT_REPORT_TYPES.PROJECT ? "Downloading..." : "Download"}
         </button>
       </ReportSection>
 
@@ -110,16 +150,17 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId }) {
         <button
           type="button"
           className={secondaryBtnClass}
-          onClick={() => handleReportAction("Prescreen Report", "View")}
+          onClick={() => handleViewReport(PROJECT_REPORT_TYPES.PRESCREEN)}
         >
           View
         </button>
         <button
           type="button"
           className={primaryBtnClass}
-          onClick={() => handleReportAction("Prescreen Report", "Download")}
+          disabled={downloadingType === PROJECT_REPORT_TYPES.PRESCREEN}
+          onClick={() => handleDownloadReport(PROJECT_REPORT_TYPES.PRESCREEN)}
         >
-          Download
+          {downloadingType === PROJECT_REPORT_TYPES.PRESCREEN ? "Downloading..." : "Download"}
         </button>
       </ReportSection>
 
@@ -147,10 +188,9 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId }) {
               type="button"
               className={secondaryBtnClass}
               onClick={() =>
-                handleReportAction(
-                  `Supplier Report (${selectedSupplierLabel})`,
-                  "View"
-                )
+                handleViewReport(PROJECT_REPORT_TYPES.SUPPLIER, {
+                  supplierId: selectedSupplier,
+                })
               }
             >
               View
@@ -158,14 +198,14 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId }) {
             <button
               type="button"
               className={primaryBtnClass}
+              disabled={downloadingType === PROJECT_REPORT_TYPES.SUPPLIER}
               onClick={() =>
-                handleReportAction(
-                  `Supplier Report (${selectedSupplierLabel})`,
-                  "Download"
-                )
+                handleDownloadReport(PROJECT_REPORT_TYPES.SUPPLIER, {
+                  supplierId: selectedSupplier,
+                })
               }
             >
-              Download
+              {downloadingType === PROJECT_REPORT_TYPES.SUPPLIER ? "Downloading..." : "Download"}
             </button>
           </div>
         </div>
