@@ -435,7 +435,7 @@ function DashboardPage({ isDarkMode }) {
             </TableCard>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          {/* <div className="grid gap-4 lg:grid-cols-2">
             <TableCard title="Recent Surveys" isDarkMode={isDarkMode}>
               <div className="overflow-x-auto">
                 <table className="admin-table min-w-full text-sm">
@@ -558,7 +558,7 @@ function DashboardPage({ isDarkMode }) {
                 ))}
               </div>
             </TableCard>
-          </div>
+          </div> */}
 
           {dashboard.loading && (
             <p className="admin-text-muted text-center text-sm">
