@@ -182,6 +182,11 @@ export const DoSurveyStartPage = lazy(
   () => import("../modules/public-survey/pages/DoSurveyStartPage")
 );
 
+/** Public survey redirect outcome pages (supplier/vendor callbacks) */
+export const SurveyRedirectPage = lazy(
+  () => import("../modules/public-redirect/pages/SurveyRedirectPage")
+);
+
 /** Survey Research Portal (demo) */
 export const SurveyResearchPortalLayout = lazy(
   () => import("../modules/survey-research/layout/SurveyResearchPortalLayout")

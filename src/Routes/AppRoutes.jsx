@@ -74,6 +74,10 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
         path="/dosurvey/:token"
         element={withSuspense(Pages.DoSurveyStartPage, themeProps)}
       />
+      <Route
+        path="/redirect/:outcome"
+        element={withSuspense(Pages.SurveyRedirectPage, themeProps)}
+      />
 
       <Route element={<GuestOnly />}>
         <Route path="/auth" element={withSuspense(Pages.LoginPage, themeProps)} />
