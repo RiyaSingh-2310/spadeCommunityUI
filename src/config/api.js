@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = "http://localhost:5050/api";
+const DEFAULT_API_BASE_URL = "https://backhand-spade-community.onrender.com/api";
 
 /** Backend route paths (must match server; always include /api prefix). */
 export const API_ROUTES = {

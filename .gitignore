@@ -1,8 +1,9 @@
 node_modules
 .npm-cache
-dist
+dist/
 .env
 .env.*
 !.env.example
 .DS_Store
 **/.DS_Store
+.env.development
