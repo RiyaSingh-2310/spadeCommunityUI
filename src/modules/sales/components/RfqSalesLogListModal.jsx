@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, X } from "lucide-react";
+import { X } from "lucide-react";
 import AdminPagination from "../../../components/admin/AdminPagination";
 import TableLoadingSkeleton from "../../../components/admin/TableLoadingSkeleton";
 import { toastApiError } from "../../../services/toast/apiToast";

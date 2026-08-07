@@ -148,16 +148,13 @@ export function mapSalesProjectsToSelectOptions(items = []) {
 async function fetchAllPaginatedRecords(fetchPage) {
   const limit = MAX_API_LIST_LIMIT;
   const items = [];
-  let page = 1;
-  let totalPages = 1;
-
-  do {
+  for (let page = 1; page <= 50; page += 1) {
     const response = await fetchPage({ page, limit });
     const pageItems = Array.isArray(response?.items) ? response.items : [];
     items.push(...pageItems);
-    totalPages = Math.max(1, Number(response?.totalPages) || 1);
-    page += 1;
-  } while (page <= totalPages && page <= 50);
+    const totalPages = Math.max(1, Number(response?.totalPages) || 1);
+    if (page >= totalPages) break;
+  }
 
   return items;
 }

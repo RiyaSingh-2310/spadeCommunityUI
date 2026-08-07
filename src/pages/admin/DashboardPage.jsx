@@ -4,7 +4,7 @@ import AdminPageHeader from "../../components/admin/AdminPageHeader";
 import PermissionDenied from "../../components/admin/PermissionDenied";
 import TableCard from "../../components/admin/TableCard";
 import { useModulePermission } from "../../modules/permissions/useModulePermission";
-import { formatDashboardDate, formatDashboardTime } from "../../modules/shared/utils/dateTime";
+import { formatDashboardDate } from "../../modules/shared/utils/dateTime";
 import { formatStatusLabel } from "../../modules/shared/utils/statusLabels";
 import { BarsChart, DonutChart, PolylineChart, SummaryCard } from "./dashboard/dashboardCharts";
 import { TABLE_HEAD } from "./dashboard/dashboardUtils";

@@ -1,6 +1,7 @@
 import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
+import { sanitizeHtml } from "../../shared/utils/sanitizeHtml";
 
 export const DEFAULT_SURVEY_PAGE_ID = 1;
 
@@ -40,11 +41,11 @@ export function mapSurveyPageToForm(record) {
 
 export function buildSurveyPageUpdatePayload(form) {
   return {
-    complete_content: String(form.completeRedirect ?? ""),
-    terminate_content: String(form.terminateRedirect ?? ""),
-    overquota_content: String(form.overQuotaRedirect ?? ""),
-    quality_term_content: String(form.qualityTermRedirect ?? ""),
-    survey_close_content: String(form.surveyCloseRedirect ?? ""),
+    complete_content: sanitizeHtml(form.completeRedirect).trim(),
+    terminate_content: sanitizeHtml(form.terminateRedirect).trim(),
+    overquota_content: sanitizeHtml(form.overQuotaRedirect).trim(),
+    quality_term_content: sanitizeHtml(form.qualityTermRedirect).trim(),
+    survey_close_content: sanitizeHtml(form.surveyCloseRedirect).trim(),
   };
 }
 

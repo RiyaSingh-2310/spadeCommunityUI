@@ -1,4 +1,4 @@
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../../components/admin/AdminPageHeader";
 import AdminPagination from "../../../../components/admin/AdminPagination";
 import DebouncedSearchInput from "../../../../components/admin/DebouncedSearchInput";
@@ -8,7 +8,6 @@ import { DEFAULT_SURVEY_DISPLAY_NAME } from "../utils/constants";
 import { getGroupSurveyBreadcrumbs } from "../../utils/groupSurveyNavigation";
 
 function UserSurveyDataPage({ isDarkMode }) {
-  const navigate = useNavigate();
   const { id: surveyId, groupId } = useParams();
   const location = useLocation();
   const isGroupView = Boolean(groupId);

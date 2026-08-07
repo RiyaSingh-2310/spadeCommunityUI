@@ -52,8 +52,6 @@ function EditCommunityUserPage({ isDarkMode }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [initialSnapshot, setInitialSnapshot] = useState(null);
   const [existingImage, setExistingImage] = useState("");
-  const [preview, setPreview] = useState("");
-  const [imageFile, setImageFile] = useState(null);
   const [isLoadingRecord, setIsLoadingRecord] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -200,10 +198,8 @@ function EditCommunityUserPage({ isDarkMode }) {
         <form className="space-y-5" onSubmit={handleSubmit} noValidate>
           <ProfileImageUpload
             isDarkMode={isDarkMode}
-            preview={preview}
-            onPreviewChange={setPreview}
-            onFileChange={setImageFile}
             existingImage={existingImage}
+            allowUpload={false}
             showCurrentLabel
             name={form.name}
             firstName={firstName}

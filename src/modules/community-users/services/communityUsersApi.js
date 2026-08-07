@@ -282,18 +282,14 @@ async function findPanelistInList(id) {
     // Continue with paginated lookup.
   }
 
-  let page = 1;
-  let totalPages = 1;
-
-  do {
+  for (let page = 1; page <= 50; page += 1) {
     const listData = await fetchListPage(page, 100);
-    totalPages = listData.totalPages;
     const match = listData.panelists.find((panelist) => String(panelist.id) === targetId);
     if (match) {
       return toPanelistDetailRecord(match);
     }
-    page += 1;
-  } while (page <= totalPages);
+    if (page >= listData.totalPages) break;
+  }
 
   return null;
 }

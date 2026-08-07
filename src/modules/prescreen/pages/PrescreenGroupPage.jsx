@@ -29,7 +29,6 @@ function PrescreenGroupPage({ isDarkMode }) {
     handlePageChange,
     handlePageSizeChange,
     refresh: fetchPrescreenGroups,
-    listError,
   } = useApiListing({
     fetchFn: getRecords,
     initialPageSize: DEFAULT_PAGE_SIZE,

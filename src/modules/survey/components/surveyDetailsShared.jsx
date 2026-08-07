@@ -105,7 +105,7 @@ export function TruncatedUrl({ url, maxWidthClass = "max-w-[220px]" }) {
   );
 }
 
-export function FilterCheckbox({ label, checked, isDarkMode }) {
+export function FilterCheckbox({ label, checked }) {
   return (
     <label
       className={`flex cursor-not-allowed items-center gap-2 rounded-xl border px-3 py-2.5 opacity-80 ${

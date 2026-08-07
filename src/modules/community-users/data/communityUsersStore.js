@@ -31,7 +31,7 @@ const PROFESSIONS = [
 const AGE_RANGES = ["18-24", "25-34", "35-44", "45-54", "55+"];
 
 function buildProfilingAnswers(seed) {
-  return PROFILING_QUESTIONS.map((question, index) => {
+  return PROFILING_QUESTIONS.map((question) => {
     if (question.includes("age")) {
       return { question, answerOpted: AGE_RANGES[seed % AGE_RANGES.length] };
     }

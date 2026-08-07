@@ -19,11 +19,6 @@ function RewardHistoryPage({ isDarkMode }) {
   const [totalRecords, setTotalRecords] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [summary, setSummary] = useState({
-    totalCredit: 0,
-    totalDebit: 0,
-    totalBalance: 0,
-  });
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [viewTarget, setViewTarget] = useState(null);
@@ -42,16 +37,10 @@ function RewardHistoryPage({ isDarkMode }) {
 
         setRows(data.rows);
         setTotalRecords(data.total);
-        setSummary(data.summary);
       } catch (error) {
         if (cancelled) return;
         setRows([]);
         setTotalRecords(0);
-        setSummary({
-          totalCredit: 0,
-          totalDebit: 0,
-          totalBalance: 0,
-        });
         toastApiError(error);
       } finally {
         if (!cancelled) setIsLoading(false);

@@ -9,6 +9,7 @@ import { ApiError } from "../../../services/api/ApiError";
 import { appendListQuery } from "../../shared/utils/listQueryParams";
 import { createSurveyUnderGroup, mapSurveyToRow } from "./surveyApi";
 import { formatSurveyListDate } from "../../shared/utils/dateTime";
+import { sanitizeHtml } from "../../shared/utils/sanitizeHtml";
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -76,7 +77,7 @@ function resolveClientIdFromForm(form) {
 function buildCreateGroupProjectPayload(form) {
   const payload = {
     project_name: String(form.projectName ?? "").trim(),
-    description: String(form.description ?? ""),
+    description: sanitizeHtml(form.description).trim(),
     status: "active",
   };
 
@@ -89,7 +90,7 @@ function buildCreateGroupProjectPayload(form) {
 function buildUpdateGroupProjectPayload(form) {
   const payload = {
     project_name: String(form.projectName ?? "").trim(),
-    description: String(form.description ?? ""),
+    description: sanitizeHtml(form.description).trim(),
     notes: String(form.notes ?? ""),
   };
 

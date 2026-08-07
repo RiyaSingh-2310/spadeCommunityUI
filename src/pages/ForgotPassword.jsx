@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Mail } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
-import AuthSecondaryAction from "../components/auth/AuthSecondaryAction";
 import { useFormValidation } from "../modules/shared/hooks/useFormValidation";
 import { EMAIL_FIELD_MAX_LENGTH, getAuthEmailError } from "../modules/shared/utils/validation";
 import { forgotPassword } from "../services/auth/authApi";

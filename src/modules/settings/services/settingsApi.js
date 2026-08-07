@@ -79,7 +79,7 @@ export function mapAdminToProfileForm(admin) {
  * Loads the authenticated user's profile via role-specific `/me` endpoints.
  * Never uses another user's id for the email/profile source.
  */
-export async function fetchProfile(_userId) {
+export async function fetchProfile() {
   const data = await apiRequest(resolveMeRoute());
   assertSuccess(data);
 

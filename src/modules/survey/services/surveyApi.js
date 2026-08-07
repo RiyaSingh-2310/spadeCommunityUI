@@ -8,6 +8,7 @@ import {
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import { createEmptySurveyForm } from "../data/surveyFormData";
+import { sanitizeHtml } from "../../shared/utils/sanitizeHtml";
 import {
   getSupplierMappingDetail,
   getSurveyProjectDetails,
@@ -356,7 +357,7 @@ export function buildProjectUrlApiFields(form = {}) {
   const language = String(form.language ?? "").trim();
 
   return {
-    description: String(form.discussion ?? "").trim(),
+    description: sanitizeHtml(form.discussion).trim(),
     loi: toNullableNumber(form.loi),
     ir: toNullableNumber(form.ir),
     country: String(form.country ?? "").trim(),

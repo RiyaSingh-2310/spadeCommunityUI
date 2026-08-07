@@ -1,4 +1,4 @@
-function FormRadioGroup({ label, name, value, onChange, options, isDarkMode, disabled = false }) {
+function FormRadioGroup({ label, name, value, onChange, options, disabled = false }) {
   return (
     <div>
       {label ? (

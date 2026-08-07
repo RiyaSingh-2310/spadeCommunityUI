@@ -88,12 +88,10 @@ export function MessagesProvider({ children }) {
       const normalizedId = String(id ?? "").trim();
       if (!normalizedId) return null;
 
-      let result = null;
       try {
-        result = await markMessageAsRead(normalizedId);
+        await markMessageAsRead(normalizedId);
       } catch {
         // Dedicated mark-read endpoint may be unavailable; keep optimistic UI.
-        result = { success: true, optimistic: true };
       }
 
       setRecentItems((prev) => {
@@ -112,7 +110,7 @@ export function MessagesProvider({ children }) {
       });
 
       notifyListingListeners();
-      return result;
+      return { success: true };
     },
     [notifyListingListeners]
   );

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
-import AuthSecondaryAction from "../components/auth/AuthSecondaryAction";
 import { forgotPassword, verifyOtp } from "../services/auth/authApi";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 

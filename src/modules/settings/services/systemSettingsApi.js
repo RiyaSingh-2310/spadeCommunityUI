@@ -47,7 +47,8 @@ function extractSectionFields(data) {
     if (!("success" in nested) && !("message" in nested)) {
       const keys = Object.keys(nested);
       if (keys.some((key) => key !== "section")) {
-        const { section: _section, ...fields } = nested;
+        const { section, ...fields } = nested;
+        void section;
         return fields;
       }
     }

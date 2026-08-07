@@ -6,6 +6,7 @@ import {
 import { appendListQuery } from "../../shared/utils/listQueryParams";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
+import { sanitizeHtml } from "../../shared/utils/sanitizeHtml";
 import {
   apiStatusToFormValue,
   formValueToApiStatus,
@@ -158,8 +159,8 @@ function buildTemplatePayload(payload) {
     ).trim(),
     title: String(payload.emailTitle ?? payload.title ?? "").trim(),
     subject: String(payload.subject ?? "").trim(),
-    body: String(
-      payload.body ?? payload.content ?? payload.description ?? ""
+    body: sanitizeHtml(
+      payload.body ?? payload.content ?? payload.description
     ).trim(),
   };
 }

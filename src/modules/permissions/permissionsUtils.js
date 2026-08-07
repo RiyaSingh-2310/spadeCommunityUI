@@ -185,9 +185,10 @@ export function decodePermissions(encoded) {
   if (!encoded) return null;
   try {
     const base64 = String(encoded).trim();
+    const bufferCtor = globalThis.Buffer;
     const utf8 =
-      typeof Buffer !== "undefined"
-        ? Buffer.from(base64, "base64").toString("utf-8")
+      typeof bufferCtor !== "undefined"
+        ? bufferCtor.from(base64, "base64").toString("utf-8")
         : atob(base64);
     return JSON.parse(utf8);
   } catch {

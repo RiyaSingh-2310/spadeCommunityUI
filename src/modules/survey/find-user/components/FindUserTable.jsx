@@ -25,7 +25,6 @@ function FindUserTable({
   selectedIds,
   onToggleRow,
   onToggleAll,
-  selectAll,
   isLoading,
   hasSearched,
   isDarkMode,

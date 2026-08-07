@@ -8,6 +8,7 @@ import {
   formatLocaleDateTime,
   formatLocaleTimeLabel,
 } from "../../modules/shared/utils/dateTime";
+import { sanitizeHtml } from "../../modules/shared/utils/sanitizeHtml";
 
 const FORM_STATUS_TO_API = {
   WIP: "wip",
@@ -76,7 +77,7 @@ function buildSalesProjectBody(payload) {
     country: String(payload.country ?? "").trim(),
     email_subject: String(payload.subject ?? "").trim(),
     status: formStatusToApiStatus(payload.status),
-    comment: String(payload.comment ?? "").trim(),
+    comment: sanitizeHtml(payload.comment).trim(),
   };
 
   const clientId = resolveNumericId(payload.clientId);
@@ -476,7 +477,7 @@ export async function createSalesLog(projectId, payload) {
     method: "POST",
     body: {
       email_subject: payload.subject.trim(),
-      comment: payload.comment ?? "",
+      comment: sanitizeHtml(payload.comment).trim(),
       comment_by: formCommentByToApi(payload.commentBy),
     },
   });

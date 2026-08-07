@@ -9,7 +9,6 @@ import {
   FileSpreadsheet,
   Gift,
   Handshake,
-  Home,
   LayoutDashboard,
   Mail,
   ReceiptIndianRupee,
@@ -36,7 +35,6 @@ const COLLAPSED_SIDEBAR_WIDTH = 80;
 const FLYOUT_HIDE_DELAY_MS = 150;
 
 function AdminSidebar({
-  isDarkMode,
   isCollapsed,
   setIsCollapsed,
   isMobile = false,

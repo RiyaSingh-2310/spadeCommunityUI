@@ -26,15 +26,12 @@ const GROUP_SURVEY_REQUIRED_FIELDS = ["projectName", "clientId"];
 async function fetchAllClients() {
   const limit = MAX_API_LIST_LIMIT;
   const items = [];
-  let page = 1;
-  let totalPages = 1;
-
-  do {
+  for (let page = 1; page <= 50; page += 1) {
     const response = await getClients({ page, limit });
     items.push(...(response?.items ?? []));
-    totalPages = Math.max(1, Number(response?.totalPages) || 1);
-    page += 1;
-  } while (page <= totalPages && page <= 50);
+    const totalPages = Math.max(1, Number(response?.totalPages) || 1);
+    if (page >= totalPages) break;
+  }
 
   return items;
 }

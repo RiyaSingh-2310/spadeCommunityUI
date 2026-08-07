@@ -2,6 +2,7 @@ import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
+import { sanitizeHtml } from "../../shared/utils/sanitizeHtml";
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -112,7 +113,7 @@ export async function updateRecord(id, payload) {
     body: {
       name: String(payload.name ?? payload.title ?? "").trim(),
       system_email: String(payload.systemEmail ?? payload.system_email ?? "").trim(),
-      content: String(payload.content ?? payload.description ?? "").trim(),
+      content: sanitizeHtml(payload.content ?? payload.description).trim(),
     },
   });
   assertSuccess(data);

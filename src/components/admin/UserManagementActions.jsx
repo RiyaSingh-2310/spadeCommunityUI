@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, ShieldCheck, Trash2 } from "lucide-react";
 
 function UserManagementActions({
   onEdit,
@@ -32,6 +32,17 @@ function UserManagementActions({
           title="Delete"
         >
           <Trash2 size={16} strokeWidth={2} />
+        </button>
+      )}
+      {showManagePermissions && onManagePermissions && (
+        <button
+          type="button"
+          onClick={onManagePermissions}
+          className="admin-icon-action"
+          aria-label="Manage permissions"
+          title="Manage permissions"
+        >
+          <ShieldCheck size={16} strokeWidth={2} />
         </button>
       )}
     </div>
