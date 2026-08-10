@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useCsvExport } from "../../shared/hooks/useCsvExport";
@@ -9,6 +10,7 @@ import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
+  deleteRecord,
   exportQuestionnaireGroupCsv,
   getRecords,
   updatePrescreenGroupStatus,
@@ -29,7 +31,6 @@ function PrescreenGroupPage({ isDarkMode }) {
     handlePageChange,
     handlePageSizeChange,
     refresh: fetchPrescreenGroups,
-    listError,
   } = useApiListing({
     fetchFn: getRecords,
     initialPageSize: DEFAULT_PAGE_SIZE,
@@ -41,7 +42,35 @@ function PrescreenGroupPage({ isDarkMode }) {
     columnLabel: "Survey Title",
   });
 
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+
+  const handleDeleteRequest = (row) => {
+    if (!row?.id) return;
+    setDeleteTarget(row);
+  };
+
+  const handleDeleteCancel = () => {
+    if (isDeleting) return;
+    setDeleteTarget(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget?.id) return;
+
+    setIsDeleting(true);
+    try {
+      const data = await deleteRecord(deleteTarget.id);
+      setDeleteTarget(null);
+      toastApiSuccess(data);
+      await fetchPrescreenGroups();
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleStatusToggle = async (row) => {
     if (!row?.id || statusUpdatingId != null) return;
@@ -64,40 +93,48 @@ function PrescreenGroupPage({ isDarkMode }) {
   const { isExporting, downloadCsv } = useCsvExport(exportCsv);
 
   return (
-    <ModuleListingPage
-      isDarkMode={isDarkMode}
-      title="Questionnaire Group"
-      breadcrumbs={[
-        { label: "Questionnaire Group" },
-      ]}
-      searchPlaceholder="Search questionnaire groups..."
-      actionLabel="Add Survey Group"
-      onActionClick={() => navigate("/prescreen/group/add")}
-      csvExportLabel="Download CSV"
-      onCsvExportClick={downloadCsv}
-      isCsvExporting={isExporting}
-      columns={LIST_COLUMNS}
-      rows={sortedRows}
-      sortableColumns={sortableColumns}
-      columnSort={columnSort}
-      onColumnSort={onColumnSort}
-      rowIdKey="id"
-      editPath="/prescreen/group"
-      permissionModule="prescreen_group"
-      onStatusToggle={handleStatusToggle}
-      isLoading={isLoading}
-      emptyMessage="No questionnaire groups found"
-      onSearch={handleSearch}
-      totalRecords={totalRecords}
-      serverPaginated
-      serverSearch
-      paginationPage={currentPage}
-      onPaginationPageChange={handlePageChange}
-      paginationPageSize={pageSize}
-      onPaginationPageSizeChange={handlePageSizeChange}
-      showPagination
-      nowrapAllCells
-    />
+    <div className="space-y-4">
+      <ModuleListingPage
+        isDarkMode={isDarkMode}
+        title="Questionnaire Group"
+        breadcrumbs={[{ label: "Questionnaire Group" }]}
+        searchPlaceholder="Search questionnaire groups..."
+        actionLabel="Add Survey Group"
+        onActionClick={() => navigate("/prescreen/group/add")}
+        csvExportLabel="Download CSV"
+        onCsvExportClick={downloadCsv}
+        isCsvExporting={isExporting}
+        columns={LIST_COLUMNS}
+        rows={sortedRows}
+        sortableColumns={sortableColumns}
+        columnSort={columnSort}
+        onColumnSort={onColumnSort}
+        rowIdKey="id"
+        editPath="/prescreen/group"
+        onDelete={handleDeleteRequest}
+        permissionModule="prescreen_group"
+        onStatusToggle={handleStatusToggle}
+        isLoading={isLoading}
+        emptyMessage="No questionnaire groups found"
+        onSearch={handleSearch}
+        totalRecords={totalRecords}
+        serverPaginated
+        serverSearch
+        paginationPage={currentPage}
+        onPaginationPageChange={handlePageChange}
+        paginationPageSize={pageSize}
+        onPaginationPageSizeChange={handlePageSizeChange}
+        showPagination
+        nowrapAllCells
+      />
+
+      <DeleteConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        onCancel={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+      />
+    </div>
   );
 }
 
