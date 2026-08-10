@@ -178,10 +178,6 @@ export const API_ROUTES = {
     start: (token) =>
       `/api/dosurvey/${encodeURIComponent(String(token ?? "").trim())}/start`,
   },
-  surveyAccess: {
-    sendOtp: "/api/survey-access/send-otp",
-    verifyOtp: "/api/survey-access/verify-otp",
-  },
   groupSurvey: {
     list: "/api/survey/groupproject/list",
     create: "/api/survey/groupproject/add",

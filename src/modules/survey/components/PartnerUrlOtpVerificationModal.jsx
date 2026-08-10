@@ -297,16 +297,14 @@ function PartnerUrlOtpVerificationModal({
                 disabled={isSending || isResending}
                 aria-invalid={Boolean(error)}
               />
-              {/* Error is shown via toast; keep inline message for accessibility. */}
-              {error ? (
+              {/* {error ? (
                 <p
                   className="admin-text mt-0.5 text-sm"
                   style={{ color: "var(--admin-danger-text)" }}
-                  role="alert"
                 >
                   {error}
                 </p>
-              ) : null}
+              ) : null} */}
             </div>
 
             <div className="admin-modal-actions mt-5 flex flex-wrap items-center justify-end gap-2">
@@ -356,15 +354,14 @@ function PartnerUrlOtpVerificationModal({
                 maxLength={6}
                 autoComplete="one-time-code"
               />
-              {error ? (
+              {/* {error ? (
                 <p
                   className="admin-text mt-0.5 text-sm"
                   style={{ color: "var(--admin-danger-text)" }}
-                  role="alert"
                 >
                   {error}
                 </p>
-              ) : null}
+              ) : null} */}
 
               <div className="admin-modal-actions flex flex-wrap items-center justify-between gap-2 pt-2">
                 <button
