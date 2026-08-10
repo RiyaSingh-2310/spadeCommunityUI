@@ -143,6 +143,16 @@ export function mapSupplierMappingToForm(record) {
     partnerCode: String(
       pickField(record, ["partner_code", "code", "mapping_code"]) ?? ""
     ).trim(),
+    partnerRedirectUrl: String(
+      pickField(record, [
+        "dynamic_url",
+        "Dynamic_URL",
+        "partner_url",
+        "supplier_url",
+        "VenderURL",
+        "vendor_url",
+      ]) ?? ""
+    ).trim(),
     quota: detail.quota != null ? String(detail.quota) : "",
     cpi: detail.cpi != null ? String(detail.cpi) : "",
     linksToAssign:

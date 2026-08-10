@@ -29,6 +29,7 @@ import {
   mapSurveyToProjectDetails,
 } from "./surveyApi";
 import { normalizeProjectUrlStatus, normalizeProjectUrlFormForState } from "../utils/projectUrlFormValidation";
+import { dedupeSelectOptions } from "../utils/dedupeSelectOptions";
 
 function normalizeUrlInfoList(record) {
   const info = record?.urlInfo;
@@ -204,7 +205,6 @@ export function createEmptyProjectUrlForm(projectId = "") {
     preScreenerId: "",
     preScreenerName: "",
     completeRewardPoints: "",
-    validateRewardPoints: "",
     terminationRewardPoints: "",
     redirectComplete: "",
     redirectTerminate: "",
@@ -266,8 +266,6 @@ export function mapProjectUrlToForm(record) {
     ).trim(),
     completeRewardPoints:
       record.completeRewardPoints != null ? String(record.completeRewardPoints) : "",
-    validateRewardPoints:
-      record.validateRewardPoints != null ? String(record.validateRewardPoints) : "",
     terminationRewardPoints:
       record.terminationRewardPoints != null
         ? String(record.terminationRewardPoints)
@@ -450,22 +448,6 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
           "completion_point",
           "completeRewardPoints",
           "comp_point",
-        ])
-    ),
-    validateRewardPoints: toFormNumberValue(
-      pickUrlInfoField(urlInfo, [
-        "ValidatePoint",
-        "validate_point",
-        "validateRewardPoints",
-        "Validate_Point",
-        "ValidationPoint",
-      ]) ??
-        pickUrlInfoField(projectRecord, [
-          "ValidatePoint",
-          "validate_point",
-          "validateRewardPoints",
-          "Validate_Point",
-          "ValidationPoint",
         ])
     ),
     terminationRewardPoints: toFormNumberValue(
@@ -683,8 +665,6 @@ function buildProjectUrlUpdatePayload(form) {
     preScreenerId: surveyGroupId,
     completeRewardPoints:
       form.completeRewardPoints === "" ? null : Number(form.completeRewardPoints),
-    validateRewardPoints:
-      form.validateRewardPoints === "" ? null : Number(form.validateRewardPoints),
     terminationRewardPoints:
       form.terminationRewardPoints === ""
         ? null
@@ -730,7 +710,6 @@ export function buildCreateProjectUrlApiPayload(form = {}) {
     QualityTermURL: String(form.redirectQualityTerm ?? "").trim(),
     SurveyCloseURL: String(form.redirectSurveyClose ?? "").trim(),
     CompletionPoint: toApiNumber(form.completeRewardPoints),
-    ValidatePoint: toApiNumber(form.validateRewardPoints),
     TerminationPoint: toApiNumber(form.terminationRewardPoints),
   });
 }
@@ -1053,13 +1032,21 @@ export async function getPreScreenerOptions({ country, language } = {}) {
 async function fetchAllQuestionnaireGroupItems() {
   const limit = MAX_API_LIST_LIMIT;
   const items = [];
+  const seenIds = new Set();
   let page = 1;
   let totalPages = 1;
 
   while (page <= totalPages && page <= 50) {
     const response = await getQuestionnaireGroups({ page, limit });
     const pageItems = Array.isArray(response?.items) ? response.items : [];
-    items.push(...pageItems);
+    for (const item of pageItems) {
+      const id = String(item?.id ?? "").trim();
+      if (id) {
+        if (seenIds.has(id)) continue;
+        seenIds.add(id);
+      }
+      items.push(item);
+    }
     totalPages = Math.max(1, Number(response?.totalPages) || 1);
     page += 1;
   }
@@ -1079,20 +1066,22 @@ export async function getSurveyGroupOptionsForLanguage(language) {
 
   try {
     const items = await fetchAllQuestionnaireGroupItems();
-    const options = items
-      .filter(
-        (item) =>
-          String(item.language ?? "")
-            .trim()
-            .toLowerCase() === languageKey
-      )
-      .map((item) => {
-        const label = String(item.surveyTitle || item.title || "").trim();
-        const value = String(item.id ?? "").trim();
-        if (!value || !label) return null;
-        return { value, label };
-      })
-      .filter(Boolean);
+    const options = dedupeSelectOptions(
+      items
+        .filter(
+          (item) =>
+            String(item.language ?? "")
+              .trim()
+              .toLowerCase() === languageKey
+        )
+        .map((item) => {
+          const label = String(item.surveyTitle || item.title || "").trim();
+          const value = String(item.id ?? "").trim();
+          if (!value || !label) return null;
+          return { value, label };
+        })
+        .filter(Boolean)
+    );
 
     if (options.length > 0) {
       return { success: true, data: options };
@@ -1106,14 +1095,16 @@ export async function getSurveyGroupOptionsForLanguage(language) {
   }
 
   await delay(120);
-  const mockOptions = getMockPreScreeners({ language })
-    .map((item) => {
-      const label = String(item.label ?? "").trim();
-      const value = String(item.value ?? "").trim();
-      if (!value || !label) return null;
-      return { value, label };
-    })
-    .filter(Boolean);
+  const mockOptions = dedupeSelectOptions(
+    getMockPreScreeners({ language })
+      .map((item) => {
+        const label = String(item.label ?? "").trim();
+        const value = String(item.value ?? "").trim();
+        if (!value || !label) return null;
+        return { value, label };
+      })
+      .filter(Boolean)
+  );
   return { success: true, data: mockOptions };
 }
 

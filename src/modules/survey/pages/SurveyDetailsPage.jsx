@@ -423,7 +423,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
           <PartnerMappingTab
             key={`partner-mapping-${id}`}
             projectId={project?.recordId ?? id}
-            projectUrlId={savedProjectUrlId}
+            projectCode={project?.projectCode || project?.surveyId || ""}
             projectLinkType={project?.projectLinkType}
             isDarkMode={isDarkMode}
             readOnly={salesViewMode}

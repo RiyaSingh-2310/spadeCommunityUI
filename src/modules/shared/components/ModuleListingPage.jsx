@@ -90,6 +90,7 @@ function ModuleListingPage({
   onUserSurveyData,
   onSurveyClone,
   onClone,
+  onCopy,
   onAddProject,
   onListProjects,
   onAddLog,
@@ -428,6 +429,7 @@ function ModuleListingPage({
       onUserSurveyData,
       onSurveyClone,
       onClone,
+      onCopy,
       onPdfDownload,
       onApprove,
       onReject,
@@ -459,6 +461,7 @@ function ModuleListingPage({
     onUserSurveyData,
     onSurveyClone,
     onClone,
+    onCopy,
     onPdfDownload,
     onApprove,
     onReject,
@@ -948,6 +951,7 @@ function ModuleListingPage({
                         onUserSurveyData={onUserSurveyData}
                         onSurveyClone={onSurveyClone}
                         onClone={onClone}
+                        onCopy={onCopy}
                         onPdfDownload={onPdfDownload}
                         onApprove={onApprove}
                         onReject={onReject}

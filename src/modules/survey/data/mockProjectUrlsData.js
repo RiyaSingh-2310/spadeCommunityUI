@@ -161,7 +161,6 @@ function createProjectUrlSeed(projectId, index) {
     preScreen: true,
     preScreenerId: matched.id,
     completeRewardPoints: 40 + index * 5,
-    validateRewardPoints: 8 + (index % 4) * 2,
     terminationRewardPoints: 5 + (index % 3) * 2,
     redirectComplete: `https://speed-community.com/survey/live/redirect/complete?id=${projectId || index + 1}&c=${index}`,
     redirectTerminate: `https://speed-community.com/survey/live/redirect/terminate?id=${projectId || index + 1}&c=${index}`,

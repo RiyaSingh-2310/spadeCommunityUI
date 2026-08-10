@@ -8,6 +8,10 @@ import { formatSurveyListDate } from "../../../shared/utils/dateTime";
 import { apiStatusToFormValue, normalizeStatusKey } from "../../../shared/utils/statusLabels";
 import { apiRequest } from "../../../../services/api/client";
 import { ApiError } from "../../../../services/api/ApiError";
+import {
+  dedupeQuestionsByIdentity,
+  dedupeSelectOptions,
+} from "../../utils/dedupeSelectOptions";
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -121,9 +125,11 @@ export async function getFindUserQuestions() {
   const data = await apiRequest(API_ROUTES.findUser.questions);
   assertSuccess(data);
 
-  return extractQuestionList(data)
-    .map(mapFindUserQuestion)
-    .filter(Boolean);
+  return dedupeQuestionsByIdentity(
+    extractQuestionList(data)
+      .map(mapFindUserQuestion)
+      .filter(Boolean)
+  );
 }
 
 /**
@@ -198,27 +204,29 @@ export async function listFindUserEmailTemplateOptions() {
   );
   assertSuccess(data);
 
-  return extractEmailTemplateList(data)
-    .filter((template) => {
-      if (!template || typeof template !== "object") return false;
-      if (template.id == null || template.id === "") return false;
-      const statusKey = normalizeStatusKey(template.status);
-      return !statusKey || statusKey === "active";
-    })
-    .map((template) => {
-      const label = String(
-        template.title ??
-          template.template_key ??
-          template.templateKey ??
-          template.slug ??
-          ""
-      ).trim();
+  return dedupeSelectOptions(
+    extractEmailTemplateList(data)
+      .filter((template) => {
+        if (!template || typeof template !== "object") return false;
+        if (template.id == null || template.id === "") return false;
+        const statusKey = normalizeStatusKey(template.status);
+        return !statusKey || statusKey === "active";
+      })
+      .map((template) => {
+        const label = String(
+          template.title ??
+            template.template_key ??
+            template.templateKey ??
+            template.slug ??
+            ""
+        ).trim();
 
-      return {
-        value: String(template.id),
-        label: label || `Template #${template.id}`,
-      };
-    });
+        return {
+          value: String(template.id),
+          label: label || `Template #${template.id}`,
+        };
+      })
+  );
 }
 
 function extractSearchList(data) {
@@ -459,6 +467,7 @@ export async function inviteFindUsers({
   surveyId,
   userIds = [],
   emailTemplateId,
+  projectUrlId,
 }) {
   const projectId = String(surveyId ?? "").trim();
   if (!projectId || projectId === "undefined" || projectId === "null") {
@@ -481,12 +490,23 @@ export async function inviteFindUsers({
     throw new ApiError("Email template is required.", null);
   }
 
+  const normalizedProjectUrlId = String(projectUrlId ?? "").trim();
+  if (!normalizedProjectUrlId) {
+    throw new ApiError("Project URL is required.", null);
+  }
+
+  const numericProjectUrlId = Number(normalizedProjectUrlId);
+  const body = {
+    panelist_ids: panelistIds,
+    email_template_id: numericTemplateId,
+    project_url_id: Number.isFinite(numericProjectUrlId)
+      ? numericProjectUrlId
+      : normalizedProjectUrlId,
+  };
+
   const data = await apiRequest(API_ROUTES.findUser.invite(projectId), {
     method: "POST",
-    body: {
-      panelist_ids: panelistIds,
-      email_template_id: numericTemplateId,
-    },
+    body,
   });
   assertSuccess(data);
   return data;

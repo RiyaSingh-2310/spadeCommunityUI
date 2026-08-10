@@ -1,7 +1,7 @@
-import { Copy, Pencil, Trash2 } from "lucide-react";
+import { Copy, Files, Pencil, Trash2 } from "lucide-react";
 
-function IconActions({ onEdit, onDelete, onClone, showDelete = true }) {
-  if (!onEdit && !(showDelete && onDelete) && !onClone) {
+function IconActions({ onEdit, onDelete, onClone, onCopy, showDelete = true }) {
+  if (!onEdit && !(showDelete && onDelete) && !onClone && !onCopy) {
     return null;
   }
 
@@ -25,6 +25,17 @@ function IconActions({ onEdit, onDelete, onClone, showDelete = true }) {
           className="admin-icon-action"
           aria-label="Clone"
           title="Clone"
+        >
+          <Files size={16} strokeWidth={2} />
+        </button>
+      )}
+      {onCopy && (
+        <button
+          type="button"
+          onClick={onCopy}
+          className="admin-icon-action"
+          aria-label="Copy"
+          title="Copy"
         >
           <Copy size={16} strokeWidth={2} />
         </button>

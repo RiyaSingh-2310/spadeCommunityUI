@@ -154,6 +154,7 @@ export function shouldShowListingActionColumn({
   onUserSurveyData,
   onSurveyClone,
   onClone,
+  onCopy,
   onPdfDownload,
   onApprove,
   onReject,
@@ -194,6 +195,7 @@ export function shouldShowListingActionColumn({
         onUserSurveyData ||
         onSurveyClone ||
         onClone ||
+        onCopy ||
         onPdfDownload ||
         onApprove ||
         onReject ||

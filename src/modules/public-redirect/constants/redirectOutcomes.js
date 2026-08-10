@@ -3,13 +3,29 @@ import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
 /**
  * Canonical redirect outcome keys matching Partner Mapping / backend redirect paths.
  * Route pattern: /redirect/:outcome
+ * Required direct routes: /redirect/complete | /redirect/terminate | /redirect/quota-full
+ *
+ * Independent path-UID result pages live at:
+ *   /complete/:uid | /terminate/:uid | /quota-full/:uid
+ * See surveyResultOutcomes.js and getSurveyOutcomePath().
  */
 export const REDIRECT_OUTCOMES = {
   COMPLETE: "complete",
   TERMINATE: "terminate",
+  /** Canonical quota-full path segment (also accepts legacy `overquota`). */
+  QUOTA_FULL: "quota-full",
+  /** @deprecated Prefer QUOTA_FULL — kept for existing redirect URLs. */
   OVERQUOTA: "overquota",
   QUALITYTERM: "qualityterm",
   SURVEYCLOSE: "surveyclose",
+};
+
+const QUOTA_FULL_CONFIG = {
+  title: "Quota Full",
+  message:
+    "The required number of responses has already been collected. Thank you for your interest.",
+  variant: "info",
+  icon: Info,
 };
 
 /**
@@ -30,13 +46,8 @@ export const REDIRECT_OUTCOME_CONFIG = {
     variant: "warning",
     icon: AlertTriangle,
   },
-  [REDIRECT_OUTCOMES.OVERQUOTA]: {
-    title: "Quota Full",
-    message:
-      "The required number of responses has already been collected. Thank you for your interest.",
-    variant: "info",
-    icon: Info,
-  },
+  [REDIRECT_OUTCOMES.QUOTA_FULL]: QUOTA_FULL_CONFIG,
+  [REDIRECT_OUTCOMES.OVERQUOTA]: QUOTA_FULL_CONFIG,
   [REDIRECT_OUTCOMES.QUALITYTERM]: {
     title: "Quality Check Failed",
     message:
@@ -52,10 +63,27 @@ export const REDIRECT_OUTCOME_CONFIG = {
   },
 };
 
-export function getRedirectOutcomeConfig(outcome) {
+/** Normalize legacy / alternate outcome path segments to a config key. */
+function normalizeRedirectOutcomeKey(outcome) {
   const key = String(outcome ?? "")
     .trim()
-    .toLowerCase();
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-");
+
+  if (
+    key === "quota-full" ||
+    key === "quotafull" ||
+    key === "overquota" ||
+    key === "over-quota"
+  ) {
+    return REDIRECT_OUTCOMES.QUOTA_FULL;
+  }
+
+  return key;
+}
+
+export function getRedirectOutcomeConfig(outcome) {
+  const key = normalizeRedirectOutcomeKey(outcome);
   return REDIRECT_OUTCOME_CONFIG[key] ?? null;
 }
 

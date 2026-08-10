@@ -8,6 +8,7 @@ import {
   getFindUserQuestions,
   normalizeFindUserQuestionOptions,
 } from "../services/findUserApi";
+import { dedupeSelectOptions } from "../../utils/dedupeSelectOptions";
 import { toastApiError } from "../../../../services/toast/apiToast";
 
 /**
@@ -96,10 +97,12 @@ function FindUserFilters({
 
   const questionSelectOptions = useMemo(
     () =>
-      questions.map((question) => ({
-        value: String(question.id),
-        label: String(question.question_title ?? "").trim(),
-      })),
+      dedupeSelectOptions(
+        questions.map((question) => ({
+          value: String(question.id),
+          label: String(question.question_title ?? "").trim(),
+        }))
+      ),
     [questions]
   );
 
@@ -163,16 +166,14 @@ function FindUserFilters({
     setDraftAnswersByRowId((prev) => ({ ...prev, [rowId]: "" }));
   };
 
-  // Search is enabled when every non-empty filter row is complete, and at least one is valid.
-  const completeFilters = filters.filter(
-    (row) => row.questionId && Array.isArray(row.answers) && row.answers.length > 0
-  );
+  // Search is enabled when every non-empty filter row is complete.
+  // Empty filters are allowed so users can load all panelists and invite.
   const hasIncompleteFilter = filters.some(
     (row) =>
       (row.questionId && (!Array.isArray(row.answers) || row.answers.length === 0)) ||
       (!row.questionId && Array.isArray(row.answers) && row.answers.length > 0)
   );
-  const canSearch = completeFilters.length > 0 && !hasIncompleteFilter;
+  const canSearch = !hasIncompleteFilter;
   const filtersDisabled = disabled || isSearching || isLoadingQuestions;
   const canDeleteFilters = filters.length > 1;
 

@@ -4,8 +4,16 @@ export function normalizeRespondentUid(value) {
   if (value == null) return null;
   const trimmed = String(value).trim();
   if (!trimmed) return null;
-  // Backend template placeholder — treat as missing until partner substitutes a real id.
-  if (trimmed === "[identifier]") return null;
+  // Backend template placeholders — treat as missing until a real id is supplied.
+  if (
+    trimmed === "[identifier]" ||
+    trimmed === "identifier" ||
+    trimmed === "{identifier}" ||
+    trimmed === "XXX" ||
+    trimmed === "XXXX"
+  ) {
+    return null;
+  }
   return trimmed;
 }
 

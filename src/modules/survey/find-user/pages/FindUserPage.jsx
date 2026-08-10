@@ -1,13 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../../components/admin/AdminPageHeader";
+import FormField from "../../../../components/admin/FormField";
+import SearchableSelect from "../../../../components/admin/SearchableSelect";
 import TableCard from "../../../../components/admin/TableCard";
+import { getAdminInputClass } from "../../../shared/utils/formStyles";
 import FindUserFilters from "../components/FindUserFilters";
 import FindUserTable from "../components/FindUserTable";
 import FindUserToolbar from "../components/FindUserToolbar";
 import InvitedUsersModal from "../components/InvitedUsersModal";
 import { useInfiniteUsers } from "../hooks/useInfiniteUsers";
 import { inviteFindUsers, listFindUserEmailTemplateOptions } from "../services/findUserApi";
+import { listProjectUrlsByProject } from "../../services/projectUrlsApi";
+import {
+  formatProjectUrlOptionLabel,
+  isProjectUrlEligibleForInvite,
+  normalizeProjectUrlAssignmentStatus,
+} from "../../utils/projectUrlEligibility";
+import CopyValueButton from "../../components/CopyValueButton";
+import { dedupeSelectOptions } from "../../utils/dedupeSelectOptions";
 import { toastApiError, toastApiSuccess } from "../../../../services/toast/apiToast";
 import { getGroupSurveyBreadcrumbs } from "../../utils/groupSurveyNavigation";
 
@@ -28,16 +39,23 @@ function FindUserPage({ isDarkMode }) {
   const location = useLocation();
   const isGroupView = Boolean(groupId);
   const surveyName = location.state?.surveyName || "Project";
+  const inputClass = getAdminInputClass();
 
   const [filterRows, setFilterRows] = useState([createFilterRow()]);
   const [activeFilters, setActiveFilters] = useState([]);
-  const [searchVersion, setSearchVersion] = useState(0);
+  /** Start at 1 so panelists load immediately (empty filters) and invite selection is usable. */
+  const [searchVersion, setSearchVersion] = useState(1);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [emailTemplate, setEmailTemplate] = useState("");
   const [emailTemplateOptions, setEmailTemplateOptions] = useState([]);
   const [isLoadingEmailTemplates, setIsLoadingEmailTemplates] = useState(false);
   const [showInvitedModal, setShowInvitedModal] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
+
+  const [projectUrls, setProjectUrls] = useState([]);
+  const [isLoadingProjectUrls, setIsLoadingProjectUrls] = useState(false);
+  /** Explicit selection — never auto-select the first URL. */
+  const [selectedProjectUrlId, setSelectedProjectUrlId] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +80,63 @@ function FindUserPage({ isDarkMode }) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProjectUrls() {
+      if (!surveyId) {
+        setProjectUrls([]);
+        return;
+      }
+      setIsLoadingProjectUrls(true);
+      try {
+        const response = await listProjectUrlsByProject(surveyId);
+        if (cancelled) return;
+        const rows = Array.isArray(response?.data) ? response.data : [];
+        setProjectUrls(rows);
+      } catch (err) {
+        if (cancelled) return;
+        setProjectUrls([]);
+        toastApiError(err);
+      } finally {
+        if (!cancelled) setIsLoadingProjectUrls(false);
+      }
+    }
+
+    loadProjectUrls();
+    return () => {
+      cancelled = true;
+    };
+  }, [surveyId]);
+
+  const selectedProjectUrl = useMemo(
+    () =>
+      projectUrls.find(
+        (url) => String(url.id) === String(selectedProjectUrlId)
+      ) ?? null,
+    [projectUrls, selectedProjectUrlId]
+  );
+
+  const eligibleProjectUrlOptions = useMemo(
+    () =>
+      dedupeSelectOptions(
+        projectUrls
+          .filter((url) => isProjectUrlEligibleForInvite(url.status))
+          .map((url) => ({
+            value: String(url.id),
+            label: formatProjectUrlOptionLabel(url, { includeStatus: true }),
+          }))
+          .filter((option) => option.value && option.value !== "undefined")
+      ),
+    [projectUrls]
+  );
+
+  const ineligibleProjectUrls = useMemo(
+    () =>
+      projectUrls.filter((url) => !isProjectUrlEligibleForInvite(url.status)),
+    [projectUrls]
+  );
 
   const {
     users,
@@ -113,7 +188,6 @@ function FindUserPage({ isDarkMode }) {
     });
   };
 
-  // Select-all applies to the current page only; selections from other pages are kept.
   const handleSelectAll = (checked) => {
     const pageIds = users
       .map((user) => getUserSelectionId(user))
@@ -137,8 +211,16 @@ function FindUserPage({ isDarkMode }) {
     [users, selectedIds]
   );
 
+  const hasEligibleProjectUrl = Boolean(
+    selectedProjectUrl &&
+      isProjectUrlEligibleForInvite(selectedProjectUrl.status)
+  );
+
   const inviteEnabled =
-    selectedIds.size > 0 && Boolean(emailTemplate) && !isInviting;
+    selectedIds.size > 0 &&
+    Boolean(emailTemplate) &&
+    hasEligibleProjectUrl &&
+    !isInviting;
 
   const handleInvite = async () => {
     if (!inviteEnabled) return;
@@ -148,9 +230,18 @@ function FindUserPage({ isDarkMode }) {
         surveyId,
         userIds: [...selectedIds],
         emailTemplateId: emailTemplate,
+        projectUrlId: selectedProjectUrlId,
       });
       toastApiSuccess(data);
       setSelectedIds(new Set());
+      // Refresh eligibility / assignment state from API after share.
+      try {
+        const response = await listProjectUrlsByProject(surveyId);
+        const rows = Array.isArray(response?.data) ? response.data : [];
+        setProjectUrls(rows);
+      } catch {
+        // Invitation already succeeded; eligibility refresh is best-effort.
+      }
       refresh();
     } catch (err) {
       toastApiError(err);
@@ -174,6 +265,88 @@ function FindUserPage({ isDarkMode }) {
         }
         isDarkMode={isDarkMode}
       />
+
+      <TableCard title="Invitation Target" isDarkMode={isDarkMode}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="Project">
+            <input
+              className={inputClass}
+              value={surveyName}
+              readOnly
+              disabled
+            />
+          </FormField>
+          <FormField
+            label="Project URL"
+            required
+            hint="Only Active (or otherwise eligible) Project URLs can be used for a fresh invitation."
+          >
+            <SearchableSelect
+              inputClass={inputClass}
+              value={selectedProjectUrlId}
+              onChange={(value) => setSelectedProjectUrlId(String(value ?? ""))}
+              options={eligibleProjectUrlOptions}
+              placeholder={
+                isLoadingProjectUrls
+                  ? "Loading Project URLs..."
+                  : eligibleProjectUrlOptions.length === 0
+                    ? "No eligible Project URLs"
+                    : "Select Project URL"
+              }
+              searchPlaceholder="Search Project URL..."
+              disabled={isLoadingProjectUrls || isInviting}
+              loading={isLoadingProjectUrls}
+              loadingLabel="Loading Project URLs..."
+              emptyMessage="No eligible Project URLs found"
+              aria-label="Project URL"
+            />
+          </FormField>
+          {selectedProjectUrl ? (
+            <>
+              <FormField label="Project URL Code">
+                <div className="flex items-stretch gap-2">
+                  <input
+                    className={`${inputClass} min-w-0 flex-1`}
+                    value={selectedProjectUrl.projectUrlCode || "—"}
+                    readOnly
+                    disabled
+                    aria-label="Project URL Code"
+                  />
+                  <CopyValueButton
+                    value={selectedProjectUrl.projectUrlCode}
+                    successMessage="Project URL Code copied"
+                    label="Copy Project URL Code"
+                  />
+                </div>
+              </FormField>
+              <FormField label="URL Status">
+                <input
+                  className={inputClass}
+                  value={normalizeProjectUrlAssignmentStatus(
+                    selectedProjectUrl.status
+                  )}
+                  readOnly
+                  disabled
+                />
+              </FormField>
+            </>
+          ) : null}
+        </div>
+        {ineligibleProjectUrls.length > 0 ? (
+          <div className="mt-4 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-header-search-bg)] px-4 py-3">
+            <p className="admin-text-muted mb-2 text-xs font-medium uppercase tracking-wide">
+              Excluded from fresh invitation
+            </p>
+            <ul className="space-y-1 text-sm">
+              {ineligibleProjectUrls.map((url) => (
+                <li key={url.id} className="admin-text">
+                  {formatProjectUrlOptionLabel(url, { includeStatus: true })}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </TableCard>
 
       <TableCard title="Filters" isDarkMode={isDarkMode}>
         <FindUserFilters
@@ -203,6 +376,15 @@ function FindUserPage({ isDarkMode }) {
           isInviting={isInviting}
           visibleCount={users.length}
           selectedCount={selectedIds.size}
+          inviteBlockedReason={
+            !hasEligibleProjectUrl
+              ? "Select an eligible Project URL before inviting"
+              : !emailTemplate
+                ? "Select an email template"
+                : selectedIds.size === 0
+                  ? "Select at least one panelist"
+                  : ""
+          }
         />
       </TableCard>
 

@@ -4,6 +4,7 @@ import {
   sanitizeInteger,
   getDecimalPlacesError,
 } from "../../shared/utils/numericInputUtils";
+import { getSurveyLinkPlaceholderError } from "./surveyLinkPlaceholders";
 
 export const PROJECT_URL_NUMERIC_MAX_DIGITS = 6;
 /** @deprecated Use PROJECT_URL_NUMERIC_MAX_DIGITS */
@@ -17,6 +18,8 @@ export const PROJECT_URL_FORM_FIELDS = [
   "sampleSize",
   "startDate",
   "endDate",
+  "liveLink",
+  "testLink",
   "preScreenerId",
   "redirectComplete",
   "redirectTerminate",
@@ -24,7 +27,6 @@ export const PROJECT_URL_FORM_FIELDS = [
   "redirectQualityTerm",
   "redirectSurveyClose",
   "completeRewardPoints",
-  "validateRewardPoints",
   "terminationRewardPoints",
 ];
 
@@ -43,9 +45,12 @@ export const PROJECT_URL_REDIRECT_FIELDS = [
   },
   {
     key: "redirectOverQuota",
-    label: "Over Quota URL",
-    path: "/redirect/overquota",
-    example: "https://spade-community.com/redirect/overquota?uid=[identifier]",
+    label: "Quota Full URL",
+    path: "/redirect/quota-full",
+    /** Accept legacy `/redirect/overquota` URLs already saved in the API. */
+    acceptedPaths: ["/redirect/quota-full", "/redirect/overquota"],
+    example:
+      "https://spade-community.com/redirect/quota-full?uid=[identifier]",
   },
   {
     key: "redirectQualityTerm",
@@ -89,7 +94,6 @@ const DIRTY_COMPARE_KEYS = [
   "redirectQualityTerm",
   "redirectSurveyClose",
   "completeRewardPoints",
-  "validateRewardPoints",
   "terminationRewardPoints",
 ];
 
@@ -149,9 +153,12 @@ function getDecimalFieldError(value, label, { required = true } = {}) {
  * Validates redirect URLs: domain may vary, but path + uid=[identifier] must match.
  * All redirect URL fields are required.
  * @param {string} value
- * @param {{ path: string, label: string, example: string }} options
+ * @param {{ path: string, label: string, example: string, acceptedPaths?: string[] }} options
  */
-export function getProjectRedirectUrlError(value, { path, label, example }) {
+export function getProjectRedirectUrlError(
+  value,
+  { path, label, example, acceptedPaths }
+) {
   const trimmed = String(value ?? "").trim();
   if (!trimmed) return getRequiredError(trimmed, label);
 
@@ -163,8 +170,13 @@ export function getProjectRedirectUrlError(value, { path, label, example }) {
   }
 
   const pathname = parsed.pathname.replace(/\/+$/, "") || "/";
-  const requiredPath = path.replace(/\/+$/, "") || "/";
-  if (pathname !== requiredPath) {
+  const allowedPaths = (
+    Array.isArray(acceptedPaths) && acceptedPaths.length > 0
+      ? acceptedPaths
+      : [path]
+  ).map((entry) => String(entry ?? "").replace(/\/+$/, "") || "/");
+
+  if (!allowedPaths.includes(pathname)) {
     return `${label} must follow the required format. Example: ${example}`;
   }
 
@@ -178,14 +190,29 @@ export function getProjectRedirectUrlError(value, { path, label, example }) {
 /**
  * @param {object} form
  */
-export function getProjectUrlFormErrors(form) {
+export function getProjectUrlFormErrors(form, { isMultiLink = false } = {}) {
   const preScreenerId = form.preScreenerId || form.surveyGroupId;
   const redirectErrors = Object.fromEntries(
-    PROJECT_URL_REDIRECT_FIELDS.map(({ key, label, path, example }) => [
-      key,
-      getProjectRedirectUrlError(form[key], { path, label, example }),
-    ])
+    PROJECT_URL_REDIRECT_FIELDS.map(
+      ({ key, label, path, example, acceptedPaths }) => [
+        key,
+        getProjectRedirectUrlError(form[key], {
+          path,
+          label,
+          example,
+          acceptedPaths,
+        }),
+      ]
+    )
   );
+
+  const liveLinkError = isMultiLink
+    ? ""
+    : getRequiredError(form.liveLink, "Live Link") ||
+      getSurveyLinkPlaceholderError(form.liveLink, "Live Link");
+  const testLinkError = isMultiLink
+    ? ""
+    : getSurveyLinkPlaceholderError(form.testLink, "Test Link");
 
   return {
     loi: getDecimalFieldError(form.loi, "LOI (Minutes)"),
@@ -196,6 +223,8 @@ export function getProjectUrlFormErrors(form) {
     endDate:
       getRequiredError(form.endDate, "End Date") ||
       getDateRangeError(form.startDate, form.endDate),
+    liveLink: liveLinkError,
+    testLink: testLinkError,
     preScreenerId: form.preScreen
       ? getRequiredError(preScreenerId, "Pre-Screen Group")
       : "",
@@ -203,11 +232,6 @@ export function getProjectUrlFormErrors(form) {
     completeRewardPoints: getDecimalFieldError(
       form.completeRewardPoints,
       "Completion Point"
-    ),
-    validateRewardPoints: getDecimalFieldError(
-      form.validateRewardPoints,
-      "Validate Point",
-      { required: false }
     ),
     terminationRewardPoints: getDecimalFieldError(
       form.terminationRewardPoints,
@@ -220,8 +244,8 @@ export function getProjectUrlFormErrors(form) {
 /**
  * @param {object} form
  */
-export function isProjectUrlFormValid(form) {
-  return isFormValid(getProjectUrlFormErrors(form));
+export function isProjectUrlFormValid(form, options) {
+  return isFormValid(getProjectUrlFormErrors(form, options));
 }
 
 const NUMERIC_COMPARE_FIELDS = new Set([
@@ -230,7 +254,6 @@ const NUMERIC_COMPARE_FIELDS = new Set([
   "cpiRate",
   "sampleSize",
   "completeRewardPoints",
-  "validateRewardPoints",
 ]);
 
 function normalizeComparableValue(key, value) {
@@ -253,7 +276,6 @@ const DECIMAL_FORM_FIELDS = [
   "ir",
   "cpiRate",
   "completeRewardPoints",
-  "validateRewardPoints",
   "terminationRewardPoints",
 ];
 

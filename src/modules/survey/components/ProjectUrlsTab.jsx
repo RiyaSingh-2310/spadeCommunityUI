@@ -13,6 +13,7 @@ import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import { getAdminInputClass, getAdminTextareaClass } from "../../shared/utils/formStyles";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import CopyValueButton, { copyValueWithToast } from "./CopyValueButton";
 import {
   createEmptyProjectUrlForm,
   createProjectUrl,
@@ -47,6 +48,7 @@ import {
   sanitizeProjectUrlInteger,
 } from "../utils/projectUrlFormValidation";
 import { PROJECT_URL_VIEW_IDS } from "../utils/surveyDetailsNavigation";
+import { dedupeSelectOptions } from "../utils/dedupeSelectOptions";
 import {
   SectionDivider,
   primaryBtnClass,
@@ -267,12 +269,29 @@ function ProjectUrlsTab({
   const isEdit = urlView === PROJECT_URL_VIEW_IDS.EDIT;
   const isLoadingEditForm = isEdit && Boolean(urlId) && !editFormReady;
 
-  const errors = useMemo(() => getProjectUrlFormErrors(form), [form]);
+  const errors = useMemo(
+    () => getProjectUrlFormErrors(form, { isMultiLink }),
+    [form, isMultiLink]
+  );
   const { showError, touch, validateSubmit, resetValidation, isValid } =
     useFormValidation({
       errors,
       fields: PROJECT_URL_FORM_FIELDS,
     });
+
+  const handleCopyListValue = useCallback(async (row) => {
+    const code = String(row?.projectUrlCode ?? row?.record?.projectUrlCode ?? "").trim();
+    const liveLink = String(row?.record?.liveLink ?? "").trim();
+    if (code && code !== "—") {
+      await copyValueWithToast(code, "Project URL Code copied");
+      return;
+    }
+    if (liveLink) {
+      await copyValueWithToast(liveLink, "Live URL copied");
+      return;
+    }
+    await copyValueWithToast("", "Project URL Code copied");
+  }, []);
 
   const setField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -564,7 +583,10 @@ function ProjectUrlsTab({
     const label =
       String(form.preScreenerName ?? form.preScreenName ?? "").trim() ||
       selectedId;
-    return [{ value: selectedId, label }, ...preScreenerOptions];
+    return dedupeSelectOptions([
+      { value: selectedId, label },
+      ...preScreenerOptions,
+    ]);
   }, [
     preScreenerOptions,
     form.preScreenerId,
@@ -613,8 +635,10 @@ function ProjectUrlsTab({
   const handleSave = async (event) => {
     event.preventDefault();
     if (!canWrite) return;
-    if (!validateSubmit() || !isProjectUrlFormValid(form)) {
-      const firstError = Object.values(getProjectUrlFormErrors(form)).find(Boolean);
+    if (!validateSubmit() || !isProjectUrlFormValid(form, { isMultiLink })) {
+      const firstError = Object.values(
+        getProjectUrlFormErrors(form, { isMultiLink })
+      ).find(Boolean);
       toastApiError(firstError || "Please fix the validation errors before saving.");
       return;
     }
@@ -643,7 +667,6 @@ function ProjectUrlsTab({
         cpiRate: trimOnBlur(form.cpiRate),
         sampleSize: trimOnBlur(form.sampleSize),
         completeRewardPoints: trimOnBlur(form.completeRewardPoints),
-        validateRewardPoints: trimOnBlur(form.validateRewardPoints),
         terminationRewardPoints: trimOnBlur(form.terminationRewardPoints),
         id: resolvedUrlId,
         projectId: form.projectId || String(projectFk ?? ""),
@@ -800,6 +823,7 @@ function ProjectUrlsTab({
           statusAsText
           onEdit={canWrite ? openEditForm : undefined}
           onClone={canWrite ? handleCloneRequest : undefined}
+          onCopy={handleCopyListValue}
           onDelete={canWrite ? handleDeleteRequest : undefined}
           onView={!canWrite ? openEditForm : undefined}
           permissionModule="survey"
@@ -867,20 +891,36 @@ function ProjectUrlsTab({
             />
           </FormField>
           <FormField label="Project Code">
-            <input
-              className={inputClass}
-              value={projectCode}
-              readOnly
-              disabled
-            />
+            <div className="flex items-stretch gap-2">
+              <input
+                className={`${inputClass} flex-1`}
+                value={projectCode}
+                readOnly
+                disabled
+                aria-label="Project Code"
+              />
+              <CopyValueButton
+                value={projectCode}
+                successMessage="Project Code copied"
+                label="Copy Project Code"
+              />
+            </div>
           </FormField>
           <FormField label="Project URL Code">
-            <input
-              className={inputClass}
-              value={form.projectUrlCode || "—"}
-              readOnly
-              disabled
-            />
+            <div className="flex items-stretch gap-2">
+              <input
+                className={`${inputClass} flex-1`}
+                value={form.projectUrlCode || (isEdit ? "—" : "Generated on save")}
+                readOnly
+                disabled
+                aria-label="Project URL Code"
+              />
+              <CopyValueButton
+                value={form.projectUrlCode}
+                successMessage="Project URL Code copied"
+                label="Copy Project URL Code"
+              />
+            </div>
           </FormField>
           <FormField label="Description" className="sm:col-span-2">
             <textarea
@@ -1057,29 +1097,56 @@ function ProjectUrlsTab({
 
           {!isMultiLink ? (
             <div className="grid gap-4 sm:grid-cols-1">
-              <FormField label="Live Link">
-                <input
-                  className={inputClass}
-                  value={form.liveLink}
-                  onChange={(event) => setField("liveLink", event.target.value)}
-                  onBlur={(event) =>
-                    setField("liveLink", trimOnBlur(event.target.value))
-                  }
-                  placeholder="https://"
-                  disabled={!canWrite}
-                />
+              <FormField
+                label="Live Link"
+                required
+                hint="Must include identifier or XXX"
+                error={showError("liveLink") ? errors.liveLink : ""}
+              >
+                <div className="flex items-stretch gap-2">
+                  <input
+                    className={`${inputClass} flex-1`}
+                    value={form.liveLink}
+                    onChange={(event) => setField("liveLink", event.target.value)}
+                    onBlur={(event) => {
+                      setField("liveLink", trimOnBlur(event.target.value));
+                      touch("liveLink");
+                    }}
+                    placeholder="https://example.com/survey?uid=identifier"
+                    disabled={!canWrite}
+                    aria-invalid={Boolean(showError("liveLink") && errors.liveLink)}
+                  />
+                  <CopyValueButton
+                    value={form.liveLink}
+                    successMessage="Live URL copied"
+                    label="Copy Live URL"
+                  />
+                </div>
               </FormField>
-              <FormField label="Test Link">
-                <input
-                  className={inputClass}
-                  value={form.testLink}
-                  onChange={(event) => setField("testLink", event.target.value)}
-                  onBlur={(event) =>
-                    setField("testLink", trimOnBlur(event.target.value))
-                  }
-                  placeholder="https://"
-                  disabled={!canWrite}
-                />
+              <FormField
+                label="Test Link"
+                hint="Must include identifier or XXX"
+                error={showError("testLink") ? errors.testLink : ""}
+              >
+                <div className="flex items-stretch gap-2">
+                  <input
+                    className={`${inputClass} flex-1`}
+                    value={form.testLink}
+                    onChange={(event) => setField("testLink", event.target.value)}
+                    onBlur={(event) => {
+                      setField("testLink", trimOnBlur(event.target.value));
+                      touch("testLink");
+                    }}
+                    placeholder="https://example.com/survey?uid=XXX"
+                    disabled={!canWrite}
+                    aria-invalid={Boolean(showError("testLink") && errors.testLink)}
+                  />
+                  <CopyValueButton
+                    value={form.testLink}
+                    successMessage="Test URL copied"
+                    label="Copy Test URL"
+                  />
+                </div>
               </FormField>
             </div>
           ) : (
@@ -1180,35 +1247,55 @@ function ProjectUrlsTab({
 
       <TableCard title="Redirect URLs" isDarkMode={isDarkMode}>
         <div className="grid gap-4 sm:grid-cols-1">
-          {PROJECT_URL_REDIRECT_FIELDS.map(({ key, label, example }) => (
-            <FormField
-              key={key}
-              label={label}
-              required
-              hint={`Example: ${example}`}
-              error={showError(key) ? errors[key] : ""}
-            >
-              <input
-                className={inputClass}
-                value={form[key]}
-                onChange={(event) => setField(key, event.target.value)}
-                onBlur={(event) => {
-                  setField(key, trimOnBlur(event.target.value));
-                  touch(key);
-                }}
-                placeholder="https://"
-                disabled={!canWrite}
-                aria-invalid={Boolean(showError(key) && errors[key])}
-              />
-            </FormField>
-          ))}
+          {PROJECT_URL_REDIRECT_FIELDS.map(({ key, label, example }) => {
+            const copyMessage =
+              key === "redirectComplete"
+                ? "Completed URL copied"
+                : key === "redirectTerminate"
+                  ? "Terminated URL copied"
+                  : key === "redirectOverQuota"
+                    ? "Quota Full URL copied"
+                    : key === "redirectQualityTerm"
+                      ? "Quality Term URL copied"
+                      : "Survey Closed URL copied";
+
+            return (
+              <FormField
+                key={key}
+                label={label}
+                required
+                hint={`Example: ${example}`}
+                error={showError(key) ? errors[key] : ""}
+              >
+                <div className="flex items-stretch gap-2">
+                  <input
+                    className={`${inputClass} flex-1`}
+                    value={form[key]}
+                    onChange={(event) => setField(key, event.target.value)}
+                    onBlur={(event) => {
+                      setField(key, trimOnBlur(event.target.value));
+                      touch(key);
+                    }}
+                    placeholder="https://"
+                    disabled={!canWrite}
+                    aria-invalid={Boolean(showError(key) && errors[key])}
+                  />
+                  <CopyValueButton
+                    value={form[key]}
+                    successMessage={copyMessage}
+                    label={`Copy ${label}`}
+                  />
+                </div>
+              </FormField>
+            );
+          })}
         </div>
       </TableCard>
 
       <SectionDivider />
 
       <TableCard title="Reward Information" isDarkMode={isDarkMode}>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <FormField
             label="Completion Point"
             required
@@ -1255,27 +1342,6 @@ function ProjectUrlsTab({
               aria-invalid={Boolean(
                 showError("terminationRewardPoints") &&
                   errors.terminationRewardPoints
-              )}
-            />
-          </FormField>
-          <FormField
-            label="Validate Point"
-            error={
-              showError("validateRewardPoints") ? errors.validateRewardPoints : ""
-            }
-          >
-            <DecimalInput
-              className={inputClass}
-              value={form.validateRewardPoints}
-              onChange={(value) =>
-                setField("validateRewardPoints", sanitizeProjectUrlDecimal(value))
-              }
-              onBlur={() => touch("validateRewardPoints")}
-              placeholder="e.g. 30"
-              decimalPlaces={PROJECT_URL_CPI_MAX_DECIMALS}
-              disabled={!canWrite}
-              aria-invalid={Boolean(
-                showError("validateRewardPoints") && errors.validateRewardPoints
               )}
             />
           </FormField>

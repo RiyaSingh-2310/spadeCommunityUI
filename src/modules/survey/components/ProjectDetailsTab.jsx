@@ -8,7 +8,7 @@ function ProjectDetailsTab({ project, isDarkMode }) {
         <DetailGrid>
           <DetailField label="ID" value={project.recordId ?? project.id} />
           <DetailField label="Project Name" value={project.projectName} />
-          <DetailField label="Project Code" value={project.projectCode || project.surveyId} />
+          <DetailField label="Project Code" value={project.projectCode || project.surveyId} copySuccessMessage="Project Code copied" copyLabel="Copy Project Code" />
           <DetailField label="Client" value={project.clientName} />
           <DetailField label="Project Manager" value={project.projectManager} />
           <DetailField label="Sales Manager" value={project.salesManager} />

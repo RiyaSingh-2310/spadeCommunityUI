@@ -15,6 +15,7 @@ function FindUserToolbar({
   isInviting = false,
   visibleCount = 0,
   selectedCount = 0,
+  inviteBlockedReason = "",
 }) {
   const inputClass = getAdminInputClass();
   const canInvite = !inviteDisabled && !disabled && !isInviting;
@@ -69,7 +70,8 @@ function FindUserToolbar({
             ? "Sending invites..."
             : canInvite
               ? "Invite selected users"
-              : "Select at least one user and an email template"
+              : inviteBlockedReason ||
+                "Select Project URL, at least one user, and an email template"
         }
         className="h-10 w-full shrink-0 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
       >

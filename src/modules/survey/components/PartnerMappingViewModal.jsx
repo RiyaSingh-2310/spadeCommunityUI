@@ -15,6 +15,10 @@ function PartnerMappingViewModal({
   mappingId,
   partnerName,
   isMultiLink = false,
+  projectId = "",
+  projectCode = "",
+  projectUrlId = "",
+  projectUrlCode = "",
   onPartnerUrlClick,
 }) {
   const [detail, setDetail] = useState(null);
@@ -94,6 +98,28 @@ function PartnerMappingViewModal({
                 label="Partner Name"
                 value={detail.partnerName ?? partnerName}
               />
+              {projectId ? (
+                <DetailField label="Project ID" value={projectId} />
+              ) : null}
+              {projectCode ? (
+                <DetailField
+                  label="Project Code"
+                  value={projectCode}
+                  copySuccessMessage="Project Code copied"
+                  copyLabel="Copy Project Code"
+                />
+              ) : null}
+              {projectUrlId ? (
+                <DetailField label="Project URL ID" value={projectUrlId} />
+              ) : null}
+              {projectUrlCode ? (
+                <DetailField
+                  label="Project URL Code"
+                  value={projectUrlCode}
+                  copySuccessMessage="Project URL Code copied"
+                  copyLabel="Copy Project URL Code"
+                />
+              ) : null}
               <DetailField label="Partner Quota" value={detail.quota} />
               <DetailField label="CPI" value={detail.cpi} />
               {isMultiLink ? (
@@ -121,6 +147,9 @@ function PartnerMappingViewModal({
               />
               <DetailField
                 label="Partner URL"
+                copyValue={appendIsTestToPartnerUrl(detail.partnerUrl, detail.isTest)}
+                copySuccessMessage="Partner URL copied"
+                copyLabel="Copy Partner URL"
                 value={
                   onPartnerUrlClick ? (
                     <button

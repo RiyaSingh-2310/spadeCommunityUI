@@ -374,7 +374,6 @@ export function buildProjectUrlApiFields(form = {}) {
     language: language.toLowerCase(),
     termination_point: toNullableNumber(form.terminationRewardPoints),
     completion_point: toNullableNumber(form.completeRewardPoints),
-    validate_point: toNullableNumber(form.validateRewardPoints),
   };
 }
 
@@ -1028,7 +1027,6 @@ function buildCloneUrlInfoPayload(urlRow) {
     TerminationPoint:
       urlRow.TerminationPoint ?? urlRow.termination_point ?? null,
     CompletionPoint: urlRow.CompletionPoint ?? urlRow.completion_point ?? null,
-    ValidatePoint: urlRow.ValidatePoint ?? urlRow.validate_point ?? null,
     CompleteURL: urlRow.CompleteURL ?? urlRow.complete_url ?? null,
     TerminateURL: urlRow.TerminateURL ?? urlRow.terminate_url ?? null,
     OverQuotaURL: urlRow.OverQuotaURL ?? urlRow.over_quota_url ?? null,

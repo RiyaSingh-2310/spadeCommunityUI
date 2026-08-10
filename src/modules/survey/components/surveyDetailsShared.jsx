@@ -1,7 +1,9 @@
+import { isValidElement } from "react";
 import TableCard from "../../../components/admin/TableCard";
 import { ExternalLink } from "lucide-react";
 import { ADMIN_TABLE_INNER_CLASS } from "../../shared/utils/tableHelpers";
 import { formatStatusLabel } from "../../shared/utils/statusLabels";
+import CopyValueButton from "./CopyValueButton";
 
 export function SectionDivider() {
   return (
@@ -38,15 +40,39 @@ function formatDetailValue(value) {
   return String(value);
 }
 
-export function DetailField({ label, value, className = "" }) {
-  const content = formatDetailValue(value);
+export function DetailField({
+  label,
+  value,
+  className = "",
+  copyValue,
+  copySuccessMessage,
+  copyLabel,
+}) {
+  const content = isValidElement(value) ? value : formatDetailValue(value);
+  const valueToCopy =
+    copyValue !== undefined
+      ? copyValue
+      : typeof value === "string" || typeof value === "number"
+        ? value
+        : "";
+  const showCopy = Boolean(copySuccessMessage);
 
   return (
     <div className={className}>
       <dt className="admin-text-muted mb-1 text-xs font-semibold uppercase tracking-wide">
         {label}
       </dt>
-      <dd className="admin-text break-words text-sm font-medium">{content}</dd>
+      <dd className="admin-text flex items-start gap-2 break-words text-sm font-medium">
+        <span className="min-w-0 flex-1">{content}</span>
+        {showCopy ? (
+          <CopyValueButton
+            value={valueToCopy}
+            successMessage={copySuccessMessage}
+            label={copyLabel || `Copy ${label}`}
+            size="inline"
+          />
+        ) : null}
+      </dd>
     </div>
   );
 }
@@ -151,7 +177,10 @@ export function SurveyDataTable({
   isDarkMode,
   footer,
   headerAction,
+  emptyMessage = "",
 }) {
+  const hasRows = Array.isArray(rows) && rows.length > 0;
+
   return (
     <TableCard
       title={title}
@@ -170,15 +199,26 @@ export function SurveyDataTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, rowIdx) => (
-            <tr key={row.id ?? row.sno ?? rowIdx} className="align-middle">
-              {columns.map((col) => (
-                <td key={col} className="admin-text align-middle text-sm">
-                  {renderCell(row, col)}
-                </td>
-              ))}
+          {hasRows ? (
+            rows.map((row, rowIdx) => (
+              <tr key={row.id ?? row.sno ?? rowIdx} className="align-middle">
+                {columns.map((col) => (
+                  <td key={col} className="admin-text align-middle text-sm">
+                    {renderCell(row, col)}
+                  </td>
+                ))}
+              </tr>
+            ))
+          ) : emptyMessage ? (
+            <tr>
+              <td
+                colSpan={Math.max(columns.length, 1)}
+                className="admin-text-muted py-10 text-center text-sm"
+              >
+                {emptyMessage}
+              </td>
             </tr>
-          ))}
+          ) : null}
         </tbody>
       </table>
     </TableCard>

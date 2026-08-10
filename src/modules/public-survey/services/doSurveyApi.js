@@ -8,6 +8,7 @@ import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import { getAuthToken } from "../../../services/auth/authStorage";
 import { findSupplierMappingByDoSurveyToken } from "../../survey/services/supplierMappingApi";
+import { dedupeQuestionsByIdentity } from "../../survey/utils/dedupeSelectOptions";
 
 const MOCK_LOAD_DELAY_MS = 450;
 
@@ -91,7 +92,17 @@ function withDoSurveyDisplayDefaults(details) {
  * Maps GET /api/dosurvey/:token response into the public start-page shape.
  * `IsTest` from supplier mapping drives Test vs Live badge.
  */
-export function mapDoSurveyStartDetails(record, { token = "", uid = "" } = {}) {
+export function mapDoSurveyStartDetails(
+  record,
+  {
+    token = "",
+    uid = "",
+    projectId = "",
+    projectUrlId = "",
+    projectUrlCode = "",
+    partnerId = "",
+  } = {}
+) {
   const safeToken = String(token ?? "").trim();
   const shortToken =
     safeToken.length > 8 ? `${safeToken.slice(0, 8)}…` : safeToken || "preview";
@@ -128,12 +139,43 @@ export function mapDoSurveyStartDetails(record, { token = "", uid = "" } = {}) {
     meta: {
       token: safeToken,
       respondentUid: uid,
+      projectId:
+        String(projectId ?? "").trim() ||
+        String(
+          pickField(record, ["projectId", "project_id", "projectid"]) ?? ""
+        ).trim(),
+      projectUrlId:
+        String(projectUrlId ?? "").trim() ||
+        String(
+          pickField(record, ["projectUrlId", "project_url_id", "url_id"]) ?? ""
+        ).trim(),
+      projectUrlCode:
+        String(projectUrlCode ?? "").trim() ||
+        String(
+          pickField(record, ["projectUrlCode", "project_url_code", "urlCode"]) ??
+            ""
+        ).trim(),
+      partnerId:
+        String(partnerId ?? "").trim() ||
+        String(
+          pickField(record, ["partnerId", "partner_id", "partnerid"]) ?? ""
+        ).trim(),
       previewLabel: shortToken,
     },
   });
 }
 
-function buildMockSurveyDetails(token, uid, { isTest = false } = {}) {
+function buildMockSurveyDetails(
+  token,
+  uid,
+  {
+    isTest = false,
+    projectId = "",
+    projectUrlId = "",
+    projectUrlCode = "",
+    partnerId = "",
+  } = {}
+) {
   return mapDoSurveyStartDetails(
     {
       surveyTitle: "Market Research Survey",
@@ -145,7 +187,7 @@ function buildMockSurveyDetails(token, uid, { isTest = false } = {}) {
       partnerCode: "P001",
       IsTest: isTest ? 1 : 0,
     },
-    { token, uid }
+    { token, uid, projectId, projectUrlId, projectUrlCode, partnerId }
   );
 }
 
@@ -176,7 +218,17 @@ async function resolveStartDetailsFromSupplierMapping(token, uid) {
  * GET /api/dosurvey/:token (planned)
  * Loads survey start-page details for a partner mapping link.
  */
-export async function fetchDoSurveyStartDetails(token, { uid, isTest } = {}) {
+export async function fetchDoSurveyStartDetails(
+  token,
+  {
+    uid,
+    isTest,
+    projectId = "",
+    projectUrlId = "",
+    projectUrlCode = "",
+    partnerId = "",
+  } = {}
+) {
   const normalizedToken = String(token ?? "").trim();
   if (!normalizedToken) {
     throw new Error("Invalid survey link. Please check the URL and try again.");
@@ -185,6 +237,8 @@ export async function fetchDoSurveyStartDetails(token, { uid, isTest } = {}) {
   if (normalizedToken.toLowerCase() === "invalid") {
     throw new Error("Survey not found. This link may be invalid or expired.");
   }
+
+  const flowMeta = { projectId, projectUrlId, projectUrlCode, partnerId };
 
   try {
     const data = await apiRequest(API_ROUTES.doSurvey.byToken(normalizedToken), {
@@ -195,7 +249,11 @@ export async function fetchDoSurveyStartDetails(token, { uid, isTest } = {}) {
     if (!record) {
       throw new ApiError("Survey not found.", data);
     }
-    return mapDoSurveyStartDetails(record, { token: normalizedToken, uid });
+    return mapDoSurveyStartDetails(record, {
+      token: normalizedToken,
+      uid,
+      ...flowMeta,
+    });
   } catch (error) {
     // Never serve mock survey details in production — respondents must see a real error.
     if (import.meta.env.PROD) {
@@ -218,12 +276,21 @@ export async function fetchDoSurveyStartDetails(token, { uid, isTest } = {}) {
           isTest !== undefined && isTest !== null && String(isTest).trim() !== ""
             ? toDoSurveyIsTest(isTest, fromMapping.isTest)
             : fromMapping.isTest,
+        meta: {
+          ...fromMapping.meta,
+          ...Object.fromEntries(
+            Object.entries(flowMeta).filter(([, value]) =>
+              String(value ?? "").trim()
+            )
+          ),
+        },
       });
     }
 
     await delay(MOCK_LOAD_DELAY_MS);
     return buildMockSurveyDetails(normalizedToken, uid, {
       isTest: toDoSurveyIsTest(isTest, false),
+      ...flowMeta,
     });
   }
 }
@@ -232,7 +299,14 @@ export async function fetchDoSurveyStartDetails(token, { uid, isTest } = {}) {
  * POST /api/survey/activity
  * Creates an activity record before the survey begins.
  */
-export async function storeSurveyActivity({ token, uid } = {}) {
+export async function storeSurveyActivity({
+  token,
+  uid,
+  projectId,
+  projectUrlId,
+  projectUrlCode,
+  partnerId,
+} = {}) {
   const normalizedToken = coerceText(token);
   const normalizedUid = coerceText(uid);
 
@@ -243,12 +317,18 @@ export async function storeSurveyActivity({ token, uid } = {}) {
     throw new ApiError("Missing or Invalid UID in Link", null);
   }
 
+  const body = {
+    token: normalizedToken,
+    uid: normalizedUid,
+  };
+  if (coerceText(projectId)) body.projectId = coerceText(projectId);
+  if (coerceText(projectUrlId)) body.projectUrlId = coerceText(projectUrlId);
+  if (coerceText(projectUrlCode)) body.projectUrlCode = coerceText(projectUrlCode);
+  if (coerceText(partnerId)) body.partnerId = coerceText(partnerId);
+
   const data = await apiRequest(API_ROUTES.survey.activity, {
     ...partnerSurveyRequestOptions({ method: "POST" }),
-    body: {
-      token: normalizedToken,
-      uid: normalizedUid,
-    },
+    body,
   });
   assertSuccess(data);
   return data;
@@ -319,7 +399,9 @@ export function mapSurveyPrescreenResponse(data) {
       : data;
 
   const questionsRaw = Array.isArray(payload?.questions) ? payload.questions : [];
-  const questions = questionsRaw.map(mapPrescreenQuestion).filter(Boolean);
+  const questions = dedupeQuestionsByIdentity(
+    questionsRaw.map(mapPrescreenQuestion).filter(Boolean)
+  );
 
   return {
     required,
@@ -388,8 +470,16 @@ export function extractSurveyRedirectUrl(data) {
 
 /**
  * GET /api/survey/link?token=<partner_token>&uid=<partner_uid>
+ * Extra flow identifiers are accepted for future API wiring but not required by the current contract.
  */
-export async function fetchSurveyLink({ token, uid } = {}) {
+export async function fetchSurveyLink({
+  token,
+  uid,
+  projectId,
+  projectUrlId,
+  projectUrlCode,
+  partnerId,
+} = {}) {
   const normalizedToken = coerceText(token);
   const normalizedUid = coerceText(uid);
 
@@ -404,6 +494,14 @@ export async function fetchSurveyLink({ token, uid } = {}) {
     token: normalizedToken,
     uid: normalizedUid,
   });
+  // Preserve identifiers for backends that already accept them; ignored if unused.
+  if (coerceText(projectId)) params.set("projectId", coerceText(projectId));
+  if (coerceText(projectUrlId)) params.set("projectUrlId", coerceText(projectUrlId));
+  if (coerceText(projectUrlCode)) {
+    params.set("projectUrlCode", coerceText(projectUrlCode));
+  }
+  if (coerceText(partnerId)) params.set("partnerId", coerceText(partnerId));
+
   const path = `${API_ROUTES.survey.link}?${params.toString()}`;
   const data = await apiRequest(path, partnerSurveyRequestOptions());
   assertSuccess(data);
@@ -437,8 +535,22 @@ export async function fetchSurveyLink({ token, uid } = {}) {
  * Returns either { prescreenRequired: true, prescreen } or { prescreenRequired: false }
  * so the page can render pre-screen or continue to the survey link.
  */
-export async function initiateSurveyStart({ token, uid } = {}) {
-  await storeSurveyActivity({ token, uid });
+export async function initiateSurveyStart({
+  token,
+  uid,
+  projectId,
+  projectUrlId,
+  projectUrlCode,
+  partnerId,
+} = {}) {
+  await storeSurveyActivity({
+    token,
+    uid,
+    projectId,
+    projectUrlId,
+    projectUrlCode,
+    partnerId,
+  });
   const prescreen = await fetchSurveyPrescreen(token);
 
   if (prescreen.required) {

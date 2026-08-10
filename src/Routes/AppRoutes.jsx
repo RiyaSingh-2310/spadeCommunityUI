@@ -78,6 +78,18 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
         path="/redirect/:outcome"
         element={withSuspense(Pages.SurveyRedirectPage, themeProps)}
       />
+      <Route
+        path="/complete/:uid"
+        element={withSuspense(Pages.CompleteSurveyResultPage, themeProps)}
+      />
+      <Route
+        path="/terminate/:uid"
+        element={withSuspense(Pages.TerminateSurveyResultPage, themeProps)}
+      />
+      <Route
+        path="/quota-full/:uid"
+        element={withSuspense(Pages.QuotaFullSurveyResultPage, themeProps)}
+      />
 
       <Route element={<GuestOnly />}>
         <Route path="/auth" element={withSuspense(Pages.LoginPage, themeProps)} />

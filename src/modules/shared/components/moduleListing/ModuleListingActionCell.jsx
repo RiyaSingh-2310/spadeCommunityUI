@@ -37,6 +37,7 @@ function ModuleListingActionCell({
   onUserSurveyData,
   onSurveyClone,
   onClone,
+  onCopy,
   onPdfDownload,
   onApprove,
   onReject,
@@ -211,6 +212,7 @@ function ModuleListingActionCell({
           showDelete={canShowDelete}
           onEdit={canShowEdit ? () => handleEdit(row, globalIdx) : undefined}
           onClone={allowWrite && onClone ? () => onClone(row, globalIdx) : undefined}
+          onCopy={onCopy ? () => onCopy(row, globalIdx) : undefined}
           onDelete={canShowDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}
         />
       </div>
@@ -270,6 +272,7 @@ function ModuleListingActionCell({
       showDelete={canShowDelete}
       onEdit={canShowEdit ? () => handleEdit(row, globalIdx) : undefined}
       onClone={allowWrite && onClone ? () => onClone(row, globalIdx) : undefined}
+      onCopy={onCopy ? () => onCopy(row, globalIdx) : undefined}
       onDelete={canShowDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}
     />
     </td>

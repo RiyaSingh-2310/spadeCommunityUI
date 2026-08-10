@@ -7,8 +7,6 @@
  * 3. sessionStorage flag — marks tabs opened from Partner Mapping (survives refresh).
  */
 
-import { extractDoSurveyToken } from "./partnerUrlVerifyContext";
-
 const CHANNEL_NAME = "spade-partner-url-admin-logout";
 const LOGOUT_STORAGE_KEY = "partnerUrlTabs:adminLogoutAt";
 const PENDING_TOKENS_KEY = "partnerUrlTabs:pendingOpenTokens";
@@ -17,6 +15,23 @@ const PENDING_TOKEN_TTL_MS = 30_000;
 
 /** @type {Set<Window>} */
 const openPartnerWindows = new Set();
+
+function extractDoSurveyToken(partnerUrl) {
+  const raw = String(partnerUrl ?? "").trim();
+  if (!raw) return "";
+
+  try {
+    const parsed = new URL(
+      raw,
+      typeof window !== "undefined" ? window.location.origin : "https://local"
+    );
+    const match = parsed.pathname.match(/\/dosurvey\/([^/]+)\/?/i);
+    return match?.[1] ? decodeURIComponent(match[1]) : "";
+  } catch {
+    const match = raw.match(/\/dosurvey\/([^/?#]+)/i);
+    return match?.[1] ? decodeURIComponent(match[1]) : "";
+  }
+}
 
 function pruneClosedWindows() {
   for (const win of [...openPartnerWindows]) {

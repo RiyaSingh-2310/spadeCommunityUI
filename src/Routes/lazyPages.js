@@ -187,6 +187,23 @@ export const SurveyRedirectPage = lazy(
   () => import("../modules/public-redirect/pages/SurveyRedirectPage")
 );
 
+/** Independent survey result pages with path UID */
+export const CompleteSurveyResultPage = lazy(() =>
+  import("../modules/public-redirect/pages/SurveyResultPage").then((m) => ({
+    default: m.CompleteSurveyResultPage,
+  }))
+);
+export const TerminateSurveyResultPage = lazy(() =>
+  import("../modules/public-redirect/pages/SurveyResultPage").then((m) => ({
+    default: m.TerminateSurveyResultPage,
+  }))
+);
+export const QuotaFullSurveyResultPage = lazy(() =>
+  import("../modules/public-redirect/pages/SurveyResultPage").then((m) => ({
+    default: m.QuotaFullSurveyResultPage,
+  }))
+);
+
 /** Survey Research Portal (demo) */
 export const SurveyResearchPortalLayout = lazy(
   () => import("../modules/survey-research/layout/SurveyResearchPortalLayout")

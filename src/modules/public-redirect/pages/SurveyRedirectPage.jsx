@@ -117,7 +117,7 @@ function SurveyRedirectContent({ outcome, outcomeConfig }) {
 /**
  * Public survey redirect outcome page.
  * Routes: /redirect/:outcome
- *   complete | terminate | overquota | qualityterm | surveyclose
+ *   complete | terminate | quota-full (legacy: overquota) | qualityterm | surveyclose
  */
 function SurveyRedirectPage({ isDarkMode, onToggleTheme }) {
   const { outcome: outcomeParam } = useParams();
