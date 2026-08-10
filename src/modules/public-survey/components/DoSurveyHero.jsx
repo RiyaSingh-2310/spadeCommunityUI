@@ -8,10 +8,17 @@ function formatLoi(loiMinutes) {
   return `${minutes} minutes`;
 }
 
-function DoSurveyHero({ survey, onStart, disabled, isStarting }) {
+function DoSurveyHero({
+  survey,
+  onStart,
+  disabled,
+  isStarting,
+  disabledTitle = "",
+}) {
   const description = getSurveyDescription(survey);
   const loiLabel = formatLoi(survey?.loiMinutes);
   const modeLabel = survey?.isTest ? "Test" : "Live";
+  const showDisabledTooltip = Boolean(disabled && !isStarting && disabledTitle);
 
   return (
     <div className="pq-card pq-hero-card">
@@ -42,10 +49,19 @@ function DoSurveyHero({ survey, onStart, disabled, isStarting }) {
           disabled={disabled || isStarting}
           className="pq-hero-start-btn admin-btn-primary"
           aria-busy={isStarting}
+          title={showDisabledTooltip ? disabledTitle : undefined}
+          aria-describedby={
+            showDisabledTooltip ? "dosurvey-start-disabled-hint" : undefined
+          }
         >
           {isStarting ? "Starting..." : "Start Survey"}
           <ArrowRight size={18} aria-hidden />
         </button>
+        {showDisabledTooltip ? (
+          <span className="sr-only" id="dosurvey-start-disabled-hint">
+            {disabledTitle}
+          </span>
+        ) : null}
       </div>
     </div>
   );

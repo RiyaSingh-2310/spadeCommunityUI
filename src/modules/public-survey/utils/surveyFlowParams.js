@@ -57,22 +57,45 @@ export function toSearchParams(search) {
 
 /**
  * Normalize respondent UID — template placeholders count as missing.
+ * Exact placeholder matches are case-insensitive; other values are kept as-is.
+ * @param {unknown} value
+ */
+export function isUidPlaceholderValue(value) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) return false;
+  const key = trimmed.toLowerCase();
+  return (
+    key === "xxx" ||
+    key === "xxxx" ||
+    key === "identifier" ||
+    key === "[identifier]" ||
+    key === "{identifier}"
+  );
+}
+
+/**
+ * Normalize respondent UID — template placeholders count as missing.
  * @param {unknown} value
  */
 export function normalizeFlowUid(value) {
   if (value == null) return "";
   const trimmed = String(value).trim();
   if (!trimmed) return "";
-  if (
-    trimmed === "[identifier]" ||
-    trimmed === "identifier" ||
-    trimmed === "XXX" ||
-    trimmed === "XXXX" ||
-    trimmed === "{identifier}"
-  ) {
-    return "";
-  }
+  if (isUidPlaceholderValue(trimmed)) return "";
   return trimmed;
+}
+
+/**
+ * True when any known UID query param still holds a placeholder token.
+ * @param {string|URLSearchParams|null|undefined} search
+ */
+export function urlHasUidPlaceholder(search) {
+  const params = toSearchParams(search);
+  for (const key of UID_QUERY_KEYS) {
+    if (!params.has(key)) continue;
+    if (isUidPlaceholderValue(params.get(key))) return true;
+  }
+  return false;
 }
 
 /**

@@ -5,12 +5,13 @@ export function normalizeRespondentUid(value) {
   const trimmed = String(value).trim();
   if (!trimmed) return null;
   // Backend template placeholders — treat as missing until a real id is supplied.
+  const key = trimmed.toLowerCase();
   if (
-    trimmed === "[identifier]" ||
-    trimmed === "identifier" ||
-    trimmed === "{identifier}" ||
-    trimmed === "XXX" ||
-    trimmed === "XXXX"
+    key === "[identifier]" ||
+    key === "identifier" ||
+    key === "{identifier}" ||
+    key === "xxx" ||
+    key === "xxxx"
   ) {
     return null;
   }

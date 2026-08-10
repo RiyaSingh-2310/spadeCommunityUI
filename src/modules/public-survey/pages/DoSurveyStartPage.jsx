@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import PublicQuestionnaireLayout from "../../public-questionnaire/layout/PublicQuestionnaireLayout";
@@ -8,6 +8,7 @@ import {
   subscribePartnerUrlTabAdminLogout,
 } from "../../survey/utils/partnerUrlTabSync";
 import { replaceSurveyLinkPlaceholders } from "../../survey/utils/surveyLinkPlaceholders";
+import { toast } from "../../../services/toast";
 import DoSurveyHero from "../components/DoSurveyHero";
 import PreScreenQuestionnaire from "../components/PreScreenQuestionnaire";
 import {
@@ -16,9 +17,15 @@ import {
   initiateSurveyStart,
 } from "../services/doSurveyApi";
 import { classifyDoSurveyError } from "../utils/doSurveyHelpers";
-import { readSurveyFlowParams } from "../utils/surveyFlowParams";
+import {
+  readSurveyFlowParams,
+  urlHasUidPlaceholder,
+} from "../utils/surveyFlowParams";
 
 const IS_TEST_QUERY_KEYS = ["IsTest", "isTest", "is_test"];
+const UID_PLACEHOLDER_INSTRUCTION =
+  "Pass your UID in the URL instead of XXX or identifier.";
+const UID_PLACEHOLDER_TOAST_MS = 8000;
 
 function readIsTestFromSearch(search) {
   const query = String(search ?? "").startsWith("?")
@@ -65,6 +72,7 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const [isSubmittingPrescreen, setIsSubmittingPrescreen] = useState(false);
   const [prescreenError, setPrescreenError] = useState("");
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const uidInstructionToastKeyRef = useRef("");
 
   const flowParams = useMemo(
     () =>
@@ -136,7 +144,39 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
 
   const respondentUid = flowParams.uid;
   const hasValidUid = Boolean(respondentUid);
+  const hasUidPlaceholder = urlHasUidPlaceholder(
+    searchParams.toString() || location.search
+  );
+  const uidBlocksStart = !hasValidUid || hasUidPlaceholder;
   const canLoadPartnerApis = isSearchReady && urlSanitized;
+
+  // Instruct the respondent when Partner URL still has XXX / identifier.
+  useEffect(() => {
+    if (!isSearchReady || !urlSanitized) return;
+    if (!uidBlocksStart) {
+      uidInstructionToastKeyRef.current = "";
+      return;
+    }
+
+    // Re-read window location so refresh / edited query is authoritative.
+    const liveSearch =
+      typeof window !== "undefined"
+        ? window.location.search
+        : searchParams.toString() || location.search;
+    const toastKey = `${token}|${liveSearch}`;
+    if (uidInstructionToastKeyRef.current === toastKey) return;
+    uidInstructionToastKeyRef.current = toastKey;
+
+    toast.warning(UID_PLACEHOLDER_INSTRUCTION, UID_PLACEHOLDER_TOAST_MS);
+  }, [
+    isSearchReady,
+    urlSanitized,
+    uidBlocksStart,
+    searchKey,
+    token,
+    searchParams,
+    location.search,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -256,8 +296,8 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     }
 
     const actionUid = getActionUid();
-    if (!actionUid) {
-      setStartError("Missing or Invalid UID in Link");
+    if (!actionUid || uidBlocksStart) {
+      setStartError(UID_PLACEHOLDER_INSTRUCTION);
       return;
     }
 
@@ -325,7 +365,7 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
 
   const pageReady = !isLoading && isSearchReady && urlSanitized;
   const showUidError =
-    pageReady && !isLoading && isSearchReady && urlSanitized && !hasValidUid;
+    pageReady && !isLoading && isSearchReady && urlSanitized && uidBlocksStart;
   const flowBusy = isStarting || isSubmittingPrescreen || isRedirecting;
 
   return (
@@ -367,10 +407,13 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
             onStart={handleStartSurvey}
             disabled={showUidError || flowBusy}
             isStarting={isStarting || isRedirecting}
+            disabledTitle={
+              showUidError ? UID_PLACEHOLDER_INSTRUCTION : ""
+            }
           />
           {showUidError ? (
             <p className="pq-hero-error" role="alert">
-              Missing or Invalid UID in Link
+              {UID_PLACEHOLDER_INSTRUCTION}
             </p>
           ) : null}
           {startError ? (
