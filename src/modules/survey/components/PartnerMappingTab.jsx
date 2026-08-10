@@ -98,13 +98,6 @@ const REDIRECT_FIELDS = [
     copySuccessMessage: "Survey Close URL copied",
     copyLabel: "Copy Survey Close URL",
   },
-  {
-    key: "postbackUrl",
-    label: "Post Back Url",
-    example: "https://www.google.com?uid={identifier}",
-    copySuccessMessage: "Post Back URL copied",
-    copyLabel: "Copy Post Back URL",
-  },
 ];
 
 const REDIRECT_FIELD_KEYS = REDIRECT_FIELDS.map((field) => field.key);
