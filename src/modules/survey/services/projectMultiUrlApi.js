@@ -6,7 +6,7 @@
  * Delete: DELETE /api/projects/multiple-url/:urlId
  * Upload: POST   /api/projects/:id/multiple-url/csv-upload
  * Template: GET  /api/projects/multiple-url/csv-template
- * Stats:  GET    /api/projects/:id/multi-link-stats
+ * Stats:  GET    /api/projects/:id/multi-link-stats?project_url_id=
  */
 import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
@@ -134,10 +134,24 @@ export function mapMultiLinkStats(raw = {}) {
   };
 }
 
-/** GET /api/projects/:id/multi-link-stats */
-export async function getProjectMultiLinkStats(projectId) {
+/** GET /api/projects/:id/multi-link-stats?project_url_id={projectUrlId} */
+export async function getProjectMultiLinkStats(projectId, projectUrlId) {
   const normalizedId = normalizeProjectId(projectId);
-  const data = await apiRequest(API_ROUTES.projects.multiLinkStats(normalizedId));
+  const normalizedUrlId = String(projectUrlId ?? "").trim();
+  if (
+    !normalizedUrlId ||
+    normalizedUrlId === "undefined" ||
+    normalizedUrlId === "null"
+  ) {
+    throw new ApiError("Project URL ID is required for multi-link stats.", null);
+  }
+
+  const params = new URLSearchParams({
+    project_url_id: normalizedUrlId,
+  });
+  const data = await apiRequest(
+    `${API_ROUTES.projects.multiLinkStats(normalizedId)}?${params.toString()}`
+  );
   assertSuccess(data);
   return mapMultiLinkStats(data);
 }

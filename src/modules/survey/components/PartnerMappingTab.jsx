@@ -343,24 +343,25 @@ function PartnerMappingTab({
   }, [projectUrls, selectedProjectUrlId]);
 
   const loadMultiLinkStats = useCallback(async () => {
-    if (!projectId) {
+    if (!projectId || !resolvedProjectUrlId) {
       setMultiLinkStats(EMPTY_MULTI_LINK_STATS);
       return EMPTY_MULTI_LINK_STATS;
     }
 
     try {
-      const stats = await getProjectMultiLinkStats(projectId);
+      const stats = await getProjectMultiLinkStats(projectId, resolvedProjectUrlId);
       setMultiLinkStats(stats);
       return stats;
     } catch {
       setMultiLinkStats(EMPTY_MULTI_LINK_STATS);
       return EMPTY_MULTI_LINK_STATS;
     }
-  }, [projectId]);
+  }, [projectId, resolvedProjectUrlId]);
 
   const loadMappings = useCallback(async () => {
     if (!projectId || !resolvedProjectUrlId) {
       setRows([]);
+      setMultiLinkStats(EMPTY_MULTI_LINK_STATS);
       return;
     }
 
