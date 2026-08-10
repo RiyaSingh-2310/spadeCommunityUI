@@ -12,6 +12,7 @@ export const PROJECT_URL_INTEGER_MAX_LENGTH = PROJECT_URL_NUMERIC_MAX_DIGITS;
 export const PROJECT_URL_CPI_MAX_DECIMALS = 2;
 
 export const PROJECT_URL_FORM_FIELDS = [
+  "projectUrlCode",
   "loi",
   "ir",
   "cpiRate",
@@ -69,6 +70,7 @@ export const PROJECT_URL_REDIRECT_FIELDS = [
 const REDIRECT_UID_VALUE = "[identifier]";
 
 const DIRTY_COMPARE_KEYS = [
+  "projectUrlCode",
   "discussion",
   "loi",
   "ir",
@@ -215,6 +217,7 @@ export function getProjectUrlFormErrors(form, { isMultiLink = false } = {}) {
     : getSurveyLinkPlaceholderError(form.testLink, "Test Link");
 
   return {
+    projectUrlCode: getRequiredError(form.projectUrlCode, "Project URL Code"),
     loi: getDecimalFieldError(form.loi, "LOI (Minutes)"),
     ir: getDecimalFieldError(form.ir, "IR (%)"),
     cpiRate: getDecimalFieldError(form.cpiRate, "CPI"),

@@ -13,11 +13,12 @@ import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import { getAdminInputClass, getAdminTextareaClass } from "../../shared/utils/formStyles";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
-import CopyValueButton, { copyValueWithToast } from "./CopyValueButton";
+import CopyValueButton from "./CopyValueButton";
 import {
   createEmptyProjectUrlForm,
   createProjectUrl,
   deleteProjectUrl,
+  generateProjectUrlCode,
   getProjectUrlFormForEdit,
   getSurveyGroupOptionsForLanguage,
   listProjectUrlsByProject,
@@ -256,6 +257,7 @@ function ProjectUrlsTab({
   const [routeState, setRouteState] = useState({ projectFk, urlView });
   const [loadedEditKey, setLoadedEditKey] = useState("");
   const [editFormReady, setEditFormReady] = useState(false);
+  const [isGeneratingUrlCode, setIsGeneratingUrlCode] = useState(false);
   const navigateToListRef = useRef(() => {});
   const linkTypeSourceKeyRef = useRef(`${projectFk}:${projectLinkType}`);
 
@@ -278,20 +280,6 @@ function ProjectUrlsTab({
       errors,
       fields: PROJECT_URL_FORM_FIELDS,
     });
-
-  const handleCopyListValue = useCallback(async (row) => {
-    const code = String(row?.projectUrlCode ?? row?.record?.projectUrlCode ?? "").trim();
-    const liveLink = String(row?.record?.liveLink ?? "").trim();
-    if (code && code !== "—") {
-      await copyValueWithToast(code, "Project URL Code copied");
-      return;
-    }
-    if (liveLink) {
-      await copyValueWithToast(liveLink, "Live URL copied");
-      return;
-    }
-    await copyValueWithToast("", "Project URL Code copied");
-  }, []);
 
   const setField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -324,10 +312,12 @@ function ProjectUrlsTab({
       setPendingDelete(nextFormState.pendingDelete);
       setLoadedEditKey("");
       setEditFormReady(false);
+      setIsGeneratingUrlCode(false);
       resetValidation();
     } else {
       setLoadedEditKey("");
       setEditFormReady(false);
+      setIsGeneratingUrlCode(false);
     }
   }
 
@@ -336,6 +326,41 @@ function ProjectUrlsTab({
       navigateToList();
     }
   }, [canWrite, urlView, navigateToList]);
+
+  useEffect(() => {
+    if (urlView !== PROJECT_URL_VIEW_IDS.ADD) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadGeneratedUrlCode = async () => {
+      setIsGeneratingUrlCode(true);
+      try {
+        const code = await generateProjectUrlCode(projectFk);
+        if (cancelled) return;
+        setForm((prev) => ({ ...prev, projectUrlCode: code }));
+        setInitialSnapshot((prev) =>
+          prev ? { ...prev, projectUrlCode: code } : prev
+        );
+      } catch (error) {
+        if (!cancelled) {
+          toastApiError(error);
+          setForm((prev) => ({ ...prev, projectUrlCode: "" }));
+          setInitialSnapshot((prev) =>
+            prev ? { ...prev, projectUrlCode: "" } : prev
+          );
+        }
+      } finally {
+        if (!cancelled) setIsGeneratingUrlCode(false);
+      }
+    };
+
+    loadGeneratedUrlCode();
+    return () => {
+      cancelled = true;
+    };
+  }, [urlView, projectFk]);
 
   useEffect(() => {
     if (urlView !== PROJECT_URL_VIEW_IDS.EDIT) {
@@ -365,9 +390,34 @@ function ProjectUrlsTab({
           return;
         }
         const normalized = normalizeProjectUrlFormForState(nextForm);
-        setSelectedUrlId(normalized.id ? String(normalized.id) : String(urlId));
-        setForm(normalized);
-        setInitialSnapshot(cloneProjectUrlForm(normalized));
+        const existingCode = String(normalized.projectUrlCode ?? "").trim();
+        let formWithCode = normalized;
+
+        if (!existingCode) {
+          setIsGeneratingUrlCode(true);
+          try {
+            const code = await generateProjectUrlCode(projectFk);
+            if (cancelled) return;
+            formWithCode = { ...normalized, projectUrlCode: code };
+          } catch (error) {
+            if (!cancelled) toastApiError(error);
+          } finally {
+            if (!cancelled) setIsGeneratingUrlCode(false);
+          }
+        }
+
+        if (cancelled) return;
+
+        setSelectedUrlId(formWithCode.id ? String(formWithCode.id) : String(urlId));
+        setForm(formWithCode);
+        // If a code was just generated, keep the snapshot without it so Save stays enabled.
+        setInitialSnapshot(
+          cloneProjectUrlForm(
+            !existingCode && formWithCode.projectUrlCode
+              ? normalized
+              : formWithCode
+          )
+        );
         setLoadedEditKey(editKey);
         setEditFormReady(true);
         resetValidation();
@@ -520,9 +570,12 @@ function ProjectUrlsTab({
     hasPendingMultiUrlCsv,
   ]);
 
+  const hasProjectUrlCode = Boolean(String(form.projectUrlCode ?? "").trim());
   const canSubmit =
     canWrite &&
     !isSaving &&
+    !isGeneratingUrlCode &&
+    hasProjectUrlCode &&
     (isEdit ? isDirty : isValid);
 
   const ensureProjectLinkType = useCallback(async () => {
@@ -634,7 +687,12 @@ function ProjectUrlsTab({
 
   const handleSave = async (event) => {
     event.preventDefault();
-    if (!canWrite) return;
+    if (!canWrite || isGeneratingUrlCode) return;
+    if (!String(form.projectUrlCode ?? "").trim()) {
+      toastApiError("Project URL Code is required.");
+      touch("projectUrlCode");
+      return;
+    }
     if (!validateSubmit() || !isProjectUrlFormValid(form, { isMultiLink })) {
       const firstError = Object.values(
         getProjectUrlFormErrors(form, { isMultiLink })
@@ -743,11 +801,12 @@ function ProjectUrlsTab({
 
       const sourceForm = normalizeUrlRecord(record, projectFk);
       const isMultiLink = selectedLinkType === "Multi Link";
+      const generatedCode = await generateProjectUrlCode(projectFk);
 
       const payloadForm = {
         ...sourceForm,
         id: "",
-        projectUrlCode: "",
+        projectUrlCode: generatedCode,
         projectId: String(projectFk ?? ""),
       };
 
@@ -823,7 +882,6 @@ function ProjectUrlsTab({
           statusAsText
           onEdit={canWrite ? openEditForm : undefined}
           onClone={canWrite ? handleCloneRequest : undefined}
-          onCopy={handleCopyListValue}
           onDelete={canWrite ? handleDeleteRequest : undefined}
           onView={!canWrite ? openEditForm : undefined}
           permissionModule="survey"
@@ -906,13 +964,22 @@ function ProjectUrlsTab({
               />
             </div>
           </FormField>
-          <FormField label="Project URL Code">
+          <FormField
+            label="Project URL Code"
+            required
+            error={showError("projectUrlCode")}
+          >
             <div className="flex items-stretch gap-2">
               <input
                 className={`${inputClass} flex-1`}
-                value={form.projectUrlCode || (isEdit ? "—" : "Generated on save")}
+                value={
+                  isGeneratingUrlCode
+                    ? "Generating..."
+                    : form.projectUrlCode || ""
+                }
                 readOnly
                 disabled
+                aria-busy={isGeneratingUrlCode}
                 aria-label="Project URL Code"
               />
               <CopyValueButton

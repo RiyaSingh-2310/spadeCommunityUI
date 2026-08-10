@@ -711,6 +711,8 @@ export function buildCreateProjectUrlApiPayload(form = {}) {
     SurveyCloseURL: String(form.redirectSurveyClose ?? "").trim(),
     CompletionPoint: toApiNumber(form.completeRewardPoints),
     TerminationPoint: toApiNumber(form.terminationRewardPoints),
+    project_url_code: String(form.projectUrlCode ?? "").trim() || undefined,
+    Project_URL_Code: String(form.projectUrlCode ?? "").trim() || undefined,
   });
 }
 
@@ -743,6 +745,51 @@ export function buildProjectUrlMultipartFormData(form = {}, options = {}) {
 function normalizeCsvFilesOption(csvFiles) {
   if (!csvFiles) return [];
   return Array.isArray(csvFiles) ? csvFiles.filter(Boolean) : [csvFiles];
+}
+
+/**
+ * GET /api/projects/:id/url/generate-code
+ * Backend is the source of truth for unique Project URL codes.
+ * @param {string|number} projectId
+ * @returns {Promise<string>}
+ */
+export async function generateProjectUrlCode(projectId) {
+  const rawId = String(projectId ?? "").trim();
+  if (!rawId || rawId === "undefined" || rawId === "null") {
+    throw new ApiError(
+      "Project ID is required to generate Project URL Code.",
+      null
+    );
+  }
+
+  const normalizedId = normalizeProjectId(projectId);
+  const data = await apiRequest(
+    API_ROUTES.projects.generateUrlCode(normalizedId)
+  );
+  assertSuccess(data);
+
+  const payload =
+    data?.data && typeof data.data === "object" && !Array.isArray(data.data)
+      ? data.data
+      : data;
+
+  const code = String(
+    payload?.project_url_code ??
+      payload?.projectUrlCode ??
+      payload?.Project_URL_Code ??
+      payload?.url_code ??
+      payload?.urlCode ??
+      ""
+  ).trim();
+
+  if (!code) {
+    throw new ApiError(
+      "Project URL Code was not returned by the server.",
+      data
+    );
+  }
+
+  return code;
 }
 
 /** GET all Project URL configs for a project. Uses GET /api/projects/:id/url/list. */

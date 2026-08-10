@@ -150,6 +150,7 @@ export const API_ROUTES = {
     delete: (id) => `/api/projects/${id}`,
     createUrl: (id) => `/api/projects/${id}/url`,
     urlList: (id) => `/api/projects/${id}/url/list`,
+    generateUrlCode: (id) => `/api/projects/${id}/url/generate-code`,
     // Backend has no GET /api/projects/url/:urlId — use urlList + match by id.
     updateUrl: (urlId) => `/api/projects/url/${urlId}`,
     updateUrlLinkMode: (urlId) => `/api/projects/url/${urlId}/link-mode`,
