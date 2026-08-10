@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Eye, ExternalLink, Link2, Loader2, Pencil } from "lucide-react";
 import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
@@ -39,6 +40,12 @@ import {
   normalizeProjectUrlAssignmentStatus,
 } from "../utils/projectUrlEligibility";
 import { dedupeSelectOptions } from "../utils/dedupeSelectOptions";
+import {
+  appendPartnerVerifyParams,
+  clearPartnerUrlVerifyContext,
+  isPartnerUrlOtpVerified,
+  stashPartnerUrlReturnPath,
+} from "../utils/partnerUrlVerifyContext";
 import {
   notePartnerUrlTabOpening,
   registerPartnerUrlWindow,
@@ -257,6 +264,7 @@ function PartnerMappingTab({
   const { canWrite } = useModulePermission("survey");
   const allowWrite = canWrite && !readOnly;
   const inputClass = getAdminInputClass();
+  const location = useLocation();
   const isMultiLink = String(projectLinkType ?? "")
     .toLowerCase()
     .includes("multi");
@@ -290,17 +298,34 @@ function PartnerMappingTab({
     ? isProjectUrlEligibleForInvite(selectedProjectUrl.status)
     : false;
 
-  const openPartnerUrl = useCallback(({ partnerUrl, isTest = false }) => {
-    const rawPartnerUrl = String(partnerUrl ?? "").trim();
-    if (!rawPartnerUrl) return;
+  const openPartnerUrlWithOtp = useCallback(
+    ({ mappingId, partnerUrl, isTest = false }) => {
+      const rawPartnerUrl = String(partnerUrl ?? "").trim();
+      if (!rawPartnerUrl) return;
 
-    const destinationUrl = appendIsTestToPartnerUrl(rawPartnerUrl, isTest);
-    setViewTarget(null);
+      const withTest = appendIsTestToPartnerUrl(rawPartnerUrl, isTest);
+      const returnPath = `${location.pathname}${location.search}${location.hash}`;
+      const alreadyVerified = isPartnerUrlOtpVerified(mappingId);
 
-    notePartnerUrlTabOpening(destinationUrl);
-    const partnerTab = window.open(destinationUrl, "_blank");
-    registerPartnerUrlWindow(partnerTab);
-  }, []);
+      setViewTarget(null);
+      clearPartnerUrlVerifyContext();
+
+      let destinationUrl = withTest;
+      if (!alreadyVerified) {
+        stashPartnerUrlReturnPath(mappingId, returnPath);
+        // Pass verify intent in the URL so the NEW tab can open the modal
+        // (sessionStorage is per-tab and does not work with target=_blank + noopener).
+        destinationUrl = appendPartnerVerifyParams(withTest, { mappingId });
+      }
+
+      // Open in a new tab (script-opened so Close ✕ can call window.close()).
+      // Avoid "noopener" here — some browsers then block window.close() on that tab.
+      notePartnerUrlTabOpening(destinationUrl);
+      const partnerTab = window.open(destinationUrl, "_blank");
+      registerPartnerUrlWindow(partnerTab);
+    },
+    [location.pathname, location.search, location.hash]
+  );
 
   const loadProjectUrls = useCallback(async () => {
     if (!projectId) {
@@ -732,7 +757,8 @@ function PartnerMappingTab({
           <button
             type="button"
             onClick={() =>
-              openPartnerUrl({
+              openPartnerUrlWithOtp({
+                mappingId: row.id,
                 partnerUrl: url,
                 isTest: row.isTest,
               })
@@ -1151,7 +1177,13 @@ function PartnerMappingTab({
         projectCode={projectCode}
         projectUrlId={selectedProjectUrl?.id}
         projectUrlCode={selectedProjectUrl?.projectUrlCode}
-        onPartnerUrlClick={openPartnerUrl}
+        onPartnerUrlClick={({ partnerUrl, isTest, mappingId }) =>
+          openPartnerUrlWithOtp({
+            mappingId: mappingId || viewTarget?.mappingId,
+            partnerUrl,
+            isTest,
+          })
+        }
       />
     </>
   );
