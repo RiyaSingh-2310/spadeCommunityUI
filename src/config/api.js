@@ -173,6 +173,7 @@ export const API_ROUTES = {
     byId: (id) => `/api/supplier-mapping/${id}`,
     update: (id) => `/api/supplier-mapping/${id}`,
     updateStatus: (id) => `/api/supplier-mapping/status/${id}`,
+    updateTestMode: (id) => `/api/supplier-mapping/istest/${id}`,
   },
   doSurvey: {
     byToken: (token) => `/dosurvey/${encodeURIComponent(String(token ?? "").trim())}`,

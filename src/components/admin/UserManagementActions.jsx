@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, ShieldCheck, Trash2 } from "lucide-react";
 
 function UserManagementActions({
   onEdit,
@@ -8,11 +8,16 @@ function UserManagementActions({
   showDelete = true,
   showManagePermissions = true,
 }) {
-  if (!onEdit && !onDelete && !onManagePermissions) return null;
+  const canEdit = showEdit && Boolean(onEdit);
+  const canDelete = showDelete && Boolean(onDelete);
+  const canManagePermissions =
+    showManagePermissions && Boolean(onManagePermissions);
+
+  if (!canEdit && !canDelete && !canManagePermissions) return null;
 
   return (
     <div className="flex items-center justify-end gap-1">
-      {showEdit && onEdit && (
+      {canEdit && (
         <button
           type="button"
           onClick={onEdit}
@@ -23,7 +28,18 @@ function UserManagementActions({
           <Pencil size={16} strokeWidth={2} />
         </button>
       )}
-      {showDelete && onDelete && (
+      {canManagePermissions && (
+        <button
+          type="button"
+          onClick={onManagePermissions}
+          className="admin-icon-action"
+          aria-label="Manage Permissions"
+          title="Manage Permissions"
+        >
+          <ShieldCheck size={16} strokeWidth={2} />
+        </button>
+      )}
+      {canDelete && (
         <button
           type="button"
           onClick={onDelete}

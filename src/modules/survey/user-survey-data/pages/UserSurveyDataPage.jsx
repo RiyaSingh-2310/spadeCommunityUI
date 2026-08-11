@@ -5,7 +5,7 @@ import DebouncedSearchInput from "../../../../components/admin/DebouncedSearchIn
 import UserSurveyDataTable from "../components/UserSurveyDataTable";
 import { useUserSurveyDataList } from "../hooks/useUserSurveyDataList";
 import { DEFAULT_SURVEY_DISPLAY_NAME } from "../utils/constants";
-import { getGroupSurveyBreadcrumbs } from "../../utils/groupSurveyNavigation";
+import { getGroupProjectsPath, getGroupSurveyBreadcrumbs } from "../../utils/groupSurveyNavigation";
 
 function UserSurveyDataPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -13,6 +13,9 @@ function UserSurveyDataPage({ isDarkMode }) {
   const location = useLocation();
   const isGroupView = Boolean(groupId);
   const surveyName = location.state?.surveyName || DEFAULT_SURVEY_DISPLAY_NAME;
+  const backToSurveyPath =
+    location.state?.returnTo ||
+    (isGroupView ? getGroupProjectsPath(groupId) : "/survey");
 
   const {
     query,
@@ -55,15 +58,15 @@ function UserSurveyDataPage({ isDarkMode }) {
               ]
         }
         isDarkMode={isDarkMode}
-        // rightContent={
-        //   <button
-        //     type="button"
-        //     onClick={() => navigate("/survey")}
-        //     className="admin-btn-cancel h-10 rounded-xl px-4 text-sm font-semibold"
-        //   >
-        //     Back to Survey
-        //   </button>
-        // }
+        rightContent={
+          <button
+            type="button"
+            onClick={() => navigate(backToSurveyPath)}
+            className="admin-btn-cancel h-10 rounded-xl px-4 text-sm font-semibold"
+          >
+            Back to Survey
+          </button>
+        }
       />
 
       <DebouncedSearchInput

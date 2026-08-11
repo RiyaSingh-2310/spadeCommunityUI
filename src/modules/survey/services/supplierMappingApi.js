@@ -377,7 +377,22 @@ export async function updateSupplierMappingStatus(mappingId, statusActive) {
   return assertSuccess(data);
 }
 
-/** PATCH IsTest via partial PUT /api/supplier-mapping/:id */
+/** PATCH IsTest via /api/supplier-mapping/istest/:id */
 export async function updateSupplierMappingTestMode(mappingId, isTest) {
-  return updateSupplierMappingRecord(mappingId, { IsTest: isTest ? 1 : 0 });
+  const normalizedId = String(mappingId ?? "").trim();
+  if (!normalizedId) {
+    throw new ApiError("Mapping ID is required.", null);
+  }
+
+  const data = await apiRequest(
+    API_ROUTES.supplierMapping.updateTestMode(encodeURIComponent(normalizedId)),
+    {
+      method: "PATCH",
+      body: {
+        IsTest: isTest ? 1 : 0,
+      },
+    }
+  );
+
+  return assertSuccess(data);
 }

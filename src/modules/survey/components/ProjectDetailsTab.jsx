@@ -16,7 +16,7 @@ function ProjectDetailsTab({ project, isDarkMode }) {
             label="Sales Project (RFQ)"
             value={project.salesProject || project.rfq}
           />
-          <DetailField label="Project Link Type" value={project.projectLinkType} />
+          {/* <DetailField label="Project Link Type" value={project.projectLinkType} /> */}
           <DetailField label="Status" value={project.projectStatus} />
           <DetailField
             label="Notes"

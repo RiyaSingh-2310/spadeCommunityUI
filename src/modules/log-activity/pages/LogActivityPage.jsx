@@ -91,7 +91,7 @@ function LogActivityPage({ isDarkMode }) {
           <table className="admin-table min-w-full text-sm">
             <thead>
               <tr className="admin-text-muted">
-                {["S.No", "Name", "Log Date", ...(canWrite ? ["Action"] : [])].map((h) => (
+                {["S.No", "Name", "Date and Time", ...(canWrite ? ["Action"] : [])].map((h) => (
                   <th
                     key={h}
                     className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap"

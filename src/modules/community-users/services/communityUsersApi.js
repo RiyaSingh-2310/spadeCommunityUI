@@ -117,6 +117,26 @@ function buildPanelistUpdatePayload(payload) {
   return body;
 }
 
+function buildPanelistUpdateFormData(payload) {
+  const body = new FormData();
+  const jsonFields = buildPanelistUpdatePayload(payload);
+
+  Object.entries(jsonFields).forEach(([key, value]) => {
+    if (value != null) {
+      body.append(key, String(value));
+    }
+  });
+
+  // Panelist GET responses expose `photo` (with `image` as a fallback alias).
+  // Multipart upload uses the same primary field name as the sibling admin
+  // FormData pattern in usersApi.js, but mapped to panelist terminology.
+  if (payload.imageFile instanceof File) {
+    body.append("photo", payload.imageFile);
+  }
+
+  return body;
+}
+
 /** Maps GET /api/panelist/list record to listing row shape. */
 export function mapPanelistToListingRow(panelist) {
   const phone =
@@ -444,6 +464,16 @@ export async function getUserRewardLogs(
 /** PUT /api/panelist/:id */
 export async function updateRecord(id, payload) {
   const normalizedId = normalizePanelistId(id);
+  const hasImage = payload?.imageFile instanceof File;
+
+  if (hasImage) {
+    const data = await apiRequest(API_ROUTES.panelist.byId(normalizedId), {
+      method: "PUT",
+      body: buildPanelistUpdateFormData(payload),
+    });
+    return assertSuccess(data);
+  }
+
   const body = buildPanelistUpdatePayload(payload);
 
   if (!Object.keys(body).length) {

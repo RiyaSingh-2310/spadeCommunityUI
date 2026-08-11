@@ -98,17 +98,22 @@ function ModuleListingActionCell({
         showDeleteAction,
       });
 
-    if (!showEdit && !showDelete) return null;
+    const showManagePermissions =
+      canShowManagePermissions && Boolean(onManagePermissions);
+
+    if (!showEdit && !showDelete && !showManagePermissions) return null;
 
     return (
       <td key={col} className={cellClass}>
         <UserManagementActions
         isDarkMode={isDarkMode}
-        showManagePermissions={canShowManagePermissions}
+        showManagePermissions={showManagePermissions}
         showEdit={showEdit}
         showDelete={showDelete}
         onManagePermissions={
-          onManagePermissions ? () => onManagePermissions(row, globalIdx) : undefined
+          showManagePermissions
+            ? () => onManagePermissions(row, globalIdx)
+            : undefined
         }
         onEdit={showEdit ? () => handleEdit(row, globalIdx) : undefined}
         onDelete={showDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}

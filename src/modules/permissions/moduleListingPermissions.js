@@ -181,7 +181,8 @@ export function shouldShowListingActionColumn({
       onDelete,
       showDeleteAction,
     });
-    return showEdit || showDelete;
+    const showManagePermissions = allowWrite && Boolean(onManagePermissions);
+    return showEdit || showDelete || showManagePermissions;
   }
 
   if (allowWrite) {

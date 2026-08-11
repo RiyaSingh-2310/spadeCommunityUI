@@ -4,12 +4,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
 import FormStatusSelect from "../../../components/admin/FormStatusSelect";
-import ProfileImageUpload from "../../../components/admin/ProfileImageUpload";
 import TableCard from "../../../components/admin/TableCard";
 import PasswordField from "../../settings/components/PasswordField";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
-import { resolveProfileImageUrl } from "../../shared/utils/userAvatar";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   EMAIL_FIELD_MAX_LENGTH,
@@ -36,14 +34,6 @@ const EMPTY_FORM = {
   confirmPassword: "",
 };
 
-function splitFullName(name) {
-  const parts = String(name ?? "").trim().split(/\s+/).filter(Boolean);
-  return {
-    firstName: parts[0] ?? "",
-    lastName: parts.slice(1).join(" "),
-  };
-}
-
 function EditCommunityUserPage({ isDarkMode }) {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -51,15 +41,11 @@ function EditCommunityUserPage({ isDarkMode }) {
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [initialSnapshot, setInitialSnapshot] = useState(null);
-  const [existingImage, setExistingImage] = useState("");
-  const [preview, setPreview] = useState("");
-  const [imageFile, setImageFile] = useState(null);
   const [isLoadingRecord, setIsLoadingRecord] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputClass = getAdminInputClass();
-  const { firstName, lastName } = splitFullName(form.name);
 
   useEffect(() => {
     if (!id) {
@@ -90,7 +76,6 @@ function EditCommunityUserPage({ isDarkMode }) {
           ...mapped,
         });
         setInitialSnapshot(snapshot);
-        setExistingImage(resolveProfileImageUrl(record) ?? "");
       } catch (error) {
         if (cancelled) return;
         toastApiError(error);
@@ -198,18 +183,6 @@ function EditCommunityUserPage({ isDarkMode }) {
       />
       <TableCard title="User Details" isDarkMode={isDarkMode}>
         <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-          <ProfileImageUpload
-            isDarkMode={isDarkMode}
-            preview={preview}
-            onPreviewChange={setPreview}
-            onFileChange={setImageFile}
-            existingImage={existingImage}
-            showCurrentLabel
-            name={form.name}
-            firstName={firstName}
-            lastName={lastName}
-          />
-
           <FormField label="Name" required error={showError("name")}>
             <input
               className={inputClass}
