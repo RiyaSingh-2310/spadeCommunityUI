@@ -12,7 +12,7 @@ import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import { getAdminInputClass, getAdminTextareaClass } from "../../shared/utils/formStyles";
-import { formatLocaleDateTime } from "../../shared/utils/dateTime";
+import { formatAppDateValue } from "../../shared/utils/dateTime";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import CopyValueButton from "./CopyValueButton";
 import {
@@ -76,11 +76,8 @@ function formatListMetric(value) {
   return text || "—";
 }
 
-function formatUpdatedDate(value) {
-  const text = String(value ?? "").trim();
-  if (!text || text === "—") return "—";
-  const formatted = formatLocaleDateTime(text);
-  return formatted && formatted !== "—" ? formatted : text;
+function formatListDate(value) {
+  return formatAppDateValue(value);
 }
 
 function InteractiveCheckbox({ label, checked, onChange, disabled }) {
@@ -124,9 +121,9 @@ function toListRow(record) {
   const cpiRate = formatListMetric(record?.cpiRate);
   const loi = formatListMetric(record?.loi);
   const ir = formatListMetric(record?.ir);
-  const startDate = formatListMetric(record?.startDate);
-  const endDate = formatListMetric(record?.endDate);
-  const updatedDate = formatUpdatedDate(record?.updatedOn);
+  const startDate = formatListDate(record?.startDate);
+  const endDate = formatListDate(record?.endDate);
+  const updatedDate = formatListDate(record?.updatedOn);
   const projectLinkType = normalizeProjectLinkType(record?.projectLinkType);
 
   return {

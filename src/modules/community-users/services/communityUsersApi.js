@@ -12,7 +12,7 @@ import {
   formValueToApiStatus,
 } from "../../shared/utils/statusLabels";
 import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
-import { formatSurveyListDate } from "../../shared/utils/dateTime";
+import { formatAppDateValue } from "../../shared/utils/dateTime";
 import {
   getCommunityUserById,
 } from "../data/communityUsersStore";
@@ -52,19 +52,6 @@ function mapIsVerified(value) {
   if (value === 1 || value === "1" || value === true) return "Yes";
   if (value === 0 || value === "0" || value === false) return "No";
   return mapYesNoFromApi(value);
-}
-
-function formatPanelistDate(value) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function extractPanelistRecord(data) {
@@ -150,9 +137,9 @@ export function mapPanelistToListingRow(panelist) {
     prescreenCompleted: mapYesNoFromApi(panelist?.questionnaire),
     emailVerified: mapIsVerified(panelist?.is_verified ?? panelist?.isVerified),
     rewardPoints: panelist?.balance_point ?? panelist?.balancePoint ?? "—",
-    joiningDate: formatPanelistDate(panelist?.created_at ?? panelist?.createdAt),
+    joiningDate: formatAppDateValue(panelist?.created_at ?? panelist?.createdAt),
     ipAddress: panelist?.ip_address ?? panelist?.ipAddress ?? "—",
-    createdAt: formatSurveyListDate(panelist?.created_at ?? panelist?.createdAt),
+    createdAt: formatAppDateValue(panelist?.created_at ?? panelist?.createdAt),
     photo: panelist?.photo ?? panelist?.image ?? null,
   };
 }
@@ -240,8 +227,8 @@ function toPanelistDetailRecord(panelist) {
     status: apiStatusToFormValue(panelist?.status),
     createdAt,
     updatedAt,
-    joiningDate: formatPanelistDate(createdAt),
-    updatedDate: formatPanelistDate(updatedAt),
+    joiningDate: formatAppDateValue(createdAt),
+    updatedDate: formatAppDateValue(updatedAt),
     deletedAt: panelist?.deleted_at ?? panelist?.deletedAt ?? null,
   };
 }

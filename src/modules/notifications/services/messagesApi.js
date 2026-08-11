@@ -7,9 +7,9 @@ import {
 } from "../../shared/utils/listResponse";
 import { appendListQuery } from "../../shared/utils/listQueryParams";
 import {
-  formatLocaleDateTime,
+  formatAppDate,
+  formatAppDateTime,
   formatLocaleTimeLabel,
-  formatSurveyListDate,
 } from "../../shared/utils/dateTime";
 
 function assertSuccess(data, fallbackMessage = "Unable to load messages.") {
@@ -90,9 +90,9 @@ function mapReplyRecord(reply) {
     body: String(
       reply.body ?? reply.reply_body ?? reply.replyBody ?? reply.message ?? reply.content ?? ""
     ),
-    date: formatSurveyListDate(createdAt),
+    date: formatAppDate(createdAt),
     time: formatLocaleTimeLabel(createdAt),
-    dateTime: formatLocaleDateTime(createdAt),
+    dateTime: formatAppDateTime(createdAt),
     createdAtRaw: createdAt,
   };
 }
@@ -111,9 +111,9 @@ export function mapMessageRecord(record) {
   const subject = coerceText(record.subject);
   const rawBody = record.body ?? record.message ?? record.content ?? "";
   const body = typeof rawBody === "string" ? rawBody : String(rawBody);
-  const date = formatSurveyListDate(createdAt);
+  const date = formatAppDate(createdAt);
   const time = formatLocaleTimeLabel(createdAt);
-  const dateTime = formatLocaleDateTime(createdAt);
+  const dateTime = formatAppDateTime(createdAt);
   const replies = Array.isArray(record.replies)
     ? record.replies.map(mapReplyRecord).filter(Boolean)
     : [];
