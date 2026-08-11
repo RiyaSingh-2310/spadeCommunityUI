@@ -482,7 +482,7 @@ export async function updatePartner(id, payload) {
   return assertSuccess(data);
 }
 
-/** DELETE /api/admin/partner/:id */
+/** DELETE /api/partner/:id */
 export async function deleteRecord(id) {
   const normalizedId = normalizePartnerId(id);
   const data = await apiRequest(API_ROUTES.partners.delete(normalizedId), {

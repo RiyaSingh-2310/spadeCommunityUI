@@ -1,9 +1,7 @@
-import { API_ROUTES } from "../../../config/api";
-import { apiRequest } from "../../../services/api/client";
-import { ApiError } from "../../../services/api/ApiError";
 import {
   DEFAULT_NOTIFICATION_SETTINGS,
   DEFAULT_SYSTEM_SETTINGS,
+  getNotificationSettings,
   getSystemSettings,
   saveNotificationSettings,
   saveSystemSettings,
@@ -11,15 +9,6 @@ import {
 import {
   normalizeThemePreference,
 } from "../utils/themePreference";
-
-const NOTIFICATION_SETTINGS_SECTION = "notification_preferences";
-
-function assertSuccess(data) {
-  if (data?.success !== true) {
-    throw new ApiError(data?.message ?? "", data);
-  }
-  return data;
-}
 
 function toBoolean(value, fallback = false) {
   if (typeof value === "boolean") return value;
@@ -30,30 +19,6 @@ function toBoolean(value, fallback = false) {
   if (["1", "true", "yes", "on"].includes(normalized)) return true;
   if (["0", "false", "no", "off"].includes(normalized)) return false;
   return fallback;
-}
-
-function extractSectionFields(data) {
-  if (!data || typeof data !== "object") return {};
-
-  const nested = data.data;
-  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
-    if (nested.data && typeof nested.data === "object" && !Array.isArray(nested.data)) {
-      return nested.data;
-    }
-    if (nested.section && nested.data && typeof nested.data === "object") {
-      return nested.data;
-    }
-    // Section payload may be the fields object itself.
-    if (!("success" in nested) && !("message" in nested)) {
-      const keys = Object.keys(nested);
-      if (keys.some((key) => key !== "section")) {
-        const { section: _section, ...fields } = nested;
-        return fields;
-      }
-    }
-  }
-
-  return {};
 }
 
 function mapSystemSettingsFromApi(fields = {}) {
@@ -121,36 +86,6 @@ function mapNotificationSettingsFromApi(fields = {}) {
   };
 }
 
-function toApiNotificationPayload(settings) {
-  return {
-    emailNotifications: String(Boolean(settings.emailNotifications)),
-    systemNotifications: String(Boolean(settings.systemNotifications)),
-    projectNotifications: String(Boolean(settings.projectNotifications)),
-    surveyNotifications: String(Boolean(settings.surveyNotifications)),
-    securityAlerts: String(Boolean(settings.securityAlerts)),
-  };
-}
-
-async function fetchSection(section) {
-  const data = await apiRequest(API_ROUTES.homepage.bySection(section));
-  assertSuccess(data);
-  return extractSectionFields(data);
-}
-
-async function updateSection(section, fields) {
-  const data = await apiRequest(API_ROUTES.homepage.updateSection(section), {
-    method: "PUT",
-    body: fields,
-  });
-  return assertSuccess(data);
-}
-
-function isNotFoundError(error) {
-  if (error?.status === 404 || error?.response?.status === 404) return true;
-  const message = String(error?.message ?? "").toLowerCase();
-  return message.includes("not found");
-}
-
 /**
  * Loads system settings from local storage only.
  * GET /api/system-settings is intentionally not called.
@@ -178,26 +113,27 @@ export async function updateSystemSettings(settings) {
 }
 
 /**
- * Loads notification preferences from the homepage settings API.
+ * Loads notification preferences from local storage only.
+ * GET /api/homepage/notification_preferences is intentionally not called (section not seeded).
  */
 export async function fetchNotificationSettings() {
-  try {
-    const fields = await fetchSection(NOTIFICATION_SETTINGS_SECTION);
-    const mapped = mapNotificationSettingsFromApi(fields);
-    saveNotificationSettings(mapped);
-    return mapped;
-  } catch (error) {
-    if (isNotFoundError(error)) {
-      return { ...DEFAULT_NOTIFICATION_SETTINGS };
-    }
-    throw error;
-  }
+  const mapped = mapNotificationSettingsFromApi(getNotificationSettings());
+  return mapped;
 }
 
+/**
+ * Persists notification preferences to local storage only.
+ * PUT /api/homepage/notification_preferences is intentionally not called.
+ */
 export async function updateNotificationSettings(settings) {
-  const payload = toApiNotificationPayload(settings);
-  const data = await updateSection(NOTIFICATION_SETTINGS_SECTION, payload);
-  const mapped = mapNotificationSettingsFromApi(payload);
+  const mapped = mapNotificationSettingsFromApi({
+    ...getNotificationSettings(),
+    ...(settings && typeof settings === "object" ? settings : {}),
+  });
   saveNotificationSettings(mapped);
-  return data;
+  return {
+    success: true,
+    message: "Notification preferences saved successfully.",
+    data: mapped,
+  };
 }

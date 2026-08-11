@@ -191,7 +191,19 @@ export function MessagesProvider({ children }) {
 export function useMessages() {
   const context = useContext(MessagesContext);
   if (!context) {
-    throw new Error("useMessages must be used within MessagesProvider");
+    // Soft fallback so message details can still render if provider mount races.
+    return {
+      recentItems: [],
+      unreadCount: 0,
+      isLoading: false,
+      hasLoaded: false,
+      refreshRecent: async () => ({ items: [], unreadCount: 0 }),
+      markAsReadLocal: () => null,
+      markAsRead: () => null,
+      markAllAsRead: async () => ({ success: true, unreadCount: 0 }),
+      removeMessage: async (id) => deleteMessage(id),
+      subscribe: () => () => {},
+    };
   }
   return context;
 }

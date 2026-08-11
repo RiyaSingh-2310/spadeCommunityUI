@@ -37,7 +37,7 @@ export const API_ROUTES = {
     byId: (id) => `/api/partner/${id}`,
     create: "/api/partner/add",
     update: (id) => `/api/partner/${id}`,
-    delete: (id) => `/api/admin/partner/${id}`,
+    delete: (id) => `/api/partner/${id}`,
     exportCsv: "/api/partner/export/csv",
   },
   projectManagers: {

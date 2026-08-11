@@ -80,7 +80,7 @@ function RfqPage({ isDarkMode }) {
     <div className="space-y-4">
       <ModuleListingPage
         isDarkMode={isDarkMode}
-        title="List Sales Projects"
+        title="RFQs"
         searchPlaceholder="Search RFQ..."
         actionLabel="Add RFQ"
         onActionClick={() => navigate("/sales/rfq/add")}

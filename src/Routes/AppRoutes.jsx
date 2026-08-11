@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import PageLoader from "../components/shared/PageLoader";
+import PageErrorBoundary from "../components/shared/PageErrorBoundary";
 import GuestOnly from "../components/auth/GuestOnly";
 import RequireAuth from "../components/auth/RequireAuth";
 import AdminLayout from "../components/admin/AdminLayout";
@@ -58,7 +59,16 @@ function MessageDetailsRoute({ isDarkMode }) {
 
   return (
     <Suspense fallback={<PageLoader />}>
-      <Pages.MessageDetailsPage key={messageId || "message-details"} isDarkMode={isDarkMode} />
+      <PageErrorBoundary
+        key={messageId || "message-details"}
+        resetKey={messageId || "message-details"}
+        title="Unable to load this message"
+      >
+        <Pages.MessageDetailsPage
+          key={messageId || "message-details"}
+          isDarkMode={isDarkMode}
+        />
+      </PageErrorBoundary>
     </Suspense>
   );
 }

@@ -68,9 +68,8 @@ function buildClientOptionalApiFields(payload) {
   if (website) fields.website_url = website;
   if (apiBaseUrl) fields.api_base_url = apiBaseUrl;
   if (apiHeaderKey) {
-    // UI label is "API Header Key"; backend client table stores it as `api_body`.
+    // Clients table column is `api_header_key` (not `api_body`).
     fields.api_header_key = apiHeaderKey;
-    fields.api_body = apiHeaderKey;
   }
   if (apiSecretKey) fields.api_secret_key = encryptValue(apiSecretKey);
 

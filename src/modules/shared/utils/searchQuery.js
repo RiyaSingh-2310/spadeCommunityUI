@@ -1,10 +1,11 @@
 /**
- * Removes all whitespace from a search query before API payloads and matching.
- * Example: "AB C" -> "ABC"
+ * Normalizes a search query for API payloads and matching.
+ * Collapses runs of whitespace to a single space and trims ends.
+ * Preserves meaningful spaces so multi-word titles (e.g. "Country Selection") match.
  * @param {unknown} query
  */
 export function normalizeSearchQuery(query) {
-  return String(query ?? "").replace(/\s+/g, "");
+  return String(query ?? "").replace(/\s+/g, " ").trim();
 }
 
 /**

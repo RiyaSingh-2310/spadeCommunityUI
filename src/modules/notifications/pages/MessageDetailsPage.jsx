@@ -219,6 +219,11 @@ function MessageDetailsPage({ isDarkMode }) {
   const replies = Array.isArray(message.replies) ? message.replies : [];
   const bodyText =
     typeof message.body === "string" ? message.body : String(message.body ?? "");
+  const displayName = String(message.name ?? "").trim() || "—";
+  const displayEmail = String(message.email ?? "").trim() || "—";
+  const displaySubject = String(message.subject ?? "").trim() || "—";
+  const displayDate = String(message.date ?? "").trim() || "—";
+  const displayTime = String(message.time ?? "").trim() || "—";
 
   return (
     <div className="space-y-6">
@@ -228,13 +233,13 @@ function MessageDetailsPage({ isDarkMode }) {
         <div className="p-2 sm:p-3 lg:p-4">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-start gap-3.5 sm:gap-4">
-              <Avatar name={message.name || "—"} size="profile" />
+              <Avatar name={displayName === "—" ? "User" : displayName} size="profile" />
               <div className="min-w-0 pt-0.5">
                 <h2 className="admin-text text-lg font-bold break-words sm:text-xl">
-                  {message.name || "—"}
+                  {displayName}
                 </h2>
                 <p className="admin-text-muted mt-1 break-all text-sm">
-                  {message.email || "—"}
+                  {displayEmail}
                 </p>
               </div>
             </div>
@@ -247,7 +252,7 @@ function MessageDetailsPage({ isDarkMode }) {
                   className="admin-text-muted shrink-0"
                   aria-hidden
                 />
-                <span>{message.date || "—"}</span>
+                <span>{displayDate}</span>
               </div>
               <div className="admin-text-muted inline-flex items-center gap-2 text-sm">
                 <Clock
@@ -256,7 +261,7 @@ function MessageDetailsPage({ isDarkMode }) {
                   className="shrink-0"
                   aria-hidden
                 />
-                <span>{message.time || "—"}</span>
+                <span>{displayTime}</span>
               </div>
             </div>
           </div>
@@ -266,7 +271,7 @@ function MessageDetailsPage({ isDarkMode }) {
               Subject
             </p>
             <p className="admin-text text-base font-bold break-words sm:text-lg">
-              {message.subject || "—"}
+              {displaySubject}
             </p>
           </div>
 
@@ -286,29 +291,34 @@ function MessageDetailsPage({ isDarkMode }) {
               </p>
               <ul className="space-y-4">
                 {replies.map((reply, index) => {
+                  if (!reply || typeof reply !== "object") return null;
                   const replyBody =
-                    typeof reply?.body === "string"
+                    typeof reply.body === "string"
                       ? reply.body
-                      : String(reply?.body ?? "");
+                      : String(reply.body ?? "");
+                  const replyName = String(reply.name ?? "").trim() || "—";
+                  const replyEmail = String(reply.email ?? "").trim();
+                  const replyWhen =
+                    String(reply.dateTime ?? reply.date ?? "").trim() || "—";
                   return (
                     <li
-                      key={reply?.id ?? `${reply?.dateTime}-${reply?.name}-${index}`}
+                      key={reply.id ?? `reply-${index}`}
                       className="rounded-xl border p-3 sm:p-4"
                       style={SECTION_BORDER}
                     >
                       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
                           <p className="admin-text text-sm font-semibold break-words">
-                            {reply?.name || "—"}
+                            {replyName}
                           </p>
-                          {reply?.email ? (
+                          {replyEmail ? (
                             <p className="admin-text-muted mt-0.5 break-all text-xs">
-                              {reply.email}
+                              {replyEmail}
                             </p>
                           ) : null}
                         </div>
                         <p className="admin-text-subtle shrink-0 text-xs">
-                          {reply?.dateTime || reply?.date || "—"}
+                          {replyWhen}
                         </p>
                       </div>
                       <p className="admin-text mt-3 whitespace-pre-wrap break-words text-sm leading-7">
@@ -348,7 +358,7 @@ function MessageDetailsPage({ isDarkMode }) {
       <MessageReplyModal
         isOpen={isReplyOpen}
         isSubmitting={isReplying}
-        recipientName={message.name}
+        recipientName={displayName === "—" ? "" : displayName}
         onCancel={() => {
           if (isReplying) return;
           setIsReplyOpen(false);

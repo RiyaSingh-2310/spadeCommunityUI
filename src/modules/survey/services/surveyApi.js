@@ -362,8 +362,8 @@ export function buildProjectUrlApiFields(form = {}) {
     country: String(form.country ?? "").trim(),
     cpi: toNullableNumber(form.cpiRate ?? form.cpi),
     sample_size: toNullableNumber(form.sampleSize),
-    start_date: form.startDate || "",
-    end_date: form.endDate || "",
+    start_date: form.startDate || null,
+    end_date: form.endDate || null,
     url_status: form.status || "Open",
     live_link: String(form.liveLink ?? "").trim(),
     test_link: String(form.testLink ?? "").trim(),
@@ -406,11 +406,15 @@ export function buildUpdateProjectApiPayload(form, selectOptions = {}, urlForm =
     Project_Description: String(form.description ?? "").trim(),
     Project_Link_Type: form.projectLinkType || "Single Link",
     link_type: formLinkTypeToApi(form.projectLinkType),
-    startDate: form.startDate || "",
-    endDate: form.endDate || "",
     Notes: String(form.notes ?? "").trim(),
     Status: formValueToApiStatus(form.status),
   };
+
+  // Omit empty dates so MySQL never receives '' for DATE columns; preserves existing values when untouched.
+  const startDate = String(form.startDate ?? "").trim();
+  const endDate = String(form.endDate ?? "").trim();
+  if (startDate) payload.startDate = startDate;
+  if (endDate) payload.endDate = endDate;
 
   if (urlForm) {
     Object.assign(payload, buildProjectUrlApiFields(urlForm));
@@ -459,7 +463,7 @@ export function buildCreateProjectPayload(form, selectOptions = {}) {
 
   const salesProjectId = String(form.salesProject ?? form.rfq ?? "").trim();
 
-  return {
+  const payload = {
     Project_Name: String(form.projectName ?? "").trim(),
     Project_code: String(form.projectCode ?? "").trim(),
     Clients: resolveOptionLabel(clientOptions, form.client),
@@ -474,11 +478,16 @@ export function buildCreateProjectPayload(form, selectOptions = {}) {
     Project_Description: String(form.description ?? "").trim(),
     Project_Link_Type: form.projectLinkType || "Single Link",
     link_type: formLinkTypeToApi(form.projectLinkType),
-    startDate: form.startDate || "",
-    endDate: form.endDate || "",
     Notes: String(form.notes ?? "").trim(),
     Status: formValueToApiStatus(form.status),
   };
+
+  const startDate = String(form.startDate ?? "").trim();
+  const endDate = String(form.endDate ?? "").trim();
+  if (startDate) payload.startDate = startDate;
+  if (endDate) payload.endDate = endDate;
+
+  return payload;
 }
 
 /**
@@ -502,8 +511,6 @@ export function buildCreateSurveyPayload(form) {
     description: form.description ?? "",
     Project_Link_Type: form.projectLinkType || "Single Link",
     link_type: formLinkTypeToApi(form.projectLinkType),
-    startDate: form.startDate || "",
-    endDate: form.endDate || "",
     Notes: form.notes?.trim() ?? "",
     notes: form.notes?.trim() ?? "",
     Status: statusValue,
@@ -516,6 +523,11 @@ export function buildCreateSurveyPayload(form) {
     payload.rfq_id = salesProjectId;
     payload.sales_project_id = salesProjectId;
   }
+
+  const startDate = String(form.startDate ?? "").trim();
+  const endDate = String(form.endDate ?? "").trim();
+  if (startDate) payload.startDate = startDate;
+  if (endDate) payload.endDate = endDate;
 
   const groupProjectId = resolveNumericId(form.groupProjectId);
   if (groupProjectId != null) payload.survey_group_project_id = groupProjectId;

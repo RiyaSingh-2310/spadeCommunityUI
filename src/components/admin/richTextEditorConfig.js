@@ -7,7 +7,6 @@ const TINYMCE_PLUGINS = [
   "link",
   "autolink",
   "fullscreen",
-  "paste",
   "searchreplace",
   "table",
   "charmap",
