@@ -22,7 +22,7 @@ import {
   MOCK_SURVEY_PARTNERS,
   updateMockSurvey,
 } from "../data/mockSurveyStore";
-import { formatSurveyListDate, parseUtcToIst } from "../../shared/utils/dateTime";
+import { formatAppDate, formatSurveyListDate, parseUtcToIst } from "../../shared/utils/dateTime";
 
 /** Set true to force mock survey data instead of live APIs. */
 const USE_SURVEY_MOCK_DATA = false;
@@ -197,8 +197,8 @@ export function mapSurveyToRow(project) {
     clientName,
     projectManagerName: project?.Project_Manager ?? project?.project_manager_name ?? "",
     partnerNames: project?.partner_names ?? "",
-    startDate: formatSurveyListDate(startDate),
-    endDate: formatSurveyListDate(endDate),
+    startDate: formatAppDate(startDate),
+    endDate: formatAppDate(endDate),
     urlMinStartDate: formatSurveyListDate(urlMinStartDate),
     urlMaxStartDate: formatSurveyListDate(urlMaxStartDate),
     loi: loi != null && loi !== "" ? String(loi) : "—",

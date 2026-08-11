@@ -57,20 +57,25 @@ export function toSearchParams(search) {
 
 /**
  * Normalize respondent UID — template placeholders count as missing.
- * Exact placeholder matches are case-insensitive; other values are kept as-is.
+ * Exact placeholder matches are case-insensitive; any value starting with XXX is invalid.
  * @param {unknown} value
  */
 export function isUidPlaceholderValue(value) {
   const trimmed = String(value ?? "").trim();
   if (!trimmed) return false;
   const key = trimmed.toLowerCase();
-  return (
-    key === "xxx" ||
-    key === "xxxx" ||
+  if (
     key === "identifier" ||
     key === "[identifier]" ||
     key === "{identifier}"
-  );
+  ) {
+    return true;
+  }
+  // XXX, XXXriya, XXX123, XXXABC, etc.
+  if (key.startsWith("xxx")) {
+    return true;
+  }
+  return false;
 }
 
 /**

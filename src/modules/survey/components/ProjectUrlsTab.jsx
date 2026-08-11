@@ -65,7 +65,7 @@ const PROJECT_URL_LIST_COLUMNS = [
   "IR",
   "Start Date",
   "End Date",
-  "Updated Date",
+  // "Updated Date",
   "Project Link Type",
   "Status",
   "Action",
@@ -831,6 +831,7 @@ function ProjectUrlsTab({
           emptyMessage="No Project URL records found"
           showPagination
           nowrapAllCells
+          descriptionMaxLines={1}
         />
         {canWrite ? (
           <DeleteConfirmModal

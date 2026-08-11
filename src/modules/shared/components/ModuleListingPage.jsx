@@ -139,7 +139,7 @@ function ModuleListingPage({
   compactStatusColumn = false,
   /** Tighter cell padding for dense listings (e.g. reward tables). */
   compactTable = false,
-  /** When set, description cells clamp to this many lines (user email templates). */
+  /** When set, description cells clamp to this many lines (1 = single-line ellipsis). */
   descriptionMaxLines = null,
   /** Optional row className resolver for unread/highlight styles. */
   getRowClassName = null,
@@ -1055,20 +1055,37 @@ function ModuleListingPage({
                   }
                   if (isDescriptionColumn(col)) {
                     const rawDescription =
-                      displayValue === "-" ? "—" : String(displayValue);
-                    const descriptionText = formatDescriptionForLineClamp(
-                      rawDescription,
-                      descriptionMaxLines
-                    );
-                    const descriptionClampClass =
-                      descriptionMaxLines === 2
+                      displayValue === "-" || displayValue === "—"
+                        ? "—"
+                        : String(displayValue ?? "");
+                    const isSingleLine = descriptionMaxLines === 1;
+                    const descriptionText = isSingleLine
+                      ? rawDescription === "—"
+                        ? "—"
+                        : rawDescription.replace(/\s+/g, " ").trim() || "—"
+                      : formatDescriptionForLineClamp(
+                          rawDescription,
+                          descriptionMaxLines
+                        );
+                    const descriptionClampClass = isSingleLine
+                      ? "admin-text block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
+                      : descriptionMaxLines === 2
                         ? "admin-text admin-table-description-line-clamp-2 break-words"
                         : "admin-text line-clamp-2 whitespace-pre-wrap break-words";
                     return (
-                      <td key={col} className="max-w-xl px-4 py-3 align-middle">
+                      <td
+                        key={col}
+                        className={
+                          isSingleLine
+                            ? "max-w-[12rem] w-[12rem] overflow-hidden px-4 py-3 align-middle"
+                            : "max-w-xl px-4 py-3 align-middle"
+                        }
+                      >
                         <span
                           className={descriptionClampClass}
-                          title={descriptionText !== "—" ? rawDescription : undefined}
+                          title={
+                            descriptionText !== "—" ? rawDescription : undefined
+                          }
                         >
                           {descriptionText}
                         </span>

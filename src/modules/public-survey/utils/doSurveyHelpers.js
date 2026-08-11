@@ -10,8 +10,7 @@ export function normalizeRespondentUid(value) {
     key === "[identifier]" ||
     key === "identifier" ||
     key === "{identifier}" ||
-    key === "xxx" ||
-    key === "xxxx"
+    key.startsWith("xxx")
   ) {
     return null;
   }
