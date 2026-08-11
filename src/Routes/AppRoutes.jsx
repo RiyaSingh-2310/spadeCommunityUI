@@ -52,6 +52,26 @@ function EditUserEmailTemplateRoute({ isDarkMode }) {
   return withSuspense(Pages.EditUserEmailTemplatePage, { key: id, isDarkMode });
 }
 
+function MessageDetailsRoute({ isDarkMode }) {
+  const { id } = useParams();
+  const messageId = String(id ?? "").trim();
+
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Pages.MessageDetailsPage key={messageId || "message-details"} isDarkMode={isDarkMode} />
+    </Suspense>
+  );
+}
+
+function LegacyMessageDetailsRedirect() {
+  const { id } = useParams();
+  const messageId = String(id ?? "").trim();
+  if (!messageId || messageId === "undefined" || messageId === "null") {
+    return <Navigate to="/messages" replace />;
+  }
+  return <Navigate to={`/messages/${encodeURIComponent(messageId)}`} replace />;
+}
+
 function EditCommunityUserRoute({ isDarkMode }) {
   const { id } = useParams();
   return withSuspense(Pages.EditCommunityUserPage, { key: id, isDarkMode });
@@ -332,12 +352,21 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
             element={withSuspense(Pages.UserEmailTemplatesPage, { isDarkMode })}
           />
           <Route
-            path="/notifications/messages"
+            path="/messages"
             element={withSuspense(Pages.MessagesPage, { isDarkMode })}
           />
           <Route
+            path="/messages/:id"
+            element={<MessageDetailsRoute isDarkMode={isDarkMode} />}
+          />
+          {/* Legacy notifications/messages paths → /messages */}
+          <Route
+            path="/notifications/messages"
+            element={<Navigate to="/messages" replace />}
+          />
+          <Route
             path="/notifications/messages/:id"
-            element={withSuspense(Pages.MessageDetailsPage, { isDarkMode })}
+            element={<LegacyMessageDetailsRedirect />}
           />
           <Route
             path="/reward-points/history"

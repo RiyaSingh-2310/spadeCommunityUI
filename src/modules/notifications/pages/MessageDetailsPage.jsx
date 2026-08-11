@@ -1,64 +1,138 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Calendar, Clock, Reply, Trash2 } from "lucide-react";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import TableCard from "../../../components/admin/TableCard";
-import TableLoadingSkeleton from "../../../components/admin/TableLoadingSkeleton";
 import Avatar from "../../../components/shared/Avatar";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import MessageReplyModal from "../components/MessageReplyModal";
 import { useMessages } from "../context/MessagesContext";
 import { getMessage, replyToMessage } from "../services/messagesApi";
 
-const MESSAGES_PATH = "/notifications/messages";
+const MESSAGES_PATH = "/messages";
 const SECTION_BORDER = { borderColor: "var(--admin-header-surface-border)" };
+
+function normalizeRouteMessageId(id) {
+  const normalizedId = String(id ?? "").trim();
+  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
+    return "";
+  }
+  return normalizedId;
+}
+
+function MessageDetailsLoadingSkeleton() {
+  return (
+    <div className="space-y-4 p-4 sm:p-6" aria-busy="true" aria-label="Loading message">
+      <div className="flex items-start gap-4">
+        <div className="h-[60px] w-[60px] shrink-0 animate-pulse rounded-full bg-[var(--admin-skeleton-bg)]" />
+        <div className="min-w-0 flex-1 space-y-2 pt-1">
+          <div className="h-5 w-40 max-w-full animate-pulse rounded-md bg-[var(--admin-skeleton-bg)]" />
+          <div className="h-4 w-56 max-w-full animate-pulse rounded-md bg-[var(--admin-skeleton-bg)]" />
+        </div>
+      </div>
+      <div className="h-4 w-24 animate-pulse rounded-md bg-[var(--admin-skeleton-bg)]" />
+      <div className="h-5 w-3/4 max-w-md animate-pulse rounded-md bg-[var(--admin-skeleton-bg)]" />
+      <div className="space-y-2 pt-2">
+        <div className="h-4 w-full animate-pulse rounded-md bg-[var(--admin-skeleton-bg)]" />
+        <div className="h-4 w-full animate-pulse rounded-md bg-[var(--admin-skeleton-bg)]" />
+        <div className="h-4 w-2/3 max-w-sm animate-pulse rounded-md bg-[var(--admin-skeleton-bg)]" />
+      </div>
+    </div>
+  );
+}
 
 function MessageDetailsPage({ isDarkMode }) {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { markAsRead, removeMessage, refreshRecent } = useMessages();
+  const { markAsReadLocal, removeMessage, refreshRecent } = useMessages();
+  const markAsReadLocalRef = useRef(markAsReadLocal);
+  const routeMessageId = normalizeRouteMessageId(id);
+
   const [message, setMessage] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(Boolean(routeMessageId));
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isReplyOpen, setIsReplyOpen] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
-  const [loadError, setLoadError] = useState("");
+  const [loadError, setLoadError] = useState(
+    routeMessageId ? "" : "Message not found."
+  );
+
+  useEffect(() => {
+    markAsReadLocalRef.current = markAsReadLocal;
+  }, [markAsReadLocal]);
 
   const goBack = () => navigate(MESSAGES_PATH);
 
-  const loadMessage = useCallback(async ({ silent = false } = {}) => {
-    const normalizedId = String(id ?? "").trim();
-    if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
-      setMessage(null);
-      setLoadError("Message not found.");
-      setIsLoading(false);
-      return;
+  const syncLocalReadState = useCallback((normalizedId, data) => {
+    if (!data || !normalizedId) return;
+    // No PATCH /api/messages/:id/read — sync drawer/list unread state locally after detail GET.
+    markAsReadLocalRef.current?.(normalizedId);
+    if (!data.isRead) {
+      setMessage((prev) =>
+        prev && String(prev.id) === String(normalizedId)
+          ? { ...prev, isRead: true, read: true, readStatus: "Read" }
+          : prev
+      );
     }
+  }, []);
 
-    if (!silent) {
-      setIsLoading(true);
-      setLoadError("");
-    }
-    try {
-      const data = await getMessage(normalizedId);
-      setMessage(data);
-      setLoadError("");
-      // Backend marks read on GET detail; sync drawer/badge/list optimistically.
-      if (data && !data.isRead) {
-        markAsRead(normalizedId)
-          .then(() => {
-            setMessage((prev) =>
-              prev
-                ? { ...prev, isRead: true, read: true, readStatus: "Read" }
-                : prev
-            );
-          })
-          .catch(() => {});
+  const fetchMessageById = useCallback(
+    async (messageId, { silent = false } = {}) => {
+      const normalizedId = normalizeRouteMessageId(messageId);
+      if (!normalizedId) {
+        if (!silent) {
+          setMessage(null);
+          setLoadError("Message not found.");
+          setIsLoading(false);
+        }
+        return null;
       }
-    } catch (error) {
+
       if (!silent) {
+        setIsLoading(true);
+        setLoadError("");
+      }
+
+      try {
+        const data = await getMessage(normalizedId);
+        setMessage(data);
+        setLoadError("");
+        syncLocalReadState(normalizedId, data);
+        return data;
+      } catch (error) {
+        if (!silent) {
+          setMessage(null);
+          const messageText =
+            error instanceof Error && error.message
+              ? error.message
+              : "Unable to load message.";
+          setLoadError(messageText);
+        }
+        toastApiError(error);
+        return null;
+      } finally {
+        if (!silent) setIsLoading(false);
+      }
+    },
+    [syncLocalReadState]
+  );
+
+  useEffect(() => {
+    if (!routeMessageId) return undefined;
+
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const data = await getMessage(routeMessageId);
+        if (cancelled) return;
+        setMessage(data);
+        setLoadError("");
+        syncLocalReadState(routeMessageId, data);
+      } catch (error) {
+        if (cancelled) return;
         setMessage(null);
         const messageText =
           error instanceof Error && error.message
@@ -66,29 +140,28 @@ function MessageDetailsPage({ isDarkMode }) {
             : "Unable to load message.";
         setLoadError(messageText);
         toastApiError(error);
-      } else {
-        toastApiError(error);
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
-    } finally {
-      if (!silent) setIsLoading(false);
-    }
-  }, [id, markAsRead]);
+    };
 
-  useEffect(() => {
-    loadMessage();
-  }, [loadMessage]);
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [routeMessageId, syncLocalReadState]);
 
   const handleReplySubmit = useCallback(
     async (replyBody) => {
-      const normalizedId = String(id ?? "").trim();
-      if (!normalizedId) return;
+      if (!routeMessageId) return;
 
       setIsReplying(true);
       try {
-        const data = await replyToMessage(normalizedId, { replyBody });
+        const data = await replyToMessage(routeMessageId, { replyBody });
         toastApiSuccess(data);
         setIsReplyOpen(false);
-        await loadMessage({ silent: true });
+        await fetchMessageById(routeMessageId, { silent: true });
         refreshRecent?.({ silent: true })?.catch?.(() => {});
       } catch (error) {
         toastApiError(error);
@@ -96,7 +169,7 @@ function MessageDetailsPage({ isDarkMode }) {
         setIsReplying(false);
       }
     },
-    [id, loadMessage, refreshRecent]
+    [routeMessageId, fetchMessageById, refreshRecent]
   );
 
   const pageHeader = (
@@ -115,9 +188,7 @@ function MessageDetailsPage({ isDarkMode }) {
       <div className="space-y-6">
         {pageHeader}
         <TableCard isDarkMode={isDarkMode}>
-          <div className="p-4">
-            <TableLoadingSkeleton rowCount={4} />
-          </div>
+          <MessageDetailsLoadingSkeleton />
         </TableCard>
       </div>
     );
@@ -293,9 +364,11 @@ function MessageDetailsPage({ isDarkMode }) {
           setIsDeleteOpen(false);
         }}
         onConfirm={async () => {
+          if (!routeMessageId) return;
+
           setIsDeleting(true);
           try {
-            const data = await removeMessage(id);
+            const data = await removeMessage(routeMessageId);
             toastApiSuccess(data);
             setIsDeleteOpen(false);
             navigate(MESSAGES_PATH, { state: { refresh: true } });

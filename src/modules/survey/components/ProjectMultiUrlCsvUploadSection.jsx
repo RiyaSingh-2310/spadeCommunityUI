@@ -89,6 +89,8 @@ function ProjectMultiUrlCsvUploadSection({
   onSelectedFilesChange,
   title = "Upload Multi URLs",
   onBeforeUpload,
+  required = false,
+  error = "",
 }) {
   const inputClass = getAdminInputClass();
   const fileInputRef = useRef(null);
@@ -316,13 +318,18 @@ function ProjectMultiUrlCsvUploadSection({
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-[1fr_auto_auto_auto] md:items-end">
-        <FormField label="Upload CSV">
+        <FormField
+          label="Upload CSV"
+          required={required}
+          // error={error}
+        >
           <input
             className={inputClass}
             value={selectedSummary}
             placeholder="No file selected"
             readOnly
             disabled
+            aria-invalid={Boolean(error)}
           />
         </FormField>
         <button

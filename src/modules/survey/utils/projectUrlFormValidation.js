@@ -81,6 +81,7 @@ const DIRTY_COMPARE_KEYS = [
   "country",
   "language",
   "status",
+  "projectLinkType",
   "liveLink",
   "testLink",
   "geoLocation",
@@ -306,6 +307,15 @@ export function normalizeProjectUrlFormForState(form) {
   const groupId = String(normalized.preScreenerId || normalized.surveyGroupId || "").trim();
   normalized.preScreenerId = groupId;
   normalized.surveyGroupId = groupId;
+
+  const linkType = String(normalized.projectLinkType ?? "")
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_-]+/g, "");
+  normalized.projectLinkType =
+    linkType === "multilink" || linkType === "multi"
+      ? "Multi Link"
+      : "Single Link";
 
   return normalized;
 }

@@ -147,13 +147,13 @@ export const SIDEBAR_NAV_ITEMS = [
     type: "group",
     label: "Notifications",
     key: "notifications",
-    matcher: /^\/notifications(\/|$)/,
+    matcher: /^\/(notifications|messages)(\/|$)/,
     permissionKeys: ["notifications", "messages"],
     children: [
       {
         label: "Messages",
-        root: "/notifications/messages",
-        matcher: /^\/notifications\/messages(\/|$)/,
+        root: "/messages",
+        matcher: /^\/messages(\/|$)/,
         permissionKeys: ["messages"],
       },
     ],

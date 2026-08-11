@@ -398,7 +398,10 @@ function PartnerMappingTab({
           .filter((url) => isProjectUrlEligibleForInvite(url.status))
           .map((url) => ({
             value: String(url.id),
-            label: formatProjectUrlOptionLabel(url, { includeStatus: true }),
+            label: formatProjectUrlOptionLabel(url, {
+              includeLinkType: true,
+              includeStatus: false,
+            }),
           }))
           .filter((option) => option.value && option.value !== "undefined")
       ),
@@ -946,7 +949,10 @@ function PartnerMappingTab({
             <ul className="space-y-1 text-sm">
               {ineligibleProjectUrls.map((url) => (
                 <li key={url.id} className="admin-text">
-                  {formatProjectUrlOptionLabel(url, { includeStatus: true })}
+                  {formatProjectUrlOptionLabel(url, {
+                    includeLinkType: true,
+                    includeStatus: false,
+                  })}
                 </li>
               ))}
             </ul>

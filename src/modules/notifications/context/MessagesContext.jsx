@@ -11,7 +11,6 @@ import {
   deleteMessage,
   getMessages,
   markAllMessagesAsRead,
-  markMessageAsRead,
 } from "../services/messagesApi";
 
 const MessagesContext = createContext(null);
@@ -20,6 +19,15 @@ const NOTIFICATION_POLL_INTERVAL_MS = 60_000;
 
 function countUnread(items) {
   return (Array.isArray(items) ? items : []).filter((item) => !item.isRead).length;
+}
+
+function markItemRead(item) {
+  return {
+    ...item,
+    isRead: true,
+    read: true,
+    readStatus: "Read",
+  };
 }
 
 export function MessagesProvider({ children }) {
@@ -83,51 +91,41 @@ export function MessagesProvider({ children }) {
     };
   }, [refreshRecent]);
 
-  const markAsRead = useCallback(
-    async (id) => {
+  /**
+   * Local-only read sync.
+   * Backend has no PATCH /api/messages/:id/read — opening GET /api/messages/:id
+   * (and PATCH /api/messages/read-all) are the supported read flows.
+   */
+  const markAsReadLocal = useCallback(
+    (id) => {
       const normalizedId = String(id ?? "").trim();
       if (!normalizedId) return null;
 
-      let result = null;
-      try {
-        result = await markMessageAsRead(normalizedId);
-      } catch {
-        // Dedicated mark-read endpoint may be unavailable; keep optimistic UI.
-        result = { success: true, optimistic: true };
-      }
-
       setRecentItems((prev) => {
-        const next = prev.map((item) =>
-          String(item.id) === normalizedId
-            ? {
-                ...item,
-                isRead: true,
-                read: true,
-                readStatus: "Read",
-              }
-            : item
-        );
+        let changed = false;
+        const next = prev.map((item) => {
+          if (String(item.id) !== normalizedId || item.isRead) return item;
+          changed = true;
+          return markItemRead(item);
+        });
+        if (!changed) return prev;
         setUnreadCount(countUnread(next));
         return next;
       });
 
       notifyListingListeners();
-      return result;
+      return { success: true, optimistic: true };
     },
     [notifyListingListeners]
   );
 
+  /** @deprecated Use markAsReadLocal — kept as alias for existing callers. */
+  const markAsRead = markAsReadLocal;
+
   const markAllAsRead = useCallback(async () => {
     const result = await markAllMessagesAsRead();
 
-    setRecentItems((prev) =>
-      prev.map((item) => ({
-        ...item,
-        isRead: true,
-        read: true,
-        readStatus: "Read",
-      }))
-    );
+    setRecentItems((prev) => prev.map(markItemRead));
     setUnreadCount(0);
     notifyListingListeners();
 
@@ -166,6 +164,7 @@ export function MessagesProvider({ children }) {
       hasLoaded,
       refreshRecent,
       markAsRead,
+      markAsReadLocal,
       markAllAsRead,
       removeMessage,
       subscribe,
@@ -177,6 +176,7 @@ export function MessagesProvider({ children }) {
       hasLoaded,
       refreshRecent,
       markAsRead,
+      markAsReadLocal,
       markAllAsRead,
       removeMessage,
       subscribe,

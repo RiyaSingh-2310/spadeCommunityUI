@@ -252,8 +252,6 @@ export const API_ROUTES = {
     unreadCount: "/api/messages/unread-count",
     readAll: "/api/messages/read-all",
     byId: (id) => `/api/messages/${encodeURIComponent(String(id ?? "").trim())}`,
-    markRead: (id) =>
-      `/api/messages/${encodeURIComponent(String(id ?? "").trim())}/read`,
     reply: (id) =>
       `/api/messages/${encodeURIComponent(String(id ?? "").trim())}/reply`,
     delete: (id) =>

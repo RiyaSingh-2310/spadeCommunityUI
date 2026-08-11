@@ -8,11 +8,9 @@ import { useMessages } from "../context/MessagesContext";
 import { getMessages } from "../services/messagesApi";
 
 const LIST_COLUMNS = [
-  "S.No",
   "Sender Name",
   "Sender Email",
   "Subject",
-  "Read Status",
   "Date",
   "Action",
 ];
@@ -25,6 +23,7 @@ function MessagesPage({ isDarkMode }) {
     rows,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -53,11 +52,15 @@ function MessagesPage({ isDarkMode }) {
       actionVariant="view-edit"
       permissionModule="messages"
       nameAsText
-      emptyMessage="No messages found"
+      emptyMessage={listError || "No messages found"}
       isLoading={isLoading}
-      onView={(row) =>
-        navigate(`/notifications/messages/${encodeURIComponent(String(row.id))}`)
-      }
+      onView={(row) => {
+        const messageId = String(row?.id ?? "").trim();
+        if (!messageId || messageId === "undefined" || messageId === "null") {
+          return;
+        }
+        navigate(`/messages/${encodeURIComponent(messageId)}`);
+      }}
       onSearch={handleSearch}
       totalRecords={totalRecords}
       serverPaginated

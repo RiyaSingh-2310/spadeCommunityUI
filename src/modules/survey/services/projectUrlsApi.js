@@ -169,6 +169,24 @@ function normalizeLinkMode(value) {
   return mode === "live" ? "live" : "test";
 }
 
+/** Normalizes Project_Link_Type from API / form values to "Single Link" | "Multi Link". */
+export function normalizeProjectLinkType(value) {
+  const normalized = String(value ?? "")
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_-]+/g, "");
+  if (!normalized || normalized === "—" || normalized === "-" || normalized === "null") {
+    return "Single Link";
+  }
+  if (normalized === "multilink" || normalized === "multi") return "Multi Link";
+  return "Single Link";
+}
+
+/** Maps form link type to the Project URL API enum: SingleLink | MultiLink. */
+export function projectLinkTypeToApi(value) {
+  return normalizeProjectLinkType(value) === "Multi Link" ? "MultiLink" : "SingleLink";
+}
+
 /** Removes undefined keys so the API receives only populated fields. */
 function compactApiPayload(payload) {
   return Object.fromEntries(
@@ -193,6 +211,7 @@ export function createEmptyProjectUrlForm(projectId = "") {
     startDate: "",
     endDate: "",
     status: "Open",
+    projectLinkType: "Single Link",
     linkMode: "test",
     testLink: "",
     liveLink: "",
@@ -247,6 +266,11 @@ export function mapProjectUrlToForm(record) {
     startDate: record.startDate ?? "",
     endDate: record.endDate ?? "",
     status: normalizeProjectUrlStatus(record.status),
+    projectLinkType: normalizeProjectLinkType(
+      record.projectLinkType ??
+        record.Project_Link_Type ??
+        record.project_link_type
+    ),
     linkMode: normalizeLinkMode(record.linkMode ?? record.link_mode),
     testLink: record.testLink ?? "",
     liveLink: record.liveLink ?? "",
@@ -368,14 +392,7 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
         "Multi_Link_Count",
         "multiple_url_count",
         "multipleUrlCount",
-      ]) ??
-        pickUrlInfoField(projectRecord, [
-          "multi_link_count",
-          "multiLinkCount",
-          "Multi_Link_Count",
-          "multiple_url_count",
-          "multipleUrlCount",
-        ])
+      ])
     ),
     startDate: toFormDateValue(
       pickUrlInfoField(urlInfo, ["Start_Date", "start_date", "Start Date", "startDate"]) ??
@@ -386,6 +403,13 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
         pickUrlInfoField(projectRecord, ["End_Date", "end_date", "End Date", "endDate"])
     ),
     status,
+    projectLinkType: normalizeProjectLinkType(
+      pickUrlInfoField(urlInfo, [
+        "Project_Link_Type",
+        "project_link_type",
+        "projectLinkType",
+      ])
+    ),
     linkMode: normalizeLinkMode(
       pickUrlInfoField(urlInfo, ["link_mode", "linkMode", "Link_Mode"]) ??
         pickUrlInfoField(projectRecord, ["link_mode", "linkMode", "Link_Mode"])
@@ -696,6 +720,7 @@ export function buildCreateProjectUrlApiPayload(form = {}) {
     Start_Date: form.startDate || "",
     End_Date: form.endDate || "",
     Status: form.status || "Open",
+    Project_Link_Type: projectLinkTypeToApi(form.projectLinkType),
     Live_Link: String(form.liveLink ?? "").trim(),
     Test_Link: String(form.testLink ?? "").trim(),
     GeoLocation: toApiFlag(form.geoLocation),

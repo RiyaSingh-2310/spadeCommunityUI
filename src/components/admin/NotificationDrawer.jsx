@@ -47,21 +47,21 @@ function NotificationDrawer({ isOpen, onClose }) {
 
   const handleViewAll = () => {
     handleClose();
-    navigate("/notifications/messages");
+    navigate("/messages");
   };
 
-  const handleNotificationClick = async (notification) => {
-    handleClose();
-    if (!notification?.isRead) {
-      try {
-        await markAsRead(notification.id);
-      } catch (error) {
-        toastApiError(error);
-      }
+  const handleNotificationClick = (notification) => {
+    const messageId = String(notification?.id ?? "").trim();
+    if (!messageId || messageId === "undefined" || messageId === "null") {
+      return;
     }
-    navigate(
-      `/notifications/messages/${encodeURIComponent(String(notification.id))}`
-    );
+
+    handleClose();
+    // No PATCH /messages/:id/read — optimistically clear unread, then open details GET.
+    if (!notification?.isRead) {
+      markAsRead(messageId);
+    }
+    navigate(`/messages/${encodeURIComponent(messageId)}`);
   };
 
   if (!isOpen) return null;

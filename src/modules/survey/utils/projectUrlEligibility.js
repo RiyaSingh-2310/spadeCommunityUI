@@ -66,15 +66,51 @@ export function isProjectUrlEligibleForInvite(status) {
 }
 
 /**
- * Format a Project URL option label for selectors.
- * @param {{ projectUrlCode?: string, id?: string|number, country?: string, language?: string, discussion?: string, status?: string }} url
- * @param {{ includeStatus?: boolean }} [options]
+ * Normalize Project_Link_Type for option labels.
+ * @param {unknown} value
+ * @returns {"Single Link"|"Multi Link"}
  */
-export function formatProjectUrlOptionLabel(url, { includeStatus = true } = {}) {
+function normalizeProjectLinkTypeLabel(value) {
+  const normalized = String(value ?? "")
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_-]+/g, "");
+  if (normalized === "multilink" || normalized === "multi") return "Multi Link";
+  return "Single Link";
+}
+
+/**
+ * Format a Project URL option label for selectors.
+ * @param {{
+ *   projectUrlCode?: string,
+ *   id?: string|number,
+ *   country?: string,
+ *   language?: string,
+ *   discussion?: string,
+ *   status?: string,
+ *   projectLinkType?: string,
+ *   Project_Link_Type?: string,
+ *   project_link_type?: string,
+ * }} url
+ * @param {{ includeStatus?: boolean, includeLinkType?: boolean }} [options]
+ */
+export function formatProjectUrlOptionLabel(
+  url,
+  { includeStatus = true, includeLinkType = false } = {}
+) {
   const code =
     String(url?.projectUrlCode ?? url?.project_url_code ?? "").trim() ||
     (url?.id != null && url.id !== "" ? `URL-${url.id}` : "Project URL");
   const parts = [code];
+
+  if (includeLinkType) {
+    parts.push(
+      normalizeProjectLinkTypeLabel(
+        url?.projectLinkType ?? url?.Project_Link_Type ?? url?.project_link_type
+      )
+    );
+    return parts.join(" — ");
+  }
 
   const country = String(url?.country ?? "").trim();
   const language = String(url?.language ?? "").trim();

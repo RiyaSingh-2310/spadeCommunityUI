@@ -234,36 +234,13 @@ export async function getMessage(id) {
 }
 
 /**
- * Mark a single message as read.
- * Prefer PATCH /api/messages/:id/read when available.
- * Backend currently marks read on GET /api/messages/:id — treat missing mark-read
- * endpoint as optimistic success so UI never blocks.
+ * Individual PATCH /api/messages/:id/read is not available on the backend (404).
+ * Read state is updated via GET /api/messages/:id (details) and
+ * PATCH /api/messages/read-all. Kept as a no-op helper for compatibility.
  */
 export async function markMessageAsRead(id) {
-  const normalizedId = normalizeMessageId(id);
-  try {
-    const data = await apiRequest(API_ROUTES.messages.markRead(normalizedId), {
-      method: "PATCH",
-    });
-    assertSuccess(data, "Unable to mark message as read.");
-
-    const mapped = mapMessageRecord(extractMessageRecord(data));
-    return {
-      success: true,
-      item: mapped ? { ...mapped, isRead: true, read: true } : null,
-      unreadCount: toNumber(data?.unreadCount ?? data?.unread_count, undefined),
-      ...data,
-    };
-  } catch (error) {
-    // Dedicated mark-read route may be absent; detail GET already marks as read.
-    if (
-      error instanceof ApiError &&
-      (error.status === 404 || error.status === 405 || error.status === 501)
-    ) {
-      return { success: true, item: null, optimistic: true };
-    }
-    throw error;
-  }
+  normalizeMessageId(id);
+  return { success: true, item: null, optimistic: true };
 }
 
 /** PATCH /api/messages/read-all */
