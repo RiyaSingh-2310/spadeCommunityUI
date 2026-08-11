@@ -152,6 +152,7 @@ export function buildSurveyFlowSearch(flow = {}, extra = {}) {
 
 /**
  * Map backend / vendor outcome status to a frontend result path.
+ * Used only after the customer survey returns — never from Start Survey.
  * @param {string} status
  * @param {string} uid
  */
@@ -187,4 +188,58 @@ export function getSurveyOutcomePath(status, uid) {
   }
 
   return null;
+}
+
+/**
+ * True when a URL points at this app's Complete / Terminate / Quota / redirect
+ * outcome pages. Start Survey must never navigate here — those routes are only
+ * for the customer's eventual survey callback.
+ * @param {string} url
+ * @param {string} [origin]
+ */
+export function isLocalSurveyOutcomeUrl(url, origin) {
+  const raw = String(url ?? "").trim();
+  if (!raw) return false;
+
+  const base =
+    String(origin ?? "").trim() ||
+    (typeof window !== "undefined" ? window.location.origin : "http://localhost");
+
+  try {
+    const parsed = new URL(raw, base);
+    // Relative same-origin outcome paths, or absolute same-origin outcome paths.
+    const isRelativeOutcome = raw.startsWith("/") && !raw.startsWith("//");
+    const isSameOrigin =
+      typeof window !== "undefined"
+        ? parsed.origin === window.location.origin
+        : parsed.origin === new URL(base).origin;
+
+    if (!isRelativeOutcome && !isSameOrigin) return false;
+
+    const path = parsed.pathname.toLowerCase();
+    return (
+      /^\/(complete|terminate|quota-full)(\/|$)/.test(path) ||
+      /^\/redirect(\/|$)/.test(path)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Read the survey token path segment from /dosurvey/:token without inventing a value.
+ * Decodes once so it matches React Router `useParams` when the URL was encoded.
+ * @param {string} [pathname]
+ */
+export function readDoSurveyTokenFromPath(pathname) {
+  const path =
+    pathname ??
+    (typeof window !== "undefined" ? window.location.pathname : "");
+  const match = String(path ?? "").match(/\/dosurvey\/([^/]+)\/?/i);
+  if (!match?.[1]) return "";
+  try {
+    return decodeURIComponent(match[1]).trim();
+  } catch {
+    return String(match[1]).trim();
+  }
 }

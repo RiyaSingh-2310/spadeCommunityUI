@@ -77,6 +77,7 @@ function SurveyRedirectContent({ outcome, outcomeConfig }) {
   }, []);
 
   const preparedParamCount = Object.keys(queryParams).length;
+  const variant = outcomeConfig?.variant || "neutral";
 
   return (
     <>
@@ -90,7 +91,7 @@ function SurveyRedirectContent({ outcome, outcomeConfig }) {
 
       {view === VIEW.SUCCESS && outcomeConfig ? (
         <RedirectCard
-          variant={outcomeConfig.variant === "success" ? "success" : "neutral"}
+          variant={variant}
           data-redirect-outcome={outcome}
           data-redirect-param-count={preparedParamCount}
         >
@@ -98,7 +99,8 @@ function SurveyRedirectContent({ outcome, outcomeConfig }) {
             title={outcomeConfig.title}
             message={outcomeConfig.message}
             icon={outcomeConfig.icon}
-            variant={outcomeConfig.variant === "success" ? "success" : "neutral"}
+            variant={variant}
+            thankYouLines={outcomeConfig.thankYouLines}
           />
         </RedirectCard>
       ) : null}

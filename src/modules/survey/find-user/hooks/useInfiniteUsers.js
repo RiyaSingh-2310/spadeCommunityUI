@@ -6,7 +6,7 @@ import { searchFindUsers } from "../services/findUserApi";
 /**
  * @param {string} surveyId
  * @param {{ questionId: string, answers: string[] }[]} activeFilters
- * @param {number} searchVersion increments on each search
+ * @param {number} searchVersion increments on each explicit Search click (0 = idle)
  */
 export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {
   const [users, setUsers] = useState([]);
@@ -19,6 +19,8 @@ export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {
   const requestIdRef = useRef(0);
 
   const loadPage = useCallback(async () => {
+    if (searchVersion < 1) return;
+
     const requestId = ++requestIdRef.current;
     setIsLoading(true);
 
@@ -48,10 +50,19 @@ export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {
         setIsLoading(false);
       }
     }
-  }, [surveyId, activeFilters, currentPage, pageSize]);
+  }, [surveyId, activeFilters, currentPage, pageSize, searchVersion]);
 
+  // Idle (no Search yet / filters reset): never hit the Search API.
   useEffect(() => {
-    if (searchVersion < 1) return;
+    if (searchVersion < 1) {
+      requestIdRef.current += 1;
+      setUsers([]);
+      setTotalItems(0);
+      setTotalPages(1);
+      setHasSearched(false);
+      setIsLoading(false);
+      return;
+    }
     loadPage();
   }, [searchVersion, loadPage]);
 

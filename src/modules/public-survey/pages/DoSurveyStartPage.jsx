@@ -7,17 +7,19 @@ import {
   claimPartnerUrlTabAsAdminOpened,
   subscribePartnerUrlTabAdminLogout,
 } from "../../survey/utils/partnerUrlTabSync";
-import { replaceSurveyLinkPlaceholders } from "../../survey/utils/surveyLinkPlaceholders";
 import { toast } from "../../../services/toast";
 import DoSurveyHero from "../components/DoSurveyHero";
 import PreScreenQuestionnaire from "../components/PreScreenQuestionnaire";
 import {
   fetchDoSurveyStartDetails,
-  fetchSurveyLink,
+  getSurveyLink,
   initiateSurveyStart,
+  openCustomerSurveyUrl,
+  toFlowErrorMessage,
 } from "../services/doSurveyApi";
 import { classifyDoSurveyError } from "../utils/doSurveyHelpers";
 import {
+  readDoSurveyTokenFromPath,
   readSurveyFlowParams,
   urlHasUidPlaceholder,
 } from "../utils/surveyFlowParams";
@@ -26,6 +28,9 @@ const IS_TEST_QUERY_KEYS = ["IsTest", "isTest", "is_test"];
 const UID_PLACEHOLDER_INSTRUCTION =
   "Pass your UID in the URL instead of XXX or identifier.";
 const UID_PLACEHOLDER_TOAST_MS = 8000;
+const START_FLOW_ERROR = "Unable to start the survey.";
+const LINK_FLOW_ERROR =
+  "Unable to load the survey. Survey link is unavailable. Please try again later.";
 
 function readIsTestFromSearch(search) {
   const query = String(search ?? "").startsWith("?")
@@ -73,6 +78,7 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const [prescreenError, setPrescreenError] = useState("");
   const [isRedirecting, setIsRedirecting] = useState(false);
   const uidInstructionToastKeyRef = useRef("");
+  const startFlowInFlightRef = useRef(false);
 
   const flowParams = useMemo(
     () =>
@@ -268,30 +274,33 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   }
 
   function getPartnerToken() {
-    return String(flowParams.token || token || "").trim();
+    const fromPath = readDoSurveyTokenFromPath(
+      typeof window !== "undefined" ? window.location.pathname : location.pathname
+    );
+    return String(fromPath || flowParams.token || token || "").trim();
   }
 
   async function redirectToSurveyLink(actionUid) {
     setIsRedirecting(true);
-    const result = await fetchSurveyLink({
+    const result = await getSurveyLink({
       token: getPartnerToken(),
       uid: actionUid,
-      projectId: flowParams.projectId,
-      projectUrlId: flowParams.projectUrlId,
-      projectUrlCode: flowParams.projectUrlCode,
-      partnerId: flowParams.partnerId,
     });
-    const rawSurveyUrl = String(result?.surveyUrl ?? "").trim();
-    if (!rawSurveyUrl) {
-      throw new Error("Survey URL missing from response. Please try again.");
+    const surveyUrl = String(result?.surveyUrl ?? "").trim();
+    if (!surveyUrl) {
+      throw new Error(LINK_FLOW_ERROR);
     }
-    // Replace identifier / XXX placeholders with the real respondent UID.
-    const surveyUrl = replaceSurveyLinkPlaceholders(rawSurveyUrl, actionUid);
-    window.location.assign(surveyUrl);
+    // Open the exact customer/vendor URL from the API — no React Router, no rewrite.
+    openCustomerSurveyUrl(surveyUrl, result?.data ?? null);
   }
 
   async function handleStartSurvey() {
-    if (isStarting || isSubmittingPrescreen || isRedirecting) {
+    if (
+      startFlowInFlightRef.current ||
+      isStarting ||
+      isSubmittingPrescreen ||
+      isRedirecting
+    ) {
       return;
     }
 
@@ -307,40 +316,51 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       return;
     }
 
+    startFlowInFlightRef.current = true;
     setStartError("");
     setPrescreenError("");
     setIsStarting(true);
 
+    let reachedLinkStep = false;
     try {
       const result = await initiateSurveyStart({
         token: partnerToken,
         uid: actionUid,
-        projectId: flowParams.projectId,
-        projectUrlId: flowParams.projectUrlId,
-        projectUrlCode: flowParams.projectUrlCode,
-        partnerId: flowParams.partnerId,
       });
 
       if (result.prescreenRequired) {
         setPrescreen(result.prescreen);
         setShowPrescreen(true);
         setIsStarting(false);
+        startFlowInFlightRef.current = false;
         return;
       }
 
+      reachedLinkStep = true;
       await redirectToSurveyLink(actionUid);
+      // Keep loading UI until the browser navigates away.
     } catch (error) {
       setStartError(
-        String(error?.message ?? "").trim() ||
-          "Unable to start the survey right now. Please try again."
+        toFlowErrorMessage(
+          error,
+          reachedLinkStep ? LINK_FLOW_ERROR : START_FLOW_ERROR
+        )
       );
       setIsStarting(false);
       setIsRedirecting(false);
+      startFlowInFlightRef.current = false;
     }
   }
 
   async function handlePrescreenSubmit() {
-    if (isSubmittingPrescreen || isRedirecting || isStarting) return;
+    if (
+      startFlowInFlightRef.current ||
+      isSubmittingPrescreen ||
+      isRedirecting ||
+      isStarting
+    ) {
+      return;
+    }
 
     const actionUid = getActionUid();
     if (!actionUid) {
@@ -348,18 +368,18 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       return;
     }
 
+    startFlowInFlightRef.current = true;
     setPrescreenError("");
     setIsSubmittingPrescreen(true);
 
     try {
       await redirectToSurveyLink(actionUid);
+      // Keep loading UI until the browser navigates away.
     } catch (error) {
-      setPrescreenError(
-        String(error?.message ?? "").trim() ||
-          "Unable to load the survey link. Please try again."
-      );
+      setPrescreenError(toFlowErrorMessage(error, LINK_FLOW_ERROR));
       setIsSubmittingPrescreen(false);
       setIsRedirecting(false);
+      startFlowInFlightRef.current = false;
     }
   }
 
@@ -377,10 +397,11 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
         </div>
       ) : null}
 
-      {isRedirecting && !showPrescreen ? (
+      {(isStarting || isRedirecting) && !showPrescreen ? (
         <div className="pq-card pq-state-card pq-loading-card" aria-busy="true" aria-live="polite">
           <Loader2 className="pq-loading-spinner" size={32} aria-hidden />
-          <p className="pq-loading-text">Opening your survey...</p>
+          <p className="pq-loading-text">Starting your survey...</p>
+          <p className="pq-loading-text">Please wait...</p>
         </div>
       ) : null}
 
@@ -400,7 +421,7 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
         />
       ) : null}
 
-      {pageReady && survey && !showPrescreen && !isRedirecting ? (
+      {pageReady && survey && !showPrescreen && !isStarting && !isRedirecting ? (
         <>
           <DoSurveyHero
             survey={survey}

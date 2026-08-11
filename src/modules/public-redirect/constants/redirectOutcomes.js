@@ -1,4 +1,14 @@
-import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
+import {
+  Ban,
+  CheckCircle2,
+  Lock,
+  ShieldAlert,
+  Users,
+} from "lucide-react";
+import {
+  COMPLETE_THANK_YOU_LINES,
+  GENERIC_THANK_YOU_LINES,
+} from "./multilingualThankYou";
 
 /**
  * Canonical redirect outcome keys matching Partner Mapping / backend redirect paths.
@@ -22,10 +32,10 @@ export const REDIRECT_OUTCOMES = {
 
 const QUOTA_FULL_CONFIG = {
   title: "Quota Full",
-  message:
-    "The required number of responses has already been collected. Thank you for your interest.",
+  message: "Quota has already been filled.",
+  thankYouLines: GENERIC_THANK_YOU_LINES,
   variant: "info",
-  icon: Info,
+  icon: Users,
 };
 
 /**
@@ -36,15 +46,17 @@ export const REDIRECT_OUTCOME_CONFIG = {
   [REDIRECT_OUTCOMES.COMPLETE]: {
     title: "Survey Completed",
     message:
-      "Your survey has been completed successfully. Thank you for your participation.",
+      "You have completed our survey. We are checking the data and if there would be any error we would get back to you",
+    thankYouLines: COMPLETE_THANK_YOU_LINES,
     variant: "success",
     icon: CheckCircle2,
   },
   [REDIRECT_OUTCOMES.TERMINATE]: {
     title: "Survey Terminated",
-    message: "This survey has been terminated. Thank you.",
+    message: "Survey has been terminated.",
+    thankYouLines: GENERIC_THANK_YOU_LINES,
     variant: "warning",
-    icon: AlertTriangle,
+    icon: Ban,
   },
   [REDIRECT_OUTCOMES.QUOTA_FULL]: QUOTA_FULL_CONFIG,
   [REDIRECT_OUTCOMES.OVERQUOTA]: QUOTA_FULL_CONFIG,
@@ -52,14 +64,16 @@ export const REDIRECT_OUTCOME_CONFIG = {
     title: "Quality Check Failed",
     message:
       "Unfortunately, you did not qualify to continue this survey. Thank you for your participation.",
-    variant: "info",
-    icon: Info,
+    thankYouLines: GENERIC_THANK_YOU_LINES,
+    variant: "danger",
+    icon: ShieldAlert,
   },
   [REDIRECT_OUTCOMES.SURVEYCLOSE]: {
     title: "Survey Closed",
     message: "This survey is no longer available. Thank you for your interest.",
-    variant: "info",
-    icon: Info,
+    thankYouLines: GENERIC_THANK_YOU_LINES,
+    variant: "neutral",
+    icon: Lock,
   },
 };
 

@@ -35,8 +35,7 @@ function SurveyResultPage({ outcome, isDarkMode, onToggleTheme }) {
     );
   }
 
-  const variant =
-    outcomeConfig.variant === "success" ? "success" : "neutral";
+  const variant = outcomeConfig.variant || "neutral";
 
   return (
     <RedirectLayout isDarkMode={isDarkMode} onToggleTheme={onToggleTheme}>
@@ -50,25 +49,11 @@ function SurveyResultPage({ outcome, isDarkMode, onToggleTheme }) {
           message={outcomeConfig.message}
           icon={outcomeConfig.icon}
           variant={variant}
+          thankYouLines={outcomeConfig.thankYouLines}
         />
 
-        {Array.isArray(outcomeConfig.thankYouLines) &&
-        outcomeConfig.thankYouLines.length > 0 ? (
-          <ul
-            className="mt-6 space-y-2 text-center text-sm text-[var(--pq-muted, #6b7280)]"
-            aria-label="Thank you messages"
-          >
-            {outcomeConfig.thankYouLines.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        ) : null}
-
         {!uid ? (
-          <p
-            className="mt-4 text-center text-xs text-[var(--pq-muted,#9ca3af)]"
-            role="status"
-          >
+          <p className="pq-redirect-uid-note" role="status">
             Respondent identifier was missing or invalid on this link. You can
             still close this page.
           </p>

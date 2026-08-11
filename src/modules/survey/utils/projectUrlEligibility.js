@@ -80,6 +80,18 @@ function normalizeProjectLinkTypeLabel(value) {
 }
 
 /**
+ * Normalize link_mode for display (Test / Live).
+ * @param {unknown} value
+ * @returns {"Test"|"Live"}
+ */
+export function normalizeProjectUrlLinkModeLabel(value) {
+  const mode = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  return mode === "live" ? "Live" : "Test";
+}
+
+/**
  * Format a Project URL option label for selectors.
  * @param {{
  *   projectUrlCode?: string,
@@ -88,15 +100,25 @@ function normalizeProjectLinkTypeLabel(value) {
  *   language?: string,
  *   discussion?: string,
  *   status?: string,
+ *   linkMode?: string,
+ *   link_mode?: string,
  *   projectLinkType?: string,
  *   Project_Link_Type?: string,
  *   project_link_type?: string,
  * }} url
- * @param {{ includeStatus?: boolean, includeLinkType?: boolean }} [options]
+ * @param {{
+ *   includeStatus?: boolean,
+ *   includeLinkType?: boolean,
+ *   includeLinkMode?: boolean,
+ * }} [options]
  */
 export function formatProjectUrlOptionLabel(
   url,
-  { includeStatus = true, includeLinkType = false } = {}
+  {
+    includeStatus = true,
+    includeLinkType = false,
+    includeLinkMode = false,
+  } = {}
 ) {
   const code =
     String(url?.projectUrlCode ?? url?.project_url_code ?? "").trim() ||
@@ -108,6 +130,13 @@ export function formatProjectUrlOptionLabel(
       normalizeProjectLinkTypeLabel(
         url?.projectLinkType ?? url?.Project_Link_Type ?? url?.project_link_type
       )
+    );
+    return parts.join(" — ");
+  }
+
+  if (includeLinkMode) {
+    parts.push(
+      normalizeProjectUrlLinkModeLabel(url?.linkMode ?? url?.link_mode)
     );
     return parts.join(" — ");
   }

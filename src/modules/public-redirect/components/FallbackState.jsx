@@ -12,11 +12,11 @@ function FallbackState({
 }) {
   return (
     <RedirectCard variant="neutral" role="alert">
-      <div className="pq-empty-icon" aria-hidden>
+      <div className="pq-redirect-icon pq-redirect-icon--neutral" aria-hidden>
         <AlertCircle size={32} strokeWidth={1.75} />
       </div>
-      <h1 className="pq-empty-title">{title}</h1>
-      <p className="pq-empty-description">{description}</p>
+      <h1 className="pq-redirect-title">{title}</h1>
+      <p className="pq-redirect-message">{description}</p>
       {typeof onRetry === "function" ? (
         <button
           type="button"

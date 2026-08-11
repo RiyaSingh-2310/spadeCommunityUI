@@ -50,8 +50,10 @@ function FindUserFilters({
   onSearch,
   isSearching,
   disabled = false,
+  selectedProjectUrlId = "",
 }) {
   const inputClass = getAdminInputClass();
+  const hasProjectUrl = Boolean(String(selectedProjectUrlId ?? "").trim());
   const [questions, setQuestions] = useState([]);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [answerOptionsByQuestionId, setAnswerOptionsByQuestionId] = useState(
@@ -60,21 +62,32 @@ function FindUserFilters({
   const [loadingAnswersFor, setLoadingAnswersFor] = useState("");
   const [draftAnswersByRowId, setDraftAnswersByRowId] = useState(() => ({}));
 
+  // Load question options only after a Project URL is selected.
   useEffect(() => {
     let cancelled = false;
 
+    if (!hasProjectUrl) {
+      setQuestions([]);
+      setAnswerOptionsByQuestionId(new Map());
+      setLoadingAnswersFor("");
+      setDraftAnswersByRowId({});
+      setIsLoadingQuestions(false);
+      return undefined;
+    }
+
     async function loadQuestions() {
       setIsLoadingQuestions(true);
+      setAnswerOptionsByQuestionId(new Map());
+      setLoadingAnswersFor("");
+      setDraftAnswersByRowId({});
       try {
         // GET /api/find-user/questions — Find User questions only (not Prescreen)
         const nextQuestions = await getFindUserQuestions();
         if (cancelled) return;
         setQuestions(nextQuestions);
-        setAnswerOptionsByQuestionId(new Map());
       } catch (err) {
         if (cancelled) return;
         setQuestions([]);
-        setAnswerOptionsByQuestionId(new Map());
         toastApiError(err);
       } finally {
         if (!cancelled) setIsLoadingQuestions(false);
@@ -85,7 +98,7 @@ function FindUserFilters({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [hasProjectUrl, selectedProjectUrlId]);
 
   const questionsById = useMemo(() => {
     const map = new Map();
@@ -124,6 +137,8 @@ function FindUserFilters({
   };
 
   const handleQuestionChange = async (rowId, questionId) => {
+    if (!hasProjectUrl) return;
+
     updateRow(rowId, { questionId, answers: [] });
     setDraftAnswersByRowId((prev) => ({ ...prev, [rowId]: "" }));
 
@@ -154,6 +169,7 @@ function FindUserFilters({
   };
 
   const addFreeTextAnswer = (rowId) => {
+    if (!hasProjectUrl) return;
     const draft = String(draftAnswersByRowId[rowId] ?? "").trim();
     if (!draft) return;
     const row = filters.find((item) => item.id === rowId);
@@ -166,15 +182,18 @@ function FindUserFilters({
     setDraftAnswersByRowId((prev) => ({ ...prev, [rowId]: "" }));
   };
 
-  // Search is enabled when every non-empty filter row is complete.
-  // Empty filters are allowed so users can load all panelists and invite.
-  const hasIncompleteFilter = filters.some(
-    (row) =>
-      (row.questionId && (!Array.isArray(row.answers) || row.answers.length === 0)) ||
-      (!row.questionId && Array.isArray(row.answers) && row.answers.length > 0)
-  );
-  const canSearch = !hasIncompleteFilter;
-  const filtersDisabled = disabled || isSearching || isLoadingQuestions;
+  // Search requires Project URL + every filter row having Question + Answer(s).
+  const allFiltersComplete =
+    filters.length > 0 &&
+    filters.every(
+      (row) =>
+        Boolean(row.questionId) &&
+        Array.isArray(row.answers) &&
+        row.answers.length > 0
+    );
+  const canSearch = hasProjectUrl && allFiltersComplete;
+  const filtersDisabled =
+    disabled || isSearching || !hasProjectUrl || isLoadingQuestions;
   const canDeleteFilters = filters.length > 1;
 
   return (
@@ -191,12 +210,14 @@ function FindUserFilters({
           loadingAnswersFor === String(row.questionId);
         const hasAnswerOptions = answerOptions.length > 0;
         const useFreeTextAnswers =
+          hasProjectUrl &&
           Boolean(row.questionId) &&
           !isLoadingAnswers &&
           !hasAnswerOptions &&
           (isFreeTextQuestionType(selectedQuestion?.question_type) ||
             !isChoiceQuestionType(selectedQuestion?.question_type));
         const answersUnavailable =
+          hasProjectUrl &&
           Boolean(row.questionId) &&
           !isLoadingQuestions &&
           !isLoadingAnswers &&
@@ -206,8 +227,10 @@ function FindUserFilters({
         const selectedAnswers = Array.isArray(row.answers) ? row.answers : [];
         const draftAnswer = draftAnswersByRowId[row.id] ?? "";
 
-        let answerPlaceholder = "Select question first";
-        if (answersUnavailable) {
+        let answerPlaceholder = "Select Project URL first";
+        if (hasProjectUrl && !row.questionId) {
+          answerPlaceholder = "Select question first";
+        } else if (answersUnavailable) {
           answerPlaceholder = "No answers available";
         } else if (isLoadingAnswers) {
           answerPlaceholder = "Loading answers...";
@@ -217,9 +240,11 @@ function FindUserFilters({
           answerPlaceholder = "Select Answer(s)";
         }
 
-        let questionPlaceholder = "Select Question";
-        if (isLoadingQuestions) {
+        let questionPlaceholder = "Select Project URL first";
+        if (hasProjectUrl && isLoadingQuestions) {
           questionPlaceholder = "Loading questions...";
+        } else if (hasProjectUrl) {
+          questionPlaceholder = "Select Question";
         }
 
         return (
@@ -242,9 +267,11 @@ function FindUserFilters({
                 options={questionSelectOptions}
                 placeholder={questionPlaceholder}
                 disabled={filtersDisabled}
-                loading={isLoadingQuestions}
+                loading={hasProjectUrl && isLoadingQuestions}
                 loadingLabel="Loading questions..."
-                emptyMessage="No questions found"
+                emptyMessage={
+                  hasProjectUrl ? "No questions found" : "Select Project URL first"
+                }
                 searchPlaceholder="Search question..."
                 searchable
                 aria-label="Select question filter"
@@ -274,7 +301,12 @@ function FindUserFilters({
                       }
                     }}
                     placeholder={answerPlaceholder}
-                    disabled={disabled || isSearching || !row.questionId}
+                    disabled={
+                      disabled ||
+                      isSearching ||
+                      !hasProjectUrl ||
+                      !row.questionId
+                    }
                     aria-label="Enter answer filter"
                   />
                   <button
@@ -283,6 +315,7 @@ function FindUserFilters({
                     disabled={
                       disabled ||
                       isSearching ||
+                      !hasProjectUrl ||
                       !row.questionId ||
                       !String(draftAnswer).trim()
                     }
@@ -301,11 +334,16 @@ function FindUserFilters({
                   disabled={
                     disabled ||
                     isSearching ||
+                    !hasProjectUrl ||
                     !row.questionId ||
                     answersUnavailable ||
                     isLoadingAnswers
                   }
-                  emptyMessage="No answers available"
+                  emptyMessage={
+                    hasProjectUrl
+                      ? "No answers available"
+                      : "Select Project URL first"
+                  }
                   searchPlaceholder="Search answer..."
                   searchable
                   aria-label="Select answer filter"

@@ -54,7 +54,7 @@ function DoSurveyHero({
             showDisabledTooltip ? "dosurvey-start-disabled-hint" : undefined
           }
         >
-          {isStarting ? "Starting..." : "Start Survey"}
+          {isStarting ? "Starting survey..." : "Start Survey"}
           <ArrowRight size={18} aria-hidden />
         </button>
         {showDisabledTooltip ? (

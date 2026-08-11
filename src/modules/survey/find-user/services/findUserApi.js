@@ -402,6 +402,100 @@ export function buildFindUserSearchFilters(filters = []) {
     .filter(Boolean);
 }
 
+function normalizeFindUserLinkMode(value) {
+  const mode = String(value ?? "test").trim().toLowerCase();
+  return mode === "live" ? "live" : "test";
+}
+
+function normalizeNullableLink(value) {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text ? text : null;
+}
+
+/**
+ * Maps GET /api/find-user/{projectId}/urls records into Find User state shape.
+ * Preserves original API field names alongside app-normalized fields.
+ * @param {object} record
+ */
+export function mapFindUserProjectUrl(record) {
+  if (!record || typeof record !== "object") return null;
+
+  const id = record.id ?? record.project_url_id ?? record.projectUrlId;
+  if (id == null || id === "") return null;
+
+  const projectUrlCode = String(
+    record.project_url_code ?? record.projectUrlCode ?? ""
+  ).trim();
+  const status = String(
+    record.Status ?? record.status ?? ""
+  ).trim();
+  const linkMode = normalizeFindUserLinkMode(
+    record.link_mode ?? record.linkMode
+  );
+  const liveLink = normalizeNullableLink(
+    record.Live_Link ?? record.live_link ?? record.liveLink
+  );
+  const testLink = normalizeNullableLink(
+    record.Test_Link ?? record.test_link ?? record.testLink
+  );
+
+  return {
+    id: String(id),
+    projectUrlId: String(id),
+    projectUrlCode,
+    project_url_code: projectUrlCode,
+    status,
+    Status: status,
+    linkMode,
+    link_mode: linkMode,
+    liveLink,
+    Live_Link: liveLink,
+    testLink,
+    Test_Link: testLink,
+  };
+}
+
+/**
+ * Resolves the survey/simulator link for a Find User Project URL using link_mode.
+ * Never invents URLs — returns null when the selected mode's link is missing.
+ * @param {{
+ *   linkMode?: string,
+ *   link_mode?: string,
+ *   liveLink?: string|null,
+ *   Live_Link?: string|null,
+ *   testLink?: string|null,
+ *   Test_Link?: string|null,
+ * } | null | undefined} url
+ * @returns {string|null}
+ */
+export function resolveFindUserProjectUrlLink(url) {
+  if (!url || typeof url !== "object") return null;
+  const mode = normalizeFindUserLinkMode(url.linkMode ?? url.link_mode);
+  if (mode === "live") {
+    return normalizeNullableLink(url.Live_Link ?? url.liveLink);
+  }
+  return normalizeNullableLink(url.Test_Link ?? url.testLink);
+}
+
+/**
+ * GET /api/find-user/{projectId}/urls
+ * @param {string|number} projectId
+ * @returns {Promise<Array<ReturnType<typeof mapFindUserProjectUrl>>>}
+ */
+export async function getProjectUrlsForFindUser(projectId) {
+  const normalizedId = String(projectId ?? "").trim();
+  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
+    throw new ApiError("Project id is required.", null);
+  }
+
+  const data = await apiRequest(API_ROUTES.findUser.projectUrls(normalizedId));
+  assertSuccess(data);
+
+  const rows = Array.isArray(data?.data) ? data.data : [];
+  return rows.map(mapFindUserProjectUrl).filter(Boolean);
+}
+
 /**
  * POST /api/find-user/{project_id}/search
  */

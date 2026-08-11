@@ -3,12 +3,23 @@ import { CircleHelp, Moon, Sun, X } from "lucide-react";
 import logo from "../../../assets/SpadeCommunitylogoWhite.png";
 import "../publicQuestionnaire.css";
 
-function PublicQuestionnaireLayout({ isDarkMode, onToggleTheme, children }) {
+function PublicQuestionnaireLayout({
+  isDarkMode,
+  onToggleTheme,
+  children,
+  footer = null,
+  shellClassName = "",
+  mainClassName = "",
+  helpDescription = "",
+}) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const helpBody =
+    String(helpDescription ?? "").trim() ||
+    "Answer each question and use Next to continue. You can go back with Previous at any time. Required questions must be answered before moving forward. If you have trouble submitting, please try again or contact support.";
 
   return (
     <div
-      className="public-questionnaire-shell admin-shell flex min-h-screen flex-col transition-colors duration-300"
+      className={`public-questionnaire-shell admin-shell flex min-h-screen flex-col transition-colors duration-300 ${shellClassName}`.trim()}
       data-theme={isDarkMode ? "dark" : "light"}
       style={{ background: "var(--admin-shell-bg)" }}
     >
@@ -50,9 +61,13 @@ function PublicQuestionnaireLayout({ isDarkMode, onToggleTheme, children }) {
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col py-8 sm:py-10 lg:py-14">
-        <div className="pq-page-container w-full">{children}</div>
+      <main
+        className={`flex flex-1 flex-col ${mainClassName || "py-8 sm:py-10 lg:py-14"}`.trim()}
+      >
+        <div className="pq-page-container flex w-full flex-1 flex-col">{children}</div>
       </main>
+
+      {footer}
 
       {isHelpOpen ? (
         <div
@@ -80,9 +95,7 @@ function PublicQuestionnaireLayout({ isDarkMode, onToggleTheme, children }) {
               </button>
             </div>
             <p className="text-sm leading-relaxed" style={{ color: "var(--admin-muted-foreground)" }}>
-              Answer each question and use Next to continue. You can go back with Previous at any
-              time. Required questions must be answered before moving forward. If you have trouble
-              submitting, please try again or contact support.
+              {helpBody}
             </p>
             <button
               type="button"

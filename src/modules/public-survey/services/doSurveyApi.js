@@ -9,6 +9,7 @@ import { ApiError } from "../../../services/api/ApiError";
 import { getAuthToken } from "../../../services/auth/authStorage";
 import { findSupplierMappingByDoSurveyToken } from "../../survey/services/supplierMappingApi";
 import { dedupeQuestionsByIdentity } from "../../survey/utils/dedupeSelectOptions";
+import { isLocalSurveyOutcomeUrl } from "../utils/surveyFlowParams";
 
 const MOCK_LOAD_DELAY_MS = 450;
 
@@ -16,11 +17,127 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isApiSuccess(data) {
+  const value = data?.success;
+  return (
+    value === true ||
+    value === 1 ||
+    value === "1" ||
+    String(value ?? "")
+      .trim()
+      .toLowerCase() === "true"
+  );
+}
+
 function assertSuccess(data) {
-  if (data?.success !== true) {
-    throw new ApiError(data?.message ?? "", data);
+  if (!isApiSuccess(data)) {
+    throw new ApiError(
+      coerceText(data?.message) || "Request failed. Please try again.",
+      data
+    );
   }
   return data;
+}
+
+function isSuccessOnlyMessage(message) {
+  const text = coerceText(message).toLowerCase();
+  if (!text) return false;
+  return (
+    text === "ok" ||
+    text === "done" ||
+    text === "success" ||
+    /successfully!?$/.test(text) ||
+    text.includes("fetched successfully") ||
+    text.includes("initiated successfully")
+  );
+}
+
+function toFlowErrorMessage(error, fallback) {
+  const raw = coerceText(error?.message);
+  if (!raw || isSuccessOnlyMessage(raw)) {
+    return fallback;
+  }
+  return raw;
+}
+
+function isInactiveSurveyStatus(status) {
+  const key = coerceText(status).toLowerCase();
+  if (!key) return false;
+  return [
+    "inactive",
+    "closed",
+    "expired",
+    "disabled",
+    "paused",
+    "stopped",
+    "cancelled",
+    "canceled",
+  ].includes(key);
+}
+
+/**
+ * Prefer survey_url, then Live_Link. Never invent a URL.
+ */
+export function resolveSurveyLaunchUrl(data) {
+  if (!data || typeof data !== "object") return "";
+
+  const payload =
+    data.data && typeof data.data === "object" && !Array.isArray(data.data)
+      ? data.data
+      : data;
+
+  return coerceText(
+    pickField(payload, [
+      "survey_url",
+      "surveyUrl",
+      "Survey_URL",
+      "Live_Link",
+      "live_link",
+      "LiveLink",
+      "liveLink",
+    ])
+  );
+}
+
+/**
+ * Absolute http(s) customer/vendor survey URLs only.
+ * Rejects local outcome routes and non-navigable values.
+ * Returns the exact input URL string (does not rewrite it).
+ */
+export function assertExternalSurveyLaunchUrl(surveyUrl, data = null) {
+  const url = coerceText(surveyUrl);
+  if (!url) {
+    throw new ApiError(
+      "Unable to start the survey. Survey link is unavailable.",
+      data
+    );
+  }
+
+  if (isLocalSurveyOutcomeUrl(url)) {
+    throw new ApiError(
+      "Unable to start the survey. Survey link is unavailable.",
+      data
+    );
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new ApiError(
+      "Unable to start the survey. Survey link is invalid.",
+      data
+    );
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new ApiError(
+      "Unable to start the survey. Survey link is invalid.",
+      data
+    );
+  }
+
+  return url;
 }
 
 function pickField(record, keys) {
@@ -298,15 +415,9 @@ export async function fetchDoSurveyStartDetails(
 /**
  * POST /api/survey/activity
  * Creates an activity record before the survey begins.
+ * Contract body: { token, uid } only — do not invent or hardcode either value.
  */
-export async function storeSurveyActivity({
-  token,
-  uid,
-  projectId,
-  projectUrlId,
-  projectUrlCode,
-  partnerId,
-} = {}) {
+export async function storeSurveyActivity({ token, uid } = {}) {
   const normalizedToken = coerceText(token);
   const normalizedUid = coerceText(uid);
 
@@ -317,21 +428,29 @@ export async function storeSurveyActivity({
     throw new ApiError("Missing or Invalid UID in Link", null);
   }
 
-  const body = {
-    token: normalizedToken,
-    uid: normalizedUid,
-  };
-  if (coerceText(projectId)) body.projectId = coerceText(projectId);
-  if (coerceText(projectUrlId)) body.projectUrlId = coerceText(projectUrlId);
-  if (coerceText(projectUrlCode)) body.projectUrlCode = coerceText(projectUrlCode);
-  if (coerceText(partnerId)) body.partnerId = coerceText(partnerId);
-
   const data = await apiRequest(API_ROUTES.survey.activity, {
     ...partnerSurveyRequestOptions({ method: "POST" }),
-    body,
+    body: {
+      token: normalizedToken,
+      uid: normalizedUid,
+    },
   });
   assertSuccess(data);
   return data;
+}
+
+/** Alias — Partner URL Start Survey activity step. */
+export const startSurveyActivity = storeSurveyActivity;
+
+function isTruthyFlag(value) {
+  return (
+    value === true ||
+    value === 1 ||
+    value === "1" ||
+    String(value ?? "")
+      .trim()
+      .toLowerCase() === "true"
+  );
 }
 
 function mapPrescreenQuestion(record) {
@@ -385,18 +504,33 @@ function mapPrescreenQuestion(record) {
 
 /**
  * Maps GET /api/survey/prescreen response into UI-ready shape.
+ * Explicit `required: false` wins. Otherwise treat required/PreScreen flags as enabled.
  */
 export function mapSurveyPrescreenResponse(data) {
-  const required =
-    data?.required === true ||
-    data?.required === 1 ||
-    data?.required === "true" ||
-    data?.required === "1";
-
   const payload =
     data?.data && typeof data.data === "object" && !Array.isArray(data.data)
       ? data.data
       : data;
+
+  const requiredRaw = data?.required;
+  const explicitlyNotRequired =
+    requiredRaw === false ||
+    requiredRaw === 0 ||
+    requiredRaw === "0" ||
+    String(requiredRaw ?? "")
+      .trim()
+      .toLowerCase() === "false";
+
+  const preScreenFlag = pickField(payload, [
+    "PreScreen",
+    "preScreen",
+    "prescreen",
+    "pre_screen",
+  ]);
+
+  const required = explicitlyNotRequired
+    ? false
+    : isTruthyFlag(requiredRaw) || isTruthyFlag(preScreenFlag);
 
   const questionsRaw = Array.isArray(payload?.questions) ? payload.questions : [];
   const questions = dedupeQuestionsByIdentity(
@@ -443,43 +577,22 @@ export async function fetchSurveyPrescreen(token) {
   return mapSurveyPrescreenResponse(data);
 }
 
+/** Alias — Partner URL Start Survey pre-screen check. */
+export const checkSurveyPreScreen = fetchSurveyPrescreen;
+
 /**
  * Extract redirect URL from GET /api/survey/link response.
  * Prefer survey_url; fall back to Live_Link.
  */
 export function extractSurveyRedirectUrl(data) {
-  if (!data || typeof data !== "object") return "";
-
-  const payload =
-    data.data && typeof data.data === "object" && !Array.isArray(data.data)
-      ? data.data
-      : data;
-
-  return coerceText(
-    pickField(payload, [
-      "survey_url",
-      "surveyUrl",
-      "Survey_URL",
-      "Live_Link",
-      "live_link",
-      "LiveLink",
-      "liveLink",
-    ])
-  );
+  return resolveSurveyLaunchUrl(data);
 }
 
 /**
  * GET /api/survey/link?token=<partner_token>&uid=<partner_uid>
- * Extra flow identifiers are accepted for future API wiring but not required by the current contract.
+ * Contract query: token + uid only. Redirect prefers survey_url, then Live_Link.
  */
-export async function fetchSurveyLink({
-  token,
-  uid,
-  projectId,
-  projectUrlId,
-  projectUrlCode,
-  partnerId,
-} = {}) {
+export async function fetchSurveyLink({ token, uid } = {}) {
   const normalizedToken = coerceText(token);
   const normalizedUid = coerceText(uid);
 
@@ -494,38 +607,51 @@ export async function fetchSurveyLink({
     token: normalizedToken,
     uid: normalizedUid,
   });
-  // Preserve identifiers for backends that already accept them; ignored if unused.
-  if (coerceText(projectId)) params.set("projectId", coerceText(projectId));
-  if (coerceText(projectUrlId)) params.set("projectUrlId", coerceText(projectUrlId));
-  if (coerceText(projectUrlCode)) {
-    params.set("projectUrlCode", coerceText(projectUrlCode));
-  }
-  if (coerceText(partnerId)) params.set("partnerId", coerceText(partnerId));
 
   const path = `${API_ROUTES.survey.link}?${params.toString()}`;
   const data = await apiRequest(path, partnerSurveyRequestOptions());
   assertSuccess(data);
 
-  const surveyUrl = extractSurveyRedirectUrl(data);
-  if (!surveyUrl) {
+  const payload =
+    data?.data && typeof data.data === "object" && !Array.isArray(data.data)
+      ? data.data
+      : data;
+
+  const status = pickField(payload, ["Status", "status"]);
+  if (isInactiveSurveyStatus(status)) {
     throw new ApiError(
-      "Survey URL missing from response. Please try again.",
+      "Unable to load the survey. This survey is not currently active.",
       data
     );
   }
+
+  const surveyUrl = assertExternalSurveyLaunchUrl(
+    resolveSurveyLaunchUrl(data),
+    data
+  );
 
   return {
     success: true,
     message: coerceText(data?.message) || "Survey link fetched successfully!",
     surveyUrl,
     liveLink: coerceText(
-      pickField(
-        data?.data && typeof data.data === "object" ? data.data : data,
-        ["Live_Link", "live_link", "LiveLink", "liveLink"]
-      )
+      pickField(payload, ["Live_Link", "live_link", "LiveLink", "liveLink"])
     ),
-    data: data?.data ?? data,
+    data: payload,
   };
+}
+
+/** Alias — Partner URL Start Survey main link step. */
+export const getMainSurveyLink = fetchSurveyLink;
+export const getSurveyLink = fetchSurveyLink;
+
+/**
+ * Navigate to the customer/vendor survey URL (external).
+ * Uses location.href — never React Router.
+ */
+export function openCustomerSurveyUrl(surveyUrl, data = null) {
+  const url = assertExternalSurveyLaunchUrl(surveyUrl, data);
+  window.location.href = url;
 }
 
 /**
@@ -535,23 +661,9 @@ export async function fetchSurveyLink({
  * Returns either { prescreenRequired: true, prescreen } or { prescreenRequired: false }
  * so the page can render pre-screen or continue to the survey link.
  */
-export async function initiateSurveyStart({
-  token,
-  uid,
-  projectId,
-  projectUrlId,
-  projectUrlCode,
-  partnerId,
-} = {}) {
-  await storeSurveyActivity({
-    token,
-    uid,
-    projectId,
-    projectUrlId,
-    projectUrlCode,
-    partnerId,
-  });
-  const prescreen = await fetchSurveyPrescreen(token);
+export async function initiateSurveyStart({ token, uid } = {}) {
+  await startSurveyActivity({ token, uid });
+  const prescreen = await checkSurveyPreScreen(token);
 
   if (prescreen.required) {
     return {
@@ -565,3 +677,5 @@ export async function initiateSurveyStart({
     prescreen,
   };
 }
+
+export { toFlowErrorMessage };

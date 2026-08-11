@@ -217,6 +217,8 @@ export const API_ROUTES = {
     questions: "/api/find-user/questions",
     questionAnswers: (questionId) =>
       `/api/find-user/questions/${encodeURIComponent(String(questionId ?? "").trim())}/answers`,
+    projectUrls: (projectId) =>
+      `/api/find-user/${encodeURIComponent(String(projectId ?? "").trim())}/urls`,
     search: (projectId) =>
       `/api/find-user/${encodeURIComponent(String(projectId ?? "").trim())}/search`,
     invite: (projectId) =>

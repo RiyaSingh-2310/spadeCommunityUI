@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../../components/admin/AdminPageHeader";
 import FormField from "../../../../components/admin/FormField";
@@ -10,12 +10,16 @@ import FindUserTable from "../components/FindUserTable";
 import FindUserToolbar from "../components/FindUserToolbar";
 import InvitedUsersModal from "../components/InvitedUsersModal";
 import { useInfiniteUsers } from "../hooks/useInfiniteUsers";
-import { inviteFindUsers, listFindUserEmailTemplateOptions } from "../services/findUserApi";
-import { listProjectUrlsByProject } from "../../services/projectUrlsApi";
+import {
+  getProjectUrlsForFindUser,
+  inviteFindUsers,
+  listFindUserEmailTemplateOptions,
+} from "../services/findUserApi";
 import {
   formatProjectUrlOptionLabel,
   isProjectUrlEligibleForInvite,
   normalizeProjectUrlAssignmentStatus,
+  normalizeProjectUrlLinkModeLabel,
 } from "../../utils/projectUrlEligibility";
 import CopyValueButton from "../../components/CopyValueButton";
 import { dedupeSelectOptions } from "../../utils/dedupeSelectOptions";
@@ -43,8 +47,8 @@ function FindUserPage({ isDarkMode }) {
 
   const [filterRows, setFilterRows] = useState([createFilterRow()]);
   const [activeFilters, setActiveFilters] = useState([]);
-  /** Start at 1 so panelists load immediately (empty filters) and invite selection is usable. */
-  const [searchVersion, setSearchVersion] = useState(1);
+  /** 0 = no search yet. Only increment when the user clicks Search. */
+  const [searchVersion, setSearchVersion] = useState(0);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [emailTemplate, setEmailTemplate] = useState("");
   const [emailTemplateOptions, setEmailTemplateOptions] = useState([]);
@@ -54,8 +58,10 @@ function FindUserPage({ isDarkMode }) {
 
   const [projectUrls, setProjectUrls] = useState([]);
   const [isLoadingProjectUrls, setIsLoadingProjectUrls] = useState(false);
+  const [projectUrlsError, setProjectUrlsError] = useState("");
   /** Explicit selection — never auto-select the first URL. */
   const [selectedProjectUrlId, setSelectedProjectUrlId] = useState("");
+  const projectUrlsRequestIdRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,34 +87,47 @@ function FindUserPage({ isDarkMode }) {
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadProjectUrls = useCallback(async () => {
+    const projectId = String(surveyId ?? "").trim();
+    const requestId = ++projectUrlsRequestIdRef.current;
 
-    async function loadProjectUrls() {
-      if (!surveyId) {
-        setProjectUrls([]);
-        return;
-      }
-      setIsLoadingProjectUrls(true);
-      try {
-        const response = await listProjectUrlsByProject(surveyId);
-        if (cancelled) return;
-        const rows = Array.isArray(response?.data) ? response.data : [];
-        setProjectUrls(rows);
-      } catch (err) {
-        if (cancelled) return;
-        setProjectUrls([]);
-        toastApiError(err);
-      } finally {
-        if (!cancelled) setIsLoadingProjectUrls(false);
-      }
+    // Clear previous project's selection and stale URL list immediately.
+    setSelectedProjectUrlId("");
+    setProjectUrls([]);
+    setProjectUrlsError("");
+    setFilterRows([createFilterRow()]);
+    setActiveFilters([]);
+    setSelectedIds(new Set());
+    setSearchVersion(0);
+
+    if (!projectId || projectId === "undefined" || projectId === "null") {
+      setIsLoadingProjectUrls(false);
+      return [];
     }
 
-    loadProjectUrls();
-    return () => {
-      cancelled = true;
-    };
+    setIsLoadingProjectUrls(true);
+    try {
+      const rows = await getProjectUrlsForFindUser(projectId);
+      if (requestId !== projectUrlsRequestIdRef.current) return [];
+      setProjectUrls(rows);
+      setProjectUrlsError("");
+      return rows;
+    } catch (err) {
+      if (requestId !== projectUrlsRequestIdRef.current) return [];
+      setProjectUrls([]);
+      setProjectUrlsError("Unable to load Project URLs. Please try again.");
+      toastApiError(err);
+      return [];
+    } finally {
+      if (requestId === projectUrlsRequestIdRef.current) {
+        setIsLoadingProjectUrls(false);
+      }
+    }
   }, [surveyId]);
+
+  useEffect(() => {
+    loadProjectUrls();
+  }, [loadProjectUrls]);
 
   const selectedProjectUrl = useMemo(
     () =>
@@ -125,7 +144,10 @@ function FindUserPage({ isDarkMode }) {
           .filter((url) => isProjectUrlEligibleForInvite(url.status))
           .map((url) => ({
             value: String(url.id),
-            label: formatProjectUrlOptionLabel(url, { includeStatus: true }),
+            label: formatProjectUrlOptionLabel(url, {
+              includeStatus: false,
+              includeLinkMode: true,
+            }),
           }))
           .filter((option) => option.value && option.value !== "undefined")
       ),
@@ -152,16 +174,33 @@ function FindUserPage({ isDarkMode }) {
     refresh,
   } = useInfiniteUsers(surveyId, activeFilters, searchVersion);
 
+  const handleProjectUrlChange = (value) => {
+    const nextId = String(value ?? "").trim();
+    setSelectedProjectUrlId(nextId);
+    // Dependent filters + search results must not carry over across Project URLs.
+    setFilterRows([createFilterRow()]);
+    setActiveFilters([]);
+    setSelectedIds(new Set());
+    reset();
+    setSearchVersion(0);
+  };
+
   const handleSearch = () => {
-    const valid = filterRows
-      .filter(
-        (row) =>
-          row.questionId && Array.isArray(row.answers) && row.answers.length > 0
-      )
-      .map((row) => ({
-        questionId: row.questionId,
-        answers: row.answers,
-      }));
+    if (!String(selectedProjectUrlId ?? "").trim()) return;
+
+    const hasIncomplete = filterRows.some(
+      (row) =>
+        !row.questionId ||
+        !Array.isArray(row.answers) ||
+        row.answers.length === 0
+    );
+    if (hasIncomplete) return;
+
+    const valid = filterRows.map((row) => ({
+      questionId: row.questionId,
+      answers: row.answers,
+    }));
+    if (valid.length === 0) return;
 
     setActiveFilters(valid);
     setSelectedIds(new Set());
@@ -234,11 +273,18 @@ function FindUserPage({ isDarkMode }) {
       });
       toastApiSuccess(data);
       setSelectedIds(new Set());
-      // Refresh eligibility / assignment state from API after share.
+      // Refresh eligibility / assignment state from API after invite.
       try {
-        const response = await listProjectUrlsByProject(surveyId);
-        const rows = Array.isArray(response?.data) ? response.data : [];
+        const rows = await getProjectUrlsForFindUser(surveyId);
         setProjectUrls(rows);
+        const stillEligible = rows.some(
+          (url) =>
+            String(url.id) === String(selectedProjectUrlId) &&
+            isProjectUrlEligibleForInvite(url.status)
+        );
+        if (!stillEligible) {
+          setSelectedProjectUrlId("");
+        }
       } catch {
         // Invitation already succeeded; eligibility refresh is best-effort.
       }
@@ -249,6 +295,10 @@ function FindUserPage({ isDarkMode }) {
       setIsInviting(false);
     }
   };
+
+  const projectUrlEmptyMessage = projectUrlsError
+    ? projectUrlsError
+    : "No available Project URLs for this project.";
 
   return (
     <div className="space-y-6">
@@ -279,30 +329,59 @@ function FindUserPage({ isDarkMode }) {
           <FormField
             label="Project URL"
             required
-            hint="Only Active (or otherwise eligible) Project URLs can be used for a fresh invitation."
+            hint="Only Open (or otherwise eligible) Project URLs can be used for a fresh invitation."
           >
-            <SearchableSelect
-              inputClass={inputClass}
-              value={selectedProjectUrlId}
-              onChange={(value) => setSelectedProjectUrlId(String(value ?? ""))}
-              options={eligibleProjectUrlOptions}
-              placeholder={
-                isLoadingProjectUrls
-                  ? "Loading Project URLs..."
-                  : eligibleProjectUrlOptions.length === 0
-                    ? "No eligible Project URLs"
-                    : "Select Project URL"
-              }
-              searchPlaceholder="Search Project URL..."
-              disabled={isLoadingProjectUrls || isInviting}
-              loading={isLoadingProjectUrls}
-              loadingLabel="Loading Project URLs..."
-              emptyMessage="No eligible Project URLs found"
-              aria-label="Project URL"
-            />
+            {projectUrlsError ? (
+              <div className="space-y-2">
+                <p className="text-sm text-[var(--admin-danger-text)]" role="alert">
+                  {projectUrlsError}
+                </p>
+                <button
+                  type="button"
+                  onClick={loadProjectUrls}
+                  disabled={isLoadingProjectUrls || isInviting}
+                  className="h-10 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-input-bg)] px-4 text-sm font-semibold admin-text transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : (
+              <SearchableSelect
+                inputClass={inputClass}
+                value={selectedProjectUrlId}
+                onChange={handleProjectUrlChange}
+                options={eligibleProjectUrlOptions}
+                placeholder={
+                  isLoadingProjectUrls
+                    ? "Loading Project URLs..."
+                    : eligibleProjectUrlOptions.length === 0
+                      ? "No available Project URLs for this project."
+                      : "Select Project URL"
+                }
+                searchPlaceholder="Search Project URL..."
+                disabled={
+                  isLoadingProjectUrls ||
+                  isInviting ||
+                  eligibleProjectUrlOptions.length === 0
+                }
+                loading={isLoadingProjectUrls}
+                loadingLabel="Loading Project URLs..."
+                emptyMessage={projectUrlEmptyMessage}
+                aria-label="Project URL"
+              />
+            )}
           </FormField>
           {selectedProjectUrl ? (
             <>
+              <FormField label="Project URL ID">
+                <input
+                  className={inputClass}
+                  value={selectedProjectUrl.id || "—"}
+                  readOnly
+                  disabled
+                  aria-label="Project URL ID"
+                />
+              </FormField>
               <FormField label="Project URL Code">
                 <div className="flex items-stretch gap-2">
                   <input
@@ -329,6 +408,16 @@ function FindUserPage({ isDarkMode }) {
                   disabled
                 />
               </FormField>
+              <FormField label="Link Mode">
+                <input
+                  className={inputClass}
+                  value={normalizeProjectUrlLinkModeLabel(
+                    selectedProjectUrl.linkMode ?? selectedProjectUrl.link_mode
+                  )}
+                  readOnly
+                  disabled
+                />
+              </FormField>
             </>
           ) : null}
         </div>
@@ -340,7 +429,10 @@ function FindUserPage({ isDarkMode }) {
             <ul className="space-y-1 text-sm">
               {ineligibleProjectUrls.map((url) => (
                 <li key={url.id} className="admin-text">
-                  {formatProjectUrlOptionLabel(url, { includeStatus: true })}
+                  {formatProjectUrlOptionLabel(url, {
+                    includeStatus: true,
+                    includeLinkMode: false,
+                  })}
                 </li>
               ))}
             </ul>
@@ -358,6 +450,7 @@ function FindUserPage({ isDarkMode }) {
           onRemoveFilter={handleRemoveFilter}
           onSearch={handleSearch}
           isSearching={isLoading && users.length === 0}
+          selectedProjectUrlId={selectedProjectUrlId}
         />
       </TableCard>
 
@@ -378,7 +471,7 @@ function FindUserPage({ isDarkMode }) {
           selectedCount={selectedIds.size}
           inviteBlockedReason={
             !hasEligibleProjectUrl
-              ? "Select an eligible Project URL before inviting"
+              ? "Please select a Project URL."
               : !emailTemplate
                 ? "Select an email template"
                 : selectedIds.size === 0
