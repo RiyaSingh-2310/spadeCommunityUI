@@ -664,6 +664,9 @@ function buildProjectUrlUpdatePayload(form) {
   const surveyGroupId = form.preScreen
     ? String(form.surveyGroupId ?? form.preScreenerId ?? "").trim()
     : "";
+  const preScreenName = form.preScreen
+    ? String(form.preScreenerName ?? form.preScreenName ?? "").trim()
+    : "";
 
   return {
     clientProjectId: String(form.clientProjectId ?? "").trim(),
@@ -687,6 +690,8 @@ function buildProjectUrlUpdatePayload(form) {
     preScreen: Boolean(form.preScreen),
     surveyGroupId,
     preScreenerId: surveyGroupId,
+    preScreenerName: preScreenName,
+    PreScreenName: preScreenName || undefined,
     completeRewardPoints:
       form.completeRewardPoints === "" ? null : Number(form.completeRewardPoints),
     terminationRewardPoints:
@@ -708,6 +713,9 @@ function buildProjectUrlUpdatePayload(form) {
  */
 export function buildCreateProjectUrlApiPayload(form = {}) {
   const preScreenerId = String(form.preScreenerId || form.surveyGroupId || "").trim();
+  const preScreenName = String(
+    form.preScreenerName ?? form.preScreenName ?? form.PreScreenName ?? ""
+  ).trim();
 
   return compactApiPayload({
     description: String(form.discussion ?? "").trim(),
@@ -729,6 +737,8 @@ export function buildCreateProjectUrlApiPayload(form = {}) {
     FraudDetection: toApiFlag(form.fraudDetection),
     PreScreen: toApiFlag(form.preScreen),
     PreScreenid: form.preScreen && preScreenerId ? preScreenerId : undefined,
+    PreScreenName:
+      form.preScreen && preScreenName ? preScreenName : undefined,
     CompleteURL: String(form.redirectComplete ?? "").trim(),
     TerminateURL: String(form.redirectTerminate ?? "").trim(),
     OverQuotaURL: String(form.redirectOverQuota ?? "").trim(),

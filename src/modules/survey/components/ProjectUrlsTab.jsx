@@ -472,6 +472,10 @@ function ProjectUrlsTab({
             ...prev,
             preScreenerId: selectedId,
             surveyGroupId: selectedId,
+            preScreenerName: String(
+              options.find((option) => String(option.value) === selectedId)
+                ?.label ?? prev.preScreenerName ?? ""
+            ).trim(),
           };
         });
       } catch {
@@ -593,6 +597,7 @@ function ProjectUrlsTab({
       language,
       preScreenerId: "",
       surveyGroupId: "",
+      preScreenerName: "",
     }));
     touch("preScreenerId");
   };
@@ -651,6 +656,21 @@ function ProjectUrlsTab({
         selectedUrlId || form.id || urlId || ""
       ).trim();
 
+      const selectedPreScreenId = String(
+        form.preScreenerId || form.surveyGroupId || ""
+      ).trim();
+      const selectedPreScreenOption = mergedPreScreenerOptions.find(
+        (option) => String(option.value) === selectedPreScreenId
+      );
+      const resolvedPreScreenName = form.preScreen
+        ? String(
+            selectedPreScreenOption?.label ??
+              form.preScreenerName ??
+              form.preScreenName ??
+              ""
+          ).trim()
+        : "";
+
       const payloadForm = {
         ...form,
         projectLinkType: selectedLinkType,
@@ -672,6 +692,7 @@ function ProjectUrlsTab({
         projectId: form.projectId || String(projectFk ?? ""),
         surveyGroupId: form.preScreenerId || form.surveyGroupId,
         preScreenerId: form.preScreenerId || form.surveyGroupId,
+        preScreenerName: resolvedPreScreenName,
         ...(isMultiLink ? { liveLink: "", testLink: "" } : {}),
       };
 
@@ -1218,7 +1239,11 @@ function ProjectUrlsTab({
                 preScreen: checked,
                 ...(checked
                   ? {}
-                  : { preScreenerId: "", surveyGroupId: "" }),
+                  : {
+                      preScreenerId: "",
+                      surveyGroupId: "",
+                      preScreenerName: "",
+                    }),
               }))
             }
             disabled={!canWrite}
@@ -1236,10 +1261,15 @@ function ProjectUrlsTab({
                 inputClass={inputClass}
                 value={form.preScreenerId || form.surveyGroupId}
                 onChange={(value) => {
+                  const selectedId = String(value ?? "").trim();
+                  const selectedOption = mergedPreScreenerOptions.find(
+                    (option) => String(option.value) === selectedId
+                  );
                   setForm((prev) => ({
                     ...prev,
                     preScreenerId: value,
                     surveyGroupId: value,
+                    preScreenerName: String(selectedOption?.label ?? "").trim(),
                   }));
                   touch("preScreenerId");
                 }}
