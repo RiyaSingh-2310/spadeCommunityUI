@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import RedirectLayout from "../components/RedirectLayout";
 import RedirectCard from "../components/RedirectCard";
 import RedirectMessage from "../components/RedirectMessage";
@@ -7,12 +7,35 @@ import LoadingState from "../components/LoadingState";
 import FallbackState from "../components/FallbackState";
 import QueryParameterHandler from "../components/QueryParameterHandler";
 import { getRedirectOutcomeConfig } from "../constants/redirectOutcomes";
+import {
+  getSurveyOutcomePath,
+  normalizeFlowUid,
+  normalizeSurveyOutcomeKey,
+} from "../../public-survey/utils/surveyFlowParams";
 
 const VIEW = {
   LOADING: "loading",
   SUCCESS: "success",
   FALLBACK: "fallback",
 };
+
+const UID_QUERY_KEYS = [
+  "uid",
+  "identifier",
+  "respondent_id",
+  "respondentId",
+  "participant_id",
+  "participantId",
+];
+
+function readRealUidFromParams(params) {
+  if (!params || typeof params !== "object") return "";
+  for (const key of UID_QUERY_KEYS) {
+    const value = normalizeFlowUid(params[key]);
+    if (value) return value;
+  }
+  return "";
+}
 
 /**
  * Inner flow for a single redirect outcome.
@@ -22,6 +45,8 @@ const VIEW = {
  * Does not call APIs or apply survey update logic.
  */
 function SurveyRedirectContent({ outcome, outcomeConfig }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [view, setView] = useState(VIEW.LOADING);
   const [fallback, setFallback] = useState(null);
   /**
@@ -43,7 +68,6 @@ function SurveyRedirectContent({ outcome, outcomeConfig }) {
 
   const handleParamsProcessed = useCallback(
     ({ params }) => {
-      // Persist every query key/value for a future API payload.
       setQueryParams(params ?? {});
 
       if (!outcomeConfig) {
@@ -56,17 +80,33 @@ function SurveyRedirectContent({ outcome, outcomeConfig }) {
         return;
       }
 
-      /**
-       * FUTURE BACKEND INTEGRATION (not implemented):
-       * Plug in an API here using `outcome` + stored query params to update final IP,
-       * end date, survey/completion status, termination reason, and redirect metadata.
-       * Keep this UI/routing shell unchanged when wiring the backend later.
-       */
+      // Prefer independent result routes with a real UID; never keep
+      // placeholder uid=[identifier] / XXX in the address bar.
+      const outcomeKey = normalizeSurveyOutcomeKey(outcome);
+      const realUid = readRealUidFromParams(params);
+      const preferredPath = getSurveyOutcomePath(outcomeKey || outcome, realUid);
+      const isIndependentResultPath =
+        preferredPath &&
+        /^\/(complete|terminate|quota-full)\//.test(preferredPath);
+
+      if (isIndependentResultPath && preferredPath !== location.pathname) {
+        navigate(preferredPath, { replace: true });
+        return;
+      }
+
+      if (location.search) {
+        // Strip placeholder / vendor query noise for /redirect/* pages.
+        navigate(
+          { pathname: location.pathname, search: "" },
+          { replace: true }
+        );
+        return;
+      }
 
       setFallback(null);
       setView(VIEW.SUCCESS);
     },
-    [outcomeConfig]
+    [outcomeConfig, outcome, navigate, location.pathname, location.search]
   );
 
   const handleRetry = useCallback(() => {

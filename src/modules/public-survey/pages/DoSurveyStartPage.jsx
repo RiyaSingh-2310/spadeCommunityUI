@@ -22,7 +22,14 @@ import {
   readDoSurveyTokenFromPath,
   readSurveyFlowParams,
   urlHasUidPlaceholder,
+  getSurveyOutcomeKeyFromUrl,
+  getSurveyOutcomePath,
+  normalizeSurveyOutcomeKey,
 } from "../utils/surveyFlowParams";
+import {
+  markSurveyFlowCompleted,
+  readSurveyFlowCompleted,
+} from "../utils/surveyFlowCompletion";
 
 const IS_TEST_QUERY_KEYS = ["IsTest", "isTest", "is_test"];
 const INVALID_SURVEY_LINK_MESSAGE =
@@ -153,6 +160,30 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   );
   const uidBlocksStart = !hasValidUid || hasUidPlaceholder;
   const canLoadPartnerApis = isSearchReady && urlSanitized;
+  const partnerTokenForGate = String(flowParams.token || token || "").trim();
+
+  // If this token+uid already completed, stay on the result page (no restart).
+  useEffect(() => {
+    if (!canLoadPartnerApis || !partnerTokenForGate || !respondentUid) return;
+
+    const completed = readSurveyFlowCompleted({
+      token: partnerTokenForGate,
+      uid: respondentUid,
+    });
+    if (!completed) return;
+
+    const resultPath = getSurveyOutcomePath(completed.outcome, respondentUid);
+    if (!resultPath) return;
+    if (location.pathname === resultPath) return;
+
+    navigate(resultPath, { replace: true });
+  }, [
+    canLoadPartnerApis,
+    partnerTokenForGate,
+    respondentUid,
+    navigate,
+    location.pathname,
+  ]);
 
   // Instruct the respondent when Partner URL still has XXX / identifier.
   useEffect(() => {
@@ -280,15 +311,43 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
 
   async function redirectToSurveyLink(actionUid) {
     setIsRedirecting(true);
+    const partnerToken = getPartnerToken();
     const result = await getSurveyLink({
-      token: getPartnerToken(),
+      token: partnerToken,
       uid: actionUid,
     });
     const surveyUrl = String(result?.surveyUrl ?? "").trim();
     if (!surveyUrl) {
       throw new Error(LINK_FLOW_ERROR);
     }
-    // Open the exact customer/vendor URL from the API — no React Router, no rewrite.
+
+    // Live/Test link may be a configured Complete/Terminate/Quota redirect
+    // (often hardcoded to production). Never follow that externally — use the
+    // in-app result route on the current origin with the real UID.
+    const outcomeKey =
+      result?.outcomeKey ||
+      getSurveyOutcomeKeyFromUrl(surveyUrl) ||
+      normalizeSurveyOutcomeKey(
+        result?.data?.Status ??
+          result?.data?.status ??
+          result?.data?.surveyStatus ??
+          result?.data?.outcome
+      );
+    if (outcomeKey) {
+      markSurveyFlowCompleted({
+        token: partnerToken,
+        uid: actionUid,
+        outcome: outcomeKey,
+      });
+      const resultPath = getSurveyOutcomePath(outcomeKey, actionUid);
+      if (!resultPath) {
+        throw new Error(LINK_FLOW_ERROR);
+      }
+      navigate(resultPath, { replace: true });
+      return;
+    }
+
+    // Real customer/vendor survey URL — leave this app.
     openCustomerSurveyUrl(surveyUrl, result?.data ?? null);
   }
 

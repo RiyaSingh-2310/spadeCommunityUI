@@ -9,7 +9,7 @@ import { ApiError } from "../../../services/api/ApiError";
 import { getAuthToken } from "../../../services/auth/authStorage";
 import { findSupplierMappingByDoSurveyToken } from "../../survey/services/supplierMappingApi";
 import { dedupeQuestionsByIdentity } from "../../survey/utils/dedupeSelectOptions";
-import { isLocalSurveyOutcomeUrl } from "../utils/surveyFlowParams";
+import { isLocalSurveyOutcomeUrl, getSurveyOutcomeKeyFromUrl } from "../utils/surveyFlowParams";
 
 const MOCK_LOAD_DELAY_MS = 450;
 
@@ -600,15 +600,31 @@ export async function fetchSurveyLink({ token, uid } = {}) {
     );
   }
 
-  const surveyUrl = assertExternalSurveyLaunchUrl(
-    resolveSurveyLaunchUrl(data),
-    data
-  );
+  const resolvedUrl = resolveSurveyLaunchUrl(data);
+  const outcomeKey = getSurveyOutcomeKeyFromUrl(resolvedUrl);
+
+  // Outcome / redirect URLs (any host) are handled in-app — do not require
+  // an external customer survey URL and do not navigate to production domains.
+  if (outcomeKey) {
+    return {
+      success: true,
+      message: coerceText(data?.message) || "Survey link fetched successfully!",
+      surveyUrl: resolvedUrl,
+      outcomeKey,
+      liveLink: coerceText(
+        pickField(payload, ["Live_Link", "live_link", "LiveLink", "liveLink"])
+      ),
+      data: payload,
+    };
+  }
+
+  const surveyUrl = assertExternalSurveyLaunchUrl(resolvedUrl, data);
 
   return {
     success: true,
     message: coerceText(data?.message) || "Survey link fetched successfully!",
     surveyUrl,
+    outcomeKey: "",
     liveLink: coerceText(
       pickField(payload, ["Live_Link", "live_link", "LiveLink", "liveLink"])
     ),

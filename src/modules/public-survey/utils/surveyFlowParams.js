@@ -156,31 +156,25 @@ export function buildSurveyFlowSearch(flow = {}, extra = {}) {
 }
 
 /**
- * Map backend / vendor outcome status to a frontend result path.
- * Used only after the customer survey returns — never from Start Survey.
- * @param {string} status
- * @param {string} uid
+ * Normalize outcome keys from API status, redirect path, or vendor callback.
+ * @param {unknown} status
+ * @returns {string} canonical key or ""
  */
-export function getSurveyOutcomePath(status, uid) {
+export function normalizeSurveyOutcomeKey(status) {
   const key = String(status ?? "")
     .trim()
     .toLowerCase()
     .replace(/[-\s]+/g, "_");
-  const safeUid = encodeURIComponent(String(uid ?? "").trim() || "unknown");
 
   if (
     key === "completed" ||
     key === "complete" ||
     key === "success"
   ) {
-    return `/complete/${safeUid}`;
+    return "complete";
   }
-  if (
-    key === "terminated" ||
-    key === "terminate" ||
-    key === "term"
-  ) {
-    return `/terminate/${safeUid}`;
+  if (key === "terminated" || key === "terminate" || key === "term") {
+    return "terminate";
   }
   if (
     key === "quota_full" ||
@@ -189,22 +183,65 @@ export function getSurveyOutcomePath(status, uid) {
     key === "over_quota" ||
     key === "quota"
   ) {
-    return `/quota-full/${safeUid}`;
+    return "quota-full";
   }
+  if (key === "qualityterm" || key === "quality_term") {
+    return "qualityterm";
+  }
+  if (
+    key === "surveyclose" ||
+    key === "survey_close" ||
+    key === "surveyclosed" ||
+    key === "survey_closed"
+  ) {
+    return "surveyclose";
+  }
+  return "";
+}
+
+/**
+ * Build an in-app result path on the current frontend origin (router path only).
+ * Uses real UID when available; never embeds placeholder identifier/XXX values.
+ * @param {string} status
+ * @param {string} uid
+ */
+export function getSurveyOutcomePath(status, uid) {
+  const outcome = normalizeSurveyOutcomeKey(status);
+  if (!outcome) return null;
+
+  const safeUid = normalizeFlowUid(uid);
+
+  if (outcome === "complete") {
+    return safeUid
+      ? `/complete/${encodeURIComponent(safeUid)}`
+      : "/redirect/complete";
+  }
+  if (outcome === "terminate") {
+    return safeUid
+      ? `/terminate/${encodeURIComponent(safeUid)}`
+      : "/redirect/terminate";
+  }
+  if (outcome === "quota-full") {
+    return safeUid
+      ? `/quota-full/${encodeURIComponent(safeUid)}`
+      : "/redirect/quota-full";
+  }
+  if (outcome === "qualityterm") return "/redirect/qualityterm";
+  if (outcome === "surveyclose") return "/redirect/surveyclose";
 
   return null;
 }
 
 /**
- * True when a URL points at this app's Complete / Terminate / Quota / redirect
- * outcome pages. Start Survey must never navigate here — those routes are only
- * for the customer's eventual survey callback.
+ * Detect Complete / Terminate / Quota / Closed / Quality outcome URLs on any host.
+ * Catches hardcoded production redirects like https://spade-community.com/redirect/complete?...
  * @param {string} url
  * @param {string} [origin]
+ * @returns {string} outcome key or ""
  */
-export function isLocalSurveyOutcomeUrl(url, origin) {
+export function getSurveyOutcomeKeyFromUrl(url, origin) {
   const raw = String(url ?? "").trim();
-  if (!raw) return false;
+  if (!raw) return "";
 
   const base =
     String(origin ?? "").trim() ||
@@ -212,23 +249,32 @@ export function isLocalSurveyOutcomeUrl(url, origin) {
 
   try {
     const parsed = new URL(raw, base);
-    // Relative same-origin outcome paths, or absolute same-origin outcome paths.
-    const isRelativeOutcome = raw.startsWith("/") && !raw.startsWith("//");
-    const isSameOrigin =
-      typeof window !== "undefined"
-        ? parsed.origin === window.location.origin
-        : parsed.origin === new URL(base).origin;
-
-    if (!isRelativeOutcome && !isSameOrigin) return false;
-
     const path = parsed.pathname.toLowerCase();
-    return (
-      /^\/(complete|terminate|quota-full)(\/|$)/.test(path) ||
-      /^\/redirect(\/|$)/.test(path)
-    );
+
+    const redirectMatch = path.match(/^\/redirect\/([^/]+)\/?$/);
+    if (redirectMatch?.[1]) {
+      return normalizeSurveyOutcomeKey(redirectMatch[1]);
+    }
+
+    const pathMatch = path.match(/^\/(complete|terminate|quota-full)(\/|$)/);
+    if (pathMatch?.[1]) {
+      return normalizeSurveyOutcomeKey(pathMatch[1]);
+    }
   } catch {
-    return false;
+    return "";
   }
+
+  return "";
+}
+
+/**
+ * True when a URL is a survey outcome / redirect result page (any host).
+ * Do not open these via window.location — use in-app router paths instead.
+ * @param {string} url
+ * @param {string} [origin]
+ */
+export function isLocalSurveyOutcomeUrl(url, origin) {
+  return Boolean(getSurveyOutcomeKeyFromUrl(url, origin));
 }
 
 /**

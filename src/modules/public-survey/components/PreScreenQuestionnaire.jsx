@@ -175,7 +175,7 @@ function PreScreenQuestionnaire({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !canProceed}
             className="pq-nav-btn pq-nav-btn--primary admin-btn-primary"
             aria-busy={isSubmitting}
           >
@@ -192,13 +192,12 @@ function PreScreenQuestionnaire({
           <button
             type="button"
             onClick={handleNext}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !canProceed}
             className="pq-nav-btn pq-nav-btn--primary admin-btn-primary"
           >
             Next
           </button>
-        )}
-      </div>
+        )}      </div>
     </div>
   );
 }
