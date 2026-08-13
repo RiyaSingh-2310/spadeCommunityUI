@@ -12,6 +12,8 @@ export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  /** @type {[string, Function]} idle | success | empty | error */
+  const [lastSearchStatus, setLastSearchStatus] = useState("idle");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalItems, setTotalItems] = useState(0);
@@ -34,17 +36,20 @@ export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {
 
       if (requestId !== requestIdRef.current) return;
 
-      setUsers(Array.isArray(result.items) ? result.items : []);
+      const items = Array.isArray(result.items) ? result.items : [];
+      setUsers(items);
       setTotalItems(result.total ?? 0);
       setTotalPages(result.totalPages ?? 0);
       setHasSearched(true);
+      setLastSearchStatus(items.length > 0 ? "success" : "empty");
     } catch (err) {
       if (requestId !== requestIdRef.current) return;
       setUsers([]);
       setTotalItems(0);
       setTotalPages(0);
       setHasSearched(true);
-      toastApiError(err);
+      setLastSearchStatus("error");
+      toastApiError(err, "Unable to search users. Please try again.");
     } finally {
       if (requestId === requestIdRef.current) {
         setIsLoading(false);
@@ -60,6 +65,7 @@ export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {
       setTotalItems(0);
       setTotalPages(1);
       setHasSearched(false);
+      setLastSearchStatus("idle");
       setIsLoading(false);
       return;
     }
@@ -72,6 +78,7 @@ export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {
     setTotalItems(0);
     setTotalPages(1);
     setHasSearched(false);
+    setLastSearchStatus("idle");
     setIsLoading(false);
     setCurrentPage(1);
   }, []);
@@ -94,6 +101,7 @@ export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {
     users,
     isLoading,
     hasSearched,
+    lastSearchStatus,
     currentPage,
     pageSize,
     totalItems,

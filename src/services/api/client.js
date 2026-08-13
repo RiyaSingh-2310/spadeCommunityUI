@@ -16,6 +16,8 @@ const HTTP_STATUS_MESSAGES = {
   401: SESSION_EXPIRED_MESSAGE,
   403: "You do not have permission to perform this action.",
   404: "The requested resource was not found.",
+  409: "This action conflicts with the current state. Please refresh and try again.",
+  422: "Unable to process the request. Please check your input.",
   500: "Internal server error. Please try again later.",
   502: "The API server is unavailable (502 Bad Gateway). Ensure the backend is running and reachable.",
   503: "Service temporarily unavailable. Please try again later.",

@@ -14,7 +14,15 @@ import {
 } from "../../utils/dedupeSelectOptions";
 
 function assertSuccess(data) {
-  if (data?.success !== true) {
+  const value = data?.success;
+  const ok =
+    value === true ||
+    value === 1 ||
+    value === "1" ||
+    String(value ?? "")
+      .trim()
+      .toLowerCase() === "true";
+  if (!ok) {
     throw new ApiError(data?.message ?? "", data);
   }
   return data;

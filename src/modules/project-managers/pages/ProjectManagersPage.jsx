@@ -59,7 +59,7 @@ function ProjectManagersPage({ isDarkMode }) {
     try {
       const data = await deleteProjectManager(deleteTarget.id);
       setDeleteTarget(null);
-      toastApiSuccess(data);
+      toastApiSuccess(data, "Project manager deleted successfully.");
       await fetchProjectManagers();
     } catch (error) {
       toastApiError(error);
@@ -78,7 +78,12 @@ function ProjectManagersPage({ isDarkMode }) {
       const data = await updateProjectManagerStatus(row.id, {
         status: nextStatus,
       });
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        nextStatus === "Active"
+          ? "Project manager activated successfully."
+          : "Project manager deactivated successfully."
+      );
       await fetchProjectManagers();
     } catch (error) {
       toastApiError(error);

@@ -68,7 +68,7 @@ function SalesManagerPage({ isDarkMode }) {
     try {
       const data = await deleteSalesManager(deleteTarget.id);
       setDeleteTarget(null);
-      toastApiSuccess(data);
+      toastApiSuccess(data, "Sales manager deleted successfully.");
       await refreshSalesManagers();
     } catch (error) {
       toastApiError(error);
@@ -87,7 +87,12 @@ function SalesManagerPage({ isDarkMode }) {
       const data = await updateSalesManagerStatus(row.id, {
         status: nextStatus,
       });
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        nextStatus === "Active"
+          ? "Sales manager activated successfully."
+          : "Sales manager deactivated successfully."
+      );
       await refreshSalesManagers();
     } catch (error) {
       toastApiError(error);

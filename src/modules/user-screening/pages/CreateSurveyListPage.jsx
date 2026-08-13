@@ -58,7 +58,12 @@ function CreateSurveyListPage({ isDarkMode }) {
 
     try {
       const data = await updateCreateSurveyStatus(row, nextStatus);
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        nextStatus === "Active"
+          ? "Survey activated successfully."
+          : "Survey deactivated successfully."
+      );
       await refresh();
     } catch (error) {
       toastApiError(error);
@@ -98,7 +103,7 @@ function CreateSurveyListPage({ isDarkMode }) {
     try {
       const data = await deleteCreateSurvey(deleteTarget);
       setDeleteTarget(null);
-      toastApiSuccess(data);
+      toastApiSuccess(data, "Survey deleted successfully.");
       await refresh();
     } catch (error) {
       toastApiError(error);

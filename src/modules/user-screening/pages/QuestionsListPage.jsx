@@ -63,7 +63,12 @@ function QuestionsListPage({ isDarkMode }) {
 
     try {
       const data = await updateScreeningQuestionStatus(rowId, nextStatus);
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        nextStatus === "Active"
+          ? "Question activated successfully."
+          : "Question deactivated successfully."
+      );
       await refresh();
     } catch (error) {
       toastApiError(error);
@@ -104,7 +109,7 @@ function QuestionsListPage({ isDarkMode }) {
     try {
       const data = await deleteScreeningQuestion(rowId);
       setDeleteTarget(null);
-      toastApiSuccess(data);
+      toastApiSuccess(data, "Question deleted successfully.");
       await refresh();
     } catch (error) {
       toastApiError(error);

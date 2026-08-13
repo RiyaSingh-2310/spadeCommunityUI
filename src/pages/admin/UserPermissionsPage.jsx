@@ -59,7 +59,10 @@ function UserPermissionsPage({ isDarkMode }) {
       navigate("/users", {
         replace: true,
         state: {
-          flash: { type: "success", message: data.message },
+          flash: {
+            type: "success",
+            message: data?.message || "Permissions updated successfully.",
+          },
           refresh: true,
         },
       });

@@ -77,7 +77,7 @@ function PrescreenPage({ isDarkMode }) {
     try {
       const data = await deleteRecord(deleteTarget.id);
       setDeleteTarget(null);
-      toastApiSuccess(data);
+      toastApiSuccess(data, "Prescreen deleted successfully.");
       await fetchPrescreens();
     } catch (error) {
       toastApiError(error);
@@ -94,7 +94,12 @@ function PrescreenPage({ isDarkMode }) {
 
     try {
       const data = await updateQuestionStatus(row.id, nextStatus);
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        nextStatus === "Active"
+          ? "Prescreen activated successfully."
+          : "Prescreen deactivated successfully."
+      );
       await fetchPrescreens();
     } catch (error) {
       toastApiError(error);

@@ -214,14 +214,14 @@ function AddPrescreenPage({ isDarkMode }) {
         options: showOptionsField ? mappedLines : [],
       });
 
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        isEdit ? "Prescreen updated successfully." : "Prescreen added successfully."
+      );
 
       navigate("/prescreen", {
         replace: true,
-        state: {
-          flash: data.message ? { type: "success", message: data.message } : null,
-          refresh: true,
-        },
+        state: { refresh: true },
       });
     } catch (error) {
       toastApiError(error);

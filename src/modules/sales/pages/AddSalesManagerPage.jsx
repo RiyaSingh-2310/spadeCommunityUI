@@ -178,14 +178,16 @@ function AddSalesManagerPage({ isDarkMode }) {
             profileImage,
           });
 
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        isEdit
+          ? "Sales manager updated successfully."
+          : "Sales manager added successfully."
+      );
 
       navigate("/sales/sales-manager", {
         replace: true,
-        state: {
-          flash: data.message ? { type: "success", message: data.message } : null,
-          refresh: true,
-        },
+        state: { refresh: true },
       });
     } catch (error) {
       toastApiError(error);

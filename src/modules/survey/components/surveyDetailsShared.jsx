@@ -178,6 +178,7 @@ export function SurveyDataTable({
   footer,
   headerAction,
   emptyMessage = "",
+  getRowProps,
 }) {
   const hasRows = Array.isArray(rows) && rows.length > 0;
 
@@ -201,7 +202,12 @@ export function SurveyDataTable({
         <tbody>
           {hasRows ? (
             rows.map((row, rowIdx) => (
-              <tr key={row.id ?? row.sno ?? rowIdx} className="align-middle">
+              <tr
+                key={row.id ?? row.sno ?? rowIdx}
+                className="align-middle"
+                data-partner-mapping-id={row.id != null ? String(row.id) : undefined}
+                {...(typeof getRowProps === "function" ? getRowProps(row, rowIdx) : {})}
+              >
                 {columns.map((col) => (
                   <td key={col} className="admin-text align-middle text-sm">
                     {renderCell(row, col)}

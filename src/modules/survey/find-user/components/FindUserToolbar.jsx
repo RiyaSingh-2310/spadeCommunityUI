@@ -30,15 +30,7 @@ function FindUserToolbar({
           onChange={(e) => onSelectAllChange(e.target.checked)}
           disabled={disabled || visibleCount === 0}
         />
-        <span className="whitespace-nowrap">
-          Select All
-          {visibleCount > 0 && (
-            <span className="admin-text-muted ml-1 text-xs font-normal">
-              ({selectedCount > 0 ? `${selectedCount} selected / ` : ""}
-              {visibleCount} visible)
-            </span>
-          )}
-        </span>
+        <span className="whitespace-nowrap">Select All</span>
       </label>
 
       <div className="min-w-0 w-full sm:min-w-[220px] sm:flex-1 lg:max-w-sm">
@@ -83,7 +75,7 @@ function FindUserToolbar({
       <button
         type="button"
         onClick={onListInvited}
-        className="admin-btn-cancel h-10 w-full shrink-0 rounded-xl px-5 text-sm font-semibold sm:w-auto"
+        className="admin-btn-cancel h-10 w-full shrink-0 rounded-xl px-5 text-sm font-semibold sm:ml-auto sm:w-auto"
       >
         List Invited Users
       </button>

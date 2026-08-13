@@ -179,7 +179,10 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
         navigate("/users", {
           replace: true,
           state: {
-            flash: { type: "success", message: data.message },
+            flash: {
+              type: "success",
+              message: data?.message || "User updated successfully.",
+            },
             refresh: true,
           },
         });
@@ -201,7 +204,10 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
       navigate("/users", {
         replace: true,
         state: {
-          flash: { type: "success", message: data.message },
+          flash: {
+            type: "success",
+            message: data?.message || "User added successfully.",
+          },
           refresh: true,
         },
       });

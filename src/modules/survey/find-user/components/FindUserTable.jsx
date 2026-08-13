@@ -96,7 +96,7 @@ function FindUserTable({
             ) : users.length === 0 ? (
               <tr>
                 <td colSpan={COLUMNS.length} className="admin-text-muted px-4 py-16 text-center text-sm">
-                  No users match the selected filters.
+                  No users found.
                 </td>
               </tr>
             ) : (

@@ -16,6 +16,10 @@ import {
   uploadProjectMultiUrlCsv,
 } from "../services/projectMultiUrlApi";
 import {
+  countValidMultiLinkCsvFiles,
+  SAMPLE_SIZE_CSV_MISMATCH_MESSAGE,
+} from "../utils/multiLinkCsvCount";
+import {
   primaryBtnClass,
   secondaryBtnClass,
   SectionDivider,
@@ -87,6 +91,7 @@ function ProjectMultiUrlCsvUploadSection({
   embedded = false,
   selectedFiles: controlledSelectedFiles,
   onSelectedFilesChange,
+  sampleSize = "",
   title = "Upload Multi URLs",
   onBeforeUpload,
   required = false,
@@ -210,6 +215,22 @@ function ProjectMultiUrlCsvUploadSection({
     const failures = [];
 
     try {
+      // Match backend: Sample Size must equal valid CSV link count.
+      const linksCount = await countValidMultiLinkCsvFiles(selectedFiles);
+      const sampleSizeNum = Number(sampleSize);
+      if (
+        !Number.isFinite(sampleSizeNum) ||
+        sampleSizeNum !== linksCount
+      ) {
+        toastApiError(
+          new ApiError(SAMPLE_SIZE_CSV_MISMATCH_MESSAGE, {
+            sampleSize: Number.isFinite(sampleSizeNum) ? sampleSizeNum : null,
+            linksCount,
+          })
+        );
+        return;
+      }
+
       if (typeof onBeforeUpload === "function") {
         await onBeforeUpload();
       }

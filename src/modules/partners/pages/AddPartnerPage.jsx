@@ -242,13 +242,13 @@ function AddPartnerPage({ isDarkMode }) {
       const data = isEdit
         ? await updatePartner(id, form)
         : await createPartner(form);
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        isEdit ? "Partner updated successfully." : "Partner added successfully."
+      );
       navigate("/partners", {
         replace: true,
-        state: {
-          flash: data.message ? { type: "success", message: data.message } : null,
-          refresh: true,
-        },
+        state: { refresh: true },
       });
     } catch (error) {
       toastApiError(error);

@@ -69,7 +69,7 @@ function ClientsPage({ isDarkMode }) {
     try {
       const data = await deleteRecord(deleteTarget.id);
       setDeleteTarget(null);
-      toastApiSuccess(data);
+      toastApiSuccess(data, "Client deleted successfully.");
       await fetchClients();
     } catch (error) {
       toastApiError(error);
@@ -91,7 +91,12 @@ function ClientsPage({ isDarkMode }) {
         country: row.countryValue ?? row.country,
         contactNumber: row.contactNumber,
       });
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        nextStatus === "Active"
+          ? "Client activated successfully."
+          : "Client deactivated successfully."
+      );
       await fetchClients();
     } catch (error) {
       toastApiError(error);

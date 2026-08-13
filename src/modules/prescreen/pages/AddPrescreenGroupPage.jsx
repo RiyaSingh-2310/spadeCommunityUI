@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
-import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { toastApiError } from "../../../services/toast/apiToast";
 import {
   createPrescreenGroup,
   getRecordForForm,
@@ -305,21 +305,22 @@ function AddPrescreenGroupPage({ isDarkMode }) {
         ? await updatePrescreenGroup(id, payload)
         : await createPrescreenGroup(form);
 
-      toastApiSuccess(data);
-
       const websiteUrl = String(data?.websiteUrl ?? data?.data?.website_url ?? "").trim();
+      const baseMessage =
+        String(data?.message ?? "").trim() ||
+        (isEdit
+          ? "Prescreen group updated successfully."
+          : "Prescreen group added successfully.");
 
       navigate("/prescreen/group", {
         replace: true,
         state: {
-          flash: data.message
-            ? {
-                type: "success",
-                message: websiteUrl
-                  ? `${data.message} Website URL: ${websiteUrl}`
-                  : data.message,
-              }
-            : null,
+          flash: {
+            type: "success",
+            message: websiteUrl
+              ? `${baseMessage} Website URL: ${websiteUrl}`
+              : baseMessage,
+          },
           refresh: true,
         },
       });

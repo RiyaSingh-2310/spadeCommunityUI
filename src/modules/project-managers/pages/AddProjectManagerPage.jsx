@@ -179,14 +179,16 @@ function AddProjectManagerPage({ isDarkMode }) {
             profileImage,
           });
 
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        isEdit
+          ? "Project manager updated successfully."
+          : "Project manager added successfully."
+      );
 
       navigate("/project-managers", {
         replace: true,
-        state: {
-          flash: data.message ? { type: "success", message: data.message } : null,
-          refresh: true,
-        },
+        state: { refresh: true },
       });
     } catch (error) {
       toastApiError(error);

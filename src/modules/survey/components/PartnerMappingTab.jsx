@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Eye, ExternalLink, Link2, Loader2, Pencil } from "lucide-react";
 import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
@@ -43,6 +43,7 @@ import {
   notePartnerUrlTabOpening,
   registerPartnerUrlWindow,
 } from "../utils/partnerUrlTabSync";
+import { jumpToSectionAfterRender } from "../../shared/utils/jumpToSection";
 import PartnerMappingViewModal from "./PartnerMappingViewModal";
 import CopyValueButton from "./CopyValueButton";
 import {
@@ -50,6 +51,9 @@ import {
   secondaryBtnClass,
   SurveyDataTable,
 } from "./surveyDetailsShared";
+
+const PARTNER_MAPPING_LIST_SECTION_ID = "partner-mapping-list";
+const ADD_PARTNER_SECTION_ID = "add-partner";
 
 const TABLE_COLUMNS = [
   "#",
@@ -276,6 +280,9 @@ function PartnerMappingTab({
   const [partnerOptionsSource, setPartnerOptionsSource] = useState([]);
   const [viewTarget, setViewTarget] = useState(null);
   const [togglingRowId, setTogglingRowId] = useState("");
+  const scrollToMappingIdRef = useRef("");
+  const mappingTableRef = useRef(null);
+  const pendingJumpToAddFormRef = useRef(false);
 
   const selectedProjectUrl = useMemo(
     () =>
@@ -390,6 +397,35 @@ function PartnerMappingTab({
   useEffect(() => {
     loadMappings();
   }, [loadMappings]);
+
+  // Scroll to newly added mapping / list after the table has re-rendered.
+  useEffect(() => {
+    const targetId = scrollToMappingIdRef.current;
+    if (!targetId || isLoading) return;
+
+    jumpToSectionAfterRender(
+      () => {
+        if (scrollToMappingIdRef.current !== targetId) return null;
+        scrollToMappingIdRef.current = "";
+
+        if (targetId !== "__latest__") {
+          const rowEl = document.querySelector(
+            `[data-partner-mapping-id="${CSS.escape(targetId)}"]`
+          );
+          if (rowEl) return rowEl;
+        }
+
+        const listEl = document.getElementById(PARTNER_MAPPING_LIST_SECTION_ID);
+        if (listEl) {
+          const rowsEls = listEl.querySelectorAll("[data-partner-mapping-id]");
+          if (rowsEls.length) return rowsEls[rowsEls.length - 1];
+          return listEl;
+        }
+        return mappingTableRef.current;
+      },
+      { block: "start", delayMs: 80 }
+    );
+  }, [rows, isLoading]);
 
   const projectUrlOptions = useMemo(
     () =>
@@ -538,6 +574,7 @@ function PartnerMappingTab({
 
   const openAddForm = async () => {
     if (!allowWrite || !resolvedProjectUrlId || !selectedUrlEligible) return;
+    pendingJumpToAddFormRef.current = true;
     setShowForm(true);
     setFormMode("add");
     setForm({
@@ -548,6 +585,20 @@ function PartnerMappingTab({
     await loadPartnerOptions();
     setIsFormLoading(false);
   };
+
+  // After Add Partner form is rendered (fields visible), jump to #add-partner.
+  useEffect(() => {
+    if (!showForm || isFormLoading || !pendingJumpToAddFormRef.current) return;
+    if (formMode !== "add") {
+      pendingJumpToAddFormRef.current = false;
+      return;
+    }
+    pendingJumpToAddFormRef.current = false;
+    jumpToSectionAfterRender(ADD_PARTNER_SECTION_ID, {
+      block: "start",
+      delayMs: 80,
+    });
+  }, [showForm, isFormLoading, formMode]);
 
   const openEditForm = async (row) => {
     if (!row?.id) return;
@@ -669,15 +720,28 @@ function PartnerMappingTab({
 
     setIsSubmitting(true);
     try {
+      const wasCreate = formMode !== "edit" || !form.mappingId;
       const data =
         formMode === "edit" && form.mappingId
           ? await updateSupplierMappingRecord(form.mappingId, payload)
           : await createSupplierMapping(payload);
 
-      toastApiSuccess(data);
+      const createdId = String(
+        data?.data?.id ?? data?.id ?? data?.data?.mapping_id ?? ""
+      ).trim();
+
+      toastApiSuccess(
+        data,
+        wasCreate ? "Partner added successfully." : "Partner updated successfully."
+      );
       resetForm();
       await loadMappings();
       await loadProjectUrls();
+
+      if (wasCreate) {
+        // Notify first, then jump to the rendered Partner Mapping list/row.
+        scrollToMappingIdRef.current = createdId || "__latest__";
+      }
     } catch (error) {
       toastApiError(error);
     } finally {
@@ -709,13 +773,13 @@ function PartnerMappingTab({
     try {
       if (field === "status") {
         const data = await updateSupplierMappingStatus(rowId, nextStatusActive);
-        toastApiSuccess(data);
+        toastApiSuccess(data, "Partner status updated successfully.");
         await loadMappings();
         return;
       }
 
       const data = await updateSupplierMappingTestMode(rowId, nextIsTest);
-      toastApiSuccess(data);
+      toastApiSuccess(data, "Partner test mode updated successfully.");
       await loadMappings();
     } catch (error) {
       toastApiError(error);
@@ -972,7 +1036,11 @@ function PartnerMappingTab({
           Loading partner mappings...
         </div>
       ) : (
-        <div className="mt-6">
+        <div
+          id={PARTNER_MAPPING_LIST_SECTION_ID}
+          className="mt-6"
+          ref={mappingTableRef}
+        >
           <SurveyDataTable
             title="Partner Mapping"
             columns={tableColumns}
@@ -1020,7 +1088,12 @@ function PartnerMappingTab({
       )}
 
       {showForm ? (
-        <form onSubmit={handleSubmit} className="mt-6 space-y-0" noValidate>
+        <form
+          id={ADD_PARTNER_SECTION_ID}
+          onSubmit={handleSubmit}
+          className="mt-6 space-y-0"
+          noValidate
+        >
           <TableCard
             title={formMode === "edit" ? "Edit Partner" : "Add Partner"}
             isDarkMode={isDarkMode}

@@ -1,5 +1,9 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import {
+  DEFAULT_SUCCESS_TOAST,
+  resolveApiToastMessage,
+} from "../../../services/toast/apiToast";
 import toast from "../../../services/toast/toast";
 
 /**
@@ -11,33 +15,44 @@ export function useFlashMessage() {
 
   useEffect(() => {
     const flash = location.state?.flash;
-    if (!flash?.message) return;
+    if (!flash) return;
+
+    const message = resolveApiToastMessage(
+      flash.message,
+      flash.type === "error" ? "Something went wrong. Please try again." : DEFAULT_SUCCESS_TOAST
+    );
+    if (!message) return;
 
     if (flash.type === "error") {
-      toast.error(flash.message);
+      toast.error(message, { force: true });
     } else if (flash.type === "warning") {
-      toast.warning(flash.message);
+      toast.warning(message, { force: true });
     } else if (flash.type === "info") {
-      toast.info(flash.message);
+      toast.info(message, { force: true });
     } else {
-      toast.success(flash.message);
+      toast.success(message, { force: true });
     }
 
     navigate(location.pathname, { replace: true, state: null });
   }, [location.state, location.pathname, navigate]);
 
   const showFlash = (nextMessage, nextType = "success") => {
-    const trimmed = String(nextMessage ?? "").trim();
+    const trimmed = resolveApiToastMessage(
+      nextMessage,
+      nextType === "error"
+        ? "Something went wrong. Please try again."
+        : DEFAULT_SUCCESS_TOAST
+    );
     if (!trimmed) return;
 
     if (nextType === "error") {
-      toast.error(trimmed);
+      toast.error(trimmed, { force: true });
     } else if (nextType === "warning") {
-      toast.warning(trimmed);
+      toast.warning(trimmed, { force: true });
     } else if (nextType === "info") {
-      toast.info(trimmed);
+      toast.info(trimmed, { force: true });
     } else {
-      toast.success(trimmed);
+      toast.success(trimmed, { force: true });
     }
   };
 

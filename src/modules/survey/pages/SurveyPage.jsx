@@ -53,7 +53,12 @@ function SurveyPage({ isDarkMode }) {
 
     try {
       const data = await updateSurveyStatus(recordId, { status: nextStatus });
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        nextStatus === "Active"
+          ? "Project activated successfully."
+          : "Project deactivated successfully."
+      );
     } catch (error) {
       toastApiError(error);
       setRows((prev) =>
@@ -75,7 +80,7 @@ function SurveyPage({ isDarkMode }) {
 
     try {
       const data = await cloneSurvey(id);
-      toastApiSuccess(data);
+      toastApiSuccess(data, "Project cloned successfully.");
       await fetchSurveys();
     } catch (error) {
       toastApiError(error);

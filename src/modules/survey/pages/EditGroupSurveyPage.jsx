@@ -231,13 +231,10 @@ function EditGroupSurveyPage({ isDarkMode }) {
     setIsSubmitting(true);
     try {
       const data = await updateGroupProject(id, form);
-      toastApiSuccess(data);
+      toastApiSuccess(data, "Group survey updated successfully.");
       navigate("/survey/group", {
         replace: true,
-        state: {
-          flash: data.message ? { type: "success", message: data.message } : null,
-          refresh: true,
-        },
+        state: { refresh: true },
       });
     } catch (error) {
       toastApiError(error);

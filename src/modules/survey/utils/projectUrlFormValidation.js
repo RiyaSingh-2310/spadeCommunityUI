@@ -192,8 +192,12 @@ export function getProjectRedirectUrlError(
 
 /**
  * @param {object} form
+ * @param {{ isMultiLink?: boolean, csvLinkCount?: number|null }} [options]
  */
-export function getProjectUrlFormErrors(form, { isMultiLink = false } = {}) {
+export function getProjectUrlFormErrors(
+  form,
+  { isMultiLink = false, csvLinkCount = null } = {}
+) {
   const preScreenerId = form.preScreenerId || form.surveyGroupId;
   const redirectErrors = Object.fromEntries(
     PROJECT_URL_REDIRECT_FIELDS.map(
@@ -217,12 +221,28 @@ export function getProjectUrlFormErrors(form, { isMultiLink = false } = {}) {
     ? ""
     : getSurveyLinkPlaceholderError(form.testLink, "Test Link");
 
+  let sampleSizeError = getIntegerFieldError(form.sampleSize, "Sample Size");
+  if (
+    !sampleSizeError &&
+    isMultiLink &&
+    csvLinkCount != null &&
+    Number.isFinite(Number(csvLinkCount))
+  ) {
+    const sampleSize = Number(form.sampleSize);
+    if (
+      Number.isFinite(sampleSize) &&
+      sampleSize !== Number(csvLinkCount)
+    ) {
+      sampleSizeError = "Sample size and no. of links not equal";
+    }
+  }
+
   return {
     projectUrlCode: getRequiredError(form.projectUrlCode, "Project URL Code"),
     loi: getDecimalFieldError(form.loi, "LOI (Minutes)"),
     ir: getDecimalFieldError(form.ir, "IR (%)"),
     cpiRate: getDecimalFieldError(form.cpiRate, "CPI"),
-    sampleSize: getIntegerFieldError(form.sampleSize, "Sample Size"),
+    sampleSize: sampleSizeError,
     startDate: getRequiredError(form.startDate, "Start Date"),
     endDate:
       getRequiredError(form.endDate, "End Date") ||

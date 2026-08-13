@@ -23,8 +23,11 @@ import {
 } from "../../utils/projectUrlEligibility";
 import CopyValueButton from "../../components/CopyValueButton";
 import { dedupeSelectOptions } from "../../utils/dedupeSelectOptions";
-import { toastApiError, toastApiSuccess } from "../../../../services/toast/apiToast";
+import { toastApiError, toastApiSuccess, toastApiInfo, toastApiWarning } from "../../../../services/toast/apiToast";
 import { getGroupSurveyBreadcrumbs } from "../../utils/groupSurveyNavigation";
+import { jumpToSectionAfterRender } from "../../../shared/utils/jumpToSection";
+
+const FIND_USER_RESULTS_SECTION_ID = "find-user-results";
 
 function createFilterRow() {
   return {
@@ -62,6 +65,7 @@ function FindUserPage({ isDarkMode }) {
   /** Explicit selection — never auto-select the first URL. */
   const [selectedProjectUrlId, setSelectedProjectUrlId] = useState("");
   const projectUrlsRequestIdRef = useRef(0);
+  const pendingSearchFeedbackRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -165,6 +169,7 @@ function FindUserPage({ isDarkMode }) {
     users,
     isLoading,
     hasSearched,
+    lastSearchStatus,
     currentPage,
     pageSize,
     totalItems,
@@ -174,6 +179,38 @@ function FindUserPage({ isDarkMode }) {
     reset,
     refresh,
   } = useInfiniteUsers(surveyId, activeFilters, searchVersion);
+
+  // After Search API + render: notify, then jump to #find-user-results.
+  useEffect(() => {
+    if (!pendingSearchFeedbackRef.current) return;
+    if (isLoading || searchVersion < 1) return;
+    if (lastSearchStatus === "idle") return;
+
+    pendingSearchFeedbackRef.current = false;
+
+    if (lastSearchStatus === "success" && users.length > 0) {
+      toastApiInfo({ message: "Users found successfully." });
+      jumpToSectionAfterRender(FIND_USER_RESULTS_SECTION_ID, {
+        block: "start",
+        delayMs: 80,
+      });
+      return;
+    }
+
+    if (lastSearchStatus === "empty") {
+      toastApiWarning({ message: "No users found." });
+      jumpToSectionAfterRender(FIND_USER_RESULTS_SECTION_ID, {
+        block: "start",
+        delayMs: 80,
+      });
+    }
+    // Errors are toasted once inside useInfiniteUsers.
+  }, [
+    isLoading,
+    lastSearchStatus,
+    users.length,
+    searchVersion,
+  ]);
 
   const handleProjectUrlChange = (value) => {
     const nextId = String(value ?? "").trim();
@@ -206,6 +243,7 @@ function FindUserPage({ isDarkMode }) {
     setActiveFilters(valid);
     setSelectedIds(new Set());
     reset();
+    pendingSearchFeedbackRef.current = true;
     setSearchVersion((version) => version + 1);
   };
 
@@ -272,8 +310,11 @@ function FindUserPage({ isDarkMode }) {
         emailTemplateId: emailTemplate,
         projectUrlId: selectedProjectUrlId,
       });
-      toastApiSuccess(data);
+      // Show success only after the invite API confirms — never on request start.
+      toastApiSuccess(data, "Invitation sent successfully.");
+      // Reset invitation selection state for a fresh invite.
       setSelectedIds(new Set());
+      setEmailTemplate("");
       // Refresh eligibility / assignment state from API after invite.
       try {
         const rows = await getProjectUrlsForFindUser(surveyId);
@@ -455,49 +496,51 @@ function FindUserPage({ isDarkMode }) {
         />
       </TableCard>
 
-      <TableCard isDarkMode={isDarkMode}>
-        <FindUserToolbar
-          selectAll={allVisibleSelected}
-          onSelectAllChange={handleSelectAll}
-          emailTemplate={emailTemplate}
-          onEmailTemplateChange={setEmailTemplate}
-          emailTemplateOptions={emailTemplateOptions}
-          isLoadingEmailTemplates={isLoadingEmailTemplates}
-          onInvite={handleInvite}
-          onListInvited={() => setShowInvitedModal(true)}
-          inviteDisabled={!inviteEnabled}
-          disabled={isInviting}
-          isInviting={isInviting}
-          visibleCount={users.length}
-          selectedCount={selectedIds.size}
-          inviteBlockedReason={
-            !hasEligibleProjectUrl
-              ? "Please select a Project URL."
-              : !emailTemplate
-                ? "Select an email template"
-                : selectedIds.size === 0
-                  ? "Select at least one panelist"
-                  : ""
-          }
-        />
-      </TableCard>
+      <div id={FIND_USER_RESULTS_SECTION_ID} className="space-y-6">
+        <TableCard isDarkMode={isDarkMode}>
+          <FindUserToolbar
+            selectAll={allVisibleSelected}
+            onSelectAllChange={handleSelectAll}
+            emailTemplate={emailTemplate}
+            onEmailTemplateChange={setEmailTemplate}
+            emailTemplateOptions={emailTemplateOptions}
+            isLoadingEmailTemplates={isLoadingEmailTemplates}
+            onInvite={handleInvite}
+            onListInvited={() => setShowInvitedModal(true)}
+            inviteDisabled={!inviteEnabled}
+            disabled={isInviting}
+            isInviting={isInviting}
+            visibleCount={users.length}
+            selectedCount={selectedIds.size}
+            inviteBlockedReason={
+              !hasEligibleProjectUrl
+                ? "Please select a Project URL."
+                : !emailTemplate
+                  ? "Select an email template"
+                  : selectedIds.size === 0
+                    ? "Select at least one panelist"
+                    : ""
+            }
+          />
+        </TableCard>
 
-      <FindUserTable
-        users={users}
-        selectedIds={selectedIds}
-        onToggleRow={handleToggleRow}
-        onToggleAll={handleSelectAll}
-        selectAll={allVisibleSelected}
-        isLoading={isLoading}
-        hasSearched={hasSearched}
-        isDarkMode={isDarkMode}
-        currentPage={currentPage}
-        pageSize={pageSize}
-        totalItems={totalItems}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
-      />
+        <FindUserTable
+          users={users}
+          selectedIds={selectedIds}
+          onToggleRow={handleToggleRow}
+          onToggleAll={handleSelectAll}
+          selectAll={allVisibleSelected}
+          isLoading={isLoading}
+          hasSearched={hasSearched}
+          isDarkMode={isDarkMode}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
+      </div>
 
       <InvitedUsersModal
         isOpen={showInvitedModal}

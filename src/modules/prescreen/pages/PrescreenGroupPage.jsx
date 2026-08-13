@@ -97,7 +97,7 @@ function PrescreenGroupPage({ isDarkMode }) {
     try {
       const data = await deleteRecord(deleteTarget.id);
       setDeleteTarget(null);
-      toastApiSuccess(data);
+      toastApiSuccess(data, "Prescreen group deleted successfully.");
       await fetchPrescreenGroups();
     } catch (error) {
       toastApiError(error);
@@ -114,7 +114,12 @@ function PrescreenGroupPage({ isDarkMode }) {
 
     try {
       const data = await updatePrescreenGroupStatus(row.id, nextStatus);
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        nextStatus === "Active"
+          ? "Prescreen group activated successfully."
+          : "Prescreen group deactivated successfully."
+      );
       await fetchPrescreenGroups();
     } catch (error) {
       toastApiError(error);

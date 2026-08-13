@@ -305,13 +305,13 @@ function AddRfqPage({ isDarkMode }) {
       const data = isEdit
         ? await updateSalesProject(id, payload)
         : await createSalesProject(payload);
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        isEdit ? "RFQ updated successfully." : "RFQ added successfully."
+      );
       navigate("/sales/rfq", {
         replace: true,
-        state: {
-          flash: data.message ? { type: "success", message: data.message } : null,
-          refresh: true,
-        },
+        state: { refresh: true },
       });
     } catch (error) {
       toastApiError(error);

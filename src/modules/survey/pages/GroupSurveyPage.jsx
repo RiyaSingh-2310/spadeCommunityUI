@@ -50,7 +50,12 @@ function GroupSurveyPage({ isDarkMode }) {
 
     try {
       const data = await updateGroupProjectStatus(row.id, { status: nextStatus });
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        nextStatus === "Active"
+          ? "Group survey activated successfully."
+          : "Group survey deactivated successfully."
+      );
       await fetchGroupProjects();
     } catch (error) {
       toastApiError(error);

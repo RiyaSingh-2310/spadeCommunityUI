@@ -131,7 +131,7 @@ function EditCommunityUserPage({ isDarkMode }) {
         email: form.email.trim(),
         status: form.status,
       });
-      toastApiSuccess(data);
+      toastApiSuccess(data, "Panelist updated successfully.");
       navigate("/community-users", { replace: true, state: { refresh: true } });
     } catch (error) {
       toastApiError(error);

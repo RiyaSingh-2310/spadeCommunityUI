@@ -16,6 +16,9 @@ import { formatAppDateValue } from "../../shared/utils/dateTime";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import CopyValueButton from "./CopyValueButton";
 import {
+  countValidMultiLinkCsvFiles,
+} from "../utils/multiLinkCsvCount";
+import {
   createEmptyProjectUrlForm,
   createProjectUrl,
   deleteProjectUrl,
@@ -222,6 +225,7 @@ function ProjectUrlsTab({
     () => getRouteFormState(projectFk, urlView).pendingDelete
   );
   const [multiUrlCsvFiles, setMultiUrlCsvFiles] = useState([]);
+  const [csvLinkCount, setCsvLinkCount] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [cloneTarget, setCloneTarget] = useState(null);
   const [isCloning, setIsCloning] = useState(false);
@@ -237,8 +241,12 @@ function ProjectUrlsTab({
   const isLoadingEditForm = isEdit && Boolean(urlId) && !editFormReady;
 
   const errors = useMemo(
-    () => getProjectUrlFormErrors(form, { isMultiLink }),
-    [form, isMultiLink]
+    () =>
+      getProjectUrlFormErrors(form, {
+        isMultiLink,
+        csvLinkCount: isMultiLink ? csvLinkCount : null,
+      }),
+    [form, isMultiLink, csvLinkCount]
   );
   const { showError, touch, validateSubmit, resetValidation, isValid } =
     useFormValidation({
@@ -264,6 +272,7 @@ function ProjectUrlsTab({
   if (routeState.projectFk !== projectFk || routeState.urlView !== urlView) {
     setRouteState({ projectFk, urlView });
     setMultiUrlCsvFiles([]);
+    setCsvLinkCount(null);
 
     if (
       urlView === PROJECT_URL_VIEW_IDS.ADD ||
@@ -532,8 +541,32 @@ function ProjectUrlsTab({
     setForm((prev) => ({ ...prev, projectLinkType: nextType }));
     if (nextType !== "Multi Link" && multiUrlCsvFiles.length > 0) {
       setMultiUrlCsvFiles([]);
+      setCsvLinkCount(null);
     }
   };
+
+  // Recount CSV links whenever Multi Link files change (or are cleared).
+  useEffect(() => {
+    let cancelled = false;
+
+    async function recount() {
+      if (!isMultiLink || multiUrlCsvFiles.length === 0) {
+        if (!cancelled) setCsvLinkCount(null);
+        return;
+      }
+      try {
+        const count = await countValidMultiLinkCsvFiles(multiUrlCsvFiles);
+        if (!cancelled) setCsvLinkCount(count);
+      } catch {
+        if (!cancelled) setCsvLinkCount(null);
+      }
+    }
+
+    recount();
+    return () => {
+      cancelled = true;
+    };
+  }, [isMultiLink, multiUrlCsvFiles]);
 
   const preScreenerPlaceholder = useMemo(() => {
     if (!form.language) return "Select language in Survey Matrix first";
@@ -637,9 +670,9 @@ function ProjectUrlsTab({
       touch("projectUrlCode");
       return;
     }
-    if (!validateSubmit() || !isProjectUrlFormValid(form, { isMultiLink })) {
+    if (!validateSubmit() || !isProjectUrlFormValid(form, { isMultiLink, csvLinkCount })) {
       const firstError = Object.values(
-        getProjectUrlFormErrors(form, { isMultiLink })
+        getProjectUrlFormErrors(form, { isMultiLink, csvLinkCount })
       ).find(Boolean);
       toastApiError(firstError || "Please fix the validation errors before saving.");
       return;
@@ -714,7 +747,12 @@ function ProjectUrlsTab({
         setMultiUrlCsvFiles([]);
       }
 
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        isCreate
+          ? "Project URL created successfully."
+          : "Project URL updated successfully."
+      );
 
       const savedId =
         data?.data?.id != null
@@ -778,7 +816,7 @@ function ProjectUrlsTab({
         csvFiles: [],
       });
 
-      toastApiSuccess(data);
+      toastApiSuccess(data, "Project URL cloned successfully.");
       await loadUrlRecords();
     } catch (error) {
       toastApiError(error);
@@ -808,7 +846,7 @@ function ProjectUrlsTab({
     setIsDeleting(true);
     try {
       const data = await deleteProjectUrl(urlRecordId);
-      toastApiSuccess(data);
+      toastApiSuccess(data, "Project URL deleted successfully.");
       setPendingDelete(null);
       await loadUrlRecords();
     } catch (error) {
@@ -1028,7 +1066,17 @@ function ProjectUrlsTab({
           <FormField
             label="Sample Size"
             required
-            error={showError("sampleSize") ? errors.sampleSize : ""}
+            error={
+              showError("sampleSize") ||
+              (isMultiLink && csvLinkCount != null && Boolean(errors.sampleSize))
+                ? errors.sampleSize
+                : ""
+            }
+            hint={
+              isMultiLink && csvLinkCount != null
+                ? `CSV links counted: ${csvLinkCount}`
+                : undefined
+            }
           >
             <NumericInput
               className={inputClass}
@@ -1040,7 +1088,13 @@ function ProjectUrlsTab({
               placeholder="e.g. 500"
               maxLength={PROJECT_URL_NUMERIC_MAX_DIGITS}
               disabled={!canWrite}
-              aria-invalid={Boolean(showError("sampleSize") && errors.sampleSize)}
+              aria-invalid={Boolean(
+                (showError("sampleSize") ||
+                  (isMultiLink &&
+                    csvLinkCount != null &&
+                    Boolean(errors.sampleSize))) &&
+                  errors.sampleSize
+              )}
             />
           </FormField>
           <FormField
@@ -1194,6 +1248,7 @@ function ProjectUrlsTab({
               embedded
               selectedFiles={multiUrlCsvFiles}
               onSelectedFilesChange={setMultiUrlCsvFiles}
+              sampleSize={form.sampleSize}
               title="Upload Multi URLs"
               required={requiresMultiLinkCsv}
               error={multiLinkCsvError}

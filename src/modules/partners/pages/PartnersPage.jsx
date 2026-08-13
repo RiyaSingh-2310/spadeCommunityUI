@@ -79,7 +79,7 @@ function PartnersPage({ isDarkMode }) {
     try {
       const data = await deleteRecord(deleteTarget.id);
       setDeleteTarget(null);
-      toastApiSuccess(data);
+      toastApiSuccess(data, "Partner deleted successfully.");
       await refreshPartners();
     } catch (error) {
       toastApiError(error);
@@ -99,7 +99,12 @@ function PartnersPage({ isDarkMode }) {
         name: row.name,
         status: nextStatus,
       });
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        nextStatus === "Active"
+          ? "Partner activated successfully."
+          : "Partner deactivated successfully."
+      );
       await refreshPartners();
     } catch (error) {
       toastApiError(error);

@@ -58,7 +58,7 @@ function UserEmailTemplatesPage({ isDarkMode }) {
     try {
       const data = await deleteRecord(deleteTarget.id);
       setDeleteTarget(null);
-      toastApiSuccess(data);
+      toastApiSuccess(data, "Email template deleted successfully.");
       await refresh();
     } catch (error) {
       toastApiError(error);
@@ -76,7 +76,12 @@ function UserEmailTemplatesPage({ isDarkMode }) {
 
       try {
         const data = await updateStatus(row.id, { status: nextStatus });
-        toastApiSuccess(data);
+        toastApiSuccess(
+        data,
+        nextStatus === "Active"
+          ? "Email template activated successfully."
+          : "Email template deactivated successfully."
+      );
         await refresh();
       } catch (error) {
         toastApiError(error);

@@ -159,7 +159,7 @@ function MessageDetailsPage({ isDarkMode }) {
       setIsReplying(true);
       try {
         const data = await replyToMessage(routeMessageId, { replyBody });
-        toastApiSuccess(data);
+        toastApiSuccess(data, "Reply sent successfully!");
         setIsReplyOpen(false);
         await fetchMessageById(routeMessageId, { silent: true });
         refreshRecent?.({ silent: true })?.catch?.(() => {});
@@ -379,7 +379,7 @@ function MessageDetailsPage({ isDarkMode }) {
           setIsDeleting(true);
           try {
             const data = await removeMessage(routeMessageId);
-            toastApiSuccess(data);
+            toastApiSuccess(data, "Message deleted successfully!");
             setIsDeleteOpen(false);
             navigate(MESSAGES_PATH, { state: { refresh: true } });
           } catch (error) {

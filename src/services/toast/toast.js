@@ -6,15 +6,30 @@ import {
   setToastTheme,
 } from "./toastStore";
 
-function show(type, message, duration = DEFAULT_DURATION) {
-  return pushToast(type, message, duration);
+function show(type, message, durationOrOptions, maybeOptions) {
+  let duration = DEFAULT_DURATION;
+  let options = {};
+
+  if (typeof durationOrOptions === "number") {
+    duration = durationOrOptions;
+    options = maybeOptions && typeof maybeOptions === "object" ? maybeOptions : {};
+  } else if (durationOrOptions && typeof durationOrOptions === "object") {
+    options = durationOrOptions;
+    if (typeof options.duration === "number") duration = options.duration;
+  }
+
+  return pushToast(type, message, duration, options);
 }
 
 const toast = {
-  success: (message, duration) => show("success", message, duration),
-  error: (message, duration) => show("error", message, duration),
-  warning: (message, duration) => show("warning", message, duration),
-  info: (message, duration) => show("info", message, duration),
+  success: (message, durationOrOptions, maybeOptions) =>
+    show("success", message, durationOrOptions, maybeOptions),
+  error: (message, durationOrOptions, maybeOptions) =>
+    show("error", message, durationOrOptions, maybeOptions),
+  warning: (message, durationOrOptions, maybeOptions) =>
+    show("warning", message, durationOrOptions, maybeOptions),
+  info: (message, durationOrOptions, maybeOptions) =>
+    show("info", message, durationOrOptions, maybeOptions),
   dismiss: removeToast,
   clear: clearToasts,
   setTheme: setToastTheme,

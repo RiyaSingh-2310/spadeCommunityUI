@@ -73,7 +73,7 @@ function UsersPage({ isDarkMode }) {
     try {
       const data = await deleteRecord(deleteTarget.id);
       setDeleteTarget(null);
-      toastApiSuccess(data);
+      toastApiSuccess(data, "User deleted successfully.");
       await fetchUsers();
     } catch (error) {
       toastApiError(error);
@@ -99,7 +99,12 @@ function UsersPage({ isDarkMode }) {
         status: formStatusToApiStatus(nextStatus),
         permissions: row.permissions,
       });
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        nextStatus === "Active"
+          ? "User activated successfully."
+          : "User deactivated successfully."
+      );
       await fetchUsers();
     } catch (error) {
       toastApiError(error);

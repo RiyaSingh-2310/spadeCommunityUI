@@ -193,7 +193,10 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
         navigate("/clients", {
           replace: true,
           state: {
-            flash: { type: "success", message: data.message },
+            flash: {
+              type: "success",
+              message: data?.message || "Client updated successfully.",
+            },
             refresh: true,
           },
         });
@@ -214,7 +217,10 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
       navigate("/clients", {
         replace: true,
         state: {
-          flash: { type: "success", message: data.message },
+          flash: {
+            type: "success",
+            message: data?.message || "Client added successfully.",
+          },
           refresh: true,
         },
       });

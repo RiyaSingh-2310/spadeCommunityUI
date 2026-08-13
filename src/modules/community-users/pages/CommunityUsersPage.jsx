@@ -124,7 +124,7 @@ function CommunityUsersPage({ isDarkMode }) {
         next.delete(String(deleteTarget.id));
         return next;
       });
-      toastApiSuccess(data);
+      toastApiSuccess(data, "User deleted successfully.");
       await refresh();
     } catch (error) {
       toastApiError(error);
@@ -180,7 +180,7 @@ function CommunityUsersPage({ isDarkMode }) {
       const data = await bulkResendInvite(ids);
       setBulkResendOpen(false);
       setSelectedRowIds(new Set());
-      toastApiSuccess(data);
+      toastApiSuccess(data, "User invited successfully");
       await refresh();
     } catch (error) {
       toastApiError(error);
@@ -245,7 +245,7 @@ function CommunityUsersPage({ isDarkMode }) {
           next.delete(String(row.id));
           return next;
         });
-        toastApiSuccess(data);
+        toastApiSuccess(data, "User invited successfully");
         await refresh();
       } catch (error) {
         toastApiError(error);
@@ -264,7 +264,12 @@ function CommunityUsersPage({ isDarkMode }) {
 
     try {
       const data = await updateStatus(row.id, nextStatus);
-      toastApiSuccess(data);
+      toastApiSuccess(
+        data,
+        nextStatus === "Active"
+          ? "User activated successfully."
+          : "User deactivated successfully."
+      );
       await refresh();
     } catch (error) {
       toastApiError(error);
