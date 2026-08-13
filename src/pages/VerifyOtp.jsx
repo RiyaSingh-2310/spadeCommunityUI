@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
-import AuthSecondaryAction from "../components/auth/AuthSecondaryAction";
 import { forgotPassword, verifyOtp } from "../services/auth/authApi";
+import {
+  readPasswordResetEmail,
+  savePasswordResetEmail,
+  savePasswordResetOtp,
+} from "../services/auth/passwordResetSession";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 
 const OTP_LENGTH = 6;
@@ -19,7 +23,11 @@ const maskEmail = (email) => {
 function VerifyOtp({ isDarkMode, onToggleTheme }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const email = location.state?.email || "";
+  const emailFromState = String(location.state?.email ?? "").trim();
+  const [email] = useState(
+    () => emailFromState || readPasswordResetEmail()
+  );
+  const sessionExpired = !email;
   const maskedEmail = useMemo(() => maskEmail(email), [email]);
 
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
@@ -30,18 +38,18 @@ function VerifyOtp({ isDarkMode, onToggleTheme }) {
   const inputsRef = useRef([]);
 
   useEffect(() => {
-    if (!email) {
-      navigate("/auth/forgot-password", { replace: true });
+    if (email) {
+      savePasswordResetEmail(email);
     }
-  }, [email, navigate]);
+  }, [email]);
 
   useEffect(() => {
-    if (timer === 0) {
+    if (sessionExpired || timer === 0) {
       return undefined;
     }
     const interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
     return () => clearInterval(interval);
-  }, [timer]);
+  }, [sessionExpired, timer]);
 
   const otpValue = otp.join("");
 
@@ -85,6 +93,9 @@ function VerifyOtp({ isDarkMode, onToggleTheme }) {
 
   const handleVerify = async (event) => {
     event.preventDefault();
+    if (sessionExpired) {
+      return;
+    }
     if (otpValue.length !== OTP_LENGTH) {
       setError("Please enter the 6-digit OTP.");
       return;
@@ -95,6 +106,8 @@ function VerifyOtp({ isDarkMode, onToggleTheme }) {
     try {
       const data = await verifyOtp({ email, otp: otpValue });
       toastApiSuccess(data);
+      savePasswordResetEmail(email);
+      savePasswordResetOtp(otpValue);
       navigate("/auth/reset-password", {
         state: { email, otp: otpValue },
       });
@@ -116,7 +129,6 @@ function VerifyOtp({ isDarkMode, onToggleTheme }) {
     }
 
     if (!email) {
-      navigate("/auth/forgot-password", { replace: true });
       return;
     }
 
@@ -144,91 +156,126 @@ function VerifyOtp({ isDarkMode, onToggleTheme }) {
       >
         Verify Your Email
       </h1>
-      <p
-        className={`mt-2 text-center text-[14px] sm:text-[15px] ${
-          isDarkMode ? "text-[#9fb0c8]" : "text-[#6f7f96]"
-        }`}
-      >
-        Enter the verification code sent to your email address.
-      </p>
-      <p className="mt-2 text-center text-sm font-semibold text-[#18a354]">
-        {maskedEmail}
-      </p>
 
-      <form onSubmit={handleVerify} className="mt-6 space-y-5">
-        <div className="flex justify-center gap-2 sm:gap-3" onPaste={handlePaste}>
-          {otp.map((value, index) => (
-            <input
-              key={index}
-              ref={(el) => {
-                inputsRef.current[index] = el;
-              }}
-              type="text"
-              inputMode="numeric"
-              maxLength={1}
-              value={value}
-              disabled={isVerifying}
-              onChange={(event) => handleChange(index, event.target.value)}
-              onKeyDown={(event) => handleKeyDown(index, event)}
-              aria-label={`OTP digit ${index + 1}`}
-              className={`h-12 w-11 rounded-xl border text-center text-lg font-semibold outline-none transition-all duration-200 sm:w-12 ${
-                isDarkMode
-                  ? "border-[#344662] bg-[#101a2a] text-[#f8fafc] focus:border-[#24b86b] focus:ring-2 focus:ring-[#24b86b]/20"
-                  : "border-[#d5deea] bg-[#f4f8fc] text-[#18202f] focus:border-[#18a957] focus:ring-2 focus:ring-[#18a957]/15"
-              }`}
-            />
-          ))}
+      {sessionExpired ? (
+        <div className="mt-6 space-y-5 text-center">
+          <p
+            className={`text-[14px] sm:text-[15px] ${
+              isDarkMode ? "text-[#9fb0c8]" : "text-[#6f7f96]"
+            }`}
+          >
+            Your password reset session has expired. Please request a new OTP to
+            continue.
+          </p>
+          <button
+            type="button"
+            className="mt-1 flex h-[52px] w-full items-center justify-center rounded-2xl bg-[#10a950] text-base font-semibold text-white shadow-[0_10px_24px_rgba(16,169,80,0.3)] transition-all duration-200 hover:bg-[#0f9b49]"
+            onClick={() => navigate("/auth/forgot-password", { replace: true })}
+          >
+            Request New OTP
+          </button>
+          <button
+            type="button"
+            className="h-11 rounded-xl w-full text-center px-5 text-sm font-semibold transition cursor-pointer bg-[#f4f8fc] border border-[#dce6f2] text-[#18202f] hover:bg-[#e9f0f7]"
+            onClick={() => navigate("/auth", { replace: true })}
+          >
+            Return To Login Page
+          </button>
         </div>
+      ) : (
+        <>
+          <p
+            className={`mt-2 text-center text-[14px] sm:text-[15px] ${
+              isDarkMode ? "text-[#9fb0c8]" : "text-[#6f7f96]"
+            }`}
+          >
+            Enter the verification code sent to your email address.
+          </p>
+          <p className="mt-2 text-center text-sm font-semibold text-[#18a354]">
+            {maskedEmail}
+          </p>
 
-        {error && <p className="text-center text-xs text-[#de3d3d]">{error}</p>}
+          <form onSubmit={handleVerify} className="mt-6 space-y-5">
+            <div
+              className="flex justify-center gap-2 sm:gap-3"
+              onPaste={handlePaste}
+            >
+              {otp.map((value, index) => (
+                <input
+                  key={index}
+                  ref={(el) => {
+                    inputsRef.current[index] = el;
+                  }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={value}
+                  disabled={isVerifying}
+                  onChange={(event) => handleChange(index, event.target.value)}
+                  onKeyDown={(event) => handleKeyDown(index, event)}
+                  aria-label={`OTP digit ${index + 1}`}
+                  className={`h-12 w-11 rounded-xl border text-center text-lg font-semibold outline-none transition-all duration-200 sm:w-12 ${
+                    isDarkMode
+                      ? "border-[#344662] bg-[#101a2a] text-[#f8fafc] focus:border-[#24b86b] focus:ring-2 focus:ring-[#24b86b]/20"
+                      : "border-[#d5deea] bg-[#f4f8fc] text-[#18202f] focus:border-[#18a957] focus:ring-2 focus:ring-[#18a957]/15"
+                  }`}
+                />
+              ))}
+            </div>
 
-        <button
-          type="submit"
-          disabled={isVerifying}
-          className="mt-1 flex h-[52px] w-full items-center justify-center rounded-2xl bg-[#10a950] text-base font-semibold text-white shadow-[0_10px_24px_rgba(16,169,80,0.3)] transition-all duration-200 hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:bg-[#6fbd93] disabled:shadow-none"
-        >
-          {isVerifying ? "Verifying..." : "Verify & Continue"}
-        </button>
+            {error && (
+              <p className="text-center text-xs text-[#de3d3d]">{error}</p>
+            )}
 
-        <div className="space-y-2 text-center text-sm">
-          <div>
+            <button
+              type="submit"
+              disabled={isVerifying}
+              className="mt-1 flex h-[52px] w-full items-center justify-center rounded-2xl bg-[#10a950] text-base font-semibold text-white shadow-[0_10px_24px_rgba(16,169,80,0.3)] transition-all duration-200 hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:bg-[#6fbd93] disabled:shadow-none"
+            >
+              {isVerifying ? "Verifying..." : "Verify & Continue"}
+            </button>
+
+            <div className="space-y-2 text-center text-sm">
+              <div>
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={timer > 0 || isResending}
+                  className={`font-semibold transition-colors ${
+                    timer > 0 || isResending
+                      ? isDarkMode
+                        ? "cursor-not-allowed text-[#64748b]"
+                        : "cursor-not-allowed text-[#9aa7b8]"
+                      : "text-[#18a354] hover:text-[#138b46]"
+                  }`}
+                >
+                  {isResending ? "Resending..." : "Resend OTP"}
+                </button>
+                <p
+                  className={`mt-1 text-xs ${
+                    isDarkMode ? "text-[#94a3b8]" : "text-[#8e97a7]"
+                  }`}
+                >
+                  {timer > 0
+                    ? `Available In: ${String(Math.floor(timer / 60)).padStart(2, "0")}:${String(timer % 60).padStart(2, "0")}`
+                    : "You can resend OTP now"}
+                </p>
+              </div>
+            </div>
+
             <button
               type="button"
-              onClick={handleResend}
-              disabled={timer > 0 || isResending}
-              className={`font-semibold transition-colors ${
-                timer > 0 || isResending
-                  ? isDarkMode
-                    ? "cursor-not-allowed text-[#64748b]"
-                    : "cursor-not-allowed text-[#9aa7b8]"
-                  : "text-[#18a354] hover:text-[#138b46]"
-              }`}
+              className="h-11 rounded-xl w-full text-center px-5 text-sm font-semibold transition cursor-pointer disabled:opacity-50 bg-[#f4f8fc] border border-[#dce6f2] text-[#18202f] hover:bg-[#e9f0f7] disabled:border-[#d5deea] disabled:bg-[#f4f8fc] disabled:text-[#18202f]"
+              onClick={() =>
+                navigate("/auth/forgot-password", { state: { email } })
+              }
+              disabled={isVerifying}
             >
-              {isResending ? "Resending..." : "Resend OTP"}
+              Back
             </button>
-            <p
-              className={`mt-1 text-xs ${
-                isDarkMode ? "text-[#94a3b8]" : "text-[#8e97a7]"
-              }`}
-            >
-              {timer > 0
-                ? `Available In: ${String(Math.floor(timer / 60)).padStart(2, "0")}:${String(timer % 60).padStart(2, "0")}`
-                : "You can resend OTP now"}
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className="h-11 rounded-xl w-full text-center px-5 text-sm font-semibold transition cursor-pointer disabled:opacity-50 bg-[#f4f8fc] border border-[#dce6f2] text-[#18202f] hover:bg-[#e9f0f7] disabled:border-[#d5deea] disabled:bg-[#f4f8fc] disabled:text-[#18202f]"
-          onClick={() =>
-            navigate("/auth/forgot-password", { state: { email } })
-          }
-          disabled={isVerifying}
-        >
-          Back
-        </button>
-      </form>
+          </form>
+        </>
+      )}
     </AuthLayout>
   );
 }

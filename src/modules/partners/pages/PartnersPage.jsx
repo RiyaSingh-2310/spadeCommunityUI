@@ -45,6 +45,7 @@ function PartnersPage({ isDarkMode }) {
     rows: partners,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -131,6 +132,8 @@ function PartnersPage({ isDarkMode }) {
         permissionModule="partners"
         nameAsText
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={refreshPartners}
         emptyMessage="No partners found"
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}

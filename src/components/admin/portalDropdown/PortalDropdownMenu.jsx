@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
-import { Search, X } from "lucide-react";
+import { Search } from "lucide-react";
+import SearchClearButton from "../SearchClearButton";
 import {
   PORTAL_DROPDOWN_MAX_HEIGHT,
   PORTAL_DROPDOWN_Z_INDEX,
@@ -59,7 +60,7 @@ export function PortalDropdownSearch({
 
   return (
     <div className="admin-portal-dropdown-search shrink-0 border-b p-2.5">
-      <div className="relative">
+      <div className="relative flex items-center">
         <Search
           size={14}
           className="admin-portal-dropdown-text-muted pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
@@ -70,26 +71,23 @@ export function PortalDropdownSearch({
           onChange={onChange}
           placeholder={placeholder}
           className={`admin-portal-dropdown-search-input h-9 w-full rounded-lg pl-8 text-sm ${
-            hasValue ? "pr-8" : "pr-2.5"
+            hasValue ? "pr-10" : "pr-2.5"
           }`}
           autoFocus
         />
         {hasValue ? (
-          <button
-            type="button"
-            onClick={() => {
-              if (onClear) {
-                onClear();
-                return;
-              }
-              onChange?.({ target: { value: "" } });
-            }}
-            className="admin-portal-dropdown-text-muted absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded hover:opacity-80"
-            aria-label="Clear search"
-            title="Clear search"
-          >
-            <X size={14} />
-          </button>
+          <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
+            <SearchClearButton
+              onClick={() => {
+                if (onClear) {
+                  onClear();
+                  return;
+                }
+                onChange?.({ target: { value: "" } });
+              }}
+              ariaLabel="Clear search"
+            />
+          </div>
         ) : null}
       </div>
     </div>

@@ -23,6 +23,7 @@ function SurveyPage({ isDarkMode }) {
     setRows,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -152,6 +153,8 @@ function SurveyPage({ isDarkMode }) {
         onStatusToggle={handleStatusToggle}
         permissionModule="survey"
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={fetchSurveys}
         emptyMessage="No Data Available"
         onSearch={handleSearch}
         totalRecords={totalRecords}

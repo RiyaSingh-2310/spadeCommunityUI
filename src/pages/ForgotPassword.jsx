@@ -2,10 +2,10 @@ import { useMemo, useState } from "react";
 import { Mail } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/auth/AuthLayout";
-import AuthSecondaryAction from "../components/auth/AuthSecondaryAction";
 import { useFormValidation } from "../modules/shared/hooks/useFormValidation";
 import { EMAIL_FIELD_MAX_LENGTH, getAuthEmailError } from "../modules/shared/utils/validation";
 import { forgotPassword } from "../services/auth/authApi";
+import { savePasswordResetEmail } from "../services/auth/passwordResetSession";
 import { toastApiError, toastApiSuccess } from "../services/toast/apiToast";
 
 const FORGOT_PASSWORD_FIELDS = ["email"];
@@ -30,9 +30,11 @@ function ForgotPassword({ isDarkMode, onToggleTheme }) {
 
     setIsSending(true);
     try {
-      const data = await forgotPassword({ email: email.trim() });
+      const trimmedEmail = email.trim();
+      const data = await forgotPassword({ email: trimmedEmail });
       toastApiSuccess(data);
-      navigate("/auth/verify-otp", { state: { email: email.trim() } });
+      savePasswordResetEmail(trimmedEmail);
+      navigate("/auth/verify-otp", { state: { email: trimmedEmail } });
     } catch (err) {
       toastApiError(err);
     } finally {

@@ -29,6 +29,7 @@ function PrescreenGroupPage({ isDarkMode }) {
     rows,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -148,6 +149,8 @@ function PrescreenGroupPage({ isDarkMode }) {
         permissionModule="prescreen_group"
         onStatusToggle={handleStatusToggle}
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={fetchPrescreenGroups}
         emptyMessage="No questionnaire groups found"
         onSearch={handleSearch}
         totalRecords={totalRecords}

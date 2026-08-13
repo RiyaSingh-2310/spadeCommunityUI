@@ -35,6 +35,7 @@ function UsersPage({ isDarkMode }) {
     rows: users,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -134,6 +135,8 @@ function UsersPage({ isDarkMode }) {
         permissionModule="users"
         actionVariant="user-management"
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={fetchUsers}
         emptyMessage="No Admin Users Found"
         onEdit={navigateToUserEdit}
         onDelete={handleDeleteRequest}

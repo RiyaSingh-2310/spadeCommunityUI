@@ -16,6 +16,7 @@ function GroupSurveyPage({ isDarkMode }) {
     rows,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -80,6 +81,8 @@ function GroupSurveyPage({ isDarkMode }) {
       actionVariant="group-survey"
       onStatusToggle={handleStatusToggle}
       isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={fetchGroupProjects}
       emptyMessage="No group surveys found"
       onEdit={(row) => {
         const id = getGroupId(row);

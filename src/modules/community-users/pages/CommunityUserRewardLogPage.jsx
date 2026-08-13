@@ -35,11 +35,13 @@ function CommunityUserRewardLogPage({ isDarkMode }) {
     rows,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
     handlePageChange,
     handlePageSizeChange,
+    refresh,
   } = useApiListing({
     fetchFn: fetchLogs,
     initialPageSize: DEFAULT_PAGE_SIZE,
@@ -110,6 +112,8 @@ function CommunityUserRewardLogPage({ isDarkMode }) {
         permissionModule="community_users"
         showStatus={false}
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={refresh}
         emptyMessage="No reward log entries found."
         onSearch={handleSearch}
         totalRecords={totalRecords}

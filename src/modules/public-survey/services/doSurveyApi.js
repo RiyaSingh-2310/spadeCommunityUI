@@ -206,7 +206,7 @@ function withDoSurveyDisplayDefaults(details) {
 }
 
 /**
- * Maps GET /api/dosurvey/:token response into the public start-page shape.
+ * Maps Partner URL / supplier-mapping fields into the public start-page shape.
  * `IsTest` from supplier mapping drives Test vs Live badge.
  */
 export function mapDoSurveyStartDetails(
@@ -308,17 +308,6 @@ function buildMockSurveyDetails(
   );
 }
 
-function extractDoSurveyRecord(data) {
-  if (!data || typeof data !== "object") return null;
-  if (data.data && typeof data.data === "object" && !Array.isArray(data.data)) {
-    return data.data;
-  }
-  if (data.id != null || data.IsTest != null || data.isTest != null) {
-    return data;
-  }
-  return null;
-}
-
 async function resolveStartDetailsFromSupplierMapping(token, uid) {
   if (!getAuthToken()) return null;
 
@@ -332,8 +321,11 @@ async function resolveStartDetailsFromSupplierMapping(token, uid) {
 }
 
 /**
- * GET /api/dosurvey/:token (planned)
- * Loads survey start-page details for a partner mapping link.
+ * Load Do Survey start-page display details for a Partner URL.
+ *
+ * Never call backend GET /dosurvey/:token — that route redirects to Live/Test
+ * (and must not run on open). Never call /api/survey/status or any complete API.
+ * Survey start APIs (activity + pre-screen) run only when the user starts.
  */
 export async function fetchDoSurveyStartDetails(
   token,
@@ -356,60 +348,43 @@ export async function fetchDoSurveyStartDetails(
   }
 
   const flowMeta = { projectId, projectUrlId, projectUrlCode, partnerId };
-
-  try {
-    const data = await apiRequest(API_ROUTES.doSurvey.byToken(normalizedToken), {
-      auth: false,
+  const applyFlowMeta = (details) =>
+    withDoSurveyDisplayDefaults({
+      ...details,
+      isTest:
+        isTest !== undefined && isTest !== null && String(isTest).trim() !== ""
+          ? toDoSurveyIsTest(isTest, details.isTest)
+          : details.isTest,
+      meta: {
+        ...details.meta,
+        ...Object.fromEntries(
+          Object.entries(flowMeta).filter(([, value]) =>
+            String(value ?? "").trim()
+          )
+        ),
+      },
     });
-    assertSuccess(data);
-    const record = extractDoSurveyRecord(data);
-    if (!record) {
-      throw new ApiError("Survey not found.", data);
-    }
-    return mapDoSurveyStartDetails(record, {
-      token: normalizedToken,
-      uid,
-      ...flowMeta,
-    });
-  } catch (error) {
-    // Never serve mock survey details in production — respondents must see a real error.
-    if (import.meta.env.PROD) {
-      if (error instanceof ApiError) throw error;
-      throw new ApiError(
-        error?.message ||
-          "Unable to load this survey. Please try again later.",
-        null
-      );
-    }
 
-    const fromMapping = await resolveStartDetailsFromSupplierMapping(
-      normalizedToken,
-      uid
-    );
-    if (fromMapping) {
-      return withDoSurveyDisplayDefaults({
-        ...fromMapping,
-        isTest:
-          isTest !== undefined && isTest !== null && String(isTest).trim() !== ""
-            ? toDoSurveyIsTest(isTest, fromMapping.isTest)
-            : fromMapping.isTest,
-        meta: {
-          ...fromMapping.meta,
-          ...Object.fromEntries(
-            Object.entries(flowMeta).filter(([, value]) =>
-              String(value ?? "").trim()
-            )
-          ),
-        },
-      });
-    }
+  const fromMapping = await resolveStartDetailsFromSupplierMapping(
+    normalizedToken,
+    uid
+  );
+  if (fromMapping) {
+    return applyFlowMeta(fromMapping);
+  }
 
+  // Public / no mapping match: show the start page shell. Token + uid are
+  // validated by POST /api/survey/activity and GET /api/survey/prescreen on start.
+  if (!import.meta.env.PROD) {
     await delay(MOCK_LOAD_DELAY_MS);
-    return buildMockSurveyDetails(normalizedToken, uid, {
+  }
+
+  return applyFlowMeta(
+    buildMockSurveyDetails(normalizedToken, uid, {
       isTest: toDoSurveyIsTest(isTest, false),
       ...flowMeta,
-    });
-  }
+    })
+  );
 }
 
 /**
@@ -655,11 +630,15 @@ export function openCustomerSurveyUrl(surveyUrl, data = null) {
 }
 
 /**
- * Start Survey orchestration:
- * 1) POST /api/survey/activity
- * 2) GET /api/survey/prescreen
- * Returns either { prescreenRequired: true, prescreen } or { prescreenRequired: false }
- * so the page can render pre-screen or continue to the survey link.
+ * Start Survey orchestration (Partner URL):
+ * 1) POST /api/survey/activity — create/initiate activity
+ * 2) GET /api/survey/prescreen — whether Pre-Screen is required
+ *
+ * Do not call /api/survey/status, /complete, or any API that marks the survey
+ * completed. Outcome/complete handling is wired later when provided.
+ *
+ * Returns { prescreenRequired, prescreen } so the page can show Pre-Screen or
+ * continue to GET /api/survey/link.
  */
 export async function initiateSurveyStart({ token, uid } = {}) {
   await startSurveyActivity({ token, uid });

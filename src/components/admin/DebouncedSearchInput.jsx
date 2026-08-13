@@ -3,11 +3,11 @@ import { useEffect, useRef } from "react";
 import { useDebouncedValue } from "../../modules/shared/hooks/useDebouncedValue";
 import { SEARCH_DEBOUNCE_MS } from "../../modules/shared/utils/debounce";
 import { normalizeSearchQuery } from "../../modules/shared/utils/searchQuery";
+import SearchClearButton from "./SearchClearButton";
 
 /**
  * Controlled search field with 500ms debounce.
- * `onChange` fires on every keystroke (immediate UI).
- * `onDebouncedChange` fires after debounce — use for filtering / API calls.
+ * Uses the same clear button as header search (no native browser clear icon).
  */
 function DebouncedSearchInput({
   value,
@@ -22,13 +22,29 @@ function DebouncedSearchInput({
 }) {
   const debouncedValue = useDebouncedValue(value, debounceMs);
   const onDebouncedChangeRef = useRef(onDebouncedChange);
+  const lastEmittedRef = useRef(null);
+  const isFirstEmitRef = useRef(true);
+  const hasValue = String(value ?? "").length > 0;
 
   useEffect(() => {
     onDebouncedChangeRef.current = onDebouncedChange;
   });
 
   useEffect(() => {
-    onDebouncedChangeRef.current?.(normalizeSearchQuery(debouncedValue));
+    const normalized = normalizeSearchQuery(debouncedValue);
+
+    if (isFirstEmitRef.current) {
+      isFirstEmitRef.current = false;
+      lastEmittedRef.current = normalized;
+      return;
+    }
+
+    if (lastEmittedRef.current === normalized) {
+      return;
+    }
+
+    lastEmittedRef.current = normalized;
+    onDebouncedChangeRef.current?.(normalized);
   }, [debouncedValue]);
 
   return (
@@ -37,13 +53,19 @@ function DebouncedSearchInput({
     >
       <Search size={16} strokeWidth={2} className="admin-text-subtle shrink-0" />
       <input
-        type="search"
+        type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={`admin-text w-full bg-transparent text-sm font-medium outline-none placeholder:text-[var(--admin-subtle-foreground)] ${inputClassName}`}
         placeholder={placeholder}
         aria-label={ariaLabel}
       />
+      {hasValue ? (
+        <SearchClearButton
+          onClick={() => onChange("")}
+          ariaLabel="Clear search"
+        />
+      ) : null}
     </label>
   );
 }

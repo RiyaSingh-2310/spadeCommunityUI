@@ -1,5 +1,6 @@
 const DEFAULT_DURATION = 3500;
-const DEDUPE_MS = 400;
+const DEDUPE_MS = 2500;
+const MAX_TOASTS = 2;
 
 let toasts = [];
 let listeners = new Set();
@@ -45,9 +46,16 @@ export function pushToast(type, message, duration = DEFAULT_DURATION) {
     return null;
   }
 
+  // Replace an existing toast with the same message+type instead of stacking.
+  const existing = toasts.find((t) => t.message === trimmed && t.type === type);
+  if (existing) {
+    toasts = toasts.filter((t) => t.id !== existing.id);
+  }
+
   const id = ++toastId;
   const toast = { id, type, message: trimmed, duration };
-  toasts = [...toasts, toast].slice(-5);
+  // Keep the newest toasts only — prevents covering header controls.
+  toasts = [...toasts, toast].slice(-MAX_TOASTS);
   notify();
 
   window.setTimeout(() => removeToast(id), duration);

@@ -23,6 +23,7 @@ function QuestionsListPage({ isDarkMode }) {
     setRows,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -142,6 +143,8 @@ function QuestionsListPage({ isDarkMode }) {
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={refresh}
         emptyMessage="No questions found"
         onSearch={handleSearch}
         totalRecords={totalRecords}

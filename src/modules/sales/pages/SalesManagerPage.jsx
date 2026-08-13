@@ -34,6 +34,7 @@ function SalesManagerPage({ isDarkMode }) {
     rows: salesManagers,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -118,6 +119,8 @@ function SalesManagerPage({ isDarkMode }) {
         editPath="/sales/sales-manager"
         permissionModule="sales_manager"
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={refreshSalesManagers}
         emptyMessage="No sales managers found"
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}

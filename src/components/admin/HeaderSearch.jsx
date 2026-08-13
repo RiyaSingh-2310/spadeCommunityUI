@@ -1,13 +1,25 @@
 import { useEffect, useRef, useState } from "react";
-import { Search, X } from "lucide-react";
+import { Search } from "lucide-react";
 import { useDebouncedValue } from "../../modules/shared/hooks/useDebouncedValue";
 import { normalizeSearchQuery } from "../../modules/shared/utils/searchQuery";
+import SearchClearButton from "./SearchClearButton";
+import { useClearOrCloseSearch } from "./useClearOrCloseSearch";
 
+/**
+ * Global admin header search (single shared control).
+ * One X button: clear text first; close only when already empty.
+ */
 function HeaderSearch({ onDebouncedSearch }) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query);
   const inputRef = useRef(null);
+  const { handleClearOrClose } = useClearOrCloseSearch({
+    query,
+    setQuery,
+    setIsOpen,
+    inputRef,
+  });
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -21,11 +33,6 @@ function HeaderSearch({ onDebouncedSearch }) {
   }, [debouncedQuery, isOpen, onDebouncedSearch]);
 
   const openSearch = () => setIsOpen(true);
-
-  const closeSearch = () => {
-    setIsOpen(false);
-    setQuery("");
-  };
 
   return (
     <div className="flex items-center justify-end">
@@ -43,21 +50,17 @@ function HeaderSearch({ onDebouncedSearch }) {
         >
           <input
             ref={inputRef}
-            type="search"
+            type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search Here"
             className="admin-text w-full bg-transparent text-sm outline-none placeholder:text-[var(--admin-subtle-foreground)]"
             aria-label="Search"
           />
-          <button
-            type="button"
-            onClick={closeSearch}
-            className="admin-icon-btn admin-text-subtle flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-200"
-            aria-label="Close search"
-          >
-            <X size={14} />
-          </button>
+          <SearchClearButton
+            onClick={handleClearOrClose}
+            ariaLabel={query ? "Clear search" : "Close search"}
+          />
         </div>
       </div>
 

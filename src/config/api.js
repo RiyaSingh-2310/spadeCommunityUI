@@ -175,10 +175,14 @@ export const API_ROUTES = {
     updateStatus: (id) => `/api/supplier-mapping/status/${id}`,
     updateTestMode: (id) => `/api/supplier-mapping/istest/${id}`,
   },
+  /**
+   * SPA path helpers only — NOT backend APIs.
+   * Backend GET /dosurvey/:token redirects to Live/Test; do not call it from the
+   * Partner URL start page. Use /api/survey/activity + /api/survey/prescreen (+ link).
+   */
   doSurvey: {
-    byToken: (token) => `/dosurvey/${encodeURIComponent(String(token ?? "").trim())}`,
-    start: (token) =>
-      `/dosurvey/${encodeURIComponent(String(token ?? "").trim())}/start`,
+    pagePath: (token) =>
+      `/dosurvey/${encodeURIComponent(String(token ?? "").trim())}`,
   },
   groupSurvey: {
     list: "/api/survey/groupproject/list",

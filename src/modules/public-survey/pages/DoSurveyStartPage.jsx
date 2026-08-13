@@ -25,8 +25,8 @@ import {
 } from "../utils/surveyFlowParams";
 
 const IS_TEST_QUERY_KEYS = ["IsTest", "isTest", "is_test"];
-const UID_PLACEHOLDER_INSTRUCTION =
-  "Pass your UID in the URL instead of XXX or identifier.";
+const INVALID_SURVEY_LINK_MESSAGE =
+  "This survey link is invalid or incomplete. Please use the link provided by your survey partner.";
 const UID_PLACEHOLDER_TOAST_MS = 8000;
 const START_FLOW_ERROR = "Unable to start the survey.";
 const LINK_FLOW_ERROR =
@@ -63,9 +63,13 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const [searchParams] = useSearchParams();
   const searchKey = searchParams.toString();
 
-  const [isSearchReady, setIsSearchReady] = useState(false);
+  const [isSearchReady] = useState(true);
   const [urlSanitized, setUrlSanitized] = useState(false);
-  const [isTestHint, setIsTestHint] = useState(undefined);
+  const [isTestHint] = useState(() =>
+    readIsTestFromSearch(
+      typeof window !== "undefined" ? window.location.search : ""
+    )
+  );
   const [survey, setSurvey] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -90,10 +94,6 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     [token, searchKey, location.search]
   );
 
-  useEffect(() => {
-    setIsSearchReady(true);
-  }, [location.search, searchParams]);
-
   /**
    * Mark this tab when opened from Admin Partner Mapping, then close on Admin logout.
    */
@@ -115,10 +115,6 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     if (!isSearchReady || urlSanitized) return;
 
     const params = new URLSearchParams(location.search);
-    const captured = readIsTestFromSearch(location.search);
-    if (captured !== undefined) {
-      setIsTestHint(captured);
-    }
 
     let changed = false;
     IS_TEST_QUERY_KEYS.forEach((key) => {
@@ -139,6 +135,8 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       );
     }
 
+    // Mark sanitized after optional URL rewrite so partner APIs can load.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot URL gate
     setUrlSanitized(true);
   }, [
     isSearchReady,
@@ -173,7 +171,7 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     if (uidInstructionToastKeyRef.current === toastKey) return;
     uidInstructionToastKeyRef.current = toastKey;
 
-    toast.warning(UID_PLACEHOLDER_INSTRUCTION, UID_PLACEHOLDER_TOAST_MS);
+    toast.warning(INVALID_SURVEY_LINK_MESSAGE, UID_PLACEHOLDER_TOAST_MS);
   }, [
     isSearchReady,
     urlSanitized,
@@ -306,7 +304,7 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
 
     const actionUid = getActionUid();
     if (!actionUid || uidBlocksStart) {
-      setStartError(UID_PLACEHOLDER_INSTRUCTION);
+      setStartError(INVALID_SURVEY_LINK_MESSAGE);
       return;
     }
 
@@ -429,12 +427,12 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
             disabled={showUidError || flowBusy}
             isStarting={isStarting || isRedirecting}
             disabledTitle={
-              showUidError ? UID_PLACEHOLDER_INSTRUCTION : ""
+              showUidError ? INVALID_SURVEY_LINK_MESSAGE : ""
             }
           />
           {showUidError ? (
             <p className="pq-hero-error" role="alert">
-              {UID_PLACEHOLDER_INSTRUCTION}
+              {INVALID_SURVEY_LINK_MESSAGE}
             </p>
           ) : null}
           {startError ? (

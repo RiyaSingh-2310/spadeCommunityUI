@@ -51,6 +51,7 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
     setRows,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -236,6 +237,8 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
         }}
         onStatusToggle={handleStatusToggle}
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={refreshProjects}
         emptyMessage="No projects found"
         onSearch={handleSearch}
         totalRecords={totalRecords}

@@ -14,6 +14,7 @@ function SystemEmailTemplatePage({ isDarkMode }) {
     rows,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -41,6 +42,8 @@ function SystemEmailTemplatePage({ isDarkMode }) {
       rowIdKey="id"
       permissionModule="system_email_templates"
       isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={refresh}
       emptyMessage="No system email templates found"
       onSearch={handleSearch}
       totalRecords={totalRecords}

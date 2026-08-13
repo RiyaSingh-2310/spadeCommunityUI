@@ -15,11 +15,13 @@ function AuditLogSettingsTab({ isDarkMode }) {
     rows,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
     handlePageChange,
     handlePageSizeChange,
+    refresh,
   } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
 
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize) || 1);
@@ -74,6 +76,24 @@ function AuditLogSettingsTab({ isDarkMode }) {
                     className="admin-text-muted px-4 py-8 text-center text-sm"
                   >
                     Loading...
+                  </td>
+                </tr>
+              ) : listError ? (
+                <tr className="border-t border-[var(--admin-header-surface-border)]">
+                  <td
+                    colSpan={TABLE_COLUMNS.length}
+                    className="admin-text-muted px-4 py-8 text-center text-sm"
+                  >
+                    <div className="mx-auto flex max-w-md flex-col items-center gap-3">
+                      <p className="admin-text text-sm font-medium">{listError}</p>
+                      <button
+                        type="button"
+                        onClick={refresh}
+                        className="admin-btn-primary h-10 rounded-xl px-4 text-sm font-semibold"
+                      >
+                        Retry
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ) : rows.length === 0 ? (

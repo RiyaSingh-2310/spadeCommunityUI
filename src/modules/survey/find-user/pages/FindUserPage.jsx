@@ -146,7 +146,8 @@ function FindUserPage({ isDarkMode }) {
             value: String(url.id),
             label: formatProjectUrlOptionLabel(url, {
               includeStatus: false,
-              includeLinkMode: true,
+              includeLinkType: true,
+              includeLinkMode: false,
             }),
           }))
           .filter((option) => option.value && option.value !== "undefined")

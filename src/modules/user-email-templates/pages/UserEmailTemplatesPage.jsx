@@ -28,6 +28,7 @@ function UserEmailTemplatesPage({ isDarkMode }) {
     rows,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -102,6 +103,8 @@ function UserEmailTemplatesPage({ isDarkMode }) {
         rowIdKey="id"
         permissionModule="user_email_templates"
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={refresh}
         emptyMessage="No email templates found"
         onEdit={(row) =>
           navigate(`/user-email-templates/edit/${encodeURIComponent(String(row.id))}`)

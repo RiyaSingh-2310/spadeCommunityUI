@@ -45,6 +45,7 @@ function PendingRewardsPage({ isDarkMode }) {
     rows,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -159,6 +160,8 @@ function PendingRewardsPage({ isDarkMode }) {
         actionVariant="reward-pending"
         permissionModule="pending_rewards"
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={reloadRedeemList}
         emptyMessage="No reward requests found"
         onSearch={handleSearch}
         toolbarFilters={toolbarFilters}

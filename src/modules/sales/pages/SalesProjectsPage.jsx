@@ -25,6 +25,7 @@ function SalesProjectsPage({ isDarkMode }) {
     rows,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -51,6 +52,8 @@ function SalesProjectsPage({ isDarkMode }) {
       }}
       permissionModule="survey"
       isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={fetchProjects}
       emptyMessage="No projects found"
       onSearch={handleSearch}
       totalRecords={totalRecords}

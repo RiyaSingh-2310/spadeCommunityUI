@@ -8,9 +8,10 @@ import AdminLayout from "../components/admin/AdminLayout";
 import * as Pages from "./lazyPages";
 
 function withSuspense(Component, props = {}) {
+  const { key, ...rest } = props;
   return (
     <Suspense fallback={<PageLoader />}>
-      <Component {...props} />
+      <Component key={key} {...rest} />
     </Suspense>
   );
 }

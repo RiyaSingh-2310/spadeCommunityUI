@@ -433,6 +433,13 @@ export function mapFindUserProjectUrl(record) {
   const linkMode = normalizeFindUserLinkMode(
     record.link_mode ?? record.linkMode
   );
+  const projectLinkType = String(
+    record.Project_Link_Type ??
+      record.project_link_type ??
+      record.projectLinkType ??
+      record.link_type ??
+      ""
+  ).trim();
   const liveLink = normalizeNullableLink(
     record.Live_Link ?? record.live_link ?? record.liveLink
   );
@@ -449,6 +456,9 @@ export function mapFindUserProjectUrl(record) {
     Status: status,
     linkMode,
     link_mode: linkMode,
+    projectLinkType,
+    Project_Link_Type: projectLinkType,
+    project_link_type: projectLinkType,
     liveLink,
     Live_Link: liveLink,
     testLink,

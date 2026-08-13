@@ -35,6 +35,7 @@ function ClientsPage({ isDarkMode }) {
     rows: clients,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -122,6 +123,8 @@ function ClientsPage({ isDarkMode }) {
         editPath="/clients"
         onDelete={handleDeleteRequest}
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={fetchClients}
         emptyMessage="No clients found"
         onStatusToggle={handleStatusToggle}
         permissionModule="clients"

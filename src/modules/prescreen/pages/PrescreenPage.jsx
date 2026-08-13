@@ -28,6 +28,7 @@ function PrescreenPage({ isDarkMode }) {
     rows,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -127,6 +128,8 @@ function PrescreenPage({ isDarkMode }) {
         onStatusToggle={handleStatusToggle}
         permissionModule="prescreen"
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={fetchPrescreens}
         emptyMessage="No questions found"
         onSearch={handleSearch}
         totalRecords={totalRecords}

@@ -19,6 +19,7 @@ function asArray(value) {
 
 const EMPTY_DASHBOARD = {
   loading: false,
+  error: "",
   users: [],
   clients: [],
   partners: [],
@@ -75,8 +76,14 @@ export function useDashboardData({ enabled = true } = {}) {
   const [dashboard, setDashboard] = useState({
     ...EMPTY_DASHBOARD,
     loading: Boolean(enabled),
+    error: "",
   });
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const retry = () => {
+    setReloadToken((value) => value + 1);
+  };
 
   useEffect(() => {
     if (!enabled) {
@@ -85,7 +92,7 @@ export function useDashboardData({ enabled = true } = {}) {
 
     let cancelled = false;
     const loadDashboard = async () => {
-      setDashboard((prev) => ({ ...prev, loading: true }));
+      setDashboard((prev) => ({ ...prev, loading: true, error: "" }));
 
       try {
         if (isSales) {
@@ -99,6 +106,7 @@ export function useDashboardData({ enabled = true } = {}) {
           setDashboard({
             ...EMPTY_DASHBOARD,
             loading: false,
+            error: "",
             rfqs: asArray(rfqData.items),
             surveys: asArray(surveyData.items),
           });
@@ -116,6 +124,7 @@ export function useDashboardData({ enabled = true } = {}) {
           setDashboard({
             ...EMPTY_DASHBOARD,
             loading: false,
+            error: "",
             surveys: asArray(surveyData.items),
             groupSurveys: asArray(groupSurveyData.items),
           });
@@ -129,18 +138,27 @@ export function useDashboardData({ enabled = true } = {}) {
         setDashboard({
           ...EMPTY_DASHBOARD,
           loading: false,
+          error: "",
         });
-      } catch {
+      } catch (error) {
         if (cancelled) return;
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to load dashboard data.";
         setSummary(EMPTY_SUMMARY);
-        setDashboard((prev) => ({ ...prev, loading: false }));
+        setDashboard({
+          ...EMPTY_DASHBOARD,
+          loading: false,
+          error: message,
+        });
       }
     };
     loadDashboard();
     return () => {
       cancelled = true;
     };
-  }, [enabled, isSales, isManager]);
+  }, [enabled, isSales, isManager, reloadToken]);
 
   const surveyStatus = useMemo(() => {
     if (!isSales && !isManager) return summary.surveyStatus;
@@ -261,6 +279,7 @@ export function useDashboardData({ enabled = true } = {}) {
       invoices: asArray(dashboard.invoices),
       logs: asArray(dashboard.logs),
     },
+    retry,
     surveyStatus,
     rfqStatus,
     usersByCountry,

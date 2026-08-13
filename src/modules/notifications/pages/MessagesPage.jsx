@@ -52,8 +52,10 @@ function MessagesPage({ isDarkMode }) {
       actionVariant="view-edit"
       permissionModule="messages"
       nameAsText
-      emptyMessage={listError || "No messages found"}
+      emptyMessage="No messages found"
       isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={refresh}
       onView={(row) => {
         const messageId = String(row?.id ?? "").trim();
         if (!messageId || messageId === "undefined" || messageId === "null") {

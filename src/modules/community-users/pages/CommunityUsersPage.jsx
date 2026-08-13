@@ -59,6 +59,7 @@ function CommunityUsersPage({ isDarkMode }) {
     rows: users,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -287,6 +288,8 @@ function CommunityUsersPage({ isDarkMode }) {
         permissionModule="community_users"
         actionVariant="community-user"
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={refresh}
         emptyMessage="No users found"
         onView={(row) => navigate(`/community-users/${encodeURIComponent(String(row.id))}`)}
         onEdit={(row) =>

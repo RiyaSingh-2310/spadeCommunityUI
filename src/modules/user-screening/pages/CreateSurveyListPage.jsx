@@ -22,6 +22,7 @@ function CreateSurveyListPage({ isDarkMode }) {
     setRows,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -133,6 +134,8 @@ function CreateSurveyListPage({ isDarkMode }) {
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={refresh}
         emptyMessage="No surveys found"
         onSearch={handleSearch}
         totalRecords={totalRecords}

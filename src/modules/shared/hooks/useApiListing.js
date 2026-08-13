@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toastApiError } from "../../../services/toast/apiToast";
 import { sortListingRowsByIdAsc } from "../utils/listingSort";
 import { DEFAULT_PAGE_SIZE } from "../utils/pagination";
 import { normalizeSearchQuery } from "../utils/searchQuery";
@@ -7,7 +6,7 @@ import { normalizeSearchQuery } from "../utils/searchQuery";
 /**
  * Server-driven listing state: search, pagination, loading, and race-safe fetch.
  * @param {{
- *   fetchFn: (params: { page: number, limit: number, search?: string }) => Promise<{ items: unknown[], total?: number, count?: number }>,
+ *   fetchFn: (params: { page: number, limit: number, search?: string, signal?: AbortSignal }) => Promise<{ items: unknown[], total?: number, count?: number }>,
  *   initialPageSize?: number,
  *   enabled?: boolean,
  *   preserveRowOrder?: boolean,
@@ -27,6 +26,7 @@ export function useApiListing({
   const [isLoading, setIsLoading] = useState(true);
   const [listError, setListError] = useState("");
   const fetchRequestIdRef = useRef(0);
+  const abortControllerRef = useRef(null);
 
   const fetchList = useCallback(async () => {
     if (!enabled) {
@@ -36,6 +36,10 @@ export function useApiListing({
       setListError("");
       return;
     }
+
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     const requestId = ++fetchRequestIdRef.current;
     setIsLoading(true);
@@ -49,9 +53,13 @@ export function useApiListing({
         page: currentPage,
         limit: pageSize,
         search: normalizedSearch,
+        signal: controller.signal,
       });
 
-      if (requestId !== fetchRequestIdRef.current) {
+      if (
+        requestId !== fetchRequestIdRef.current ||
+        controller.signal.aborted
+      ) {
         return;
       }
 
@@ -75,7 +83,13 @@ export function useApiListing({
         setCurrentPage(totalPages);
       }
     } catch (error) {
-      if (requestId !== fetchRequestIdRef.current) {
+      if (
+        requestId !== fetchRequestIdRef.current ||
+        controller.signal.aborted ||
+        error?.name === "CanceledError" ||
+        error?.name === "AbortError" ||
+        error?.code === "ERR_CANCELED"
+      ) {
         return;
       }
       const message =
@@ -83,13 +97,13 @@ export function useApiListing({
           ? error.message
           : "Unable to load records.";
       setListError(message);
-      toastApiError(error);
       setRows([]);
       setTotalRecords(0);
     } finally {
       if (
         requestId === fetchRequestIdRef.current &&
-        !keepLoadingForPageCorrection
+        !keepLoadingForPageCorrection &&
+        !controller.signal.aborted
       ) {
         setIsLoading(false);
       }
@@ -97,11 +111,17 @@ export function useApiListing({
   }, [enabled, fetchFn, currentPage, pageSize, search, preserveRowOrder]);
 
   useEffect(() => {
+    // Data-fetching effect: sync loading/error state with server responses.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional list fetch
     fetchList();
+    return () => {
+      abortControllerRef.current?.abort();
+    };
   }, [fetchList]);
 
   const handleSearch = useCallback((debouncedQuery) => {
-    setSearch(normalizeSearchQuery(debouncedQuery));
+    const nextSearch = normalizeSearchQuery(debouncedQuery);
+    setSearch((prev) => (prev === nextSearch ? prev : nextSearch));
     setCurrentPage(1);
   }, []);
 

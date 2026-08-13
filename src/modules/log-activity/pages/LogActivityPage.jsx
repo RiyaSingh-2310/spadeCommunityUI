@@ -21,6 +21,7 @@ function LogActivityPage({ isDarkMode }) {
     rows,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -109,6 +110,24 @@ function LogActivityPage({ isDarkMode }) {
                     className="admin-text-muted px-4 py-8 text-center text-sm"
                   >
                     Loading...
+                  </td>
+                </tr>
+              ) : listError ? (
+                <tr className={`border-t ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}>
+                  <td
+                    colSpan={canWrite ? 4 : 3}
+                    className="admin-text-muted px-4 py-8 text-center text-sm"
+                  >
+                    <div className="mx-auto flex max-w-md flex-col items-center gap-3">
+                      <p className="admin-text text-sm font-medium">{listError}</p>
+                      <button
+                        type="button"
+                        onClick={refresh}
+                        className="admin-btn-primary h-10 rounded-xl px-4 text-sm font-semibold"
+                      >
+                        Retry
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ) : rows.length === 0 ? (

@@ -34,6 +34,7 @@ function RfqPage({ isDarkMode }) {
     rows: projects,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -95,6 +96,8 @@ function RfqPage({ isDarkMode }) {
         showStatus
         permissionModule="rfq"
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={fetchProjects}
         emptyMessage="No RFQ projects found"
         onSearch={handleSearch}
         totalRecords={totalRecords}

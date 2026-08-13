@@ -352,8 +352,8 @@ body {
 }
 
 .admin-search-field:focus-within {
-  border-color: var(--admin-primary-color);
-  box-shadow: 0 0 0 3px var(--admin-input-focus-ring);
+  border-color: var(--admin-input-border);
+  box-shadow: none;
 }
 
 .admin-search-field input,
@@ -478,6 +478,27 @@ body {
   border-color: var(--admin-primary-color);
   box-shadow: 0 0 0 3px var(--admin-input-focus-ring);
   outline: none;
+}
+
+/* Search fields: no green focus ring (header + listing + wrapper). */
+.admin-shell .admin-search-field:focus-within,
+.admin-shell .admin-header-search-input:focus-within {
+  border-color: var(--admin-input-border);
+  box-shadow: none;
+  outline: none;
+}
+
+.admin-shell .admin-header-search-input:focus-within {
+  border-color: var(--admin-header-search-border);
+}
+
+.admin-shell .admin-search-field input,
+.admin-shell .admin-search-field input:focus,
+.admin-shell .admin-header-search-input input,
+.admin-shell .admin-header-search-input input:focus {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 /* Nested phone digits inherit focus from the wrapper only (no inner ring). */
@@ -798,6 +819,18 @@ input[type="number"],
   color: var(--admin-foreground);
 }
 
+.admin-header-search-input:focus-within {
+  border-color: var(--admin-header-search-border);
+  box-shadow: none;
+}
+
+.admin-shell .admin-header-search-input input,
+.admin-shell .admin-header-search-input input:focus {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
 .admin-header-search-input::placeholder {
   color: var(--admin-subtle-foreground);
 }
@@ -861,8 +894,8 @@ input[type="number"],
 }
 
 .admin-portal-dropdown-search-input:focus {
-  border-color: #10a950;
-  box-shadow: 0 0 0 3px var(--portal-dropdown-focus-ring);
+  border-color: var(--portal-dropdown-border, #d8e3ef);
+  box-shadow: none;
   outline: none;
 }
 
@@ -1348,11 +1381,14 @@ input[type="number"],
   position: fixed;
   top: 1rem;
   right: 1rem;
-  z-index: 9999;
+  z-index: 40;
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
   width: min(100vw - 2rem, 22rem);
+  max-height: min(40vh, 16rem);
+  overflow-y: auto;
+  overflow-x: hidden;
   pointer-events: none;
 }
 

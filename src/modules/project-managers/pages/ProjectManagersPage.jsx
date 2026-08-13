@@ -25,6 +25,7 @@ function ProjectManagersPage({ isDarkMode }) {
     rows: projectManagers,
     totalRecords,
     isLoading,
+    listError,
     currentPage,
     pageSize,
     handleSearch,
@@ -109,6 +110,8 @@ function ProjectManagersPage({ isDarkMode }) {
         editPath="/project-managers"
         permissionModule="project_managers"
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={fetchProjectManagers}
         emptyMessage="No project managers found"
         onDelete={handleDeleteRequest}
         onStatusToggle={handleStatusToggle}
