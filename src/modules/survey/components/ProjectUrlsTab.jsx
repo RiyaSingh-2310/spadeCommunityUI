@@ -46,6 +46,7 @@ import {
   PROJECT_URL_FORM_FIELDS,
   PROJECT_URL_NUMERIC_MAX_DIGITS,
   PROJECT_URL_REDIRECT_FIELDS,
+  getDefaultProjectUrlRedirects,
   sanitizeProjectUrlDecimal,
   sanitizeProjectUrlInteger,
 } from "../utils/projectUrlFormValidation";
@@ -161,9 +162,10 @@ function getListRouteFormState(projectFk) {
 }
 
 function getAddRouteFormState(projectFk) {
-  const nextForm = normalizeProjectUrlFormForState(
-    createEmptyProjectUrlForm(projectFk)
-  );
+  const nextForm = normalizeProjectUrlFormForState({
+    ...createEmptyProjectUrlForm(projectFk),
+    ...getDefaultProjectUrlRedirects(),
+  });
   return {
     selectedUrlId: "",
     form: nextForm,
@@ -1185,7 +1187,7 @@ function ProjectUrlsTab({
               <FormField
                 label="Live Link"
                 required
-                hint="Must include identifier or XXX"
+                hint="Must include XXXX"
                 error={showError("liveLink") ? errors.liveLink : ""}
               >
                 <div className="flex items-stretch gap-2">
@@ -1197,7 +1199,7 @@ function ProjectUrlsTab({
                       setField("liveLink", trimOnBlur(event.target.value));
                       touch("liveLink");
                     }}
-                    placeholder="https://example.com/survey?uid=identifier"
+                    placeholder="https://example.com/survey?uid=XXXX"
                     disabled={!canWrite}
                     aria-invalid={Boolean(showError("liveLink") && errors.liveLink)}
                   />
@@ -1210,7 +1212,7 @@ function ProjectUrlsTab({
               </FormField>
               <FormField
                 label="Test Link"
-                hint="Must include identifier or XXX"
+                hint="Must include XXXX"
                 error={showError("testLink") ? errors.testLink : ""}
               >
                 <div className="flex items-stretch gap-2">
@@ -1222,7 +1224,7 @@ function ProjectUrlsTab({
                       setField("testLink", trimOnBlur(event.target.value));
                       touch("testLink");
                     }}
-                    placeholder="https://example.com/survey?uid=XXX"
+                    placeholder="https://example.com/survey?uid=xxxx"
                     disabled={!canWrite}
                     aria-invalid={Boolean(showError("testLink") && errors.testLink)}
                   />

@@ -1,9 +1,15 @@
 /**
  * Live / Test link dynamic identifier placeholders.
- * Supported tokens (validation): identifier | XXX
+ * Supported token (validation): XXXX (case-insensitive, exact token).
  */
 
-export const SURVEY_LINK_PLACEHOLDER_TOKENS = Object.freeze(["identifier", "XXX"]);
+export const SURVEY_LINK_PLACEHOLDER_TOKENS = Object.freeze(["XXXX"]);
+
+/**
+ * Exact XXXX token, ignoring letter case.
+ * Rejects partial/different values such as XXX, XXXXX, identifier, abcXXXX.
+ */
+const SURVEY_LINK_PLACEHOLDER_PATTERN = /(^|[^A-Za-z0-9])XXXX(?![A-Za-z0-9])/i;
 
 /** Tokens replaced at survey-redirect time (includes legacy bracket form). */
 export const SURVEY_LINK_REPLACE_TOKENS = Object.freeze([
@@ -14,22 +20,26 @@ export const SURVEY_LINK_REPLACE_TOKENS = Object.freeze([
 ]);
 
 const PLACEHOLDER_MESSAGE =
-  "must include a supported identifier placeholder (identifier or XXX)";
+  "must include a supported identifier placeholder (XXXX)";
+
+function isPlaceholderUid(uid) {
+  const key = String(uid ?? "").trim().toLowerCase();
+  return (
+    key === "[identifier]" ||
+    key === "identifier" ||
+    key === "xxx" ||
+    key === "xxxx"
+  );
+}
 
 /**
- * True when the URL contains at least one supported placeholder token.
+ * True when the URL contains the exact XXXX placeholder (case-insensitive).
  * @param {string} value
  */
 export function hasSupportedSurveyLinkPlaceholder(value) {
   const text = String(value ?? "");
   if (!text.trim()) return false;
-
-  // Prefer exact query-param style matches, but also allow path/query token presence.
-  // Reject arbitrary brace placeholders like {uid} / {foo}.
-  for (const token of SURVEY_LINK_PLACEHOLDER_TOKENS) {
-    if (text.includes(token)) return true;
-  }
-  return false;
+  return SURVEY_LINK_PLACEHOLDER_PATTERN.test(text);
 }
 
 /**
@@ -61,21 +71,20 @@ export function replaceSurveyLinkPlaceholders(url, uid) {
   const respondentUid = String(uid ?? "").trim();
   if (!source || !respondentUid) return source;
 
-  if (
-    respondentUid === "[identifier]" ||
-    respondentUid === "identifier" ||
-    respondentUid === "XXX" ||
-    respondentUid === "XXXX"
-  ) {
+  if (isPlaceholderUid(respondentUid)) {
     return source;
   }
 
-  const tokens = [...SURVEY_LINK_REPLACE_TOKENS].sort(
-    (a, b) => b.length - a.length
+  let result = source.replace(
+    /(^|[^A-Za-z0-9])XXXX(?![A-Za-z0-9])/gi,
+    `$1${respondentUid}`
   );
 
-  let result = source;
-  for (const token of tokens) {
+  const legacyTokens = SURVEY_LINK_REPLACE_TOKENS.filter(
+    (token) => token.toUpperCase() !== "XXXX"
+  ).sort((a, b) => b.length - a.length);
+
+  for (const token of legacyTokens) {
     if (!result.includes(token)) continue;
     result = result.split(token).join(respondentUid);
   }

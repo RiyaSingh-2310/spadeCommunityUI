@@ -1,5 +1,4 @@
 import SearchableSelect from "../../../components/admin/SearchableSelect";
-import AdminDatePicker from "../../../components/admin/AdminDatePicker";
 import FormField from "../../../components/admin/FormField";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
@@ -156,38 +155,6 @@ function SurveyForm({
               disabled={disabled}
               searchable={false}
               aria-label="Select status"
-            />
-          </FormField>
-
-          <FormField
-            label="Start Date"
-            error={showError("startDate") ? errors.startDate : ""}
-          >
-            <AdminDatePicker
-              value={form.startDate}
-              onChange={(value) => {
-                setField("startDate", value);
-                touch("startDate");
-              }}
-              placeholder="Select start date"
-              disabled={disabled}
-              aria-label="Start date"
-            />
-          </FormField>
-
-          <FormField
-            label="End Date"
-            error={showError("endDate") ? errors.endDate : ""}
-          >
-            <AdminDatePicker
-              value={form.endDate}
-              onChange={(value) => {
-                setField("endDate", value);
-                touch("endDate");
-              }}
-              placeholder="Select end date"
-              disabled={disabled}
-              aria-label="End date"
             />
           </FormField>
         </div>

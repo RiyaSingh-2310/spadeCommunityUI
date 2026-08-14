@@ -1,4 +1,4 @@
-import { ArrowRight, Clock3, Languages, Sparkles } from "lucide-react";
+import { ArrowRight, AlertCircle, Clock3, Languages, Sparkles } from "lucide-react";
 import { getSurveyDescription } from "../../public-questionnaire/utils/surveyHelpers";
 
 function formatLoi(loiMinutes) {
@@ -14,11 +14,16 @@ function DoSurveyHero({
   disabled,
   isStarting,
   disabledTitle = "",
+  statusMessage = "",
+  statusVariant = "error",
 }) {
   const description = getSurveyDescription(survey);
   const loiLabel = formatLoi(survey?.loiMinutes);
   const modeLabel = survey?.isTest ? "Test" : "Live";
   const showDisabledTooltip = Boolean(disabled && !isStarting && disabledTitle);
+  const inlineStatus = String(statusMessage ?? "").trim();
+  const statusClass =
+    statusVariant === "warning" ? "pq-hero-status--warning" : "pq-hero-status--error";
 
   return (
     <div className="pq-card pq-hero-card">
@@ -42,6 +47,13 @@ function DoSurveyHero({
 
         <h1 className="pq-hero-title">{survey?.surveyTitle || "Survey"}</h1>
         <p className="pq-hero-description">{description}</p>
+
+        {inlineStatus ? (
+          <div className={`pq-hero-status ${statusClass}`} role="alert">
+            <AlertCircle size={18} aria-hidden />
+            <p>{inlineStatus}</p>
+          </div>
+        ) : null}
 
         <button
           type="button"

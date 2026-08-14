@@ -10,6 +10,7 @@ import { getAuthToken } from "../../../services/auth/authStorage";
 import { findSupplierMappingByDoSurveyToken } from "../../survey/services/supplierMappingApi";
 import { dedupeQuestionsByIdentity } from "../../survey/utils/dedupeSelectOptions";
 import { isLocalSurveyOutcomeUrl, getSurveyOutcomeKeyFromUrl } from "../utils/surveyFlowParams";
+import { interpretSurveyStartAccess } from "../utils/doSurveyHelpers";
 
 const MOCK_LOAD_DELAY_MS = 450;
 
@@ -37,6 +38,45 @@ function assertSuccess(data) {
     );
   }
   return data;
+}
+
+function throwSurveyStartBlocked(message, data) {
+  const error = new ApiError(
+    coerceText(message) || "Unable to start the survey.",
+    data
+  );
+  error.surveyStartBlocked = true;
+  throw error;
+}
+
+function rethrowSurveyStartError(error) {
+  if (error?.surveyStartBlocked) throw error;
+  const access = interpretSurveyStartAccess(error);
+  if (access.blocked) {
+    throwSurveyStartBlocked(
+      access.message || error?.message,
+      error?.data ?? error
+    );
+  }
+  throw error;
+}
+
+/**
+ * Prefer API status/code/flag when deciding whether the respondent can start.
+ * Throws when the survey is completed, in progress, or access is denied.
+ */
+function assertSurveyStartAllowed(data) {
+  const access = interpretSurveyStartAccess(data);
+  if (!access.canStart) {
+    if (access.blocked) {
+      throwSurveyStartBlocked(access.message, data);
+    }
+    throw new ApiError(
+      access.message || coerceText(data?.message) || "Request failed. Please try again.",
+      data
+    );
+  }
+  return assertSuccess(data);
 }
 
 function isSuccessOnlyMessage(message) {
@@ -403,16 +443,19 @@ export async function storeSurveyActivity({ token, uid } = {}) {
     throw new ApiError("Missing or Invalid UID in Link", null);
   }
 
-  const data = await apiRequest(API_ROUTES.survey.activity, {
-    ...partnerSurveyRequestOptions({ method: "POST" }),
-    body: {
-      token: normalizedToken,
-      uid: normalizedUid,
-    },
-  });
-  assertSuccess(data);
-  return data;
-}
+  try {
+    const data = await apiRequest(API_ROUTES.survey.activity, {
+      ...partnerSurveyRequestOptions({ method: "POST" }),
+      body: {
+        token: normalizedToken,
+        uid: normalizedUid,
+      },
+    });
+    assertSurveyStartAllowed(data);
+    return data;
+  } catch (error) {
+    rethrowSurveyStartError(error);
+  }
 
 /** Alias — Partner URL Start Survey activity step. */
 export const startSurveyActivity = storeSurveyActivity;
@@ -547,10 +590,13 @@ export async function fetchSurveyPrescreen(token) {
   }
 
   const path = `${API_ROUTES.survey.prescreen}?token=${encodeURIComponent(normalizedToken)}`;
-  const data = await apiRequest(path, partnerSurveyRequestOptions());
-  assertSuccess(data);
-  return mapSurveyPrescreenResponse(data);
-}
+  try {
+    const data = await apiRequest(path, partnerSurveyRequestOptions());
+    assertSurveyStartAllowed(data);
+    return mapSurveyPrescreenResponse(data);
+  } catch (error) {
+    rethrowSurveyStartError(error);
+  }
 
 /** Alias — Partner URL Start Survey pre-screen check. */
 export const checkSurveyPreScreen = fetchSurveyPrescreen;
@@ -584,8 +630,13 @@ export async function fetchSurveyLink({ token, uid } = {}) {
   });
 
   const path = `${API_ROUTES.survey.link}?${params.toString()}`;
-  const data = await apiRequest(path, partnerSurveyRequestOptions());
-  assertSuccess(data);
+  let data;
+  try {
+    data = await apiRequest(path, partnerSurveyRequestOptions());
+    assertSurveyStartAllowed(data);
+  } catch (error) {
+    rethrowSurveyStartError(error);
+  }
 
   const payload =
     data?.data && typeof data.data === "object" && !Array.isArray(data.data)
@@ -656,8 +707,14 @@ export function openCustomerSurveyUrl(surveyUrl, data = null) {
  * Returns { prescreenRequired, prescreen } so the page can show Pre-Screen or
  * continue to GET /api/survey/link.
  */
-export async function initiateSurveyStart({ token, uid } = {}) {
-  await startSurveyActivity({ token, uid });
+export async function initiateSurveyStart({
+  token,
+  uid,
+  skipActivity = false,
+} = {}) {
+  if (!skipActivity) {
+    await startSurveyActivity({ token, uid });
+  }
   const prescreen = await checkSurveyPreScreen(token);
 
   if (prescreen.required) {

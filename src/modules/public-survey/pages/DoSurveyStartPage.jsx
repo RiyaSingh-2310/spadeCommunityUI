@@ -17,7 +17,10 @@ import {
   openCustomerSurveyUrl,
   toFlowErrorMessage,
 } from "../services/doSurveyApi";
-import { classifyDoSurveyError } from "../utils/doSurveyHelpers";
+import {
+  classifyDoSurveyError,
+  interpretSurveyStartAccess,
+} from "../utils/doSurveyHelpers";
 import {
   readDoSurveyTokenFromPath,
   readSurveyFlowParams,
@@ -81,6 +84,7 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const [loadError, setLoadError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [startError, setStartError] = useState("");
+  const [startBlocked, setStartBlocked] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
 
   const [prescreen, setPrescreen] = useState(null);
@@ -90,6 +94,8 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const uidInstructionToastKeyRef = useRef("");
   const startFlowInFlightRef = useRef(false);
+  const activityReadyRef = useRef(false);
+  const notifiedMessageRef = useRef("");
 
   const flowParams = useMemo(
     () =>
@@ -162,6 +168,21 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const canLoadPartnerApis = isSearchReady && urlSanitized;
   const partnerTokenForGate = String(flowParams.token || token || "").trim();
 
+  function notifyOnce(message, type = "warning") {
+    const text = String(message ?? "").trim();
+    if (!text) return;
+    if (notifiedMessageRef.current === text) return;
+    notifiedMessageRef.current = text;
+    if (type === "error") {
+      toast.error(text, { force: true });
+      return;
+    }
+    toast.warning(text, {
+      force: true,
+      duration: type === "uid" ? UID_PLACEHOLDER_TOAST_MS : undefined,
+    });
+  }
+
   // If this token+uid already completed, stay on the result page (no restart).
   useEffect(() => {
     if (!canLoadPartnerApis || !partnerTokenForGate || !respondentUid) return;
@@ -202,7 +223,7 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     if (uidInstructionToastKeyRef.current === toastKey) return;
     uidInstructionToastKeyRef.current = toastKey;
 
-    toast.warning(INVALID_SURVEY_LINK_MESSAGE, UID_PLACEHOLDER_TOAST_MS);
+    notifyOnce(INVALID_SURVEY_LINK_MESSAGE, "uid");
   }, [
     isSearchReady,
     urlSanitized,
@@ -219,21 +240,26 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     async function load() {
       const normalizedToken = String(flowParams.token || token || "").trim();
       if (!normalizedToken) {
+        const message = "Missing survey token. Please use a valid partner survey link.";
         setSurvey(null);
-        setLoadError("Missing survey token. Please use a valid partner survey link.");
+        setLoadError(message);
         setIsLoading(false);
+        notifyOnce(message, "error");
         return;
       }
 
       setIsLoading(true);
       setLoadError("");
       setStartError("");
+      setStartBlocked(false);
       setIsStarting(false);
       setPrescreen(null);
       setShowPrescreen(false);
       setPrescreenError("");
       setIsSubmittingPrescreen(false);
       setIsRedirecting(false);
+      activityReadyRef.current = false;
+      notifiedMessageRef.current = "";
 
       try {
         const data = await fetchDoSurveyStartDetails(normalizedToken, {
@@ -250,10 +276,11 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       } catch (error) {
         if (!cancelled) {
           setSurvey(null);
-          setLoadError(
+          const message =
             String(error?.message ?? "").trim() ||
-              "Unable to load this survey. Please try again later."
-          );
+            "Unable to load this survey. Please try again later.";
+          setLoadError(message);
+          notifyOnce(message, "error");
         }
       } finally {
         if (!cancelled) {
@@ -356,7 +383,9 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       startFlowInFlightRef.current ||
       isStarting ||
       isSubmittingPrescreen ||
-      isRedirecting
+      isRedirecting ||
+      startBlocked ||
+      isLoading
     ) {
       return;
     }
@@ -364,12 +393,15 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     const actionUid = getActionUid();
     if (!actionUid || uidBlocksStart) {
       setStartError(INVALID_SURVEY_LINK_MESSAGE);
+      notifyOnce(INVALID_SURVEY_LINK_MESSAGE, "uid");
       return;
     }
 
     const partnerToken = getPartnerToken();
     if (!partnerToken) {
-      setStartError("Missing survey token. Please use a valid partner survey link.");
+      const message = "Missing survey token. Please use a valid partner survey link.";
+      setStartError(message);
+      notifyOnce(message, "error");
       return;
     }
 
@@ -383,7 +415,9 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       const result = await initiateSurveyStart({
         token: partnerToken,
         uid: actionUid,
+        skipActivity: activityReadyRef.current,
       });
+      activityReadyRef.current = true;
 
       if (result.prescreenRequired) {
         setPrescreen(result.prescreen);
@@ -397,12 +431,19 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       await redirectToSurveyLink(actionUid);
       // Keep loading UI until the browser navigates away.
     } catch (error) {
-      setStartError(
-        toFlowErrorMessage(
-          error,
-          reachedLinkStep ? LINK_FLOW_ERROR : START_FLOW_ERROR
-        )
+      const access = interpretSurveyStartAccess(error);
+      const message = toFlowErrorMessage(
+        error,
+        reachedLinkStep ? LINK_FLOW_ERROR : START_FLOW_ERROR
       );
+      const blocked = Boolean(error?.surveyStartBlocked) || access.blocked;
+      setStartError(message);
+      if (blocked) {
+        setStartBlocked(true);
+        notifyOnce(message, "warning");
+      } else {
+        notifyOnce(message, "error");
+      }
       setIsStarting(false);
       setIsRedirecting(false);
       startFlowInFlightRef.current = false;
@@ -414,7 +455,8 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       startFlowInFlightRef.current ||
       isSubmittingPrescreen ||
       isRedirecting ||
-      isStarting
+      isStarting ||
+      startBlocked
     ) {
       return;
     }
@@ -433,7 +475,18 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       await redirectToSurveyLink(actionUid);
       // Keep loading UI until the browser navigates away.
     } catch (error) {
-      setPrescreenError(toFlowErrorMessage(error, LINK_FLOW_ERROR));
+      const access = interpretSurveyStartAccess(error);
+      const message = toFlowErrorMessage(error, LINK_FLOW_ERROR);
+      const blocked = Boolean(error?.surveyStartBlocked) || access.blocked;
+      setPrescreenError(message);
+      if (blocked) {
+        setStartBlocked(true);
+        setStartError(message);
+        setShowPrescreen(false);
+        notifyOnce(message, "warning");
+      } else {
+        notifyOnce(message, "error");
+      }
       setIsSubmittingPrescreen(false);
       setIsRedirecting(false);
       startFlowInFlightRef.current = false;
@@ -443,7 +496,12 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const pageReady = !isLoading && isSearchReady && urlSanitized;
   const showUidError =
     pageReady && !isLoading && isSearchReady && urlSanitized && uidBlocksStart;
-  const flowBusy = isStarting || isSubmittingPrescreen || isRedirecting;
+  const flowBusy = isStarting || isSubmittingPrescreen || isRedirecting || isLoading;
+  const inlineStatusMessage = showUidError
+    ? INVALID_SURVEY_LINK_MESSAGE
+    : startError;
+  const startDisabled = showUidError || startBlocked || flowBusy;
+  const statusVariant = startBlocked || showUidError ? "warning" : "error";
 
   return (
     <PublicQuestionnaireLayout isDarkMode={isDarkMode} onToggleTheme={onToggleTheme}>
@@ -479,27 +537,15 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       ) : null}
 
       {pageReady && survey && !showPrescreen && !isStarting && !isRedirecting ? (
-        <>
-          <DoSurveyHero
-            survey={survey}
-            onStart={handleStartSurvey}
-            disabled={showUidError || flowBusy}
-            isStarting={isStarting || isRedirecting}
-            disabledTitle={
-              showUidError ? INVALID_SURVEY_LINK_MESSAGE : ""
-            }
-          />
-          {showUidError ? (
-            <p className="pq-hero-error" role="alert">
-              {INVALID_SURVEY_LINK_MESSAGE}
-            </p>
-          ) : null}
-          {startError ? (
-            <p className="pq-hero-error" role="alert">
-              {startError}
-            </p>
-          ) : null}
-        </>
+        <DoSurveyHero
+          survey={survey}
+          onStart={handleStartSurvey}
+          disabled={startDisabled}
+          isStarting={isStarting || isRedirecting}
+          disabledTitle={inlineStatusMessage}
+          statusMessage={inlineStatusMessage}
+          statusVariant={statusVariant}
+        />
       ) : null}
     </PublicQuestionnaireLayout>
   );

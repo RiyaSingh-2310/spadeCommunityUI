@@ -67,6 +67,13 @@ export const PROJECT_URL_REDIRECT_FIELDS = [
   },
 ];
 
+/** Default redirect URLs used only when creating a new Project URL. */
+export function getDefaultProjectUrlRedirects() {
+  return Object.fromEntries(
+    PROJECT_URL_REDIRECT_FIELDS.map(({ key, example }) => [key, example])
+  );
+}
+
 const REDIRECT_UID_VALUE = "[identifier]";
 
 const DIRTY_COMPARE_KEYS = [
