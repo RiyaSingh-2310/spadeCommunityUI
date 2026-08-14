@@ -1,4 +1,4 @@
-import { Ban, CheckCircle2, Users } from "lucide-react";
+import { Ban, CheckCircle2, Lock, ShieldAlert, Users } from "lucide-react";
 import {
   COMPLETE_THANK_YOU_LINES,
   GENERIC_THANK_YOU_LINES,
@@ -12,6 +12,8 @@ export const SURVEY_RESULT_OUTCOMES = {
   COMPLETE: "complete",
   TERMINATE: "terminate",
   QUOTA_FULL: "quota-full",
+  QUALITY_TERMINATE: "quality-terminate",
+  SURVEY_CLOSED: "survey-closed",
 };
 
 export const SURVEY_RESULT_OUTCOME_CONFIG = {
@@ -37,6 +39,21 @@ export const SURVEY_RESULT_OUTCOME_CONFIG = {
     variant: "info",
     icon: Users,
   },
+  [SURVEY_RESULT_OUTCOMES.QUALITY_TERMINATE]: {
+    title: "Quality Check Failed",
+    message:
+      "Unfortunately, you did not qualify to continue this survey. Thank you for your participation.",
+    thankYouLines: GENERIC_THANK_YOU_LINES,
+    variant: "danger",
+    icon: ShieldAlert,
+  },
+  [SURVEY_RESULT_OUTCOMES.SURVEY_CLOSED]: {
+    title: "Survey Closed",
+    message: "This survey is no longer available. Thank you for your interest.",
+    thankYouLines: GENERIC_THANK_YOU_LINES,
+    variant: "neutral",
+    icon: Lock,
+  },
 };
 
 export function getSurveyResultOutcomeConfig(outcome) {
@@ -51,8 +68,8 @@ export function isValidSurveyResultOutcome(outcome) {
 }
 
 /**
- * Normalize path UID for display / future API use.
- * Missing or placeholder UIDs are treated as invalid but pages still render.
+ * Normalize path UID for display / API use.
+ * Missing or placeholder UIDs are treated as invalid.
  * @param {unknown} uid
  */
 export function normalizeResultUid(uid) {

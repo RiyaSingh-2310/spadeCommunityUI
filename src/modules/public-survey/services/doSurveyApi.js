@@ -703,8 +703,9 @@ export function openCustomerSurveyUrl(surveyUrl, data = null) {
  * 1) POST /api/survey/activity — create/initiate activity
  * 2) GET /api/survey/prescreen — whether Pre-Screen is required
  *
- * Do not call /api/survey/status, /complete, or any API that marks the survey
- * completed. Outcome/complete handling is wired later when provided.
+ * Do not call result status APIs (/api/survey/complete, /terminate, /quota,
+ * /quality, /closed) from the start flow. Those run on the independent
+ * result pages after the respondent lands on a redirect URL.
  *
  * Returns { prescreenRequired, prescreen } so the page can show Pre-Screen or
  * continue to GET /api/survey/link.

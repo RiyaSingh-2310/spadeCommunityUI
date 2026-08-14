@@ -203,6 +203,16 @@ export const QuotaFullSurveyResultPage = lazy(() =>
     default: m.QuotaFullSurveyResultPage,
   }))
 );
+export const QualityTerminateSurveyResultPage = lazy(() =>
+  import("../modules/public-redirect/pages/SurveyResultPage").then((m) => ({
+    default: m.QualityTerminateSurveyResultPage,
+  }))
+);
+export const SurveyClosedSurveyResultPage = lazy(() =>
+  import("../modules/public-redirect/pages/SurveyResultPage").then((m) => ({
+    default: m.SurveyClosedSurveyResultPage,
+  }))
+);
 
 /** Survey Research Portal (demo) */
 export const SurveyResearchPortalLayout = lazy(

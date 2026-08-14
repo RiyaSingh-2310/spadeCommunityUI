@@ -12,7 +12,8 @@ const UID_QUERY_KEYS = [
   "respondentId",
 ];
 
-const PROJECT_ID_KEYS = ["projectId", "project_id", "pid", "projectid"];
+const PID_KEYS = ["pid"];
+const PROJECT_ID_KEYS = ["projectId", "project_id", "projectid"];
 const PROJECT_URL_ID_KEYS = [
   "projectUrlId",
   "project_url_id",
@@ -119,6 +120,7 @@ export function readSurveyFlowParams({
   return {
     token: pathToken || queryToken,
     uid: normalizeFlowUid(pathUid) || normalizeFlowUid(firstParam(params, UID_QUERY_KEYS)),
+    pid: firstParam(params, PID_KEYS),
     projectId: firstParam(params, PROJECT_ID_KEYS),
     projectUrlId: firstParam(params, PROJECT_URL_ID_KEYS),
     projectUrlCode: firstParam(params, PROJECT_URL_CODE_KEYS),
@@ -138,6 +140,7 @@ export function buildSurveyFlowSearch(flow = {}, extra = {}) {
 
   const entries = {
     uid: flow.uid,
+    pid: flow.pid,
     projectId: flow.projectId,
     projectUrlId: flow.projectUrlId,
     projectUrlCode: flow.projectUrlCode,
@@ -185,7 +188,12 @@ export function normalizeSurveyOutcomeKey(status) {
   ) {
     return "quota-full";
   }
-  if (key === "qualityterm" || key === "quality_term") {
+  if (
+    key === "qualityterm" ||
+    key === "quality_term" ||
+    key === "quality_terminate" ||
+    key === "qualityterminate"
+  ) {
     return "qualityterm";
   }
   if (
@@ -199,35 +207,39 @@ export function normalizeSurveyOutcomeKey(status) {
   return "";
 }
 
+function buildRedirectOutcomePath(segment, uid, pid) {
+  const params = new URLSearchParams();
+  const safePid = String(pid ?? "").trim();
+  const safeUid = normalizeFlowUid(uid);
+  if (safePid) params.set("pid", safePid);
+  if (safeUid) params.set("uid", safeUid);
+  const qs = params.toString();
+  return qs ? `/redirect/${segment}?${qs}` : `/redirect/${segment}`;
+}
+
 /**
- * Build an in-app result path on the current frontend origin (router path only).
- * Uses real UID when available; never embeds placeholder identifier/XXX values.
+ * Build an in-app result path on the current frontend origin.
+ * Canonical destination is /redirect/{outcome}?pid=&uid= so status APIs can
+ * read both identifiers. Never embeds placeholder identifier/XXX values.
  * @param {string} status
  * @param {string} uid
+ * @param {{ pid?: string }} [extra]
  */
-export function getSurveyOutcomePath(status, uid) {
+export function getSurveyOutcomePath(status, uid, extra = {}) {
   const outcome = normalizeSurveyOutcomeKey(status);
   if (!outcome) return null;
 
-  const safeUid = normalizeFlowUid(uid);
+  const pid = extra?.pid ?? "";
 
-  if (outcome === "complete") {
-    return safeUid
-      ? `/complete/${encodeURIComponent(safeUid)}`
-      : "/redirect/complete";
+  if (outcome === "complete") return buildRedirectOutcomePath("complete", uid, pid);
+  if (outcome === "terminate") return buildRedirectOutcomePath("terminate", uid, pid);
+  if (outcome === "quota-full") return buildRedirectOutcomePath("quota-full", uid, pid);
+  if (outcome === "qualityterm") {
+    return buildRedirectOutcomePath("quality-terminate", uid, pid);
   }
-  if (outcome === "terminate") {
-    return safeUid
-      ? `/terminate/${encodeURIComponent(safeUid)}`
-      : "/redirect/terminate";
+  if (outcome === "surveyclose") {
+    return buildRedirectOutcomePath("survey-closed", uid, pid);
   }
-  if (outcome === "quota-full") {
-    return safeUid
-      ? `/quota-full/${encodeURIComponent(safeUid)}`
-      : "/redirect/quota-full";
-  }
-  if (outcome === "qualityterm") return "/redirect/qualityterm";
-  if (outcome === "surveyclose") return "/redirect/surveyclose";
 
   return null;
 }
@@ -256,7 +268,9 @@ export function getSurveyOutcomeKeyFromUrl(url, origin) {
       return normalizeSurveyOutcomeKey(redirectMatch[1]);
     }
 
-    const pathMatch = path.match(/^\/(complete|terminate|quota-full)(\/|$)/);
+    const pathMatch = path.match(
+      /^\/(complete|terminate|quota-full|quality-terminate|survey-closed)(\/|$)/
+    );
     if (pathMatch?.[1]) {
       return normalizeSurveyOutcomeKey(pathMatch[1]);
     }

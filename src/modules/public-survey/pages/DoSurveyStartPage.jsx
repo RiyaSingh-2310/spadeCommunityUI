@@ -193,17 +193,23 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     });
     if (!completed) return;
 
-    const resultPath = getSurveyOutcomePath(completed.outcome, respondentUid);
+    const resultPath = getSurveyOutcomePath(completed.outcome, respondentUid, {
+      pid: flowParams.pid || flowParams.projectUrlCode,
+    });
     if (!resultPath) return;
-    if (location.pathname === resultPath) return;
+    const current = `${location.pathname}${location.search}`;
+    if (current === resultPath) return;
 
     navigate(resultPath, { replace: true });
   }, [
     canLoadPartnerApis,
     partnerTokenForGate,
     respondentUid,
+    flowParams.pid,
+    flowParams.projectUrlCode,
     navigate,
     location.pathname,
+    location.search,
   ]);
 
   // Instruct the respondent when Partner URL still has XXX / identifier.
@@ -366,7 +372,9 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
         uid: actionUid,
         outcome: outcomeKey,
       });
-      const resultPath = getSurveyOutcomePath(outcomeKey, actionUid);
+      const resultPath = getSurveyOutcomePath(outcomeKey, actionUid, {
+        pid: flowParams.pid || flowParams.projectUrlCode,
+      });
       if (!resultPath) {
         throw new Error(LINK_FLOW_ERROR);
       }

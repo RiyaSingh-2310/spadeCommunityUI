@@ -121,6 +121,14 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
         path="/quota-full/:uid"
         element={withSuspense(Pages.QuotaFullSurveyResultPage, themeProps)}
       />
+      <Route
+        path="/quality-terminate/:uid"
+        element={withSuspense(Pages.QualityTerminateSurveyResultPage, themeProps)}
+      />
+      <Route
+        path="/survey-closed/:uid"
+        element={withSuspense(Pages.SurveyClosedSurveyResultPage, themeProps)}
+      />
 
       <Route element={<GuestOnly />}>
         <Route path="/auth" element={withSuspense(Pages.LoginPage, themeProps)} />

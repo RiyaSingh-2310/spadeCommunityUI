@@ -1187,7 +1187,7 @@ function ProjectUrlsTab({
               <FormField
                 label="Live Link"
                 required
-                hint="Must include XXXX"
+                hint="Must include PID and a supported UID placeholder (identifier or XXXX)"
                 error={showError("liveLink") ? errors.liveLink : ""}
               >
                 <div className="flex items-stretch gap-2">
@@ -1199,7 +1199,7 @@ function ProjectUrlsTab({
                       setField("liveLink", trimOnBlur(event.target.value));
                       touch("liveLink");
                     }}
-                    placeholder="https://example.com/survey?uid=XXXX"
+                    placeholder="https://example.com/survey?pid=xxxx&uid=[identifier]"
                     disabled={!canWrite}
                     aria-invalid={Boolean(showError("liveLink") && errors.liveLink)}
                   />
@@ -1212,7 +1212,7 @@ function ProjectUrlsTab({
               </FormField>
               <FormField
                 label="Test Link"
-                hint="Must include XXXX"
+                hint="Must include PID and a supported UID placeholder (identifier or XXXX)"
                 error={showError("testLink") ? errors.testLink : ""}
               >
                 <div className="flex items-stretch gap-2">
@@ -1224,7 +1224,7 @@ function ProjectUrlsTab({
                       setField("testLink", trimOnBlur(event.target.value));
                       touch("testLink");
                     }}
-                    placeholder="https://example.com/survey?uid=xxxx"
+                    placeholder="https://example.com/survey?pid=xxxx&uid=[identifier]"
                     disabled={!canWrite}
                     aria-invalid={Boolean(showError("testLink") && errors.testLink)}
                   />
@@ -1374,7 +1374,7 @@ function ProjectUrlsTab({
                       setField(key, trimOnBlur(event.target.value));
                       touch(key);
                     }}
-                    placeholder="https://"
+                    placeholder={example}
                     disabled={!canWrite}
                     aria-invalid={Boolean(showError(key) && errors[key])}
                   />

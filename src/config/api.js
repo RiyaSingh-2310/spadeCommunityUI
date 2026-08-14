@@ -140,6 +140,12 @@ export const API_ROUTES = {
     prescreen: "/api/survey/prescreen",
     /** Partner URL gateway — resolve live survey redirect URL. */
     link: "/api/survey/link",
+    /** Public result-page status updates (pid + uid query). */
+    complete: "/api/survey/complete",
+    terminate: "/api/survey/terminate",
+    quota: "/api/survey/quota",
+    quality: "/api/survey/quality",
+    closed: "/api/survey/closed",
   },
   projects: {
     list: "/api/projects/list",

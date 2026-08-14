@@ -1,4 +1,4 @@
-const UID_QUERY_KEYS = ["uid", "identifier", "participant_id", "participantId", "pid"];
+const UID_QUERY_KEYS = ["uid", "identifier", "participant_id", "participantId"];
 
 export function normalizeRespondentUid(value) {
   if (value == null) return null;

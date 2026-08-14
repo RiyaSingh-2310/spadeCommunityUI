@@ -1,92 +1,154 @@
 /**
- * Live / Test link dynamic identifier placeholders.
- * Supported token (validation): XXXX (case-insensitive, exact token).
+ * Live / Test / redirect-link PID + UID placeholders.
+ * UID accepts only identifier / [identifier] / XXXX (case-insensitive).
+ * PID may be any non-empty value (project code or placeholder).
  */
 
-export const SURVEY_LINK_PLACEHOLDER_TOKENS = Object.freeze(["XXXX"]);
-
-/**
- * Exact XXXX token, ignoring letter case.
- * Rejects partial/different values such as XXX, XXXXX, identifier, abcXXXX.
- */
-const SURVEY_LINK_PLACEHOLDER_PATTERN = /(^|[^A-Za-z0-9])XXXX(?![A-Za-z0-9])/i;
-
-/** Tokens replaced at survey-redirect time (includes legacy bracket form). */
-export const SURVEY_LINK_REPLACE_TOKENS = Object.freeze([
-  "[identifier]",
+export const SURVEY_LINK_PLACEHOLDER_TOKENS = Object.freeze([
   "identifier",
+  "[identifier]",
   "XXXX",
-  "XXX",
 ]);
 
-const PLACEHOLDER_MESSAGE =
-  "must include a supported identifier placeholder (XXXX)";
+const PID_PARAM_NAMES = ["pid"];
+const UID_PARAM_NAMES = ["uid"];
 
-function isPlaceholderUid(uid) {
-  const key = String(uid ?? "").trim().toLowerCase();
-  return (
-    key === "[identifier]" ||
-    key === "identifier" ||
-    key === "xxx" ||
-    key === "xxxx"
-  );
+const BOTH_PARAMS_MESSAGE =
+  "must include both PID and a supported UID placeholder (identifier or XXXX)";
+const MISSING_PID_MESSAGE = "must include a PID query parameter";
+const MISSING_UID_MESSAGE = "must include a UID query parameter";
+const INVALID_UID_MESSAGE =
+  "must include a supported UID placeholder (identifier or XXXX)";
+
+function coerceText(value) {
+  return String(value ?? "").trim();
+}
+
+function parseAbsoluteUrl(value) {
+  const trimmed = coerceText(value);
+  if (!trimmed) return null;
+  try {
+    return new URL(trimmed);
+  } catch {
+    return null;
+  }
+}
+
+function getQueryParamIgnoreCase(searchParams, names) {
+  if (!searchParams) return { key: "", value: "" };
+  const wanted = names.map((name) => String(name).toLowerCase());
+  for (const [key, value] of searchParams.entries()) {
+    if (wanted.includes(String(key).toLowerCase())) {
+      return { key, value: String(value ?? "") };
+    }
+  }
+  return { key: "", value: "" };
 }
 
 /**
- * True when the URL contains the exact XXXX placeholder (case-insensitive).
+ * True when the UID query value is a supported configuration placeholder.
+ * Does not accept arbitrary respondent IDs or partial tokens (XXX, XXXXX).
+ * @param {unknown} value
+ */
+export function isSupportedUidPlaceholder(value) {
+  const trimmed = coerceText(value);
+  if (!trimmed) return false;
+  const key = trimmed.toLowerCase();
+  if (key === "identifier" || key === "[identifier]") return true;
+  return key === "xxxx";
+}
+
+/**
+ * Read pid + uid from URL query params only (not from the rest of the string).
+ * @param {string} value
+ * @returns {{ url: URL|null, pid: string, uid: string, hasPid: boolean, hasUid: boolean, uidIsPlaceholder: boolean }}
+ */
+export function readPidUidFromUrl(value) {
+  const url = parseAbsoluteUrl(value);
+  if (!url) {
+    return {
+      url: null,
+      pid: "",
+      uid: "",
+      hasPid: false,
+      hasUid: false,
+      uidIsPlaceholder: false,
+    };
+  }
+
+  const pid = coerceText(getQueryParamIgnoreCase(url.searchParams, PID_PARAM_NAMES).value);
+  const uidRaw = getQueryParamIgnoreCase(url.searchParams, UID_PARAM_NAMES).value;
+  const uid = coerceText(uidRaw);
+
+  return {
+    url,
+    pid,
+    uid,
+    hasPid: Boolean(pid),
+    hasUid: Boolean(uid),
+    uidIsPlaceholder: isSupportedUidPlaceholder(uid),
+  };
+}
+
+/**
+ * True when the URL has a uid query param using a supported placeholder.
  * @param {string} value
  */
 export function hasSupportedSurveyLinkPlaceholder(value) {
-  const text = String(value ?? "");
-  if (!text.trim()) return false;
-  return SURVEY_LINK_PLACEHOLDER_PATTERN.test(text);
+  return readPidUidFromUrl(value).uidIsPlaceholder;
 }
 
 /**
- * Validates Live Link / Test Link for a supported dynamic identifier.
+ * Validates Live Link / Test Link for pid + a supported uid placeholder.
  * Empty values are allowed (optional fields) — only non-empty values are checked.
  * @param {string} value
  * @param {string} label
  */
 export function getSurveyLinkPlaceholderError(value, label = "Link") {
-  const trimmed = String(value ?? "").trim();
+  const trimmed = coerceText(value);
   if (!trimmed) return "";
 
-  if (!hasSupportedSurveyLinkPlaceholder(trimmed)) {
-    return `${label} ${PLACEHOLDER_MESSAGE}`;
+  const { url, hasPid, hasUid, uidIsPlaceholder } = readPidUidFromUrl(trimmed);
+  if (!url) {
+    return `${label} ${BOTH_PARAMS_MESSAGE}.`;
+  }
+
+  if (!hasPid && !uidIsPlaceholder) {
+    return `${label} ${BOTH_PARAMS_MESSAGE}.`;
+  }
+  if (!hasPid) {
+    return `${label} ${MISSING_PID_MESSAGE}.`;
+  }
+  if (!hasUid) {
+    return `${label} ${MISSING_UID_MESSAGE}.`;
+  }
+  if (!uidIsPlaceholder) {
+    return `${label} ${INVALID_UID_MESSAGE}.`;
   }
 
   return "";
 }
 
 /**
- * Replace supported placeholders with the real respondent UID.
- * Never invents a UID — returns the original URL when uid is missing.
- * Longer tokens are replaced first so `[identifier]` wins over `identifier`.
+ * Replace a supported UID query placeholder with the real respondent UID.
+ * Never invents a UID, never rewrites pid (pid may also use xxxx as a token).
  * @param {string} url
  * @param {string} uid
  */
 export function replaceSurveyLinkPlaceholders(url, uid) {
   const source = String(url ?? "");
-  const respondentUid = String(uid ?? "").trim();
+  const respondentUid = coerceText(uid);
   if (!source || !respondentUid) return source;
+  if (isSupportedUidPlaceholder(respondentUid)) return source;
 
-  if (isPlaceholderUid(respondentUid)) {
+  const parsed = parseAbsoluteUrl(source);
+  if (!parsed) return source;
+
+  const uidParam = getQueryParamIgnoreCase(parsed.searchParams, UID_PARAM_NAMES);
+  if (!uidParam.key || !isSupportedUidPlaceholder(uidParam.value)) {
     return source;
   }
 
-  let result = source.replace(
-    /(^|[^A-Za-z0-9])XXXX(?![A-Za-z0-9])/gi,
-    `$1${respondentUid}`
-  );
-
-  const legacyTokens = SURVEY_LINK_REPLACE_TOKENS.filter(
-    (token) => token.toUpperCase() !== "XXXX"
-  ).sort((a, b) => b.length - a.length);
-
-  for (const token of legacyTokens) {
-    if (!result.includes(token)) continue;
-    result = result.split(token).join(respondentUid);
-  }
-  return result;
+  parsed.searchParams.set(uidParam.key, respondentUid);
+  return parsed.toString();
 }

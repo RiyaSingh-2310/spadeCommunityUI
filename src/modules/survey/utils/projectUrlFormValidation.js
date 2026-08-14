@@ -4,7 +4,11 @@ import {
   sanitizeInteger,
   getDecimalPlacesError,
 } from "../../shared/utils/numericInputUtils";
-import { getSurveyLinkPlaceholderError } from "./surveyLinkPlaceholders";
+import {
+  getSurveyLinkPlaceholderError,
+  isSupportedUidPlaceholder,
+  readPidUidFromUrl,
+} from "./surveyLinkPlaceholders";
 
 export const PROJECT_URL_NUMERIC_MAX_DIGITS = 6;
 /** @deprecated Use PROJECT_URL_NUMERIC_MAX_DIGITS */
@@ -36,13 +40,15 @@ export const PROJECT_URL_REDIRECT_FIELDS = [
     key: "redirectComplete",
     label: "Complete URL",
     path: "/redirect/complete",
-    example: "https://spade-community.com/redirect/complete?uid=[identifier]",
+    example:
+      "https://spade-community.com/redirect/complete?pid=xxxx&uid=[identifier]",
   },
   {
     key: "redirectTerminate",
     label: "Terminate URL",
     path: "/redirect/terminate",
-    example: "https://spade-community.com/redirect/terminate?uid=[identifier]",
+    example:
+      "https://spade-community.com/redirect/terminate?pid=xxxx&uid=[identifier]",
   },
   {
     key: "redirectOverQuota",
@@ -51,19 +57,23 @@ export const PROJECT_URL_REDIRECT_FIELDS = [
     /** Accept legacy `/redirect/overquota` URLs already saved in the API. */
     acceptedPaths: ["/redirect/quota-full", "/redirect/overquota"],
     example:
-      "https://spade-community.com/redirect/quota-full?uid=[identifier]",
+      "https://spade-community.com/redirect/overquota?pid=xxxx&uid=[identifier]",
   },
   {
     key: "redirectQualityTerm",
     label: "Quality Term URL",
     path: "/redirect/qualityterm",
-    example: "https://spade-community.com/redirect/qualityterm?uid=[identifier]",
+    acceptedPaths: ["/redirect/qualityterm", "/redirect/quality-terminate"],
+    example:
+      "https://spade-community.com/redirect/qualityterm?pid=xxxx&uid=[identifier]",
   },
   {
     key: "redirectSurveyClose",
     label: "Survey Closed URL",
     path: "/redirect/surveyclose",
-    example: "https://spade-community.com/redirect/surveyclose?uid=[identifier]",
+    acceptedPaths: ["/redirect/surveyclose", "/redirect/survey-closed"],
+    example:
+      "https://spade-community.com/redirect/surveyclose?pid=xxxx&uid=[identifier]",
   },
 ];
 
@@ -73,8 +83,6 @@ export function getDefaultProjectUrlRedirects() {
     PROJECT_URL_REDIRECT_FIELDS.map(({ key, example }) => [key, example])
   );
 }
-
-const REDIRECT_UID_VALUE = "[identifier]";
 
 const DIRTY_COMPARE_KEYS = [
   "projectUrlCode",
@@ -160,7 +168,8 @@ function getDecimalFieldError(value, label, { required = true } = {}) {
 }
 
 /**
- * Validates redirect URLs: domain may vary, but path + uid=[identifier] must match.
+ * Validates redirect URLs: domain may vary, but path + pid + uid placeholder must match.
+ * pid may be any non-empty value. uid must be identifier or XXXX (case-insensitive).
  * All redirect URL fields are required.
  * @param {string} value
  * @param {{ path: string, label: string, example: string, acceptedPaths?: string[] }} options
@@ -172,14 +181,12 @@ export function getProjectRedirectUrlError(
   const trimmed = String(value ?? "").trim();
   if (!trimmed) return getRequiredError(trimmed, label);
 
-  let parsed;
-  try {
-    parsed = new URL(trimmed);
-  } catch {
+  const { url, hasPid, hasUid, uid, uidIsPlaceholder } = readPidUidFromUrl(trimmed);
+  if (!url) {
     return `${label} must follow the required format. Example: ${example}`;
   }
 
-  const pathname = parsed.pathname.replace(/\/+$/, "") || "/";
+  const pathname = url.pathname.replace(/\/+$/, "") || "/";
   const allowedPaths = (
     Array.isArray(acceptedPaths) && acceptedPaths.length > 0
       ? acceptedPaths
@@ -190,8 +197,17 @@ export function getProjectRedirectUrlError(
     return `${label} must follow the required format. Example: ${example}`;
   }
 
-  if (parsed.searchParams.get("uid") !== REDIRECT_UID_VALUE) {
-    return `${label} must follow the required format. Example: ${example}`;
+  if (!hasPid && !uidIsPlaceholder) {
+    return `${label} must include both PID and a supported UID placeholder (identifier or XXXX).`;
+  }
+  if (!hasPid) {
+    return `${label} must include a PID query parameter.`;
+  }
+  if (!hasUid) {
+    return `${label} must include a UID query parameter.`;
+  }
+  if (!isSupportedUidPlaceholder(uid)) {
+    return `${label} must include a supported UID placeholder (identifier or XXXX).`;
   }
 
   return "";

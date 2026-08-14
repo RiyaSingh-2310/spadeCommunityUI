@@ -251,6 +251,54 @@
   color: var(--admin-muted-foreground);
 }
 
+.public-questionnaire-shell .pq-redirect-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  max-width: 36rem;
+  margin: 1.5rem auto 0;
+  padding: 1rem 1.15rem 1.1rem;
+  border-radius: 1rem;
+  text-align: center;
+  border: 1px solid color-mix(in srgb, var(--admin-surface-border) 85%, transparent);
+  background: color-mix(in srgb, var(--admin-shell-bg) 55%, var(--admin-surface-bg));
+}
+
+.public-questionnaire-shell .pq-redirect-status--loading {
+  border-color: color-mix(in srgb, var(--admin-primary-color) 22%, var(--admin-surface-border));
+}
+
+.public-questionnaire-shell .pq-redirect-status--success {
+  border-color: color-mix(in srgb, var(--admin-primary-color) 28%, var(--admin-surface-border));
+}
+
+.public-questionnaire-shell .pq-redirect-status--error {
+  border-color: color-mix(in srgb, var(--admin-danger-text, #dc2626) 28%, var(--admin-surface-border));
+}
+
+.public-questionnaire-shell .pq-redirect-status-text,
+.public-questionnaire-shell .pq-redirect-countdown {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--admin-foreground);
+}
+
+.public-questionnaire-shell .pq-redirect-status--loading .pq-redirect-status-text,
+.public-questionnaire-shell .pq-redirect-countdown {
+  color: var(--admin-muted-foreground);
+}
+
+.public-questionnaire-shell .pq-redirect-status--error .pq-redirect-status-text {
+  color: var(--admin-danger-text, #dc2626);
+}
+
+.public-questionnaire-shell .pq-redirect-countdown {
+  font-weight: 600;
+  color: var(--admin-foreground);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .public-questionnaire-shell .pq-redirect-icon {
     animation: none !important;

@@ -13,10 +13,13 @@ import {
 /**
  * Canonical redirect outcome keys matching Partner Mapping / backend redirect paths.
  * Route pattern: /redirect/:outcome
- * Required direct routes: /redirect/complete | /redirect/terminate | /redirect/quota-full
+ * Required direct routes:
+ *   /redirect/complete | /redirect/terminate | /redirect/quota-full
+ *   /redirect/quality-terminate | /redirect/survey-closed
  *
  * Independent path-UID result pages live at:
  *   /complete/:uid | /terminate/:uid | /quota-full/:uid
+ *   /quality-terminate/:uid | /survey-closed/:uid
  * See surveyResultOutcomes.js and getSurveyOutcomePath().
  */
 export const REDIRECT_OUTCOMES = {
@@ -26,7 +29,11 @@ export const REDIRECT_OUTCOMES = {
   QUOTA_FULL: "quota-full",
   /** @deprecated Prefer QUOTA_FULL — kept for existing redirect URLs. */
   OVERQUOTA: "overquota",
+  QUALITY_TERMINATE: "quality-terminate",
+  /** @deprecated Prefer QUALITY_TERMINATE — kept for existing redirect URLs. */
   QUALITYTERM: "qualityterm",
+  SURVEY_CLOSED: "survey-closed",
+  /** @deprecated Prefer SURVEY_CLOSED — kept for existing redirect URLs. */
   SURVEYCLOSE: "surveyclose",
 };
 
@@ -38,9 +45,25 @@ const QUOTA_FULL_CONFIG = {
   icon: Users,
 };
 
+const QUALITY_TERMINATE_CONFIG = {
+  title: "Quality Check Failed",
+  message:
+    "Unfortunately, you did not qualify to continue this survey. Thank you for your participation.",
+  thankYouLines: GENERIC_THANK_YOU_LINES,
+  variant: "danger",
+  icon: ShieldAlert,
+};
+
+const SURVEY_CLOSED_CONFIG = {
+  title: "Survey Closed",
+  message: "This survey is no longer available. Thank you for your interest.",
+  thankYouLines: GENERIC_THANK_YOU_LINES,
+  variant: "neutral",
+  icon: Lock,
+};
+
 /**
  * UI copy + visual config per redirect outcome.
- * Frontend-only — no status/business fields until backend integration.
  */
 export const REDIRECT_OUTCOME_CONFIG = {
   [REDIRECT_OUTCOMES.COMPLETE]: {
@@ -60,21 +83,10 @@ export const REDIRECT_OUTCOME_CONFIG = {
   },
   [REDIRECT_OUTCOMES.QUOTA_FULL]: QUOTA_FULL_CONFIG,
   [REDIRECT_OUTCOMES.OVERQUOTA]: QUOTA_FULL_CONFIG,
-  [REDIRECT_OUTCOMES.QUALITYTERM]: {
-    title: "Quality Check Failed",
-    message:
-      "Unfortunately, you did not qualify to continue this survey. Thank you for your participation.",
-    thankYouLines: GENERIC_THANK_YOU_LINES,
-    variant: "danger",
-    icon: ShieldAlert,
-  },
-  [REDIRECT_OUTCOMES.SURVEYCLOSE]: {
-    title: "Survey Closed",
-    message: "This survey is no longer available. Thank you for your interest.",
-    thankYouLines: GENERIC_THANK_YOU_LINES,
-    variant: "neutral",
-    icon: Lock,
-  },
+  [REDIRECT_OUTCOMES.QUALITYTERM]: QUALITY_TERMINATE_CONFIG,
+  [REDIRECT_OUTCOMES.QUALITY_TERMINATE]: QUALITY_TERMINATE_CONFIG,
+  [REDIRECT_OUTCOMES.SURVEYCLOSE]: SURVEY_CLOSED_CONFIG,
+  [REDIRECT_OUTCOMES.SURVEY_CLOSED]: SURVEY_CLOSED_CONFIG,
 };
 
 /** Normalize legacy / alternate outcome path segments to a config key. */
@@ -91,6 +103,24 @@ function normalizeRedirectOutcomeKey(outcome) {
     key === "over-quota"
   ) {
     return REDIRECT_OUTCOMES.QUOTA_FULL;
+  }
+
+  if (
+    key === "quality-terminate" ||
+    key === "qualityterminate" ||
+    key === "qualityterm" ||
+    key === "quality-term"
+  ) {
+    return REDIRECT_OUTCOMES.QUALITY_TERMINATE;
+  }
+
+  if (
+    key === "survey-closed" ||
+    key === "surveyclosed" ||
+    key === "surveyclose" ||
+    key === "survey-close"
+  ) {
+    return REDIRECT_OUTCOMES.SURVEY_CLOSED;
   }
 
   return key;
