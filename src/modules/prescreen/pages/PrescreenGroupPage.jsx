@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
@@ -6,11 +6,8 @@ import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useCsvExport } from "../../shared/hooks/useCsvExport";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
-import {
-  compareTextAsc,
-  getListingTextValue,
-} from "../../shared/utils/nameColumnSort";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   deleteRecord,
@@ -43,38 +40,10 @@ function PrescreenGroupPage({ isDarkMode }) {
   });
   useListingRefresh(fetchPrescreenGroups);
 
-  // Asc/desc by Survey Title only (not the shared newest→alpha cycle used elsewhere).
-  const [columnSort, setColumnSort] = useState(null);
-  const sortableColumns = useMemo(() => [SORT_COLUMN], []);
-
-  const onColumnSort = useCallback((clickedColumn) => {
-    if (clickedColumn !== SORT_COLUMN) return;
-    setColumnSort((current) => {
-      if (!current || current.column !== SORT_COLUMN) {
-        return { column: SORT_COLUMN, direction: "asc" };
-      }
-      if (current.direction === "asc") {
-        return { column: SORT_COLUMN, direction: "desc" };
-      }
-      return null;
-    });
-  }, []);
-
-  const sortedRows = useMemo(() => {
-    if (!Array.isArray(rows) || rows.length <= 1 || !columnSort?.direction) {
-      return Array.isArray(rows) ? rows : [];
-    }
-
-    const sorted = [...rows];
-    sorted.sort((left, right) => {
-      const cmp = compareTextAsc(
-        getListingTextValue(left, SORT_COLUMN),
-        getListingTextValue(right, SORT_COLUMN)
-      );
-      return columnSort.direction === "desc" ? -cmp : cmp;
-    });
-    return sorted;
-  }, [rows, columnSort]);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows,
+    columnLabel: SORT_COLUMN,
+  });
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);

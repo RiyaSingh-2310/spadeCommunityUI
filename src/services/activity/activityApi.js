@@ -5,7 +5,6 @@ import {
   formatActivityLogDate,
   formatAuditLogDate,
 } from "../../modules/shared/utils/dateTime";
-import { sortListingRowsByIdAsc } from "../../modules/shared/utils/listingSort";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
 
@@ -133,9 +132,7 @@ export async function getRecords({ page, limit, search } = {}) {
 
   const activities = extractActivityList(data);
   const total = extractListTotalFromResponse(data, activities.length);
-  const items = sortListingRowsByIdAsc(
-    activities.map((activity) => mapActivityToRow(activity))
-  );
+  const items = activities.map((activity) => mapActivityToRow(activity));
 
   return {
     ...data,

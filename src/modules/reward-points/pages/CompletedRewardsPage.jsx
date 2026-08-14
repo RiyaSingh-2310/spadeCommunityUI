@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import RewardDetailsModal from "../components/RewardDetailsModal";
 
 const REWARD_TYPES = ["Registration Reward", "Survey Completion", "Reward Redemption"];
@@ -25,6 +26,10 @@ const initialRows = Array.from({ length: 12 }, (_, idx) => ({
 
 function CompletedRewardsPage({ isDarkMode }) {
   const [viewTarget, setViewTarget] = useState(null);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows: initialRows,
+    columnLabel: "User Name",
+  });
 
   return (
     <>
@@ -42,7 +47,10 @@ function CompletedRewardsPage({ isDarkMode }) {
           "Completed Date",
           "Action",
         ]}
-        rows={initialRows}
+        rows={sortedRows}
+        sortableColumns={sortableColumns}
+        columnSort={columnSort}
+        onColumnSort={onColumnSort}
         rowIdKey="id"
         showStatus
         statusAsText

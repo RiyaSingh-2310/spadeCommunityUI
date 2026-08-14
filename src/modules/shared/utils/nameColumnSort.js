@@ -1,4 +1,25 @@
-import { getColumnKey, getRowValue } from "./tableHelpers";
+import { getRowValue } from "./tableHelpers";
+
+function toFiniteNumber(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  const asNumber = Number(text);
+  if (Number.isFinite(asNumber)) return asNumber;
+  const digits = text.match(/(\d+)(?!.*\d)/);
+  if (!digits) return null;
+  const parsed = Number(digits[1]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toTimestamp(value) {
+  if (value == null || value === "") return null;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value < 1e12 ? value * 1000 : value;
+  }
+  const parsed = Date.parse(String(value));
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 /**
  * Resolve a timestamp/id for "newest first" ordering.
@@ -10,24 +31,27 @@ export function getListingNewestValue(row) {
   const dateCandidates = [
     row.createdAtRaw,
     row.created_at,
+    row.createdAt,
+    row.createdDate,
+    row.created_date,
+    row.createdOn,
+    row.created_on,
+    row.addedOn,
+    row.added_on,
     row.updatedAtRaw,
     row.updated_at,
-    row.createdAt,
     row.updatedAt,
   ];
 
   for (const value of dateCandidates) {
-    if (value == null || value === "") continue;
-    if (typeof value === "number" && Number.isFinite(value)) return value;
-    const parsed = Date.parse(String(value));
-    if (Number.isFinite(parsed)) return parsed;
+    const timestamp = toTimestamp(value);
+    if (timestamp != null) return timestamp;
   }
 
-  const idCandidates = [row.id, row.recordId, row.survey_id];
+  const idCandidates = [row.recordId, row.id, row.survey_id, row.surveyId];
   for (const value of idCandidates) {
-    if (value == null || value === "") continue;
-    const asNumber = Number(value);
-    if (Number.isFinite(asNumber)) return asNumber;
+    const asNumber = toFiniteNumber(value);
+    if (asNumber != null) return asNumber;
   }
 
   return 0;
@@ -35,8 +59,7 @@ export function getListingNewestValue(row) {
 
 export function getListingTextValue(row, columnLabel) {
   if (!row) return "";
-  const key = getColumnKey(columnLabel);
-  const value = getRowValue(row, key);
+  const value = getRowValue(row, columnLabel);
   if (value == null || value === "-" || value === "—") return "";
   return String(value).trim();
 }
@@ -67,21 +90,27 @@ export function applyNameColumnSort(rows, sortState, options = {}) {
     ((row) => getListingTextValue(row, sortState.column));
   const getNewest = options.getNewestValue ?? getListingNewestValue;
 
-  const sorted = [...rows];
-
   if (sortState.mode === "newest") {
-    sorted.sort((left, right) => {
-      const leftValue = Number(getNewest(left)) || 0;
-      const rightValue = Number(getNewest(right)) || 0;
-      if (leftValue !== rightValue) return rightValue - leftValue; // newest first
-      return compareTextAsc(getText(left), getText(right));
-    });
-    return sorted;
+    return rows
+      .map((row, index) => ({ row, index }))
+      .sort((left, right) => {
+        const leftValue = Number(getNewest(left.row)) || 0;
+        const rightValue = Number(getNewest(right.row)) || 0;
+        if (leftValue !== rightValue) return rightValue - leftValue;
+        return left.index - right.index;
+      })
+      .map((entry) => entry.row);
   }
 
   if (sortState.mode === "alpha") {
-    sorted.sort((left, right) => compareTextAsc(getText(left), getText(right)));
-    return sorted;
+    return rows
+      .map((row, index) => ({ row, index }))
+      .sort((left, right) => {
+        const cmp = compareTextAsc(getText(left.row), getText(right.row));
+        if (cmp !== 0) return cmp;
+        return left.index - right.index;
+      })
+      .map((entry) => entry.row);
   }
 
   return rows;

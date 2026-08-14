@@ -6,6 +6,7 @@ import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { cloneSurvey, updateSurveyStatus } from "../services/surveyApi";
@@ -64,6 +65,10 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
     enabled: Boolean(groupId),
   });
   useListingRefresh(refreshProjects);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows,
+    columnLabel: "Project Name",
+  });
 
   useEffect(() => {
     if (!groupId) {
@@ -185,7 +190,10 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
           "Status",
           "Action",
         ]}
-        rows={rows}
+        rows={sortedRows}
+        sortableColumns={sortableColumns}
+        columnSort={columnSort}
+        onColumnSort={onColumnSort}
         rowIdKey="recordId"
         actionVariant="view-edit"
         showDeleteAction={false}

@@ -3,6 +3,7 @@ import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { getRecords } from "../services/systemEmailsApi";
 
@@ -23,6 +24,10 @@ function SystemEmailTemplatePage({ isDarkMode }) {
     refresh,
   } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(refresh);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows,
+    columnLabel: "Title",
+  });
 
   const handleEdit = (row) => {
     navigate(`/system-email/edit/${encodeURIComponent(String(row.id))}`);
@@ -34,7 +39,10 @@ function SystemEmailTemplatePage({ isDarkMode }) {
       title="System Email Template"
       searchPlaceholder="Search email templates..."
       columns={["S.No", "Title", "Action"]}
-      rows={rows}
+      rows={sortedRows}
+      sortableColumns={sortableColumns}
+      columnSort={columnSort}
+      onColumnSort={onColumnSort}
       showStatus={false}
       actionVariant="edit-only"
       showDeleteAction={false}

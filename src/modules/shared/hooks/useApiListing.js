@@ -11,12 +11,15 @@ import { normalizeSearchQuery } from "../utils/searchQuery";
  *   enabled?: boolean,
  *   preserveRowOrder?: boolean,
  * }} options
+ *
+ * Default listing order is the API response order (typically newest first).
+ * Do not alphabetize or re-sort by id unless preserveRowOrder is false.
  */
 export function useApiListing({
   fetchFn,
   initialPageSize = DEFAULT_PAGE_SIZE,
   enabled = true,
-  preserveRowOrder = false,
+  preserveRowOrder = true,
 }) {
   const [rows, setRows] = useState([]);
   const [totalRecords, setTotalRecords] = useState(0);

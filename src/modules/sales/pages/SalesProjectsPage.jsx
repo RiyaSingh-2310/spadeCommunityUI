@@ -3,6 +3,7 @@ import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { getRecords } from "../../survey/services/surveyApi";
 
@@ -34,6 +35,10 @@ function SalesProjectsPage({ isDarkMode }) {
     refresh: fetchProjects,
   } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(fetchProjects);
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows,
+    columnLabel: "Project Name",
+  });
 
   return (
     <ModuleListingPage
@@ -41,7 +46,10 @@ function SalesProjectsPage({ isDarkMode }) {
       title="Projects"
       searchPlaceholder="Search projects..."
       columns={LIST_COLUMNS}
-      rows={rows}
+      rows={sortedRows}
+      sortableColumns={sortableColumns}
+      columnSort={columnSort}
+      onColumnSort={onColumnSort}
       rowIdKey="recordId"
       actionVariant="view-edit"
       showDeleteAction={false}

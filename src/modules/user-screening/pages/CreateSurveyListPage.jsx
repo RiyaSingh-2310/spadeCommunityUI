@@ -4,6 +4,7 @@ import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
+import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import {
   deleteCreateSurvey,
@@ -33,6 +34,10 @@ function CreateSurveyListPage({ isDarkMode }) {
     fetchFn: listCreateSurveyRecords,
     initialPageSize: DEFAULT_PAGE_SIZE,
     preserveRowOrder: true,
+  });
+  const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
+    rows,
+    columnLabel: "Survey Title",
   });
 
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
@@ -131,7 +136,10 @@ function CreateSurveyListPage({ isDarkMode }) {
           "Status",
           "Action",
         ]}
-        rows={rows}
+        rows={sortedRows}
+        sortableColumns={sortableColumns}
+        columnSort={columnSort}
+        onColumnSort={onColumnSort}
         permissionModule="user_screening_management"
         nowrapAllCells
         rowIdKey="id"
