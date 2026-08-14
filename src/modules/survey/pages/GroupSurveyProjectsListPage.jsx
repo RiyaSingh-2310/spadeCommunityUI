@@ -182,8 +182,6 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
           "Client",
           "LOI",
           "IR",
-          "Start Date",
-          "End Date",
           "Status",
           "Action",
         ]}

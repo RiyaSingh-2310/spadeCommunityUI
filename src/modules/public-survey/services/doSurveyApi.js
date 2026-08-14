@@ -456,6 +456,7 @@ export async function storeSurveyActivity({ token, uid } = {}) {
   } catch (error) {
     rethrowSurveyStartError(error);
   }
+}
 
 /** Alias — Partner URL Start Survey activity step. */
 export const startSurveyActivity = storeSurveyActivity;
@@ -597,6 +598,7 @@ export async function fetchSurveyPrescreen(token) {
   } catch (error) {
     rethrowSurveyStartError(error);
   }
+}
 
 /** Alias — Partner URL Start Survey pre-screen check. */
 export const checkSurveyPreScreen = fetchSurveyPrescreen;

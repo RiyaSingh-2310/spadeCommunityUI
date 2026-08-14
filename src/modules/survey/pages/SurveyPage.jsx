@@ -102,8 +102,6 @@ function SurveyPage({ isDarkMode }) {
           "ID",
           "Project Name",
           "Client",
-          "Start Date",
-          "End Date",
           "Status",
           "Action",
         ]}
