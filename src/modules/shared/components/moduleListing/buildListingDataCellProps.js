@@ -7,6 +7,7 @@ export function buildListingDataCellProps(ctx) {
     renderCheckboxCell: ctx.renderCheckboxCell,
     showStatus: ctx.showStatus,
     rfq: ctx.rfq,
+    renderStatus: ctx.renderStatus,
     effectiveStatusAsText: ctx.effectiveStatusAsText,
     formatStatusDisplay: ctx.formatStatusDisplay,
     statusColumnClass: ctx.statusColumnClass,

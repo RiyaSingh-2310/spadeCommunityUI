@@ -34,6 +34,7 @@ function ModuleListingDataCells({
   renderCheckboxCell,
   showStatus,
   rfq,
+  renderStatus,
   effectiveStatusAsText,
   formatStatusDisplay,
   statusColumnClass,
@@ -124,6 +125,13 @@ function ModuleListingDataCells({
           className={`admin-table-status-col px-4 py-3 align-middle whitespace-nowrap ${statusColumnClass}`}
         >
           <RfqStatusBadge status={displayStatus} />
+        </td>
+      );
+    }
+    if (key === "status" && showStatus && typeof renderStatus === "function") {
+      return (
+        <td key={col} className="px-4 py-3 align-middle whitespace-nowrap">
+          {renderStatus(row)}
         </td>
       );
     }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Eye, ExternalLink, Link2, Loader2, Pencil } from "lucide-react";
 import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
+import NumericInput from "../../../components/admin/NumericInput";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import StatusToggle from "../../../components/admin/StatusToggle";
 import TableCard from "../../../components/admin/TableCard";
@@ -44,6 +45,14 @@ import {
   registerPartnerUrlWindow,
 } from "../utils/partnerUrlTabSync";
 import { jumpToSectionAfterRender } from "../../shared/utils/jumpToSection";
+import {
+  capQuotaToAvailable,
+  getAvailablePartnerQuota,
+  getPartnerQuotaFieldError,
+  parsePartnerQuota,
+  readProjectUrlSampleSize,
+  sumAssignedPartnerQuota,
+} from "../utils/partnerMappingQuota";
 import PartnerMappingViewModal from "./PartnerMappingViewModal";
 import CopyValueButton from "./CopyValueButton";
 import {
@@ -261,9 +270,6 @@ function PartnerMappingTab({
   const { canWrite } = useModulePermission("survey");
   const allowWrite = canWrite && !readOnly;
   const inputClass = getAdminInputClass();
-  const isMultiLink = String(projectLinkType ?? "")
-    .toLowerCase()
-    .includes("multi");
 
   const [projectUrls, setProjectUrls] = useState([]);
   const [isLoadingUrls, setIsLoadingUrls] = useState(true);
@@ -283,6 +289,7 @@ function PartnerMappingTab({
   const scrollToMappingIdRef = useRef("");
   const mappingTableRef = useRef(null);
   const pendingJumpToAddFormRef = useRef(false);
+  const pendingJumpToMappingRef = useRef(false);
 
   const selectedProjectUrl = useMemo(
     () =>
@@ -292,10 +299,36 @@ function PartnerMappingTab({
     [projectUrls, selectedProjectUrlId]
   );
 
-  const resolvedProjectUrlId = String(selectedProjectUrlId ?? "").trim();
+  const resolvedProjectUrlId = String(
+    selectedProjectUrl?.id ?? selectedProjectUrlId ?? ""
+  ).trim();
   const selectedUrlEligible = selectedProjectUrl
     ? isProjectUrlEligibleForInvite(selectedProjectUrl.status)
     : false;
+  const isMultiLink = String(
+    selectedProjectUrl?.projectLinkType ?? projectLinkType ?? ""
+  )
+    .toLowerCase()
+    .includes("multi");
+  const sampleSize = readProjectUrlSampleSize(selectedProjectUrl);
+  const assignedQuota = useMemo(() => sumAssignedPartnerQuota(rows), [rows]);
+  const editingQuota = useMemo(() => {
+    if (formMode !== "edit" || !form.mappingId) return 0;
+    const currentRow = rows.find(
+      (row) => String(row.id) === String(form.mappingId)
+    );
+    return parsePartnerQuota(currentRow?.quota);
+  }, [formMode, form.mappingId, rows]);
+  const availableQuota = getAvailablePartnerQuota({
+    sampleSize,
+    assignedQuota,
+    excludedQuota: editingQuota,
+  });
+  const remainingForNewPartners = getAvailablePartnerQuota({
+    sampleSize,
+    assignedQuota,
+    excludedQuota: 0,
+  });
 
   const openPartnerUrl = useCallback(({ partnerUrl, isTest = false }) => {
     const rawPartnerUrl = String(partnerUrl ?? "").trim();
@@ -398,6 +431,17 @@ function PartnerMappingTab({
     loadMappings();
   }, [loadMappings]);
 
+  // Jump to the mapping section as soon as a Project URL is selected.
+  useEffect(() => {
+    if (!resolvedProjectUrlId || !pendingJumpToMappingRef.current) return;
+    pendingJumpToMappingRef.current = false;
+    jumpToSectionAfterRender(PARTNER_MAPPING_LIST_SECTION_ID, {
+      behavior: "auto",
+      block: "start",
+      delayMs: 0,
+    });
+  }, [resolvedProjectUrlId]);
+
   // Scroll to newly added mapping / list after the table has re-rendered.
   useEffect(() => {
     const targetId = scrollToMappingIdRef.current;
@@ -423,7 +467,7 @@ function PartnerMappingTab({
         }
         return mappingTableRef.current;
       },
-      { block: "start", delayMs: 80 }
+      { behavior: "auto", block: "start", delayMs: 0 }
     );
   }, [rows, isLoading]);
 
@@ -536,7 +580,10 @@ function PartnerMappingTab({
         "Selected Project URL is not eligible for a new mapping";
     }
     if (!form.partnerId) next.partnerId = "Partner is required";
-    if (!String(form.quota ?? "").trim()) next.quota = "Partner quota is required";
+    next.quota = getPartnerQuotaFieldError(form.quota, {
+      sampleSize,
+      availableQuota,
+    });
     {
       const cpiError = getDecimalPlacesError(form.cpi, "CPI", {
         required: true,
@@ -553,7 +600,7 @@ function PartnerMappingTab({
     });
 
     return next;
-  }, [form, resolvedProjectUrlId, selectedUrlEligible]);
+  }, [form, resolvedProjectUrlId, selectedUrlEligible, sampleSize, availableQuota]);
 
   const validationFields = useMemo(
     () => ["projectUrlId", "partnerId", "quota", "cpi", ...REDIRECT_FIELD_KEYS],
@@ -574,6 +621,7 @@ function PartnerMappingTab({
 
   const openAddForm = async () => {
     if (!allowWrite || !resolvedProjectUrlId || !selectedUrlEligible) return;
+    if (sampleSize != null && (remainingForNewPartners ?? 0) <= 0) return;
     pendingJumpToAddFormRef.current = true;
     setShowForm(true);
     setFormMode("add");
@@ -595,8 +643,9 @@ function PartnerMappingTab({
     }
     pendingJumpToAddFormRef.current = false;
     jumpToSectionAfterRender(ADD_PARTNER_SECTION_ID, {
+      behavior: "auto",
       block: "start",
-      delayMs: 80,
+      delayMs: 0,
     });
   }, [showForm, isFormLoading, formMode]);
 
@@ -639,7 +688,7 @@ function PartnerMappingTab({
       partnerRedirectUrl: "",
       quota:
         panelSize != null && String(panelSize).trim() !== ""
-          ? String(panelSize)
+          ? capQuotaToAvailable(panelSize, availableQuota)
           : prev.quota,
       // Reset to Project URL defaults; partner detail will overwrite when loaded.
       redirects: { ...projectUrlRedirects },
@@ -669,7 +718,7 @@ function PartnerMappingTab({
         redirects: mergeRedirects(partnerRedirects, projectUrlRedirects),
         quota:
           mapped.panelSize && mapped.panelSize !== "—"
-            ? String(mapped.panelSize)
+            ? capQuotaToAvailable(mapped.panelSize, availableQuota)
             : prev.quota,
       }));
     } catch {
@@ -705,6 +754,8 @@ function PartnerMappingTab({
     event.preventDefault();
     if (!allowWrite || !resolvedProjectUrlId || !selectedUrlEligible) return;
     if (!validateSubmit() || !isFormValid(errors)) return;
+    if (sampleSize == null || availableQuota == null) return;
+    if (formMode !== "edit" && availableQuota <= 0) return;
 
     const payload = buildPayloadFromForm();
     if (
@@ -887,11 +938,16 @@ function PartnerMappingTab({
 
   const canSubmit =
     isFormValid(errors) && !isSubmitting && !isFormLoading && selectedUrlEligible;
+  const quotaFullyAllocated =
+    sampleSize != null &&
+    remainingForNewPartners != null &&
+    remainingForNewPartners <= 0;
   const showAddPartner =
     allowWrite &&
     resolvedProjectUrlId &&
     selectedUrlEligible &&
-    (!isMultiLink || multiLinkStats.addPartner);
+    (!isMultiLink || multiLinkStats.addPartner) &&
+    !quotaFullyAllocated;
 
   if (isLoadingUrls) {
     return (
@@ -956,9 +1012,11 @@ function PartnerMappingTab({
               inputClass={inputClass}
               value={selectedProjectUrlId}
               onChange={(value) => {
-                setSelectedProjectUrlId(String(value ?? ""));
+                const nextId = String(value ?? "").trim();
+                setSelectedProjectUrlId(nextId);
                 resetForm();
                 touch("projectUrlId");
+                pendingJumpToMappingRef.current = Boolean(nextId);
               }}
               options={projectUrlOptions}
               placeholder="Select Project URL"
@@ -1030,60 +1088,62 @@ function PartnerMappingTab({
             Select a Project URL above to view and manage partner mappings.
           </p>
         </div>
-      ) : isLoading ? (
-        <div className="admin-text mt-6 flex min-h-[200px] items-center justify-center gap-2 text-sm">
-          <Loader2 size={18} className="animate-spin" />
-          Loading partner mappings...
-        </div>
       ) : (
         <div
           id={PARTNER_MAPPING_LIST_SECTION_ID}
           className="mt-6"
           ref={mappingTableRef}
         >
-          <SurveyDataTable
-            title="Partner Mapping"
-            columns={tableColumns}
-            rows={rows}
-            renderCell={renderCell}
-            isDarkMode={isDarkMode}
-            emptyMessage="No partner mappings for this Project URL yet."
-            headerAction={
-              showAddPartner ? (
-                <button
-                  type="button"
-                  onClick={openAddForm}
-                  className="h-10 cursor-pointer rounded-xl bg-[#10a950] px-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,169,80,0.28)] transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]"
-                >
-                  + Add Partner
-                </button>
-              ) : null
-            }
-            footer={
-              <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-3 text-sm">
-                {isMultiLink ? (
-                  <>
-                    <div>
-                      <p className="admin-text-muted text-xs font-medium uppercase tracking-wide">
-                        Remaining Multi Links
-                      </p>
-                      <p className="mt-1 font-semibold text-[var(--admin-danger-text)]">
-                        {multiLinkStats.remainingMultiLinks}
-                      </p>
-                    </div>
-                    <div className="sm:text-right">
-                      <p className="admin-text-muted text-xs font-medium uppercase tracking-wide">
-                        Completed Surveys
-                      </p>
-                      <p className="admin-text mt-1 font-semibold">
-                        {multiLinkStats.completedSurveyCount}
-                      </p>
-                    </div>
-                  </>
-                ) : null}
-              </div>
-            }
-          />
+          {isLoading ? (
+            <div className="admin-text flex min-h-[200px] items-center justify-center gap-2 text-sm">
+              <Loader2 size={18} className="animate-spin" />
+              Loading partner mappings...
+            </div>
+          ) : (
+            <SurveyDataTable
+              title="Partner Mapping"
+              columns={tableColumns}
+              rows={rows}
+              renderCell={renderCell}
+              isDarkMode={isDarkMode}
+              emptyMessage="No partner mappings for this Project URL yet."
+              headerAction={
+                showAddPartner ? (
+                  <button
+                    type="button"
+                    onClick={openAddForm}
+                    className="h-10 cursor-pointer rounded-xl bg-[#10a950] px-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,169,80,0.28)] transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]"
+                  >
+                    + Add Partner
+                  </button>
+                ) : null
+              }
+              footer={
+                <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-3 text-sm">
+                  {isMultiLink ? (
+                    <>
+                      <div>
+                        <p className="admin-text-muted text-xs font-medium uppercase tracking-wide">
+                          Remaining Multi Links
+                        </p>
+                        <p className="mt-1 font-semibold text-[var(--admin-danger-text)]">
+                          {multiLinkStats.remainingMultiLinks}
+                        </p>
+                      </div>
+                      <div className="sm:text-right">
+                        <p className="admin-text-muted text-xs font-medium uppercase tracking-wide">
+                          Completed Surveys
+                        </p>
+                        <p className="admin-text mt-1 font-semibold">
+                          {multiLinkStats.completedSurveyCount}
+                        </p>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              }
+            />
+          )}
         </div>
       )}
 
@@ -1127,17 +1187,23 @@ function PartnerMappingTab({
                   <FormField
                     label="Partner Quota"
                     required
-                    error={showError("quota") ? errors.quota : ""}
+                    error={
+                      showError("quota") || sampleSize == null
+                        ? errors.quota
+                        : ""
+                    }
                   >
-                    <input
+                    <NumericInput
                       className={inputClass}
                       value={form.quota}
-                      onChange={(event) =>
-                        setForm((prev) => ({ ...prev, quota: event.target.value }))
+                      onChange={(value) =>
+                        setForm((prev) => ({ ...prev, quota: value }))
                       }
                       onBlur={() => touch("quota")}
                       disabled={isSubmitting}
-                      aria-invalid={Boolean(showError("quota") && errors.quota)}
+                      aria-invalid={Boolean(
+                        (showError("quota") || sampleSize == null) && errors.quota
+                      )}
                     />
                   </FormField>
                   <FormField

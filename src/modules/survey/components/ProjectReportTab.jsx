@@ -13,11 +13,39 @@ import {
   PROJECT_REPORT_TYPES,
 } from "../utils/projectReportNavigation";
 
-function ReportSection({ title, children, isDarkMode }) {
+function ReportSection({ title, children, isDarkMode, headerAction }) {
   return (
-    <TableCard title={title} isDarkMode={isDarkMode}>
-      <div className="flex flex-wrap items-center gap-3">{children}</div>
+    <TableCard title={title} isDarkMode={isDarkMode} headerAction={headerAction}>
+      {children}
     </TableCard>
+  );
+}
+
+function ReportActions({
+  onView,
+  onDownload,
+  isDownloading,
+  disabled = false,
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-3">
+      <button
+        type="button"
+        className={secondaryBtnClass}
+        disabled={disabled}
+        onClick={onView}
+      >
+        View
+      </button>
+      <button
+        type="button"
+        className={primaryBtnClass}
+        disabled={disabled || isDownloading}
+        onClick={onDownload}
+      >
+        {isDownloading ? "Downloading..." : "Download"}
+      </button>
+    </div>
   );
 }
 
@@ -62,7 +90,7 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) 
           if (prev && options.some((option) => option.value === prev)) {
             return prev;
           }
-          return options[0]?.value ?? "";
+          return "";
         });
       } catch (error) {
         if (cancelled) return;
@@ -126,46 +154,36 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) 
     }
   };
 
+  const hasSupplier = Boolean(String(selectedSupplier ?? "").trim());
+
   return (
     <div className="space-y-6">
-      <ReportSection title="Project Report" isDarkMode={isDarkMode}>
-        <button
-          type="button"
-          className={secondaryBtnClass}
-          onClick={() => handleViewReport(PROJECT_REPORT_TYPES.PROJECT)}
-        >
-          View
-        </button>
-        <button
-          type="button"
-          className={primaryBtnClass}
-          disabled={downloadingType === PROJECT_REPORT_TYPES.PROJECT}
-          onClick={() => handleDownloadReport(PROJECT_REPORT_TYPES.PROJECT)}
-        >
-          {downloadingType === PROJECT_REPORT_TYPES.PROJECT ? "Downloading..." : "Download"}
-        </button>
-      </ReportSection>
+      <ReportSection
+        title="Project Report"
+        isDarkMode={isDarkMode}
+        headerAction={
+          <ReportActions
+            onView={() => handleViewReport(PROJECT_REPORT_TYPES.PROJECT)}
+            onDownload={() => handleDownloadReport(PROJECT_REPORT_TYPES.PROJECT)}
+            isDownloading={downloadingType === PROJECT_REPORT_TYPES.PROJECT}
+          />
+        }
+      />
 
-      <ReportSection title="Prescreen Report" isDarkMode={isDarkMode}>
-        <button
-          type="button"
-          className={secondaryBtnClass}
-          onClick={() => handleViewReport(PROJECT_REPORT_TYPES.PRESCREEN)}
-        >
-          View
-        </button>
-        <button
-          type="button"
-          className={primaryBtnClass}
-          disabled={downloadingType === PROJECT_REPORT_TYPES.PRESCREEN}
-          onClick={() => handleDownloadReport(PROJECT_REPORT_TYPES.PRESCREEN)}
-        >
-          {downloadingType === PROJECT_REPORT_TYPES.PRESCREEN ? "Downloading..." : "Download"}
-        </button>
-      </ReportSection>
+      <ReportSection
+        title="Prescreen Report"
+        isDarkMode={isDarkMode}
+        headerAction={
+          <ReportActions
+            onView={() => handleViewReport(PROJECT_REPORT_TYPES.PRESCREEN)}
+            onDownload={() => handleDownloadReport(PROJECT_REPORT_TYPES.PRESCREEN)}
+            isDownloading={downloadingType === PROJECT_REPORT_TYPES.PRESCREEN}
+          />
+        }
+      />
 
       <ReportSection title="Supplier Report" isDarkMode={isDarkMode}>
-        <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
           <label className="admin-text flex min-w-0 flex-1 flex-col gap-2 text-sm font-semibold sm:max-w-xs">
             <span>Select Supplier</span>
             <SearchableSelect
@@ -183,31 +201,20 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) 
               aria-label="Select supplier"
             />
           </label>
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              className={secondaryBtnClass}
-              onClick={() =>
-                handleViewReport(PROJECT_REPORT_TYPES.SUPPLIER, {
-                  supplierId: selectedSupplier,
-                })
-              }
-            >
-              View
-            </button>
-            <button
-              type="button"
-              className={primaryBtnClass}
-              disabled={downloadingType === PROJECT_REPORT_TYPES.SUPPLIER}
-              onClick={() =>
-                handleDownloadReport(PROJECT_REPORT_TYPES.SUPPLIER, {
-                  supplierId: selectedSupplier,
-                })
-              }
-            >
-              {downloadingType === PROJECT_REPORT_TYPES.SUPPLIER ? "Downloading..." : "Download"}
-            </button>
-          </div>
+          <ReportActions
+            disabled={!hasSupplier}
+            onView={() =>
+              handleViewReport(PROJECT_REPORT_TYPES.SUPPLIER, {
+                supplierId: selectedSupplier,
+              })
+            }
+            onDownload={() =>
+              handleDownloadReport(PROJECT_REPORT_TYPES.SUPPLIER, {
+                supplierId: selectedSupplier,
+              })
+            }
+            isDownloading={downloadingType === PROJECT_REPORT_TYPES.SUPPLIER}
+          />
         </div>
       </ReportSection>
     </div>

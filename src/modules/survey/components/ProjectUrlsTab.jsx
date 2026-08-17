@@ -52,10 +52,12 @@ import {
 } from "../utils/projectUrlFormValidation";
 import { PROJECT_URL_VIEW_IDS } from "../utils/surveyDetailsNavigation";
 import { dedupeSelectOptions } from "../utils/dedupeSelectOptions";
+import { applyPrefillSingleLinkUrls } from "../utils/surveyLinkPlaceholders";
 import {
   SectionDivider,
   primaryBtnClass,
   secondaryBtnClass,
+  StatusBadge,
 } from "./surveyDetailsShared";
 
 const PROJECT_URL_LIST_COLUMNS = [
@@ -172,6 +174,16 @@ function getAddRouteFormState(projectFk) {
     initialSnapshot: cloneProjectUrlForm(nextForm),
     pendingDelete: null,
   };
+}
+
+function withGeneratedProjectUrlCode(form, code) {
+  const nextCode = String(code ?? "").trim();
+  const nextForm = { ...form, projectUrlCode: nextCode };
+  if (!nextCode) return nextForm;
+  if (normalizeProjectLinkType(nextForm.projectLinkType) === "Multi Link") {
+    return nextForm;
+  }
+  return applyPrefillSingleLinkUrls(nextForm, nextCode);
 }
 
 function getRouteFormState(projectFk, urlView) {
@@ -314,9 +326,9 @@ function ProjectUrlsTab({
       try {
         const code = await generateProjectUrlCode(projectFk);
         if (cancelled) return;
-        setForm((prev) => ({ ...prev, projectUrlCode: code }));
+        setForm((prev) => withGeneratedProjectUrlCode(prev, code));
         setInitialSnapshot((prev) =>
-          prev ? { ...prev, projectUrlCode: code } : prev
+          prev ? withGeneratedProjectUrlCode(prev, code) : prev
         );
       } catch (error) {
         if (!cancelled) {
@@ -373,24 +385,28 @@ function ProjectUrlsTab({
           try {
             const code = await generateProjectUrlCode(projectFk);
             if (cancelled) return;
-            formWithCode = { ...normalized, projectUrlCode: code };
+            formWithCode = withGeneratedProjectUrlCode(normalized, code);
           } catch (error) {
             if (!cancelled) toastApiError(error);
           } finally {
             if (!cancelled) setIsGeneratingUrlCode(false);
           }
+        } else if (
+          normalizeProjectLinkType(normalized.projectLinkType) !== "Multi Link"
+        ) {
+          formWithCode = applyPrefillSingleLinkUrls(normalized, existingCode);
         }
 
         if (cancelled) return;
 
         setSelectedUrlId(formWithCode.id ? String(formWithCode.id) : String(urlId));
         setForm(formWithCode);
-        // If a code was just generated, keep the snapshot without it so Save stays enabled.
+        // Keep Save enabled when a code was generated or Live/Test pid was synced.
         setInitialSnapshot(
           cloneProjectUrlForm(
-            !existingCode && formWithCode.projectUrlCode
-              ? normalized
-              : formWithCode
+            areProjectUrlFormsEqual(formWithCode, normalized)
+              ? formWithCode
+              : normalized
           )
         );
         setLoadedEditKey(editKey);
@@ -540,7 +556,12 @@ function ProjectUrlsTab({
 
   const handleLinkTypeChange = (value) => {
     const nextType = normalizeProjectLinkType(value);
-    setForm((prev) => ({ ...prev, projectLinkType: nextType }));
+    setForm((prev) => {
+      const next = { ...prev, projectLinkType: nextType };
+      if (nextType === "Multi Link") return next;
+      const code = String(next.projectUrlCode ?? "").trim();
+      return code ? applyPrefillSingleLinkUrls(next, code) : next;
+    });
     if (nextType !== "Multi Link" && multiUrlCsvFiles.length > 0) {
       setMultiUrlCsvFiles([]);
       setCsvLinkCount(null);
@@ -805,13 +826,15 @@ function ProjectUrlsTab({
       const cloneIsMultiLink = cloneLinkType === "Multi Link";
       const generatedCode = await generateProjectUrlCode(projectFk);
 
-      const payloadForm = {
-        ...sourceForm,
-        id: "",
-        projectUrlCode: generatedCode,
-        projectId: String(projectFk ?? ""),
-        projectLinkType: cloneLinkType,
-      };
+      const payloadForm = withGeneratedProjectUrlCode(
+        {
+          ...sourceForm,
+          id: "",
+          projectId: String(projectFk ?? ""),
+          projectLinkType: cloneLinkType,
+        },
+        generatedCode
+      );
 
       const data = await createProjectUrl(projectFk, payloadForm, {
         isMultiLink: cloneIsMultiLink,
@@ -882,7 +905,7 @@ function ProjectUrlsTab({
           rowIdKey="id"
           actionVariant={canWrite ? "edit-delete" : "view-edit"}
           showDeleteAction={canWrite}
-          statusAsText
+          renderStatus={(row) => <StatusBadge status={row.status || "Open"} />}
           onEdit={canWrite ? openEditForm : undefined}
           onClone={canWrite ? handleCloneRequest : undefined}
           onDelete={canWrite ? handleDeleteRequest : undefined}
@@ -1199,7 +1222,7 @@ function ProjectUrlsTab({
                       setField("liveLink", trimOnBlur(event.target.value));
                       touch("liveLink");
                     }}
-                    placeholder="https://example.com/survey?pid=xxxx&uid=[identifier]"
+                    placeholder="https://samplepolls.com/survey?pid=PROJECT_URL_CODE&uid=XXXX"
                     disabled={!canWrite}
                     aria-invalid={Boolean(showError("liveLink") && errors.liveLink)}
                   />
@@ -1224,7 +1247,7 @@ function ProjectUrlsTab({
                       setField("testLink", trimOnBlur(event.target.value));
                       touch("testLink");
                     }}
-                    placeholder="https://example.com/survey?pid=xxxx&uid=[identifier]"
+                    placeholder="https://samplepolls.com/survey?pid=PROJECT_URL_CODE&uid=XXXX"
                     disabled={!canWrite}
                     aria-invalid={Boolean(showError("testLink") && errors.testLink)}
                   />

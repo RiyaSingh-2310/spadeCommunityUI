@@ -10,6 +10,12 @@ export const SURVEY_LINK_PLACEHOLDER_TOKENS = Object.freeze([
   "XXXX",
 ]);
 
+/** Default UID token used in pre-filled Single Link Live/Test URLs. */
+export const DEFAULT_SURVEY_LINK_UID_PLACEHOLDER = "XXXX";
+
+const DEFAULT_SURVEY_LINK_ORIGIN = "https://samplepolls.com";
+const DEFAULT_SURVEY_LINK_PATH = "/survey";
+
 const PID_PARAM_NAMES = ["pid"];
 const UID_PARAM_NAMES = ["uid"];
 
@@ -96,6 +102,84 @@ export function readPidUidFromUrl(value) {
  */
 export function hasSupportedSurveyLinkPlaceholder(value) {
   return readPidUidFromUrl(value).uidIsPlaceholder;
+}
+
+function getSurveyLinkOrigin() {
+  return DEFAULT_SURVEY_LINK_ORIGIN;
+}
+
+/**
+ * Build a Single Link Live/Test URL with pid = Project URL Code and a supported UID placeholder.
+ * Does not invent a second PID value.
+ * @param {unknown} projectUrlCode
+ * @param {string} [uid]
+ */
+export function buildPrefillSurveyLink(
+  projectUrlCode,
+  uid = DEFAULT_SURVEY_LINK_UID_PLACEHOLDER
+) {
+  const pid = coerceText(projectUrlCode);
+  if (!pid) return "";
+
+  try {
+    const url = new URL(DEFAULT_SURVEY_LINK_PATH, getSurveyLinkOrigin());
+    url.searchParams.set("pid", pid);
+    url.searchParams.set(
+      "uid",
+      isSupportedUidPlaceholder(uid) ? coerceText(uid) : DEFAULT_SURVEY_LINK_UID_PLACEHOLDER
+    );
+    return url.toString();
+  } catch {
+    const safeUid = isSupportedUidPlaceholder(uid)
+      ? coerceText(uid)
+      : DEFAULT_SURVEY_LINK_UID_PLACEHOLDER;
+    return `${getSurveyLinkOrigin()}${DEFAULT_SURVEY_LINK_PATH}?pid=${encodeURIComponent(pid)}&uid=${encodeURIComponent(safeUid)}`;
+  }
+}
+
+/**
+ * Set pid to the Project URL Code on an existing survey link.
+ * Keeps the current UID (or adds the supported placeholder when missing).
+ * Empty urls become a full pre-filled Live/Test link.
+ * @param {unknown} url
+ * @param {unknown} projectUrlCode
+ */
+export function withSurveyLinkPid(url, projectUrlCode) {
+  const pid = coerceText(projectUrlCode);
+  const trimmed = coerceText(url);
+  if (!pid) return trimmed;
+  if (!trimmed) return buildPrefillSurveyLink(pid);
+
+  const parsed = parseAbsoluteUrl(trimmed);
+  if (!parsed) return trimmed;
+
+  const pidParam = getQueryParamIgnoreCase(parsed.searchParams, PID_PARAM_NAMES);
+  parsed.searchParams.set(pidParam.key || "pid", pid);
+
+  const uidParam = getQueryParamIgnoreCase(parsed.searchParams, UID_PARAM_NAMES);
+  if (!uidParam.key) {
+    parsed.searchParams.set("uid", DEFAULT_SURVEY_LINK_UID_PLACEHOLDER);
+  }
+
+  return parsed.toString();
+}
+
+/**
+ * Prefill Single Link live/test fields with pid = Project URL Code.
+ * Does not change Multi Link forms. Existing URLs keep their structure; only pid is synced.
+ * @param {object} form
+ * @param {unknown} [projectUrlCode]
+ */
+export function applyPrefillSingleLinkUrls(form, projectUrlCode) {
+  if (!form || typeof form !== "object") return form;
+  const code = coerceText(projectUrlCode ?? form.projectUrlCode);
+  if (!code) return form;
+
+  return {
+    ...form,
+    liveLink: withSurveyLinkPid(form.liveLink, code),
+    testLink: withSurveyLinkPid(form.testLink, code),
+  };
 }
 
 /**

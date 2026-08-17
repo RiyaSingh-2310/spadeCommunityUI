@@ -45,6 +45,7 @@ function ModuleListingPage({
   rows = [],
   showStatus = true,
   statusAsText = false,
+  renderStatus = null,
   actionVariant = "edit-delete",
   showDeleteAction = true,
   pageSize: initialPageSize = DEFAULT_PAGE_SIZE,
@@ -464,7 +465,7 @@ function ModuleListingPage({
           tableColumns,
           renderExpandedContent,
           dataCellProps: buildListingDataCellProps({
-            rowIdKey, renderCheckboxCell, showStatus, rfq, effectiveStatusAsText,
+            rowIdKey, renderCheckboxCell, showStatus, rfq, renderStatus, effectiveStatusAsText,
             formatStatusDisplay, statusColumnClass, statusDropdownOptions, allowWrite,
             isDarkMode, onStatusChange, setInternalData, effectiveStatusToggle,
             compactStatusColumn, allowRead, onView, actionVariant, readOnlyListingActions,

@@ -152,14 +152,17 @@ export function FilterCheckbox({ label, checked, isDarkMode }) {
 
 export function StatusBadge({ status }) {
   const label = formatStatusLabel(status);
-  const isActive = label === "Active";
+  const key = String(label).trim().toLowerCase();
+  const isPositive = key === "active" || key === "open";
+  const isClosed = key === "closed" || key === "close";
+  const toneClass = isPositive
+    ? "bg-[var(--admin-success-text)]/15 text-[var(--admin-success-text)]"
+    : isClosed
+      ? "bg-[var(--admin-danger-text)]/15 text-[var(--admin-danger-text)]"
+      : "bg-[var(--admin-warning-text)]/15 text-[var(--admin-warning-text)]";
   return (
     <span
-      className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-semibold ${
-        isActive
-          ? "bg-[var(--admin-success-text)]/15 text-[var(--admin-success-text)]"
-          : "bg-[var(--admin-warning-text)]/15 text-[var(--admin-warning-text)]"
-      }`}
+      className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-semibold ${toneClass}`}
     >
       {label}
     </span>
