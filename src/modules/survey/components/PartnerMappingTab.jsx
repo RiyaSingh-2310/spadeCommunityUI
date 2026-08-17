@@ -251,14 +251,22 @@ function mergeRedirects(preferred, fallback) {
   };
 }
 
-const EMPTY_MULTI_LINK_STATS = {
-  totalMultiLinks: 0,
-  remainingMultiLinks: 0,
-  completedSurveyCount: 0,
-  sampleSize: 0,
-  sampleAdded: 0,
-  addPartner: true,
-};
+function MappingStat({ label, value, emphasize = false, align = "left" }) {
+  return (
+    <div className={align === "right" ? "sm:text-right" : undefined}>
+      <p className="admin-text-muted text-xs font-medium uppercase tracking-wide">
+        {label}
+      </p>
+      <p
+        className={`mt-1 font-semibold ${
+          emphasize ? "text-[var(--admin-danger-text)]" : "admin-text"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
 
 function PartnerMappingTab({
   projectId,
@@ -276,7 +284,8 @@ function PartnerMappingTab({
   /** Explicit selection only — never auto-pick the first URL. */
   const [selectedProjectUrlId, setSelectedProjectUrlId] = useState("");
   const [rows, setRows] = useState([]);
-  const [multiLinkStats, setMultiLinkStats] = useState(EMPTY_MULTI_LINK_STATS);
+  const [multiLinkStats, setMultiLinkStats] = useState(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState("add");
@@ -290,6 +299,7 @@ function PartnerMappingTab({
   const mappingTableRef = useRef(null);
   const pendingJumpToAddFormRef = useRef(false);
   const pendingJumpToMappingRef = useRef(false);
+  const statsRequestIdRef = useRef(0);
 
   const selectedProjectUrl = useMemo(
     () =>
@@ -323,11 +333,6 @@ function PartnerMappingTab({
     sampleSize,
     assignedQuota,
     excludedQuota: editingQuota,
-  });
-  const remainingForNewPartners = getAvailablePartnerQuota({
-    sampleSize,
-    assignedQuota,
-    excludedQuota: 0,
   });
 
   const openPartnerUrl = useCallback(({ partnerUrl, isTest = false }) => {
@@ -383,29 +388,47 @@ function PartnerMappingTab({
   }, [projectUrls, selectedProjectUrlId]);
 
   const loadMultiLinkStats = useCallback(async () => {
+    const requestId = statsRequestIdRef.current + 1;
+    statsRequestIdRef.current = requestId;
+
     if (!projectId || !resolvedProjectUrlId) {
-      setMultiLinkStats(EMPTY_MULTI_LINK_STATS);
-      return EMPTY_MULTI_LINK_STATS;
+      setMultiLinkStats(null);
+      setIsLoadingStats(false);
+      return null;
     }
 
+    setIsLoadingStats(true);
+    setMultiLinkStats(null);
     try {
-      const stats = await getProjectMultiLinkStats(projectId, resolvedProjectUrlId);
+      const stats = await getProjectMultiLinkStats(
+        projectId,
+        resolvedProjectUrlId
+      );
+      if (statsRequestIdRef.current !== requestId) return stats;
       setMultiLinkStats(stats);
       return stats;
-    } catch {
-      setMultiLinkStats(EMPTY_MULTI_LINK_STATS);
-      return EMPTY_MULTI_LINK_STATS;
+    } catch (error) {
+      if (statsRequestIdRef.current !== requestId) return null;
+      toastApiError(error);
+      setMultiLinkStats(null);
+      return null;
+    } finally {
+      if (statsRequestIdRef.current === requestId) {
+        setIsLoadingStats(false);
+      }
     }
   }, [projectId, resolvedProjectUrlId]);
 
   const loadMappings = useCallback(async () => {
     if (!projectId || !resolvedProjectUrlId) {
       setRows([]);
-      setMultiLinkStats(EMPTY_MULTI_LINK_STATS);
+      setMultiLinkStats(null);
+      setIsLoadingStats(false);
       return;
     }
 
     setIsLoading(true);
+    setMultiLinkStats(null);
     try {
       const [records] = await Promise.all([
         listSupplierMappings({
@@ -421,7 +444,7 @@ function PartnerMappingTab({
     } catch (error) {
       toastApiError(error);
       setRows([]);
-      setMultiLinkStats(EMPTY_MULTI_LINK_STATS);
+      setMultiLinkStats(null);
     } finally {
       setIsLoading(false);
     }
@@ -621,7 +644,7 @@ function PartnerMappingTab({
 
   const openAddForm = async () => {
     if (!allowWrite || !resolvedProjectUrlId || !selectedUrlEligible) return;
-    if (sampleSize != null && (remainingForNewPartners ?? 0) <= 0) return;
+    if (!multiLinkStats?.addPartner) return;
     pendingJumpToAddFormRef.current = true;
     setShowForm(true);
     setFormMode("add");
@@ -938,16 +961,12 @@ function PartnerMappingTab({
 
   const canSubmit =
     isFormValid(errors) && !isSubmitting && !isFormLoading && selectedUrlEligible;
-  const quotaFullyAllocated =
-    sampleSize != null &&
-    remainingForNewPartners != null &&
-    remainingForNewPartners <= 0;
   const showAddPartner =
     allowWrite &&
     resolvedProjectUrlId &&
     selectedUrlEligible &&
-    (!isMultiLink || multiLinkStats.addPartner) &&
-    !quotaFullyAllocated;
+    !isLoadingStats &&
+    Boolean(multiLinkStats?.addPartner);
 
   if (isLoadingUrls) {
     return (
@@ -1119,28 +1138,42 @@ function PartnerMappingTab({
                 ) : null
               }
               footer={
-                <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-3 text-sm">
-                  {isMultiLink ? (
-                    <>
-                      <div>
-                        <p className="admin-text-muted text-xs font-medium uppercase tracking-wide">
-                          Remaining Multi Links
-                        </p>
-                        <p className="mt-1 font-semibold text-[var(--admin-danger-text)]">
-                          {multiLinkStats.remainingMultiLinks}
-                        </p>
-                      </div>
-                      <div className="sm:text-right">
-                        <p className="admin-text-muted text-xs font-medium uppercase tracking-wide">
-                          Completed Surveys
-                        </p>
-                        <p className="admin-text mt-1 font-semibold">
-                          {multiLinkStats.completedSurveyCount}
-                        </p>
-                      </div>
-                    </>
-                  ) : null}
-                </div>
+                isLoadingStats ? (
+                  <div className="admin-text flex items-center gap-2 text-sm">
+                    <Loader2 size={16} className="animate-spin" />
+                    Loading project URL stats...
+                  </div>
+                ) : !multiLinkStats ? (
+                  <p className="admin-text-muted text-sm">
+                    Unable to load Project URL stats.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-3 text-sm">
+                    <MappingStat
+                      label="Sample Size"
+                      value={multiLinkStats.sampleSize}
+                    />
+                    <MappingStat
+                      label="Quota Added"
+                      value={multiLinkStats.quotasAdded}
+                    />
+                    <MappingStat
+                      label="Remaining Quota"
+                      value={multiLinkStats.remainingQuota}
+                      emphasize={Number(multiLinkStats.remainingQuota) <= 0}
+                    />
+                    <MappingStat
+                      label="Remaining Multi Links"
+                      value={multiLinkStats.remainingMultiLinks}
+                      emphasize
+                    />
+                    <MappingStat
+                      label="Completed Surveys"
+                      value={multiLinkStats.completedSurveyCount}
+                      // align="right"
+                    />
+                  </div>
+                )
               }
             />
           )}

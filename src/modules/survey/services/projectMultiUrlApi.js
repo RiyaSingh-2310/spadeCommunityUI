@@ -119,8 +119,21 @@ export function mapMultiLinkStats(raw = {}) {
     sampleSize: toNumber(
       source?.sampleSize ?? source?.sample_size
     ),
+    quotasAdded: toNumber(
+      source?.quotasAdded ??
+        source?.quotaAdded ??
+        source?.quotas_added ??
+        source?.samplesAdded ??
+        source?.sample_added ??
+        source?.sampleAdded
+    ),
+    remainingQuota: toNumber(
+      source?.remainingQuota ?? source?.remaining_quota
+    ),
     sampleAdded: toNumber(
-      source?.samplesAdded ??
+      source?.quotasAdded ??
+        source?.quotaAdded ??
+        source?.samplesAdded ??
         source?.sample_added ??
         source?.sampleAdded
     ),
