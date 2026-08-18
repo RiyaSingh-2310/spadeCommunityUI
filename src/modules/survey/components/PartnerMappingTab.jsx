@@ -17,6 +17,7 @@ import { getAdminInputClass } from "../../shared/utils/formStyles";
 import {
   DEFAULT_DECIMAL_PLACES,
   getDecimalPlacesError,
+  sanitizeDecimal,
 } from "../../shared/utils/numericInputUtils";
 import { getOptionalUrlError, isFormValid } from "../../shared/utils/validation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
@@ -63,6 +64,7 @@ import {
 
 const PARTNER_MAPPING_LIST_SECTION_ID = "partner-mapping-list";
 const ADD_PARTNER_SECTION_ID = "add-partner";
+const PARTNER_MAPPING_CPI_MAX_LENGTH = 6;
 
 const TABLE_COLUMNS = [
   "#",
@@ -266,6 +268,28 @@ function MappingStat({ label, value, emphasize = false, align = "left" }) {
       </p>
     </div>
   );
+}
+
+function sanitizePartnerMappingCpi(raw) {
+  return sanitizeDecimal(raw, DEFAULT_DECIMAL_PLACES).slice(
+    0,
+    PARTNER_MAPPING_CPI_MAX_LENGTH
+  );
+}
+
+function getPartnerMappingCpiError(value) {
+  const decimalError = getDecimalPlacesError(value, "CPI", {
+    required: true,
+    maxDecimals: DEFAULT_DECIMAL_PLACES,
+  });
+  if (decimalError) return decimalError;
+
+  const trimmed = String(value ?? "").trim();
+  if (trimmed.length > PARTNER_MAPPING_CPI_MAX_LENGTH) {
+    return `CPI must be at most ${PARTNER_MAPPING_CPI_MAX_LENGTH} characters`;
+  }
+
+  return "";
 }
 
 function PartnerMappingTab({
@@ -608,10 +632,7 @@ function PartnerMappingTab({
       availableQuota,
     });
     {
-      const cpiError = getDecimalPlacesError(form.cpi, "CPI", {
-        required: true,
-        maxDecimals: DEFAULT_DECIMAL_PLACES,
-      });
+      const cpiError = getPartnerMappingCpiError(form.cpi);
       if (cpiError) next.cpi = cpiError;
     }
 
@@ -1248,10 +1269,14 @@ function PartnerMappingTab({
                       className={inputClass}
                       value={form.cpi}
                       onChange={(value) =>
-                        setForm((prev) => ({ ...prev, cpi: value }))
+                        setForm((prev) => ({
+                          ...prev,
+                          cpi: sanitizePartnerMappingCpi(value),
+                        }))
                       }
                       onBlur={() => touch("cpi")}
                       decimalPlaces={DEFAULT_DECIMAL_PLACES}
+                      maxLength={PARTNER_MAPPING_CPI_MAX_LENGTH}
                       disabled={isSubmitting}
                       aria-invalid={Boolean(showError("cpi") && errors.cpi)}
                     />
