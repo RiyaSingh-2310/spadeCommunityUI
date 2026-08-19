@@ -19,9 +19,13 @@ import {
   getDecimalPlacesError,
   sanitizeDecimal,
 } from "../../shared/utils/numericInputUtils";
-import { getOptionalUrlError, isFormValid } from "../../shared/utils/validation";
+import { isFormValid } from "../../shared/utils/validation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { mapPartnersToSelectOptions } from "../services/surveyApi";
+import {
+  getOptionalRedirectUrlPidUidError,
+  withRedirectUrlPid,
+} from "../utils/surveyLinkPlaceholders";
 import {
   buildSupplierMappingApiPayload,
   appendIsTestToPartnerUrl,
@@ -81,35 +85,45 @@ const REDIRECT_FIELDS = [
   {
     key: "complete",
     label: "Complete",
-    example: "https://www.google.com?uid={identifier}",
+    path: "/redirect/complete",
+    example:
+      "https://spade-community.com/redirect/complete?pid=PROJECT_URL_CODE&uid=identifier",
     copySuccessMessage: "Complete URL copied",
     copyLabel: "Copy Complete URL",
   },
   {
     key: "terminate",
     label: "Terminate",
-    example: "https://www.google.com?uid={identifier}",
+    path: "/redirect/terminate",
+    example:
+      "https://spade-community.com/redirect/terminate?pid=PROJECT_URL_CODE&uid=identifier",
     copySuccessMessage: "Terminate URL copied",
     copyLabel: "Copy Terminate URL",
   },
   {
     key: "overQuota",
     label: "Over Quota",
-    example: "https://www.google.com?uid={identifier}",
+    path: "/redirect/overquota",
+    example:
+      "https://spade-community.com/redirect/overquota?pid=PROJECT_URL_CODE&uid=identifier",
     copySuccessMessage: "Over Quota URL copied",
     copyLabel: "Copy Over Quota URL",
   },
   {
     key: "qualityTerm",
     label: "Quality Term",
-    example: "https://www.google.com?uid={identifier}",
+    path: "/redirect/qualityterm",
+    example:
+      "https://spade-community.com/redirect/qualityterm?pid=PROJECT_URL_CODE&uid=identifier",
     copySuccessMessage: "Quality Term URL copied",
     copyLabel: "Copy Quality Term URL",
   },
   {
     key: "surveyClose",
     label: "Survey Close",
-    example: "https://www.google.com?uid={identifier}",
+    path: "/redirect/surveyclose",
+    example:
+      "https://spade-community.com/redirect/surveyclose?pid=PROJECT_URL_CODE&uid=identifier",
     copySuccessMessage: "Survey Close URL copied",
     copyLabel: "Copy Survey Close URL",
   },
@@ -167,7 +181,8 @@ function redirectsFromProjectUrl(projectUrl) {
     };
   }
 
-  return {
+  const projectUrlCode = String(projectUrl.projectUrlCode ?? "").trim();
+  const redirects = {
     complete: normalizeRedirectUrlValue(projectUrl.redirectComplete),
     terminate: normalizeRedirectUrlValue(projectUrl.redirectTerminate),
     overQuota: normalizeRedirectUrlValue(projectUrl.redirectOverQuota),
@@ -175,6 +190,24 @@ function redirectsFromProjectUrl(projectUrl) {
     surveyClose: normalizeRedirectUrlValue(projectUrl.redirectSurveyClose),
     postbackUrl: "",
   };
+
+  return applyProjectUrlPidToRedirects(redirects, projectUrlCode);
+}
+
+function applyProjectUrlPidToRedirects(redirects, projectUrlCode) {
+  const pid = String(projectUrlCode ?? "").trim();
+  if (!pid || !redirects || typeof redirects !== "object") return redirects;
+
+  return Object.fromEntries(
+    Object.entries(redirects).map(([key, value]) => {
+      if (key === "postbackUrl") return [key, value];
+      const field = REDIRECT_FIELDS.find((item) => item.key === key);
+      return [
+        key,
+        withRedirectUrlPid(value, pid, field?.path ?? ""),
+      ];
+    })
+  );
 }
 
 /**
@@ -637,7 +670,7 @@ function PartnerMappingTab({
     }
 
     REDIRECT_FIELDS.forEach((field) => {
-      next[field.key] = getOptionalUrlError(
+      next[field.key] = getOptionalRedirectUrlPidUidError(
         form.redirects[field.key] ?? "",
         field.label
       );
@@ -709,6 +742,10 @@ function PartnerMappingTab({
       setForm({
         ...mapped,
         partnerRedirectUrl: String(row.partnerUrl ?? mapped.partnerRedirectUrl ?? "").trim(),
+        redirects: applyProjectUrlPidToRedirects(
+          mapped.redirects,
+          selectedProjectUrl?.projectUrlCode
+        ),
       });
     } catch (error) {
       toastApiError(error);
@@ -759,7 +796,10 @@ function PartnerMappingTab({
               : ""
           ),
         // Partner API values take priority; Project URL fills any gaps.
-        redirects: mergeRedirects(partnerRedirects, projectUrlRedirects),
+        redirects: applyProjectUrlPidToRedirects(
+          mergeRedirects(partnerRedirects, projectUrlRedirects),
+          selectedProjectUrl?.projectUrlCode
+        ),
         quota:
           mapped.panelSize && mapped.panelSize !== "—"
             ? capQuotaToAvailable(mapped.panelSize, availableQuota)
@@ -769,7 +809,10 @@ function PartnerMappingTab({
       // Keep Project URL / panel-sizes defaults when partner detail is unavailable.
       setForm((prev) => ({
         ...prev,
-        redirects: mergeRedirects(projectUrlRedirects, prev.redirects),
+        redirects: applyProjectUrlPidToRedirects(
+          mergeRedirects(projectUrlRedirects, prev.redirects),
+          selectedProjectUrl?.projectUrlCode
+        ),
       }));
     }
   };

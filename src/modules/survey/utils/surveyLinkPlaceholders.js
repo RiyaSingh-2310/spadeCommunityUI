@@ -15,6 +15,8 @@ export const DEFAULT_SURVEY_LINK_UID_PLACEHOLDER = "XXXX";
 
 const DEFAULT_SURVEY_LINK_ORIGIN = "https://samplepolls.com";
 const DEFAULT_SURVEY_LINK_PATH = "/survey";
+const DEFAULT_REDIRECT_ORIGIN = "https://spade-community.com";
+const DEFAULT_REDIRECT_UID_PLACEHOLDER = "identifier";
 
 const PID_PARAM_NAMES = ["pid"];
 const UID_PARAM_NAMES = ["uid"];
@@ -165,6 +167,54 @@ export function withSurveyLinkPid(url, projectUrlCode) {
 }
 
 /**
+ * Build a redirect URL with pid + supported uid placeholder.
+ * @param {string} path
+ * @param {unknown} projectUrlCode
+ * @param {string} [uid]
+ */
+export function buildPrefillRedirectUrl(
+  path,
+  projectUrlCode,
+  uid = DEFAULT_REDIRECT_UID_PLACEHOLDER
+) {
+  const pid = coerceText(projectUrlCode);
+  const redirectPath = String(path ?? "").trim();
+  if (!pid || !redirectPath) return "";
+
+  const safeUid = isSupportedUidPlaceholder(uid)
+    ? coerceText(uid)
+    : DEFAULT_REDIRECT_UID_PLACEHOLDER;
+
+  try {
+    const url = new URL(redirectPath, DEFAULT_REDIRECT_ORIGIN);
+    url.searchParams.set("pid", pid);
+    url.searchParams.set("uid", safeUid);
+    return url.toString();
+  } catch {
+    const normalizedPath = redirectPath.startsWith("/")
+      ? redirectPath
+      : `/${redirectPath}`;
+    return `${DEFAULT_REDIRECT_ORIGIN}${normalizedPath}?pid=${encodeURIComponent(pid)}&uid=${encodeURIComponent(safeUid)}`;
+  }
+}
+
+/**
+ * Ensure pid is present on a redirect URL. Empty values become a full pre-filled URL.
+ * @param {unknown} url
+ * @param {unknown} projectUrlCode
+ * @param {string} [fallbackPath]
+ */
+export function withRedirectUrlPid(url, projectUrlCode, fallbackPath = "") {
+  const pid = coerceText(projectUrlCode);
+  const trimmed = coerceText(url);
+  if (!pid) return trimmed;
+  if (!trimmed) {
+    return fallbackPath ? buildPrefillRedirectUrl(fallbackPath, pid) : "";
+  }
+  return withSurveyLinkPid(trimmed, pid);
+}
+
+/**
  * Prefill Single Link live/test fields with pid = Project URL Code.
  * Does not change Multi Link forms. Existing URLs keep their structure; only pid is synced.
  * @param {object} form
@@ -211,6 +261,17 @@ export function getSurveyLinkPlaceholderError(value, label = "Link") {
   }
 
   return "";
+}
+
+/**
+ * Validates optional redirect URLs for pid + supported uid placeholder.
+ * @param {unknown} value
+ * @param {string} label
+ */
+export function getOptionalRedirectUrlPidUidError(value, label = "URL") {
+  const trimmed = coerceText(value);
+  if (!trimmed) return "";
+  return getSurveyLinkPlaceholderError(trimmed, label);
 }
 
 /**

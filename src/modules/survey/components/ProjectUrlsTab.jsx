@@ -42,6 +42,7 @@ import {
   getProjectUrlFormErrors,
   isProjectUrlFormValid,
   normalizeProjectUrlFormForState,
+  applyPrefillProjectUrlRedirects,
   PROJECT_URL_CPI_MAX_DECIMALS,
   PROJECT_URL_FORM_FIELDS,
   PROJECT_URL_NUMERIC_MAX_DIGITS,
@@ -178,12 +179,13 @@ function getAddRouteFormState(projectFk) {
 
 function withGeneratedProjectUrlCode(form, code) {
   const nextCode = String(code ?? "").trim();
-  const nextForm = { ...form, projectUrlCode: nextCode };
+  let nextForm = { ...form, projectUrlCode: nextCode };
   if (!nextCode) return nextForm;
-  if (normalizeProjectLinkType(nextForm.projectLinkType) === "Multi Link") {
-    return nextForm;
+  nextForm = applyPrefillProjectUrlRedirects(nextForm, nextCode);
+  if (normalizeProjectLinkType(nextForm.projectLinkType) !== "Multi Link") {
+    nextForm = applyPrefillSingleLinkUrls(nextForm, nextCode);
   }
-  return applyPrefillSingleLinkUrls(nextForm, nextCode);
+  return nextForm;
 }
 
 function getRouteFormState(projectFk, urlView) {
@@ -391,10 +393,11 @@ function ProjectUrlsTab({
           } finally {
             if (!cancelled) setIsGeneratingUrlCode(false);
           }
-        } else if (
-          normalizeProjectLinkType(normalized.projectLinkType) !== "Multi Link"
-        ) {
-          formWithCode = applyPrefillSingleLinkUrls(normalized, existingCode);
+        } else {
+          formWithCode = applyPrefillProjectUrlRedirects(normalized, existingCode);
+          if (normalizeProjectLinkType(normalized.projectLinkType) !== "Multi Link") {
+            formWithCode = applyPrefillSingleLinkUrls(formWithCode, existingCode);
+          }
         }
 
         if (cancelled) return;
@@ -557,10 +560,15 @@ function ProjectUrlsTab({
   const handleLinkTypeChange = (value) => {
     const nextType = normalizeProjectLinkType(value);
     setForm((prev) => {
-      const next = { ...prev, projectLinkType: nextType };
-      if (nextType === "Multi Link") return next;
+      let next = { ...prev, projectLinkType: nextType };
       const code = String(next.projectUrlCode ?? "").trim();
-      return code ? applyPrefillSingleLinkUrls(next, code) : next;
+      if (code) {
+        next = applyPrefillProjectUrlRedirects(next, code);
+        if (nextType !== "Multi Link") {
+          next = applyPrefillSingleLinkUrls(next, code);
+        }
+      }
+      return next;
     });
     if (nextType !== "Multi Link" && multiUrlCsvFiles.length > 0) {
       setMultiUrlCsvFiles([]);

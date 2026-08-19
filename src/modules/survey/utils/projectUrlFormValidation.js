@@ -5,9 +5,11 @@ import {
   getDecimalPlacesError,
 } from "../../shared/utils/numericInputUtils";
 import {
+  buildPrefillRedirectUrl,
   getSurveyLinkPlaceholderError,
   isSupportedUidPlaceholder,
   readPidUidFromUrl,
+  withRedirectUrlPid,
 } from "./surveyLinkPlaceholders";
 
 export const PROJECT_URL_NUMERIC_MAX_DIGITS = 6;
@@ -41,14 +43,14 @@ export const PROJECT_URL_REDIRECT_FIELDS = [
     label: "Complete URL",
     path: "/redirect/complete",
     example:
-      "https://spade-community.com/redirect/complete?pid=xxxx&uid=[identifier]",
+      "https://spade-community.com/redirect/complete?pid=xxxx&uid=identifier",
   },
   {
     key: "redirectTerminate",
     label: "Terminate URL",
     path: "/redirect/terminate",
     example:
-      "https://spade-community.com/redirect/terminate?pid=xxxx&uid=[identifier]",
+      "https://spade-community.com/redirect/terminate?pid=xxxx&uid=identifier",
   },
   {
     key: "redirectOverQuota",
@@ -57,7 +59,7 @@ export const PROJECT_URL_REDIRECT_FIELDS = [
     /** Accept legacy `/redirect/overquota` URLs already saved in the API. */
     acceptedPaths: ["/redirect/quota-full", "/redirect/overquota"],
     example:
-      "https://spade-community.com/redirect/overquota?pid=xxxx&uid=[identifier]",
+      "https://spade-community.com/redirect/overquota?pid=xxxx&uid=identifier",
   },
   {
     key: "redirectQualityTerm",
@@ -65,7 +67,7 @@ export const PROJECT_URL_REDIRECT_FIELDS = [
     path: "/redirect/qualityterm",
     acceptedPaths: ["/redirect/qualityterm", "/redirect/quality-terminate"],
     example:
-      "https://spade-community.com/redirect/qualityterm?pid=xxxx&uid=[identifier]",
+      "https://spade-community.com/redirect/qualityterm?pid=xxxx&uid=identifier",
   },
   {
     key: "redirectSurveyClose",
@@ -73,15 +75,45 @@ export const PROJECT_URL_REDIRECT_FIELDS = [
     path: "/redirect/surveyclose",
     acceptedPaths: ["/redirect/surveyclose", "/redirect/survey-closed"],
     example:
-      "https://spade-community.com/redirect/surveyclose?pid=xxxx&uid=[identifier]",
+      "https://spade-community.com/redirect/surveyclose?pid=xxxx&uid=identifier",
   },
 ];
 
 /** Default redirect URLs used only when creating a new Project URL. */
-export function getDefaultProjectUrlRedirects() {
+export function getDefaultProjectUrlRedirects(projectUrlCode = "") {
+  const code = String(projectUrlCode ?? "").trim();
+  if (!code) {
+    return Object.fromEntries(
+      PROJECT_URL_REDIRECT_FIELDS.map(({ key, example }) => [key, example])
+    );
+  }
+
   return Object.fromEntries(
-    PROJECT_URL_REDIRECT_FIELDS.map(({ key, example }) => [key, example])
+    PROJECT_URL_REDIRECT_FIELDS.map(({ key, path, acceptedPaths }) => {
+      const redirectPath =
+        Array.isArray(acceptedPaths) && acceptedPaths.length > 0
+          ? acceptedPaths[0]
+          : path;
+      return [key, buildPrefillRedirectUrl(redirectPath, code)];
+    })
   );
+}
+
+/** Sync pid on all Project URL redirect fields using the Project URL Code. */
+export function applyPrefillProjectUrlRedirects(form, projectUrlCode) {
+  if (!form || typeof form !== "object") return form;
+  const code = String(projectUrlCode ?? form.projectUrlCode ?? "").trim();
+  if (!code) return form;
+
+  const next = { ...form };
+  PROJECT_URL_REDIRECT_FIELDS.forEach(({ key, path, acceptedPaths }) => {
+    const redirectPath =
+      Array.isArray(acceptedPaths) && acceptedPaths.length > 0
+        ? acceptedPaths[0]
+        : path;
+    next[key] = withRedirectUrlPid(form[key], code, redirectPath);
+  });
+  return next;
 }
 
 const DIRTY_COMPARE_KEYS = [
