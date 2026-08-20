@@ -2,10 +2,15 @@ import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import {
-  extractListTotalFromResponse,
-  safeMapListItems,
-} from "../../shared/utils/listResponse";
-import { appendListQuery } from "../../shared/utils/listQueryParams";
+  buildDatedExportFilename,
+  downloadCsvExport,
+} from "../../../services/api/csvExport";
+import { extractListTotalFromResponse } from "../../shared/utils/listResponse";
+import {
+  appendListQuery,
+  clampApiListLimit,
+} from "../../shared/utils/listQueryParams";
+import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
 import {
   normalizeProjectReportType,
   PROJECT_REPORT_TYPES,
@@ -32,11 +37,51 @@ function formatCellValue(value) {
   return String(value);
 }
 
+function formatBooleanCell(value) {
+  if (value === true || value === "true") return "true";
+  if (value === false || value === "false") return "false";
+  return formatCellValue(value);
+}
+
+function formatReportDateTime(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString();
+}
+
+function mapReportRows(records, mapRow) {
+  if (!Array.isArray(records)) return [];
+  return records
+    .map((record, index) => {
+      try {
+        return mapRow(record, index);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+function filterRowsBySearch(items, search) {
+  const query = normalizeSearchQuery(search).toLowerCase();
+  if (!query) return items;
+  return items.filter((row) =>
+    Object.values(row).some((value) => String(value ?? "").toLowerCase().includes(query))
+  );
+}
+
+function paginateRows(items, page = 1, limit = 10) {
+  const safeLimit = clampApiListLimit(limit);
+  const parsedPage = Number(page);
+  const safePage = Number.isFinite(parsedPage) && parsedPage > 0 ? Math.floor(parsedPage) : 1;
+  const start = (safePage - 1) * safeLimit;
+  return items.slice(start, start + safeLimit);
+}
+
 function mapSharedSurveyRow(record, index = 0) {
   return {
-    id: String(
-      pickField(record, ["id", "record_id", "client_id", "clientId"]) ?? index + 1
-    ),
+    id: String(pickField(record, ["id", "record_id"]) ?? `row-${index + 1}`),
     supplierId: formatCellValue(
       pickField(record, ["supplier_id", "supplierId", "Supplier_Id", "partner_id"])
     ),
@@ -55,7 +100,7 @@ function mapSharedSurveyRow(record, index = 0) {
       ])
     ),
     status: formatCellValue(pickField(record, ["status", "Status"])),
-    surveyStartDate: formatCellValue(
+    surveyStartDate: formatReportDateTime(
       pickField(record, [
         "survey_start_date",
         "surveyStartDate",
@@ -64,7 +109,7 @@ function mapSharedSurveyRow(record, index = 0) {
         "startDate",
       ])
     ),
-    surveyEndDate: formatCellValue(
+    surveyEndDate: formatReportDateTime(
       pickField(record, [
         "survey_end_date",
         "surveyEndDate",
@@ -93,8 +138,14 @@ function mapSharedSurveyRow(record, index = 0) {
 export function mapProjectReportRow(record, index = 0) {
   return {
     ...mapSharedSurveyRow(record, index),
-    isTextLink: formatCellValue(
-      pickField(record, ["is_text_link", "isTextLink", "Is_Text_Link", "text_link"])
+    isTestLink: formatBooleanCell(
+      pickField(record, [
+        "is_test_link",
+        "isTestLink",
+        "Is_Test_Link",
+        "is_text_link",
+        "isTextLink",
+      ])
     ),
   };
 }
@@ -135,7 +186,7 @@ export function mapPrescreenReportRow(record, index = 0) {
 export function mapSupplierReportRow(record, index = 0) {
   return {
     ...mapSharedSurveyRow(record, index),
-    isTestLink: formatCellValue(
+    isTestLink: formatBooleanCell(
       pickField(record, [
         "is_test_link",
         "isTestLink",
@@ -200,6 +251,28 @@ export async function fetchProjectReportList({
   }
 
   const normalizedType = normalizeProjectReportType(reportType);
+  const mapRow =
+    REPORT_ROW_MAPPERS[normalizedType] ?? REPORT_ROW_MAPPERS[PROJECT_REPORT_TYPES.PROJECT];
+
+  if (normalizedType === PROJECT_REPORT_TYPES.PROJECT) {
+    const data = await apiRequest(API_ROUTES.projectReports.report(resolvedProjectId));
+    assertSuccess(data);
+
+    const records = extractReportRecords(data);
+    const mapped = mapReportRows(records, mapRow);
+    const filtered = filterRowsBySearch(mapped, search);
+    const items = paginateRows(filtered, page, limit);
+
+    return {
+      success: true,
+      items,
+      total: filtered.length,
+      page,
+      limit,
+      projectName: String(data.project_name ?? data.projectName ?? "").trim(),
+    };
+  }
+
   const basePath = API_ROUTES.projects.reportList(resolvedProjectId, normalizedType);
   const url = appendListQuery(basePath, {
     page,
@@ -212,9 +285,7 @@ export async function fetchProjectReportList({
   assertSuccess(data);
 
   const records = extractReportRecords(data);
-  const mapRow =
-    REPORT_ROW_MAPPERS[normalizedType] ?? REPORT_ROW_MAPPERS[PROJECT_REPORT_TYPES.PROJECT];
-  const items = safeMapListItems(records, mapRow);
+  const items = mapReportRows(records, mapRow);
   const total = extractListTotalFromResponse(data, items.length);
 
   return {
@@ -226,20 +297,10 @@ export async function fetchProjectReportList({
   };
 }
 
-function triggerBlobDownload(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
 function buildReportDownloadFilename(reportType, projectId) {
-  const stamp = new Date().toISOString().slice(0, 10);
-  return `${normalizeProjectReportType(reportType)}-report-${projectId}-${stamp}.csv`;
+  return buildDatedExportFilename(
+    `${normalizeProjectReportType(reportType)}-report-${projectId}`
+  );
 }
 
 /**
@@ -260,15 +321,18 @@ export async function downloadProjectReport({
   }
 
   const normalizedType = normalizeProjectReportType(reportType);
+  const defaultFilename = buildReportDownloadFilename(normalizedType, resolvedProjectId);
+
+  if (normalizedType === PROJECT_REPORT_TYPES.PROJECT) {
+    return downloadCsvExport(API_ROUTES.projectReports.exportCsv(resolvedProjectId), {
+      defaultFilename,
+    });
+  }
+
   const basePath = API_ROUTES.projects.reportDownload(resolvedProjectId, normalizedType);
   const url = appendListQuery(basePath, {
     extra: supplierId ? { supplierId: String(supplierId).trim() } : {},
   });
 
-  const blob = await apiRequest(url, { responseType: "blob" });
-  if (!(blob instanceof Blob)) {
-    throw new ApiError("Unable to download report.", null);
-  }
-
-  triggerBlobDownload(blob, buildReportDownloadFilename(normalizedType, resolvedProjectId));
+  return downloadCsvExport(url, { defaultFilename });
 }

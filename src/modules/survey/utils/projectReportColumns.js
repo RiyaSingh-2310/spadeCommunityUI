@@ -13,9 +13,7 @@ export const PROJECT_REPORT_COLUMNS = {
     { key: "ipAddress", label: "IP Address" },
     { key: "country", label: "Country" },
     { key: "city", label: "City" },
-    { key: "isTextLink", label: "Is Text Link" },
-    { key: "device", label: "Device" },
-    { key: "reason", label: "Reason" },
+    { key: "isTestLink", label: "Is Test Link" },
   ],
   [PROJECT_REPORT_TYPES.PRESCREEN]: [
     { key: "slNo", label: "Sl.No." },

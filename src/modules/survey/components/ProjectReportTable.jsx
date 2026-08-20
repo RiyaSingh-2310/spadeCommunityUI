@@ -1,6 +1,7 @@
 import TableCard from "../../../components/admin/TableCard";
 import TableLoadingSkeleton from "../../../components/admin/TableLoadingSkeleton";
 import { ADMIN_TABLE_INNER_CLASS } from "../../shared/utils/tableHelpers";
+import StatusToggle from "../../../components/admin/StatusToggle";
 import { getProjectReportColumns } from "../utils/projectReportColumns";
 import { PROJECT_REPORT_TYPES } from "../utils/projectReportNavigation";
 
@@ -60,11 +61,24 @@ function ProjectReportTable({
                       key={column.key}
                       className={`admin-text text-sm ${
                         column.key === "question" || column.key === "multilinkUrl"
-                          ? "max-w-xs whitespace-normal break-words"
+                          ? "max-w-xs whitespace-normal wrap-break-word"
                           : "whitespace-nowrap"
                       }`}
                     >
-                      {row[column.key]}
+                      {column.key === "isTestLink" ? (
+                        <StatusToggle
+                          checked={
+                            row[column.key] === true ||
+                            String(row[column.key] ?? "").toLowerCase() === "true"
+                          }
+                          readOnly
+                          labelOn="Test"
+                          labelOff="Live"
+                          compact
+                        />
+                      ) : (
+                        row[column.key]
+                      )}
                     </td>
                   ))}
                 </tr>
