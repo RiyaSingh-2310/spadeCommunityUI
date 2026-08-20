@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
+import AdminDatePicker from "../../../components/admin/AdminDatePicker";
 import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
 import FormRadioGroup from "../../../components/admin/FormRadioGroup";
 import NumericInput from "../../../components/admin/NumericInput";
+import RichTextEditor from "../../../components/admin/RichTextEditor";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
@@ -29,8 +31,13 @@ import {
 import {
   getRecontactSurveyFormErrors,
   isRecontactSurveyFormSubmittable,
+  PROJECT_URL_NUMERIC_MAX_DIGITS,
   RECONTACT_SURVEY_FORM_FIELDS,
 } from "../utils/recontactSurveyValidation";
+import {
+  sanitizeProjectUrlDecimal,
+  sanitizeProjectUrlInteger,
+} from "../utils/projectUrlFormValidation";
 
 function FilterCheckbox({ label, checked, onChange, disabled }) {
   return (
@@ -165,11 +172,11 @@ function RecontactSurveyForm({
           </FormField>
 
           <FormField label="LOI (Minutes)" required error={showError("loi")}>
-            <NumericInput
+            <DecimalInput
               className={inputClass}
               placeholder="Enter LOI"
               value={form.loi}
-              onChange={(value) => setField("loi", value)}
+              onChange={(value) => setField("loi", sanitizeProjectUrlDecimal(value))}
               onBlur={() => touch("loi")}
               disabled={fieldDisabled(readOnly, isSubmitting)}
             />
@@ -192,11 +199,11 @@ function RecontactSurveyForm({
           </FormField>
 
           <FormField label="IR (%)" required error={showError("ir")}>
-            <NumericInput
+            <DecimalInput
               className={inputClass}
               placeholder="Enter IR"
               value={form.ir}
-              onChange={(value) => setField("ir", value)}
+              onChange={(value) => setField("ir", sanitizeProjectUrlDecimal(value))}
               onBlur={() => touch("ir")}
               disabled={fieldDisabled(readOnly, isSubmitting)}
             />
@@ -217,7 +224,8 @@ function RecontactSurveyForm({
               className={inputClass}
               placeholder="Enter Sample Size"
               value={form.sampleSize}
-              onChange={(value) => setField("sampleSize", value)}
+              maxLength={PROJECT_URL_NUMERIC_MAX_DIGITS}
+              onChange={(value) => setField("sampleSize", sanitizeProjectUrlInteger(value))}
               onBlur={() => touch("sampleSize")}
               disabled={fieldDisabled(readOnly, isSubmitting)}
             />
@@ -246,7 +254,10 @@ function RecontactSurveyForm({
               className={inputClass}
               placeholder="Enter Respondent Click Quota"
               value={form.respondentClickQuota}
-              onChange={(value) => setField("respondentClickQuota", value)}
+              maxLength={PROJECT_URL_NUMERIC_MAX_DIGITS}
+              onChange={(value) =>
+                setField("respondentClickQuota", sanitizeProjectUrlInteger(value))
+              }
               onBlur={() => touch("respondentClickQuota")}
               disabled={fieldDisabled(readOnly, isSubmitting)}
             />
@@ -257,44 +268,50 @@ function RecontactSurveyForm({
               className={inputClass}
               placeholder="Enter CPI"
               value={form.cpi}
-              onChange={(value) => setField("cpi", value)}
+              onChange={(value) => setField("cpi", sanitizeProjectUrlDecimal(value))}
               onBlur={() => touch("cpi")}
               disabled={fieldDisabled(readOnly, isSubmitting)}
             />
           </FormField>
 
           <FormField label="Start Date" required error={showError("startDate")}>
-            <input
-              type="date"
-              className={inputClass}
+            <AdminDatePicker
               value={form.startDate}
-              onChange={(e) => setField("startDate", e.target.value)}
-              onBlur={() => touch("startDate")}
+              onChange={(value) => {
+                setField("startDate", value);
+                touch("startDate");
+              }}
+              placeholder="Select start date"
               disabled={fieldDisabled(readOnly, isSubmitting)}
+              aria-label="Start date"
             />
           </FormField>
 
           <FormField label="End Date" required error={showError("endDate")}>
-            <input
-              type="date"
-              className={inputClass}
+            <AdminDatePicker
               value={form.endDate}
-              min={form.startDate || undefined}
-              onChange={(e) => setField("endDate", e.target.value)}
-              onBlur={() => touch("endDate")}
+              onChange={(value) => {
+                setField("endDate", value);
+                touch("endDate");
+              }}
+              placeholder="Select end date"
               disabled={fieldDisabled(readOnly, isSubmitting)}
+              aria-label="End date"
             />
           </FormField>
         </div>
 
         <div className="mt-4">
           <FormField label="Project Description">
-            <textarea
-              className={`${inputClass} min-h-[120px] resize-y py-3`}
-              placeholder="Enter Project Description"
+            <RichTextEditor
+              isDarkMode={isDarkMode}
               value={form.description}
-              onChange={(e) => setField("description", e.target.value)}
+              onChange={(value) => setField("description", value)}
+              placeholder="Enter Project Description"
               disabled={fieldDisabled(readOnly, isSubmitting)}
+              initiallyCollapsed
+              height={260}
+              compactHeight={140}
             />
           </FormField>
         </div>
@@ -318,20 +335,29 @@ function RecontactSurveyForm({
 
         {isSingleLink ? (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <FormField label="Live Link" required error={showError("liveUrl")}>
+            <FormField
+              label="Live Link"
+              required
+              error={showError("liveUrl")}
+              hint="Must include PID and a supported UID placeholder (identifier or XXXX)"
+            >
               <input
                 className={inputClass}
-                placeholder="Enter Live Link"
+                placeholder="https://samplepolls.com/survey?pid=PROJECT_URL_CODE&uid=XXXX"
                 value={form.liveUrl}
                 onChange={(e) => setField("liveUrl", e.target.value)}
                 onBlur={() => touch("liveUrl")}
                 disabled={fieldDisabled(readOnly, isSubmitting)}
               />
             </FormField>
-            <FormField label="Test Link" required error={showError("testUrl")}>
+            <FormField
+              label="Test Link"
+              error={showError("testUrl")}
+              hint="Must include PID and a supported UID placeholder (identifier or XXXX)"
+            >
               <input
                 className={inputClass}
-                placeholder="Enter Test Link"
+                placeholder="https://samplepolls.com/survey?pid=PROJECT_URL_CODE&uid=XXXX"
                 value={form.testUrl}
                 onChange={(e) => setField("testUrl", e.target.value)}
                 onBlur={() => touch("testUrl")}

@@ -131,7 +131,7 @@ export const API_ROUTES = {
       `/api/survey/${surveyId}/partners/${partnerId}/allocation`,
     removePartner: (surveyId, partnerId) =>
       `/api/survey/${surveyId}/partners/${partnerId}`,
-    recontactCreate: "/api/survey/recontact/add",
+    recontactCreate: "/api/projects/recontact/add",
     recontactSupplierDetails: (surveyId) =>
       `/api/survey/recontact/${encodeURIComponent(surveyId)}/supplier-details`,
     /** Partner URL gateway — store activity before survey start. */
@@ -168,6 +168,7 @@ export const API_ROUTES = {
     multiUrlCsvTemplate: "/api/projects/multiple-url/csv-template",
     uploadMultiUrls: (id) => `/api/projects/${id}/multiple-url/csv-upload`,
     multiLinkStats: (id) => `/api/projects/${id}/multi-link-stats`,
+    recontactAdd: "/api/projects/recontact/add",
     reportList: (id, reportType) =>
       `/api/projects/${encodeURIComponent(String(id ?? "").trim())}/reports/${encodeURIComponent(String(reportType ?? "").trim())}`,
     reportDownload: (id, reportType) =>

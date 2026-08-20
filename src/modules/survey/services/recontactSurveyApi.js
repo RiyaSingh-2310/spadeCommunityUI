@@ -19,6 +19,15 @@ function resolveNumericId(value) {
   return undefined;
 }
 
+/** Maps form link type to the recontact API enum: SingleLink | MultiLink. */
+function toRecontactProjectLinkType(value) {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "");
+  return normalized === "multilink" || normalized === "multi" ? "MultiLink" : "SingleLink";
+}
+
 export function createEmptyRecontactSurveyForm() {
   return {
     parentSurveyId: "",
@@ -77,22 +86,34 @@ export function mapSurveyToRecontactFormDefaults(survey) {
     return {};
   }
 
+  const referenceProjectId =
+    survey.recordId ?? survey.record_id ?? survey.id ?? survey.project_id;
+
   return {
-    parentSurveyId: survey.id != null ? String(survey.id) : "",
-    client: survey.client_name ?? "",
+    parentSurveyId: referenceProjectId != null ? String(referenceProjectId) : "",
+    client: survey.client_name ?? survey.Clients ?? survey.clientName ?? "",
     projectManager:
-      survey.project_manager_id != null ? String(survey.project_manager_id) : "",
+      survey.project_manager_id != null
+        ? String(survey.project_manager_id)
+        : survey.Project_Manager != null
+          ? String(survey.Project_Manager)
+          : "",
     projectCountry:
-      formatCountryLabel(survey.project_country) !== "—"
-        ? formatCountryLabel(survey.project_country)
-        : (survey.project_country ?? ""),
-    loi: survey.loi != null ? String(survey.loi) : "",
+      formatCountryLabel(survey.project_country ?? survey.country) !== "—"
+        ? formatCountryLabel(survey.project_country ?? survey.country)
+        : (survey.project_country ?? survey.country ?? ""),
+    loi: survey.loi != null ? String(survey.loi) : survey.LOI != null ? String(survey.LOI) : "",
     ir: survey.ir != null ? String(survey.ir) : "",
-    sampleSize: survey.sample_size != null ? String(survey.sample_size) : "",
+    sampleSize:
+      survey.sample_size != null
+        ? String(survey.sample_size)
+        : survey.SampleSize != null
+          ? String(survey.SampleSize)
+          : "",
     currency: survey.currency ?? "",
     cpi: survey.cpi != null ? String(survey.cpi) : "",
-    liveUrl: survey.live_url ?? "",
-    testUrl: survey.test_url ?? "",
+    liveUrl: survey.live_url ?? survey.Live_Link ?? "",
+    testUrl: survey.test_url ?? survey.Test_Link ?? "",
     description: survey.description ?? "",
   };
 }
@@ -142,38 +163,53 @@ export async function getRecontactParentSurvey(surveyId) {
 }
 
 /**
+ * Builds multipart/form-data for POST /api/projects/recontact/add.
+ * @param {ReturnType<typeof createEmptyRecontactSurveyForm>} form
+ */
+export function buildCreateRecontactSurveyFormData(form) {
+  const referenceProjectId = resolveNumericId(form.parentSurveyId);
+  if (referenceProjectId == null) {
+    throw new ApiError("Reference project is required.", null);
+  }
+
+  const projectManagerId = resolveNumericId(form.projectManager);
+  if (projectManagerId == null) {
+    throw new ApiError("Project Manager is required.", null);
+  }
+
+  const projectName = String(form.projectName ?? "").trim();
+  if (!projectName) {
+    throw new ApiError("Project Name is required.", null);
+  }
+
+  const body = new FormData();
+  body.append("reference_project_id", String(referenceProjectId));
+  body.append("Project_Name", projectName);
+  body.append("Project_Manager", String(projectManagerId));
+  body.append("LOI", String(form.loi ?? "").trim());
+  body.append("SampleSize", String(form.sampleSize ?? "").trim());
+  body.append("Project_Link_Type", toRecontactProjectLinkType(form.projectLinkType));
+
+  const isSingleLink = toRecontactProjectLinkType(form.projectLinkType) === "SingleLink";
+  body.append("Live_Link", isSingleLink ? String(form.liveUrl ?? "").trim() : "");
+  body.append("Test_Link", isSingleLink ? String(form.testUrl ?? "").trim() : "");
+
+  return body;
+}
+
+/**
+ * @deprecated Prefer buildCreateRecontactSurveyFormData for the projects recontact API.
  * @param {ReturnType<typeof createEmptyRecontactSurveyForm>} form
  */
 export function buildCreateRecontactSurveyPayload(form) {
-  const payload = {
-    parent_survey_id: resolveNumericId(form.parentSurveyId),
-    project_name: String(form.projectName ?? "").trim(),
-    description: String(form.description ?? ""),
-    loi: Number(form.loi),
-    ir: Number(form.ir),
-    sample_size: Number(form.sampleSize),
-    currency: form.currency,
-    start_date: form.startDate,
-    end_date: form.endDate,
-    cpi: Number(form.cpi),
-  };
-
-  const notes = String(form.notes ?? "").trim();
-  if (notes) payload.notes = notes;
-
-  if (form.projectLinkType === "Single Link") {
-    payload.live_url = String(form.liveUrl ?? "").trim();
-    payload.test_url = String(form.testUrl ?? "").trim();
-  }
-
-  return payload;
+  return buildCreateRecontactSurveyFormData(form);
 }
 
-/** POST /api/survey/recontact/add */
+/** POST /api/projects/recontact/add (multipart/form-data) */
 export async function createRecontactSurvey(form) {
-  const data = await apiRequest(API_ROUTES.survey.recontactCreate, {
+  const data = await apiRequest(API_ROUTES.projects.recontactAdd, {
     method: "POST",
-    body: buildCreateRecontactSurveyPayload(form),
+    body: buildCreateRecontactSurveyFormData(form),
   });
 
   return assertSuccess(data);

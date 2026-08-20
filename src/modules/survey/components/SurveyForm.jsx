@@ -167,7 +167,9 @@ function SurveyForm({
               onChange={(value) => setField("description", value)}
               placeholder="Enter Description"
               disabled={disabled}
-              height={200}
+              height={240}
+              compactHeight={140}
+              initiallyCollapsed
             />
           </FormField>
           <FormField label="Notes">

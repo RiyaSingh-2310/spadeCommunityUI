@@ -333,7 +333,9 @@ function EditGroupSurveyPage({ isDarkMode }) {
                 onChange={(value) => setField("description", value)}
                 placeholder="Enter project description"
                 disabled={fieldDisabled(readOnly, isSubmitting)}
-                height={200}
+                height={240}
+                compactHeight={140}
+                initiallyCollapsed
                 contentKey={`group-survey-${id}`}
               />
             </FormField>

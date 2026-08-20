@@ -1,51 +1,17 @@
 import {
   getDateRangeError,
-  getOptionalUrlError,
   getRequiredError,
   getRequiredMaxLengthError,
   isFormValid,
 } from "../../shared/utils/validation";
+import { getSurveyLinkPlaceholderError } from "./surveyLinkPlaceholders";
 import {
-  DEFAULT_DECIMAL_PLACES,
-  getDecimalPlacesError,
-} from "../../shared/utils/numericInputUtils";
+  getProjectNumericDecimalError,
+  getProjectNumericIntegerError,
+  PROJECT_URL_NUMERIC_MAX_DIGITS,
+} from "./projectUrlFormValidation";
 
-function getPositiveNumberError(value, label) {
-  const trimmed = String(value ?? "").trim();
-  if (!trimmed) {
-    return `${label} is required`;
-  }
-  const num = Number(trimmed);
-  if (!Number.isFinite(num) || num <= 0) {
-    return `${label} must be a valid number greater than 0`;
-  }
-  return "";
-}
-
-function getPositiveDecimalError(value, label) {
-  const placesError = getDecimalPlacesError(value, label, {
-    required: true,
-    maxDecimals: DEFAULT_DECIMAL_PLACES,
-  });
-  if (placesError) return placesError;
-  const num = Number(String(value ?? "").trim());
-  if (!Number.isFinite(num) || num <= 0) {
-    return `${label} must be a valid number greater than 0`;
-  }
-  return "";
-}
-
-function getNonNegativeNumberError(value, label) {
-  const trimmed = String(value ?? "").trim();
-  if (!trimmed) {
-    return `${label} is required`;
-  }
-  const num = Number(trimmed);
-  if (!Number.isFinite(num) || num < 0) {
-    return `${label} must be a valid number`;
-  }
-  return "";
-}
+export { PROJECT_URL_NUMERIC_MAX_DIGITS };
 
 /**
  * @param {ReturnType<import('../services/recontactSurveyApi').createEmptyRecontactSurveyForm>} form
@@ -53,27 +19,31 @@ function getNonNegativeNumberError(value, label) {
 export function getRecontactSurveyFormErrors(form) {
   const isSingleLink = form.projectLinkType === "Single Link";
 
+  const liveUrlError = isSingleLink
+    ? getRequiredError(form.liveUrl, "Live Link") ||
+      getSurveyLinkPlaceholderError(form.liveUrl, "Live Link")
+    : "";
+  const testUrlError = isSingleLink
+    ? getSurveyLinkPlaceholderError(form.testUrl, "Test Link")
+    : "";
+
   const errors = {
     client: getRequiredError(form.client, "Client"),
     projectName: getRequiredMaxLengthError(form.projectName, "Project Name"),
-    loi: getPositiveNumberError(form.loi, "LOI"),
+    loi: getProjectNumericDecimalError(form.loi, "LOI"),
     projectManager: getRequiredError(form.projectManager, "Project Manager"),
-    ir: getPositiveNumberError(form.ir, "IR"),
-    sampleSize: getPositiveNumberError(form.sampleSize, "Sample Size"),
+    ir: getProjectNumericDecimalError(form.ir, "IR"),
+    sampleSize: getProjectNumericIntegerError(form.sampleSize, "Sample Size"),
     currency: getRequiredError(form.currency, "Currency"),
-    respondentClickQuota: getNonNegativeNumberError(
+    respondentClickQuota: getProjectNumericIntegerError(
       form.respondentClickQuota,
       "Respondent Click Quota"
     ),
-    cpi: getPositiveDecimalError(form.cpi, "CPI"),
+    cpi: getProjectNumericDecimalError(form.cpi, "CPI"),
     startDate: getRequiredError(form.startDate, "Start Date"),
     endDate: getRequiredError(form.endDate, "End Date"),
-    liveUrl: isSingleLink
-      ? getOptionalUrlError(form.liveUrl, "Live Link")
-      : "",
-    testUrl: isSingleLink
-      ? getOptionalUrlError(form.testUrl, "Test Link")
-      : "",
+    liveUrl: liveUrlError,
+    testUrl: testUrlError,
     language: form.filters?.preScreen
       ? getRequiredError(form.language, "Language")
       : "",

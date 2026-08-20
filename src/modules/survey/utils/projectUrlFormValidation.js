@@ -199,6 +199,16 @@ function getDecimalFieldError(value, label, { required = true } = {}) {
   return "";
 }
 
+/** Shared integer field error (max 6 digits). */
+export function getProjectNumericIntegerError(value, label, options) {
+  return getIntegerFieldError(value, label, options);
+}
+
+/** Shared decimal field error (max 6 integer digits, max 2 decimals). */
+export function getProjectNumericDecimalError(value, label, options) {
+  return getDecimalFieldError(value, label, options);
+}
+
 /**
  * Validates redirect URLs: domain may vary, but path + pid + uid placeholder must match.
  * pid may be any non-empty value. uid must be identifier or XXXX (case-insensitive).

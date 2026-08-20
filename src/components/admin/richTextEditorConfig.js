@@ -15,34 +15,50 @@ const TINYMCE_PLUGINS = [
   "code",
 ].join(" ");
 
-const TINYMCE_TOOLBAR =
+export const TINYMCE_TOOLBAR_FULL =
   "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist | outdent indent | link | table | tabledelete tableprops tablerowprops tablecellprops | tableinsertrowbefore tableinsertrowafter tabledeleterow | tableinsertcolbefore tableinsertcolafter tabledeletecol | removeformat | fullscreen | htmlEmbed";
+
+/** Compact toolbar for collapsed description editors. */
+export const TINYMCE_TOOLBAR_COMPACT =
+  "bold italic underline strikethrough | alignleft aligncenter alignright alignjustify";
+
+const TINYMCE_TOOLBAR = TINYMCE_TOOLBAR_FULL;
 
 const CONTENT_STYLE =
   "body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; margin: 8px; }";
 
 /**
  * Shared TinyMCE init used by the admin RichTextEditor.
- * @param {{ isDarkMode?: boolean, placeholder?: string, height?: number, onBlur?: () => void }} options
+ * @param {{
+ *   isDarkMode?: boolean,
+ *   placeholder?: string,
+ *   height?: number,
+ *   toolbar?: string,
+ *   resize?: boolean,
+ *   onBlur?: () => void,
+ * }} options
  */
 export function createTinyMceInit({
   isDarkMode = false,
   placeholder = "Enter content...",
   height = 240,
+  toolbar = TINYMCE_TOOLBAR,
+  resize = true,
   onBlur,
 } = {}) {
   return {
     height,
-    menubar: "table",
+    menubar: toolbar === TINYMCE_TOOLBAR_COMPACT ? false : "table",
     branding: false,
     promotion: false,
     statusbar: false,
-    resize: true,
+    resize,
     toolbar_mode: "wrap",
+    auto_focus: false,
     skin: isDarkMode ? "oxide-dark" : "oxide",
     content_css: isDarkMode ? "dark" : "default",
     plugins: TINYMCE_PLUGINS,
-    toolbar: TINYMCE_TOOLBAR,
+    toolbar,
     menu: {
       table: {
         title: "Table",
