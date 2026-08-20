@@ -178,6 +178,10 @@ export const API_ROUTES = {
       `/api/project-reports/${encodeURIComponent(String(id ?? "").trim())}/report`,
     exportCsv: (id) =>
       `/api/project-reports/${encodeURIComponent(String(id ?? "").trim())}/report/export/csv`,
+    supplierReport: (projectId, supplierId) =>
+      `/api/project-reports/${encodeURIComponent(String(projectId ?? "").trim())}/supplier/${encodeURIComponent(String(supplierId ?? "").trim())}`,
+    supplierExportCsv: (projectId, supplierId) =>
+      `/api/project-reports/${encodeURIComponent(String(projectId ?? "").trim())}/supplier/${encodeURIComponent(String(supplierId ?? "").trim())}/export/csv`,
   },
   supplierMapping: {
     list: "/api/supplier-mapping/list",

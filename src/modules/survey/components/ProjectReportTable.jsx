@@ -60,7 +60,9 @@ function ProjectReportTable({
                     <td
                       key={column.key}
                       className={`admin-text text-sm ${
-                        column.key === "question" || column.key === "multilinkUrl"
+                        column.key === "question" ||
+                        column.key === "multilinkUrl" ||
+                        column.key === "multiLinkUrl"
                           ? "max-w-xs whitespace-normal wrap-break-word"
                           : "whitespace-nowrap"
                       }`}

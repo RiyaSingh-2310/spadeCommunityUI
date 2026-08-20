@@ -184,25 +184,47 @@ export function mapPrescreenReportRow(record, index = 0) {
  * @param {number} index
  */
 export function mapSupplierReportRow(record, index = 0) {
+  const partnerId = pickField(record, ["partnerId", "partner_id"]);
+  const partnersIdentifier = pickField(record, [
+    "partnersIdentifier",
+    "partners_identifier",
+    "partnerIdentifier",
+    "partner_identifier",
+  ]);
+
   return {
-    ...mapSharedSurveyRow(record, index),
-    isTestLink: formatBooleanCell(
-      pickField(record, [
-        "is_test_link",
-        "isTestLink",
-        "Is_Test_Link",
-        "is_text_link",
-        "isTextLink",
-      ])
+    id: String(
+      pickField(record, ["id", "record_id"]) ??
+        [partnerId, partnersIdentifier, index + 1].filter((value) => value != null).join("-")
     ),
-    multilinkUrl: formatCellValue(
-      pickField(record, [
-        "multilink_url",
-        "multilinkUrl",
-        "Multilink_URL",
-        "multi_link_url",
-        "multiLinkUrl",
-      ])
+    partnerId: formatCellValue(partnerId),
+    partnerName: formatCellValue(
+      pickField(record, ["partnerName", "partner_name"])
+    ),
+    clientName: formatCellValue(
+      pickField(record, ["clientName", "client_name"])
+    ),
+    partnersIdentifier: formatCellValue(partnersIdentifier),
+    status: formatCellValue(pickField(record, ["status", "Status"])),
+    surveyStartDate: formatReportDateTime(
+      pickField(record, ["surveyStartDate", "survey_start_date"])
+    ),
+    surveyEndDate: formatReportDateTime(
+      pickField(record, ["surveyEndDate", "survey_end_date"])
+    ),
+    loi: formatCellValue(pickField(record, ["LOI", "loi", "loiMinutes", "loi_minutes"])),
+    ipAddress: formatCellValue(
+      pickField(record, ["ipAddress", "ip_address", "IP_Address"])
+    ),
+    geoLocation: formatCellValue(
+      pickField(record, ["geoLocation", "geo_location"])
+    ),
+    isTestLink: formatBooleanCell(
+      pickField(record, ["isTestLink", "is_test_link", "Is_Test_Link"])
+    ),
+    finalIp: formatCellValue(pickField(record, ["finalIp", "final_ip"])),
+    multiLinkUrl: formatCellValue(
+      pickField(record, ["multiLinkUrl", "multilinkUrl", "multi_link_url", "multilink_url"])
     ),
   };
 }
@@ -273,6 +295,32 @@ export async function fetchProjectReportList({
     };
   }
 
+  if (normalizedType === PROJECT_REPORT_TYPES.SUPPLIER) {
+    const resolvedSupplierId = String(supplierId ?? "").trim();
+    if (!resolvedSupplierId) {
+      throw new ApiError("Supplier id is required.", null);
+    }
+
+    const url = appendListQuery(
+      API_ROUTES.projectReports.supplierReport(resolvedProjectId, resolvedSupplierId),
+      { page, limit, search }
+    );
+    const data = await apiRequest(url);
+    assertSuccess(data);
+
+    const records = extractReportRecords(data);
+    const items = mapReportRows(records, mapRow);
+    const total = extractListTotalFromResponse(data, items.length);
+
+    return {
+      success: true,
+      items,
+      total,
+      page: Number(data.page) || page,
+      limit: Number(data.limit) || limit,
+    };
+  }
+
   const basePath = API_ROUTES.projects.reportList(resolvedProjectId, normalizedType);
   const url = appendListQuery(basePath, {
     page,
@@ -327,6 +375,22 @@ export async function downloadProjectReport({
     return downloadCsvExport(API_ROUTES.projectReports.exportCsv(resolvedProjectId), {
       defaultFilename,
     });
+  }
+
+  if (normalizedType === PROJECT_REPORT_TYPES.SUPPLIER) {
+    const resolvedSupplierId = String(supplierId ?? "").trim();
+    if (!resolvedSupplierId) {
+      throw new ApiError("Supplier id is required.", null);
+    }
+
+    return downloadCsvExport(
+      API_ROUTES.projectReports.supplierExportCsv(resolvedProjectId, resolvedSupplierId),
+      {
+        defaultFilename: buildDatedExportFilename(
+          `supplier-report-${resolvedProjectId}-${resolvedSupplierId}`
+        ),
+      }
+    );
   }
 
   const basePath = API_ROUTES.projects.reportDownload(resolvedProjectId, normalizedType);
