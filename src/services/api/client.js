@@ -4,6 +4,7 @@ import { getAuthToken } from "../auth/authStorage";
 import { tryRefreshAuthSession } from "../auth/refreshSession";
 import {
   forceLogoutAfterSessionExpired,
+  isIntentionalLogoutInProgress,
   isSessionExpiredHandled,
   SESSION_EXPIRED_MESSAGE,
 } from "../auth/sessionExpiry";
@@ -209,7 +210,7 @@ export async function apiRequest(path, options = {}) {
     _retriedAfterRefresh = false,
   } = options;
 
-  if (auth && isSessionExpiredHandled()) {
+  if (auth && isSessionExpiredHandled() && !isIntentionalLogoutInProgress()) {
     throw new ApiError(SESSION_EXPIRED_MESSAGE, null, 401, { sessionExpired: true });
   }
 
@@ -271,7 +272,10 @@ export async function apiRequest(path, options = {}) {
         }
       }
 
-      forceLogoutAfterSessionExpired();
+      // Do not force-logout while the user is explicitly signing out.
+      if (!isIntentionalLogoutInProgress()) {
+        forceLogoutAfterSessionExpired();
+      }
       throw new ApiError(SESSION_EXPIRED_MESSAGE, data, 401, { sessionExpired: true });
     }
 

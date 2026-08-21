@@ -10,15 +10,24 @@ import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
 import { LOGIN_ROLES } from "./loginRole";
 import { toastApiSuccess } from "../toast/apiToast";
-import { clearAuthSession } from "./authStorage";
+import toast from "../toast/toast";
+import { clearAuthSession, getAuthToken } from "./authStorage";
 import { mapAuthFlowResponse } from "./mapAuthFlowResponse";
 import { mapLoginResponse } from "./mapLoginResponse";
+import {
+  beginIntentionalLogout,
+  endIntentionalLogout,
+} from "./sessionExpiry";
+import { stopAuthSessionLifecycle } from "./sessionLifecycle";
 
 const AUTH_FLOW_REQUEST_OPTIONS = {
   method: "POST",
   auth: false,
   loginBearer: true,
 };
+
+/** Prevents duplicate Sign Out / idle-logout calls. */
+let logoutInFlight = null;
 
 function logAuthDebug(scope, label, value) {
   if (API_DEBUG) {
@@ -150,14 +159,21 @@ export async function loginAdmin(credentials) {
 
 /**
  * POST /api/admin/logout — blacklists the current Bearer token on the server.
+ * Requires the auth token to still be present in storage when called.
  */
 export async function logoutAdmin() {
   const logoutPath = resolveLogoutRoute();
   const logoutUrl = buildApiUrl(logoutPath);
+  const token = getAuthToken();
 
   logAuthDebug("Logout", "API base URL", API_BASE_URL);
   logAuthDebug("Logout", "Request URL", logoutUrl);
   logAuthDebug("Logout", "Method", "POST");
+  logAuthDebug("Logout", "Has auth token", Boolean(token));
+
+  if (!token) {
+    return { success: false, message: "No auth token available for logout." };
+  }
 
   try {
     const data = await apiRequest(logoutPath, {
@@ -177,23 +193,53 @@ export async function logoutAdmin() {
 }
 
 /**
- * Calls logout API, clears local auth state, shows success toast, and redirects to login.
+ * Calls logout API first, then clears local auth state and redirects to login.
  * @param {(path: string) => void} navigate
+ * @param {{ reason?: "manual" | "inactivity" }} [options]
  */
-export async function performLogout(navigate) {
-  const result = await logoutAdmin();
-  // Close Partner URL tabs immediately (window refs + cross-tab broadcast).
-  notifyPartnerUrlTabsAdminLogout();
-  clearAuthSession();
-  if (result.success) {
-    toastApiSuccess(result);
-  } else if (API_DEBUG) {
-    console.warn(
-      "[Logout] Server logout did not succeed; local session was cleared and user redirected to login.",
-      result.message
-    );
+export async function performLogout(navigate, { reason = "manual" } = {}) {
+  if (logoutInFlight) {
+    return logoutInFlight;
   }
-  navigate("/auth");
+
+  logoutInFlight = (async () => {
+    beginIntentionalLogout();
+    stopAuthSessionLifecycle();
+
+    try {
+      // Must call API while the Bearer token is still in storage.
+      const result = await logoutAdmin();
+
+      notifyPartnerUrlTabsAdminLogout();
+      clearAuthSession();
+
+      if (result.success) {
+        if (reason === "inactivity") {
+          toast.success("You were signed out due to inactivity.");
+        } else {
+          toastApiSuccess(result);
+        }
+      } else if (API_DEBUG) {
+        console.warn(
+          "[Logout] Server logout did not succeed; local session was cleared and user redirected to login.",
+          result.message
+        );
+      }
+
+      if (typeof navigate === "function") {
+        navigate("/auth");
+      } else if (typeof window !== "undefined") {
+        window.location.replace("/auth");
+      }
+
+      return result;
+    } finally {
+      endIntentionalLogout();
+      logoutInFlight = null;
+    }
+  })();
+
+  return logoutInFlight;
 }
 
 /**

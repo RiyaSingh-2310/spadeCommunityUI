@@ -23,7 +23,6 @@ const LIST_COLUMNS = [
   "ID",
   "Name",
   "Email Address",
-  "Mobile Number",
   "Created At",
   "Status",
   "Action",

@@ -9,6 +9,7 @@ import {
   ADMIN_MOBILE_MEDIA_QUERY,
   useMediaQuery,
 } from "../../modules/shared/hooks/useMediaQuery";
+import { useAuthSessionLifecycle } from "../../modules/shared/hooks/useAuthSessionLifecycle";
 import ScrollToTopOnNavigate from "../shared/ScrollToTopOnNavigate";
 import PageErrorBoundary from "../shared/PageErrorBoundary";
 import AdminNavbar from "./AdminNavbar";
@@ -21,6 +22,7 @@ function AdminLayoutContent({ isDarkMode, onToggleTheme }) {
   const isMobile = useMediaQuery(ADMIN_MOBILE_MEDIA_QUERY);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  useAuthSessionLifecycle();
   const { moduleKey, requiresWrite } = getRoutePermissionAccess(location.pathname);
   const hasAccess =
     !moduleKey || (requiresWrite ? canWrite(moduleKey) : canRead(moduleKey));

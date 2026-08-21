@@ -11,13 +11,30 @@ const PENDING_SESSION_EXPIRED_TOAST_KEY = "auth:pending-session-expired-toast";
 /** Blocks further authenticated API calls after forced logout begins. */
 let sessionExpiredHandled = false;
 
+/** True while an intentional Sign Out is in progress (skip duplicate forced logout). */
+let intentionalLogoutInProgress = false;
+
 export function isSessionExpiredHandled() {
   return sessionExpiredHandled;
+}
+
+export function isIntentionalLogoutInProgress() {
+  return intentionalLogoutInProgress;
+}
+
+/** Mark intentional logout so concurrent 401 handlers do not double-redirect. */
+export function beginIntentionalLogout() {
+  intentionalLogoutInProgress = true;
+}
+
+export function endIntentionalLogout() {
+  intentionalLogoutInProgress = false;
 }
 
 /** Resets forced-logout guard after a successful login. */
 export function resetSessionExpiredState() {
   sessionExpiredHandled = false;
+  intentionalLogoutInProgress = false;
 }
 
 /**
@@ -37,7 +54,7 @@ export function consumeSessionExpiredToast() {
  * Safe to call from multiple concurrent 401 handlers — only runs once.
  */
 export function forceLogoutAfterSessionExpired() {
-  if (sessionExpiredHandled) return;
+  if (intentionalLogoutInProgress || sessionExpiredHandled) return;
   sessionExpiredHandled = true;
 
   notifyPartnerUrlTabsAdminLogout();

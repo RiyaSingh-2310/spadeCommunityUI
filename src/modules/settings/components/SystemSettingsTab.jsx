@@ -208,7 +208,7 @@ function SystemSettingsTab({ isDarkMode }) {
             <input
               className={inputClass}
               type="number"
-              min="5"
+              min="10"
               value={form.sessionTimeout}
               onChange={(event) => setField("sessionTimeout", event.target.value)}
             />

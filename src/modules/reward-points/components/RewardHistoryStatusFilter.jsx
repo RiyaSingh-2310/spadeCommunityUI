@@ -3,7 +3,7 @@ import { getAdminInputClass } from "../../shared/utils/formStyles";
 export const REWARD_HISTORY_STATUS_OPTIONS = [
   { value: "all", label: "All" },
   { value: "pending", label: "Pending" },
-  { value: "completed", label: "Completed" },
+  { value: "completed", label: "Approved" },
   { value: "rejected", label: "Rejected" },
 ];
 
