@@ -568,12 +568,6 @@ function PartnerMappingTab({
     [projectUrls]
   );
 
-  const ineligibleProjectUrls = useMemo(
-    () =>
-      projectUrls.filter((url) => !isProjectUrlEligibleForInvite(url.status)),
-    [projectUrls]
-  );
-
   const assignedPartnerIds = useMemo(
     () =>
       new Set(
@@ -1146,23 +1140,6 @@ function PartnerMappingTab({
             </>
           ) : null}
         </div>
-        {ineligibleProjectUrls.length > 0 ? (
-          <div className="mt-4 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-header-search-bg)] px-4 py-3">
-            <p className="admin-text-muted mb-2 text-xs font-medium uppercase tracking-wide">
-              Unavailable for new mapping
-            </p>
-            <ul className="space-y-1 text-sm">
-              {ineligibleProjectUrls.map((url) => (
-                <li key={url.id} className="admin-text">
-                  {formatProjectUrlOptionLabel(url, {
-                    includeLinkType: true,
-                    includeStatus: false,
-                  })}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
       </TableCard>
 
       {!resolvedProjectUrlId ? (
