@@ -12,54 +12,65 @@ const PROJECT_INFORMATION_FIELDS = [
   { key: "clientName", label: "Client Name" },
   { key: "status", label: "Status" },
   { key: "salesManager", label: "Sales Manager" },
-  { key: "projectManagerName", label: "Project Manager Name" },
+  { key: "projectManagerName", label: "Project Manager" },
 ];
 
-const PROJECT_DETAILS_FIELDS = [
+const URL_DETAIL_FIELDS = [
+  { key: "projectLinkType", label: "Link Type" },
   { key: "country", label: "Country" },
   { key: "language", label: "Language" },
   { key: "cpi", label: "CPI" },
   { key: "loi", label: "LOI" },
-  { key: "projectLinkType", label: "Link Type" },
-  { key: "sampleSize", label: "Sample Size" },
-];
-
-const SURVEY_STATISTICS_FIELDS = [
-  { key: "urlCount", label: "URL Count" },
   { key: "completed", label: "Completed" },
-  { key: "terminated", label: "Terminated" },
+  { key: "terminated", label: "Terminate" },
+  { key: "sampleSize", label: "Sample Size" },
+  { key: "quotaAdded", label: "Quota Added" },
   { key: "remainingQuota", label: "Remaining Quota" },
 ];
 
-const PROJECT_DATES_FIELDS = [
-  { key: "startDate", label: "Start Date" },
-  { key: "endDate", label: "End Date" },
-  { key: "updatedDate", label: "Updated Date" },
+const OVERALL_SUMMARY_FIELDS = [
+  { key: "completed", label: "Total Completed" },
+  { key: "terminated", label: "Total Terminated" },
+  { key: "sampleSize", label: "Total Sample Size" },
+  { key: "quotaAdded", label: "Total Quota Added" },
+  { key: "remainingQuota", label: "Remaining Quota" },
+  { key: "quotaFull", label: "Quota Full" },
 ];
 
 function InfoRow({ label, value }) {
   const display = value == null || String(value).trim() === "" ? "—" : value;
   return (
-    <div className="grid grid-cols-1 gap-0.5 py-1.5 sm:grid-cols-[9rem_minmax(0,1fr)] sm:items-start sm:gap-x-4">
+    <div className="min-w-0">
       <dt className="admin-text-muted text-xs font-medium">{label}</dt>
-      <dd className="admin-text min-w-0 wrap-break-word text-sm font-medium">
+      <dd className="admin-text mt-0.5 wrap-break-word text-sm font-medium">
         {display}
       </dd>
     </div>
   );
 }
 
-function InfoSection({ title, fields }) {
+function InfoCard({ title, subtitle, fields, columns = 1 }) {
   if (!fields.length) return null;
 
+  const gridClass =
+    columns === 2
+      ? "grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2"
+      : "grid grid-cols-2 gap-y-2.5";
+
   return (
-    <section className="rounded-xl border border-[var(--admin-header-surface-border)] px-3 py-2.5 sm:px-4">
+    <section
+      className="rounded-xl border px-3 py-3 sm:px-4"
+      style={{ borderColor: "var(--admin-header-surface-border)" }}
+    >
       {title ? (
-        <h3 className="admin-text-muted mb-1 text-xs font-semibold uppercase tracking-wide">
-          {title}
-        </h3>
+        <div className="mb-3">
+          <h3 className="admin-text text-sm font-semibold">{title}</h3>
+          {subtitle ? (
+            <p className="admin-text-muted mt-0.5 text-xs">{subtitle}</p>
+          ) : null}
+        </div>
       ) : null}
-      <dl>
+      <dl className={gridClass}>
         {fields.map((field) => (
           <InfoRow key={field.key} label={field.label} value={field.value} />
         ))}
@@ -68,7 +79,14 @@ function InfoSection({ title, fields }) {
   );
 }
 
-function ProjectUrlInfoModal({ isOpen, onClose, isDarkMode, projectId, projectName }) {
+function withValues(source, fields) {
+  return fields.map((field) => ({
+    ...field,
+    value: source?.[field.key] ?? "—",
+  }));
+}
+
+function ProjectUrlInfoModal({ isOpen, onClose, isDarkMode, projectId }) {
   const [summary, setSummary] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -112,16 +130,7 @@ function ProjectUrlInfoModal({ isOpen, onClose, isDarkMode, projectId, projectNa
 
   if (!isOpen) return null;
 
-  const withValues = (fields) =>
-    fields.map((field) => ({
-      ...field,
-      value: summary?.[field.key] ?? "—",
-    }));
-
-  const informationFields = withValues(PROJECT_INFORMATION_FIELDS);
-  const detailFields = withValues(PROJECT_DETAILS_FIELDS);
-  const statisticFields = withValues(SURVEY_STATISTICS_FIELDS);
-  const dateFields = withValues(PROJECT_DATES_FIELDS);
+  const urls = Array.isArray(summary?.urls) ? summary.urls : [];
 
   return (
     <div className="admin-modal-overlay fixed inset-0 z-[250] flex items-center justify-center p-3 sm:p-4">
@@ -139,14 +148,12 @@ function ProjectUrlInfoModal({ isOpen, onClose, isDarkMode, projectId, projectNa
         data-theme-mode={isDarkMode ? "dark" : "light"}
       >
         <div
-          className="flex shrink-0 items-start justify-between gap-3 border-b px-4 py-3.5 sm:px-5"
+          className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3.5 sm:px-5"
           style={{ borderColor: "var(--admin-header-surface-border)" }}
         >
-          <div className="min-w-0">
-            <h2 id="project-url-info-title" className="admin-text text-lg font-bold">
-              Project Information
-            </h2>
-          </div>
+          <h2 id="project-url-info-title" className="admin-text text-lg font-bold">
+            Project Information
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -169,10 +176,33 @@ function ProjectUrlInfoModal({ isOpen, onClose, isDarkMode, projectId, projectNa
             </p>
           ) : summary ? (
             <div className="space-y-3">
-              <InfoSection fields={informationFields} />
-              <InfoSection title="Project Details" fields={detailFields} />
-              <InfoSection title="Survey Statistics" fields={statisticFields} />
-              {/* <InfoSection title="Project Dates" fields={dateFields} /> */}
+              <InfoCard
+                fields={withValues(summary.project, PROJECT_INFORMATION_FIELDS)}
+              />
+
+              {urls.length ? (
+                urls.map((url, index) => (
+                  <InfoCard
+                    key={url.id}
+                    title={`Project URL ${index + 1}`}
+                    fields={withValues(url, URL_DETAIL_FIELDS)}
+                    columns={2}
+                  />
+                ))
+              ) : (
+                <p className="admin-text-muted rounded-xl border px-4 py-5 text-center text-sm"
+                  style={{ borderColor: "var(--admin-header-surface-border)" }}
+                >
+                  No Project URLs found for this project.
+                </p>
+              )}
+
+              <InfoCard
+                title="Overall Project Summary"
+                subtitle="Combined totals across all Project URLs"
+                fields={withValues(summary.totals, OVERALL_SUMMARY_FIELDS)}
+                columns={2}
+              />
             </div>
           ) : (
             <p className="admin-text-muted py-10 text-center text-sm">

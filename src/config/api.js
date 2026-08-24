@@ -151,6 +151,7 @@ export const API_ROUTES = {
     list: "/api/projects/list",
     create: "/api/projects/add",
     byId: (id) => `/api/projects/${id}`,
+    summary: (id) => `/api/projects/${id}/summary`,
     update: (id) => `/api/projects/${id}`,
     updateStatus: (id) => `/api/projects/${id}/status`,
     delete: (id) => `/api/projects/${id}`,
