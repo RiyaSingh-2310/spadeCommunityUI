@@ -71,6 +71,7 @@ export function hasNativeReadOnlyListingActions({
   onFindUser,
   onUserSurveyData,
   onSurveyClone,
+  onProjectUrlInfo,
   onPdfDownload,
   onApprove,
   onReject,
@@ -85,12 +86,19 @@ export function hasNativeReadOnlyListingActions({
     return false;
   }
 
-  if (actionVariant === "view-edit" && onView && !onFindUser && !onUserSurveyData && !onSurveyClone) {
+  if (
+    actionVariant === "view-edit" &&
+    onView &&
+    !onFindUser &&
+    !onUserSurveyData &&
+    !onSurveyClone &&
+    !onProjectUrlInfo
+  ) {
     return Boolean(onView);
   }
 
   if (mode === "survey-read") {
-    return Boolean(onView || onFindUser || onUserSurveyData);
+    return Boolean(onView || onFindUser || onUserSurveyData || onProjectUrlInfo);
   }
 
   if (mode === "group-survey-view") {
@@ -113,8 +121,8 @@ export function hasNativeReadOnlyListingActions({
     return Boolean(onView || onRewardLog || onDownload);
   }
 
-  if (actionVariant === "view-edit" && (onFindUser || onUserSurveyData || onSurveyClone)) {
-    return Boolean(onView || onFindUser || onUserSurveyData);
+  if (actionVariant === "view-edit" && (onFindUser || onUserSurveyData || onSurveyClone || onProjectUrlInfo)) {
+    return Boolean(onView || onFindUser || onUserSurveyData || onProjectUrlInfo);
   }
 
   if (actionVariant === "pdf-download") {
@@ -153,6 +161,7 @@ export function shouldShowListingActionColumn({
   onFindUser,
   onUserSurveyData,
   onSurveyClone,
+  onProjectUrlInfo,
   onClone,
   onCopy,
   onPdfDownload,
@@ -195,6 +204,7 @@ export function shouldShowListingActionColumn({
         onFindUser ||
         onUserSurveyData ||
         onSurveyClone ||
+        onProjectUrlInfo ||
         onClone ||
         onCopy ||
         onPdfDownload ||
@@ -220,6 +230,7 @@ export function shouldShowListingActionColumn({
     onFindUser,
     onUserSurveyData,
     onSurveyClone,
+    onProjectUrlInfo,
     onPdfDownload,
     onApprove,
     onReject,

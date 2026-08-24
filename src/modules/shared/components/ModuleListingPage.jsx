@@ -63,6 +63,7 @@ function ModuleListingPage({
   onFindUser,
   onUserSurveyData,
   onSurveyClone,
+  onProjectUrlInfo,
   onClone,
   onCopy,
   onAddProject,
@@ -245,6 +246,7 @@ function ModuleListingPage({
     onFindUser,
     onUserSurveyData,
     onSurveyClone,
+    onProjectUrlInfo,
     onPdfDownload,
     onApprove,
     onReject,
@@ -315,6 +317,7 @@ function ModuleListingPage({
       onFindUser,
       onUserSurveyData,
       onSurveyClone,
+      onProjectUrlInfo,
       onClone,
       onCopy,
       onPdfDownload,
@@ -334,7 +337,7 @@ function ModuleListingPage({
   }, [
     safeColumns, filterColumns, permissionModule, actionVariant, allowRead, allowWrite,
     onView, onEdit, onDelete, editPath, showDeleteAction, onManagePermissions, onFindUser,
-    onUserSurveyData, onSurveyClone, onClone, onCopy, onPdfDownload, onApprove, onReject,
+    onUserSurveyData, onSurveyClone, onProjectUrlInfo, onClone, onCopy, onPdfDownload, onApprove, onReject,
     onListProjects, onAddLog, onViewLogs, onRewardLog, onDownload, hasActionColumn,
   ]);
 
@@ -472,7 +475,7 @@ function ModuleListingPage({
             listingReadMode, communityUser, groupSurveyProjects, userMgmtActions,
             canShowEdit, canShowDelete, canShowManagePermissions, editPath, showDeleteAction,
             onEdit, onDelete, onManagePermissions, onFindUser, onUserSurveyData, onSurveyClone,
-            onClone, onCopy, onPdfDownload, onApprove, onReject, onAddProject, onListProjects,
+            onProjectUrlInfo, onClone, onCopy, onPdfDownload, onApprove, onReject, onAddProject, onListProjects,
             onAddLog, onViewLogs, onRewardLog, onResendEmail, onDownload, surveyActionLabels,
             handleEdit, handleDeleteRequest, hasProfileImageColumn, nameAsText, nowrapAllCells,
             descriptionMaxLines,

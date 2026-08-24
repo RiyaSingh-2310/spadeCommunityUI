@@ -36,6 +36,7 @@ function ModuleListingActionCell({
   onFindUser,
   onUserSurveyData,
   onSurveyClone,
+  onProjectUrlInfo,
   onClone,
   onCopy,
   onPdfDownload,
@@ -173,7 +174,8 @@ function ModuleListingActionCell({
   }
 
   if (actionVariant === "view-edit") {
-    const useSurveyActions = onFindUser || onUserSurveyData || onSurveyClone;
+    const useSurveyActions =
+      onFindUser || onUserSurveyData || onSurveyClone || onProjectUrlInfo;
 
     if (!allowWrite && onView && !useSurveyActions) {
       return (
@@ -201,6 +203,9 @@ function ModuleListingActionCell({
           allowRead && onUserSurveyData ? () => onUserSurveyData(row, globalIdx) : undefined
         }
         onSurveyClone={allowWrite && onSurveyClone ? () => onSurveyClone(row, globalIdx) : undefined}
+        onProjectUrlInfo={
+          allowRead && onProjectUrlInfo ? () => onProjectUrlInfo(row, globalIdx) : undefined
+        }
         labels={surveyActionLabels}
       />
     ) : (

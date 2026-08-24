@@ -37,6 +37,7 @@ export function buildListingDataCellProps(ctx) {
     onFindUser: ctx.onFindUser,
     onUserSurveyData: ctx.onUserSurveyData,
     onSurveyClone: ctx.onSurveyClone,
+    onProjectUrlInfo: ctx.onProjectUrlInfo,
     onClone: ctx.onClone,
     onCopy: ctx.onCopy,
     onPdfDownload: ctx.onPdfDownload,

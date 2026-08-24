@@ -9,6 +9,7 @@ import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { cloneSurvey, getRecords, updateSurveyStatus } from "../services/surveyApi";
+import ProjectUrlInfoModal from "../components/ProjectUrlInfoModal";
 
 const CLONE_CONFIRM_CLASS =
   "admin-btn-primary flex h-10 cursor-pointer items-center justify-center gap-2 px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60";
@@ -18,6 +19,7 @@ function SurveyPage({ isDarkMode }) {
   useFlashMessage();
   const [cloneTarget, setCloneTarget] = useState(null);
   const [isCloning, setIsCloning] = useState(false);
+  const [infoTarget, setInfoTarget] = useState(null);
   const {
     rows,
     setRows,
@@ -153,6 +155,10 @@ function SurveyPage({ isDarkMode }) {
           if (row?.recordId == null || isCloning) return;
           setCloneTarget(row);
         }}
+        onProjectUrlInfo={(row) => {
+          if (row?.recordId == null) return;
+          setInfoTarget(row);
+        }}
         onStatusToggle={handleStatusToggle}
         permissionModule="survey"
         isLoading={isLoading}
@@ -169,6 +175,14 @@ function SurveyPage({ isDarkMode }) {
         onPaginationPageSizeChange={handlePageSizeChange}
         showPagination
         nowrapAllCells
+      />
+
+      <ProjectUrlInfoModal
+        isOpen={Boolean(infoTarget)}
+        onClose={() => setInfoTarget(null)}
+        isDarkMode={isDarkMode}
+        projectId={infoTarget?.recordId}
+        projectName={infoTarget?.projectName}
       />
 
       <DeleteConfirmModal

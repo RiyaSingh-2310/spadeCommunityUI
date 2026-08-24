@@ -1,4 +1,4 @@
-import { Copy, Eye, LayoutDashboard, Pencil, UserRound } from "lucide-react";
+import { Copy, Eye, Info, LayoutDashboard, Pencil, UserRound } from "lucide-react";
 
 function ActionIconButton({ label, onClick, disabled = false, children }) {
   return (
@@ -21,10 +21,11 @@ function SurveyListingActions({
   onFindUser,
   onUserSurveyData,
   onSurveyClone,
+  onProjectUrlInfo,
   labels = {},
 }) {
   const hasAny =
-    onView || onEdit || onFindUser || onUserSurveyData || onSurveyClone;
+    onView || onEdit || onFindUser || onUserSurveyData || onSurveyClone || onProjectUrlInfo;
 
   if (!hasAny) return null;
 
@@ -33,6 +34,7 @@ function SurveyListingActions({
   const findUserLabel = labels.findUser ?? "Find User";
   const userSurveyDataLabel = labels.userSurveyData ?? "User Survey Data";
   const surveyCloneLabel = labels.surveyClone ?? "Survey Clone";
+  const infoLabel = labels.projectUrlInfo ?? "Project URL Info";
 
   return (
     <div className="flex flex-nowrap items-center justify-end gap-1 whitespace-nowrap">
@@ -59,6 +61,18 @@ function SurveyListingActions({
       {onSurveyClone && (
         <ActionIconButton label={surveyCloneLabel} onClick={onSurveyClone}>
           <Copy size={16} strokeWidth={2} />
+        </ActionIconButton>
+      )}
+      {onProjectUrlInfo && (
+        <ActionIconButton
+          label={infoLabel}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onProjectUrlInfo(event);
+          }}
+        >
+          <Info size={16} strokeWidth={2} />
         </ActionIconButton>
       )}
     </div>

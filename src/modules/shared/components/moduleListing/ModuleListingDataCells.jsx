@@ -64,6 +64,7 @@ function ModuleListingDataCells({
   onFindUser,
   onUserSurveyData,
   onSurveyClone,
+  onProjectUrlInfo,
   onClone,
   onCopy,
   onPdfDownload,
@@ -260,6 +261,7 @@ function ModuleListingDataCells({
           onFindUser={onFindUser}
           onUserSurveyData={onUserSurveyData}
           onSurveyClone={onSurveyClone}
+          onProjectUrlInfo={onProjectUrlInfo}
           onClone={onClone}
           onCopy={onCopy}
           onPdfDownload={onPdfDownload}

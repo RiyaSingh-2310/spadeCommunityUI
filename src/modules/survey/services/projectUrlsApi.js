@@ -839,6 +839,7 @@ export async function listProjectUrlsByProject(projectId) {
       return {
         success: true,
         data: rawRows.map((row) => mapApiUrlInfoToForm(row, projectId, null)),
+        records: rawRows,
       };
     } catch (listError) {
       // Fallback: project details payload may still include urlInfo.
@@ -848,6 +849,7 @@ export async function listProjectUrlsByProject(projectId) {
         return {
           success: true,
           data: urlInfo.map((row) => mapApiUrlInfoToForm(row, projectId, record)),
+          records: urlInfo,
           project: mapSurveyToProjectDetails(record),
         };
       } catch {
@@ -857,9 +859,11 @@ export async function listProjectUrlsByProject(projectId) {
   }
 
   await delay();
+  const mockRows = listMockProjectUrlsByProjectId(projectId);
   return {
     success: true,
-    data: listMockProjectUrlsByProjectId(projectId),
+    data: mockRows,
+    records: mockRows,
   };
 }
 
