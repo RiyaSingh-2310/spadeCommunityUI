@@ -61,6 +61,17 @@ describe("buildApiUrl", () => {
   it("keeps the invoice PDF contract on GET /api/invoice/:id/pdf", () => {
     expect(API_ROUTES.invoice.downloadPdf("INV-1")).toBe("/api/invoice/INV-1/pdf");
   });
+
+  it("uses the pre-screen response and report contracts", () => {
+    expect(API_ROUTES.survey.prescreenResponse).toBe("/api/survey/prescreenResponse");
+    expect(API_ROUTES.survey.prescreenResponseEnd).toBe("/api/survey/prescreenResponseEnd");
+    expect(API_ROUTES.projectReports.preScreenReport).toBe(
+      "/api/project-reports/pre-screen-report"
+    );
+    expect(API_ROUTES.projectReports.preScreenReportExportCsv).toBe(
+      "/api/project-reports/pre-screen-report/export/csv"
+    );
+  });
 });
 
 describe("API_DEBUG", () => {

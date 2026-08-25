@@ -8,7 +8,6 @@ import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import { getAuthToken } from "../../../services/auth/authStorage";
 import { downloadCsvExport } from "../../../services/api/csvExport";
-import { extractListTotalFromResponse } from "../../shared/utils/listResponse";
 import { clampApiListLimit } from "../../shared/utils/listQueryParams";
 import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
 
@@ -304,12 +303,11 @@ export async function getPreScreenReport({
       )
     : mapped;
   const items = paginateRows(filtered, page, limit);
-  const total = extractListTotalFromResponse(data, filtered.length) || filtered.length;
 
   return {
     success: true,
     items,
-    total: query ? filtered.length : total,
+    total: filtered.length,
     page,
     limit,
   };
