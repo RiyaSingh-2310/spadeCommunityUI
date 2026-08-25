@@ -12,7 +12,8 @@ import {
 
 /**
  * Keeps the admin session alive while the user is active, and signs out after
- * the configured inactivity timeout (minimum 10 minutes).
+ * 7 minutes of genuine inactivity (lastActivityAt). Tab visibility does not
+ * count as activity.
  */
 export function useAuthSessionLifecycle() {
   const navigate = useNavigate();

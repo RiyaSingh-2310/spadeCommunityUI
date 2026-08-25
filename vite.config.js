@@ -68,6 +68,17 @@ export default defineConfig(({ mode }) => {
       },
     },
 
+    esbuild: {
+      jsx: 'automatic',
+    },
+
+    test: {
+      environment: 'jsdom',
+      include: ['src/**/*.test.{js,jsx}'],
+      restoreMocks: true,
+      setupFiles: ['./src/test/setup.js'],
+    },
+
     optimizeDeps: {
       include: ['react', 'react-dom', 'react-router-dom'],
       rollupOptions: {

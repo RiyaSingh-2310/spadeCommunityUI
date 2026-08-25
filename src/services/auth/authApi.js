@@ -30,20 +30,21 @@ const AUTH_FLOW_REQUEST_OPTIONS = {
 let logoutInFlight = null;
 
 function logAuthDebug(scope, label, value) {
-  if (API_DEBUG) {
-    console.log(`[${scope}] ${label}:`, value);
+  if (!API_DEBUG) return;
+  if (value === undefined) {
+    console.info(`[${scope}] ${label}`);
+    return;
   }
+  console.info(`[${scope}] ${label}:`, value);
 }
 
 function logAuthError(scope, error) {
   if (!API_DEBUG) return;
   if (error instanceof ApiError) {
     console.error(`[${scope}] Error status:`, error.status);
-    console.error(`[${scope}] Error message:`, error.message);
-    console.error(`[${scope}] Error data:`, error.data);
     return;
   }
-  console.error(`[${scope}] Unexpected error:`, error);
+  console.error(`[${scope}] Request failed`);
 }
 
 function logLogoutRouteHint(status, logoutPath, logoutUrl) {
@@ -104,7 +105,6 @@ export async function loginAdmin(credentials) {
   logAuthDebug("Login", "API base URL", API_BASE_URL);
   logAuthDebug("Login", "Request URL", url);
   logAuthDebug("Login", "Login role", loginRole);
-  logAuthDebug("Login", "Request payload", { email: payload.email, password: "***" });
 
   let data;
   try {
@@ -116,7 +116,7 @@ export async function loginAdmin(credentials) {
       loginBearer: loginRole === LOGIN_ROLES.SALES,
       body: payload,
     });
-    logAuthDebug("Login", "Response data", data);
+    logAuthDebug("Login", "Response received");
   } catch (error) {
     logAuthError("Login", error);
     const message =
@@ -180,7 +180,7 @@ export async function logoutAdmin() {
       method: "POST",
       skipSessionExpiryOn401: true,
     });
-    logAuthDebug("Logout", "Response data", data);
+    logAuthDebug("Logout", "Response received");
     return assertAuthFlowSuccess(data, "Logged out successfully!");
   } catch (error) {
     logAuthError("Logout", error);
@@ -249,14 +249,13 @@ export async function performLogout(navigate, { reason = "manual" } = {}) {
 export async function forgotPassword(payload) {
   const body = { email: payload.email.trim() };
   logAuthDebug("Forgot Password", "Request URL", buildApiUrl(API_ROUTES.admin.forgotPassword));
-  logAuthDebug("Forgot Password", "Payload", body);
 
   try {
     const data = await apiRequest(API_ROUTES.admin.forgotPassword, {
       ...AUTH_FLOW_REQUEST_OPTIONS,
       body,
     });
-    logAuthDebug("Forgot Password", "Response", data);
+    logAuthDebug("Forgot Password", "Response received");
     return assertAuthFlowSuccess(data, "Failed to send OTP. Please try again.");
   } catch (error) {
     logAuthError("Forgot Password", error);
@@ -274,14 +273,13 @@ export async function verifyOtp(payload) {
     otp: String(payload.otp).trim(),
   };
   logAuthDebug("Verify OTP", "Request URL", buildApiUrl(API_ROUTES.admin.verifyOtp));
-  logAuthDebug("Verify OTP", "Payload", body);
 
   try {
     const data = await apiRequest(API_ROUTES.admin.verifyOtp, {
       ...AUTH_FLOW_REQUEST_OPTIONS,
       body,
     });
-    logAuthDebug("Verify OTP", "Response", data);
+    logAuthDebug("Verify OTP", "Response received");
     return assertAuthFlowSuccess(data, "OTP verification failed. Please try again.");
   } catch (error) {
     logAuthError("Verify OTP", error);
@@ -291,7 +289,6 @@ export async function verifyOtp(payload) {
 
 /**
  * POST /api/admin/reset-password
- * Encrypts new password and confirm password before send.
  * @param {{
  *   email: string,
  *   otp: string,
@@ -320,20 +317,13 @@ export async function resetPassword(payload) {
   };
 
   logAuthDebug("Reset Password", "Request URL", buildApiUrl(API_ROUTES.admin.resetPassword));
-  logAuthDebug("Reset Password", "Payload", {
-    email: body.email,
-    otp: body.otp,
-    password: "***",
-    confirm_password: "***",
-    newPassword: "***",
-  });
 
   try {
     const data = await apiRequest(API_ROUTES.admin.resetPassword, {
       ...AUTH_FLOW_REQUEST_OPTIONS,
       body,
     });
-    logAuthDebug("Reset Password", "Response", data);
+    logAuthDebug("Reset Password", "Response received");
 
     const mapped = mapAuthFlowResponse(data);
     if (!mapped.success) {

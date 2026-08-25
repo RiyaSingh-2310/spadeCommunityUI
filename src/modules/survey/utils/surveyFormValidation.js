@@ -3,26 +3,15 @@ import {
   getRequiredMaxLengthError,
   isFormValid,
 } from "../../shared/utils/validation";
-import { isProjectCodeTaken } from "../data/mockSurveyStore";
 
 /**
  * @param {ReturnType<import('../data/surveyFormData').createEmptySurveyForm>} form
- * @param {{ excludeId?: string|number }} [options]
  */
-export function getSurveyFormErrors(form, options = {}) {
-  const projectCode = String(form.projectCode ?? "").trim();
-  let projectCodeError = getRequiredError(form.projectCode, "Project Code");
-
-  if (!projectCodeError && projectCode) {
-    if (isProjectCodeTaken(projectCode, options.excludeId)) {
-      projectCodeError = "Project Code must be unique";
-    }
-  }
-
+export function getSurveyFormErrors(form) {
   return {
     client: getRequiredError(form.client, "Client"),
     projectName: getRequiredMaxLengthError(form.projectName, "Project Name"),
-    projectCode: projectCodeError,
+    projectCode: getRequiredError(form.projectCode, "Project Code"),
     projectManager: getRequiredError(form.projectManager, "Project Manager"),
     projectLinkType: "",
     status: getRequiredError(form.status, "Status"),
@@ -33,10 +22,9 @@ export function getSurveyFormErrors(form, options = {}) {
 
 /**
  * @param {ReturnType<import('../data/surveyFormData').createEmptySurveyForm>} form
- * @param {{ excludeId?: string|number }} [options]
  */
-export function isSurveyFormSubmittable(form, options = {}) {
-  return isFormValid(getSurveyFormErrors(form, options));
+export function isSurveyFormSubmittable(form) {
+  return isFormValid(getSurveyFormErrors(form));
 }
 
 export const SURVEY_FORM_FIELDS = [

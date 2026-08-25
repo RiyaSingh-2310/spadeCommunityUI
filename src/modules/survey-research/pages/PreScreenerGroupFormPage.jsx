@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
-import { getPreScreenerGroupById } from "../data/mockSurveyResearchData";
+import { SURVEY_RESEARCH_API_UNAVAILABLE_MESSAGE } from "../data/surveyResearchData";
+import { toastApiError } from "../../../services/toast/apiToast";
 
 const EMPTY_FORM = {
   groupName: "",
@@ -13,31 +14,9 @@ const EMPTY_FORM = {
 
 function PreScreenerGroupFormPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const isEdit = Boolean(id);
-  const [isLoading, setIsLoading] = useState(isEdit);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    if (!isEdit) return;
-
-    const timer = window.setTimeout(() => {
-      const record = getPreScreenerGroupById(id);
-      if (record) {
-        setForm({
-          groupName: record.groupName,
-          language: record.language,
-          questionnaireTitle: record.questionnaireTitle,
-          status: record.status,
-          estimatedLoi: record.estimatedLoi,
-        });
-      }
-      setIsLoading(false);
-    }, 400);
-
-    return () => window.clearTimeout(timer);
-  }, [id, isEdit]);
+  const isSaving = false;
 
   const updateField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -45,20 +24,8 @@ function PreScreenerGroupFormPage() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    setIsSaving(true);
-    window.setTimeout(() => {
-      setIsSaving(false);
-      navigate("/survey-research/pre-screener-groups");
-    }, 600);
+    toastApiError(new Error(SURVEY_RESEARCH_API_UNAVAILABLE_MESSAGE));
   };
-
-  if (isLoading) {
-    return (
-      <div className="srp-card p-12 text-center text-sm" style={{ color: "var(--srp-text-muted)" }}>
-        Loading group details...
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">

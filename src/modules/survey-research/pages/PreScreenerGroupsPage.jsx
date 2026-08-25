@@ -4,8 +4,9 @@ import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import PortalDataTable from "../components/PortalDataTable";
 import PortalDrawer from "../components/PortalDrawer";
 import PortalStatusBadge from "../components/PortalStatusBadge";
-import { PRESCREENER_GROUPS } from "../data/mockSurveyResearchData";
+import { PRESCREENER_GROUPS, SURVEY_RESEARCH_API_UNAVAILABLE_MESSAGE } from "../data/surveyResearchData";
 import { usePortalTable } from "../hooks/usePortalTable";
+import { toastApiError } from "../../../services/toast/apiToast";
 
 const TABLE_COLUMNS = [
   { key: "groupName", label: "Group Name", sortable: true },
@@ -22,7 +23,7 @@ const TABLE_COLUMNS = [
 
 function PreScreenerGroupsPage() {
   const navigate = useNavigate();
-  const [rows, setRows] = useState(PRESCREENER_GROUPS);
+  const [rows] = useState(PRESCREENER_GROUPS);
   const [viewTarget, setViewTarget] = useState(null);
   const [isLoading] = useState(false);
 
@@ -37,7 +38,7 @@ function PreScreenerGroupsPage() {
 
   const handleDelete = (row) => {
     if (!window.confirm(`Delete "${row.groupName}"?`)) return;
-    setRows((prev) => prev.filter((item) => item.id !== row.id));
+    toastApiError(new Error(SURVEY_RESEARCH_API_UNAVAILABLE_MESSAGE));
   };
 
   return (

@@ -2,12 +2,6 @@ import { useState } from "react";
 import { Eye, Pencil } from "lucide-react";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import {
-  getSupplierLinksRows,
-  getSupplierMappedLiveRows,
-  getSupplierMappedTestRows,
-  getSupplierMappingRows,
-} from "../data/surveyDetailsData";
-import {
   ReadOnlyUrl,
   SectionDivider,
   StatusBadge,
@@ -19,13 +13,13 @@ import SupplierMappingViewModal from "./SupplierMappingViewModal";
 
 function SupplierMappingTab({ surveyId, isDarkMode }) {
   const { canWrite } = useModulePermission("survey");
-  const [rows, setRows] = useState(() => getSupplierMappingRows());
+  const [rows, setRows] = useState([]);
   const [viewTarget, setViewTarget] = useState(null);
   const [editTarget, setEditTarget] = useState(null);
 
-  const liveRows = getSupplierMappedLiveRows();
-  const testRows = getSupplierMappedTestRows();
-  const linkRows = getSupplierLinksRows();
+  const liveRows = [];
+  const testRows = [];
+  const linkRows = [];
 
   const columns = [
     "S No",

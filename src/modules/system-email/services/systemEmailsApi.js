@@ -70,9 +70,9 @@ export function mapTemplateToDetail(template) {
   };
 }
 
-/** GET /api/system-emails/list */
+/** GET /api/email-templates/list */
 export async function getRecords({ page = 1, limit = 10, search } = {}) {
-  const data = await apiRequest(API_ROUTES.systemEmails.list);
+  const data = await apiRequest(API_ROUTES.emailTemplates.list);
   assertSuccess(data);
 
   const normalizedSearch = normalizeSearchQuery(search);
@@ -90,10 +90,10 @@ export async function getRecords({ page = 1, limit = 10, search } = {}) {
   return { items, total, count: total };
 }
 
-/** GET /api/system-emails/:id */
+/** GET /api/email-templates/:id */
 export async function getRecord(id) {
   const normalizedId = normalizeSystemEmailId(id);
-  const data = await apiRequest(API_ROUTES.systemEmails.byId(normalizedId));
+  const data = await apiRequest(API_ROUTES.emailTemplates.byId(normalizedId));
   assertSuccess(data);
 
   const template = extractTemplateRecord(data);
@@ -104,16 +104,12 @@ export async function getRecord(id) {
   return mapTemplateToDetail(template);
 }
 
-/** PUT /api/system-emails/:id */
+/** PUT /api/email-templates/:id */
 export async function updateRecord(id, payload) {
   const normalizedId = normalizeSystemEmailId(id);
-  const data = await apiRequest(API_ROUTES.systemEmails.byId(normalizedId), {
+  const data = await apiRequest(API_ROUTES.emailTemplates.update(normalizedId), {
     method: "PUT",
-    body: {
-      name: String(payload.name ?? payload.title ?? "").trim(),
-      system_email: String(payload.systemEmail ?? payload.system_email ?? "").trim(),
-      content: String(payload.content ?? payload.description ?? "").trim(),
-    },
+    body: buildTemplateBody(payload),
   });
   assertSuccess(data);
 
@@ -122,4 +118,36 @@ export async function updateRecord(id, payload) {
     ...data,
     template: template ? mapTemplateToDetail(template) : null,
   };
+}
+
+function buildTemplateBody(payload) {
+  return {
+    name: String(payload.name ?? payload.title ?? "").trim(),
+    system_email: String(payload.systemEmail ?? payload.system_email ?? "").trim(),
+    content: String(payload.content ?? payload.description ?? "").trim(),
+  };
+}
+
+/** POST /api/email-templates/add */
+export async function createRecord(payload) {
+  const data = await apiRequest(API_ROUTES.emailTemplates.create, {
+    method: "POST",
+    body: buildTemplateBody(payload),
+  });
+  assertSuccess(data);
+
+  const template = extractTemplateRecord(data);
+  return {
+    ...data,
+    template: template ? mapTemplateToDetail(template) : null,
+  };
+}
+
+/** DELETE /api/email-templates/:id */
+export async function deleteRecord(id) {
+  const normalizedId = normalizeSystemEmailId(id);
+  const data = await apiRequest(API_ROUTES.emailTemplates.delete(normalizedId), {
+    method: "DELETE",
+  });
+  return assertSuccess(data);
 }

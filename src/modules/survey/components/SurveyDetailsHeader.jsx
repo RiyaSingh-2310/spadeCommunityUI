@@ -1,7 +1,7 @@
 import { Loader2 } from "lucide-react";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import { useModulePermission } from "../../permissions/useModulePermission";
-import { PROJECT_STATUS_OPTIONS } from "../data/surveyDetailsData";
+import { PROJECT_STATUS_OPTIONS } from "../data/surveyFormData";
 import { primaryBtnClass, secondaryBtnClass } from "./surveyDetailsShared";
 
 export const SURVEY_DETAIL_TABS = [

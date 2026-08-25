@@ -1,74 +1,63 @@
-import { getSystemSettings } from "../../modules/settings/utils/settingsStorage";
-import { getAuthToken, isAuthenticated } from "./authStorage";
+import { getAuthToken, getRefreshToken, isAuthenticated } from "./authStorage";
 import { getJwtMsUntilExpiry } from "./jwtUtils";
 import { tryRefreshAuthSession } from "./refreshSession";
 
-/** Prefer 10 minutes; never below this for inactivity logout. */
-export const DEFAULT_SESSION_INACTIVITY_MINUTES = 10;
+/** Idle logout after this much time with no genuine user interaction. */
+export const SESSION_INACTIVITY_MINUTES = 7;
+export const SESSION_INACTIVITY_MS = SESSION_INACTIVITY_MINUTES * 60_000;
 
-/** Refresh access token this long before JWT `exp`. */
+/** Refresh access token this long before JWT `exp` (only if a refresh token exists). */
 const REFRESH_BEFORE_EXPIRY_MS = 90_000;
 
-/** How often to re-check token expiry / schedule refresh. */
-const KEEP_ALIVE_TICK_MS = 30_000;
-
-/** Fallback refresh interval when JWT has no readable `exp` but a refresh token may exist. */
-const FALLBACK_REFRESH_INTERVAL_MS = 8 * 60_000;
+/** Avoid decoding JWT / scheduling refresh on every mousemove. */
+const REFRESH_CHECK_THROTTLE_MS = 10_000;
 
 const ACTIVITY_EVENTS = [
   "mousedown",
+  "mouseup",
   "mousemove",
-  "keydown",
-  "scroll",
-  "touchstart",
   "click",
+  "dblclick",
+  "keydown",
+  "keyup",
+  "scroll",
   "wheel",
+  "touchstart",
+  "touchmove",
+  "touchend",
+  "pointerdown",
+  "pointermove",
+  "pointerup",
+  "input",
+  "change",
 ];
 
+const ACTIVITY_LISTENER_OPTIONS = { capture: true, passive: true };
+
 let started = false;
-let keepAliveTimerId = null;
 let refreshTimerId = null;
 let inactivityTimerId = null;
-let lastActivityAt = Date.now();
-let lastFallbackRefreshAt = 0;
+let lastActivityAt = 0;
+let lastRefreshCheckAt = 0;
 let idleLogoutHandler = null;
+let idleLogoutQueued = false;
 let activityBound = null;
-
-/**
- * Inactivity timeout from System Settings (minutes), floored at 10 minutes.
- */
-export function getSessionInactivityTimeoutMs() {
-  const raw = Number(getSystemSettings()?.sessionTimeout);
-  const minutes =
-    Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_SESSION_INACTIVITY_MINUTES;
-  return Math.max(DEFAULT_SESSION_INACTIVITY_MINUTES, minutes) * 60_000;
-}
+let visibilityBound = null;
 
 function clearTimer(id) {
   if (id != null) window.clearTimeout(id);
   return null;
 }
 
-function clearIntervalTimer(id) {
-  if (id != null) window.clearInterval(id);
-  return null;
+function hasRefreshToken() {
+  return Boolean(String(getRefreshToken() ?? "").trim());
 }
 
 async function refreshIfNeeded() {
-  if (!isAuthenticated()) return;
+  if (!isAuthenticated() || !hasRefreshToken()) return;
 
-  const token = getAuthToken();
-  const msUntilExpiry = getJwtMsUntilExpiry(token);
-
-  if (msUntilExpiry == null) {
-    const now = Date.now();
-    if (now - lastFallbackRefreshAt >= FALLBACK_REFRESH_INTERVAL_MS) {
-      lastFallbackRefreshAt = now;
-      await tryRefreshAuthSession();
-    }
-    return;
-  }
-
+  const msUntilExpiry = getJwtMsUntilExpiry(getAuthToken());
+  if (msUntilExpiry == null) return;
   if (msUntilExpiry <= REFRESH_BEFORE_EXPIRY_MS) {
     await tryRefreshAuthSession();
   }
@@ -76,10 +65,9 @@ async function refreshIfNeeded() {
 
 function scheduleExpiryRefresh() {
   refreshTimerId = clearTimer(refreshTimerId);
-  if (!isAuthenticated()) return;
+  if (!started || !isAuthenticated() || !hasRefreshToken()) return;
 
-  const token = getAuthToken();
-  const msUntilExpiry = getJwtMsUntilExpiry(token);
+  const msUntilExpiry = getJwtMsUntilExpiry(getAuthToken());
   if (msUntilExpiry == null) return;
 
   const delay = Math.max(5_000, msUntilExpiry - REFRESH_BEFORE_EXPIRY_MS);
@@ -92,31 +80,75 @@ function scheduleExpiryRefresh() {
   }, delay);
 }
 
-function resetInactivityTimer() {
-  inactivityTimerId = clearTimer(inactivityTimerId);
-  if (!started || !isAuthenticated()) return;
-
-  const timeoutMs = getSessionInactivityTimeoutMs();
-  inactivityTimerId = window.setTimeout(() => {
-    if (!isAuthenticated()) return;
-    const idleFor = Date.now() - lastActivityAt;
-    if (idleFor < timeoutMs - 1_000) {
-      resetInactivityTimer();
-      return;
-    }
-    idleLogoutHandler?.();
-  }, timeoutMs);
-}
-
-function onUserActivity() {
-  if (document.visibilityState === "hidden") return;
-  lastActivityAt = Date.now();
-  resetInactivityTimer();
+function maybeRefreshOnActivity() {
+  const now = Date.now();
+  if (now - lastRefreshCheckAt < REFRESH_CHECK_THROTTLE_MS) return;
+  lastRefreshCheckAt = now;
 
   const msUntilExpiry = getJwtMsUntilExpiry(getAuthToken());
   if (msUntilExpiry != null && msUntilExpiry <= REFRESH_BEFORE_EXPIRY_MS) {
     refreshIfNeeded().catch(() => {});
   }
+}
+
+function scheduleInactivityTimeout() {
+  inactivityTimerId = clearTimer(inactivityTimerId);
+  if (!started || !isAuthenticated()) return;
+
+  const remaining = SESSION_INACTIVITY_MS - (Date.now() - lastActivityAt);
+  inactivityTimerId = window.setTimeout(() => {
+    checkInactivity();
+  }, Math.max(0, remaining));
+}
+
+function triggerIdleLogout() {
+  if (idleLogoutQueued) return;
+  idleLogoutQueued = true;
+
+  const handler = idleLogoutHandler;
+  stopAuthSessionLifecycle();
+
+  if (typeof handler !== "function") return;
+
+  try {
+    const result = handler();
+    if (result && typeof result.catch === "function") {
+      result.catch(() => {});
+    }
+  } catch {
+    // Idle logout must not throw from a timer callback.
+  }
+}
+
+function checkInactivity() {
+  if (!started || !isAuthenticated() || idleLogoutQueued) return;
+
+  const idleFor = Date.now() - lastActivityAt;
+  if (idleFor < SESSION_INACTIVITY_MS) {
+    scheduleInactivityTimeout();
+    return;
+  }
+
+  triggerIdleLogout();
+}
+
+function onUserActivity() {
+  if (!started || idleLogoutQueued) return;
+  lastActivityAt = Date.now();
+  maybeRefreshOnActivity();
+}
+
+function onVisibilityOrFocus() {
+  if (!started) return;
+  checkInactivity();
+}
+
+/**
+ * Last genuine user interaction (or session-start) timestamp.
+ * @returns {number}
+ */
+export function getLastActivityAt() {
+  return lastActivityAt;
 }
 
 /**
@@ -132,23 +164,22 @@ export function startAuthSessionLifecycle({ onIdleLogout } = {}) {
   if (!isAuthenticated()) return;
 
   started = true;
+  idleLogoutQueued = false;
   idleLogoutHandler = onIdleLogout ?? null;
   lastActivityAt = Date.now();
-  lastFallbackRefreshAt = 0;
+  lastRefreshCheckAt = 0;
 
   activityBound = onUserActivity;
+  visibilityBound = onVisibilityOrFocus;
+
   ACTIVITY_EVENTS.forEach((eventName) => {
-    window.addEventListener(eventName, activityBound, { passive: true });
+    window.addEventListener(eventName, activityBound, ACTIVITY_LISTENER_OPTIONS);
   });
-  document.addEventListener("visibilitychange", activityBound);
+  document.addEventListener("visibilitychange", visibilityBound);
+  window.addEventListener("focus", visibilityBound);
 
   scheduleExpiryRefresh();
-  refreshIfNeeded().catch(() => {});
-  resetInactivityTimer();
-
-  keepAliveTimerId = window.setInterval(() => {
-    refreshIfNeeded().catch(() => {});
-  }, KEEP_ALIVE_TICK_MS);
+  scheduleInactivityTimeout();
 }
 
 /** Stop keep-alive + inactivity monitoring (logout / leaving admin shell). */
@@ -157,15 +188,19 @@ export function stopAuthSessionLifecycle() {
 
   started = false;
   idleLogoutHandler = null;
-  keepAliveTimerId = clearIntervalTimer(keepAliveTimerId);
   refreshTimerId = clearTimer(refreshTimerId);
   inactivityTimerId = clearTimer(inactivityTimerId);
 
   if (activityBound) {
     ACTIVITY_EVENTS.forEach((eventName) => {
-      window.removeEventListener(eventName, activityBound);
+      window.removeEventListener(eventName, activityBound, ACTIVITY_LISTENER_OPTIONS);
     });
-    document.removeEventListener("visibilitychange", activityBound);
     activityBound = null;
+  }
+
+  if (visibilityBound) {
+    document.removeEventListener("visibilitychange", visibilityBound);
+    window.removeEventListener("focus", visibilityBound);
+    visibilityBound = null;
   }
 }

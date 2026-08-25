@@ -1,8 +1,10 @@
 import { buildApiUrl } from "../../config/api";
 import { getAuthToken } from "../auth/authStorage";
 import { tryRefreshAuthSession } from "../auth/refreshSession";
+import { shouldInvalidateSessionOn401 } from "../auth/jwtUtils";
 import {
   forceLogoutAfterSessionExpired,
+  isIntentionalLogoutInProgress,
   isSessionExpiredHandled,
   SESSION_EXPIRED_MESSAGE,
 } from "../auth/sessionExpiry";
@@ -143,8 +145,16 @@ export async function downloadFileExport(
     const data = error.response.data;
 
     if (status === 401) {
-      forceLogoutAfterSessionExpired();
-      throw new ApiError(SESSION_EXPIRED_MESSAGE, null, 401, { sessionExpired: true });
+      const sessionExpired = shouldInvalidateSessionOn401(getAuthToken());
+      if (!isIntentionalLogoutInProgress() && sessionExpired) {
+        forceLogoutAfterSessionExpired();
+      }
+      throw new ApiError(
+        sessionExpired ? SESSION_EXPIRED_MESSAGE : failureMessage,
+        data,
+        401,
+        { sessionExpired }
+      );
     }
 
     let message = "";

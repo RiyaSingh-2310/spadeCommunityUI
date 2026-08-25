@@ -1,3 +1,9 @@
+/**
+ * Frontend permission flags control UI visibility and disabled states only.
+ * They are not a security boundary. Hidden or disabled actions can still be
+ * attempted against the API; the backend must enforce authorization.
+ * API 401/403 responses are handled by the shared HTTP client.
+ */
 import { PERMISSION_MODULE_KEYS, PERMISSION_MODULES } from "./permissionModules";
 import {
   PERMISSION_UI_PARENT_KEYS,

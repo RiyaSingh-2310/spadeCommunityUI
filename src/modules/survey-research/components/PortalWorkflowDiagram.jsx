@@ -1,4 +1,4 @@
-import { WORKFLOW_STEPS } from "../data/mockSurveyResearchData";
+import { WORKFLOW_STEPS } from "../data/surveyResearchData";
 
 function PortalWorkflowDiagram() {
   return (

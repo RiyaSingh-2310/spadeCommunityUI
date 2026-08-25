@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { BarChart3, FolderKanban, Layers3 } from "lucide-react";
 import PortalWorkflowDiagram from "../components/PortalWorkflowDiagram";
-import { ANALYTICS_SUMMARY, PRESCREENER_GROUPS, PROJECT_SURVEY } from "../data/mockSurveyResearchData";
+import { ANALYTICS_SUMMARY, PRESCREENER_GROUPS, PROJECT_SURVEY } from "../data/surveyResearchData";
 
 function StatCard({ label, value, hint }) {
   return (
@@ -37,7 +37,7 @@ function PortalOverviewPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Pre-Screener Groups" value={PRESCREENER_GROUPS.length} hint="Configured questionnaires" />
-        <StatCard label="Live Project" value={PROJECT_SURVEY.status} hint={PROJECT_SURVEY.projectName} />
+        <StatCard label="Live Project" value={PROJECT_SURVEY?.status ?? "—"} hint={PROJECT_SURVEY?.projectName} />
         <StatCard label="Total Respondents" value={ANALYTICS_SUMMARY.totalRespondents.toLocaleString()} hint="Current wave" />
         <StatCard label="Conversion Rate" value={`${ANALYTICS_SUMMARY.conversionRate}%`} hint="Completed / started" />
       </div>

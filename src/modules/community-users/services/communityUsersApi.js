@@ -13,9 +13,6 @@ import {
 } from "../../shared/utils/statusLabels";
 import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
 import { formatAppDateValue } from "../../shared/utils/dateTime";
-import {
-  getCommunityUserById,
-} from "../data/communityUsersStore";
 import { normalizeRewardLogEntry } from "../utils/rewardLogUtils";
 
 const LIST_LOAD_ERROR_MESSAGE = "Unable to load panelists. Please try again later.";
@@ -419,16 +416,67 @@ export async function getUserRewardLogs(
   userId,
   { page = 1, limit = 10, search, filters } = {}
 ) {
-  // TODO(backend): Replace communityUsersStore mock with a real reward-log
-  // endpoint (e.g. GET /api/panelist/:id/reward-logs) and remove the store.
-  const user = getCommunityUserById(userId);
-  if (!user) {
-    return { items: [], total: 0, count: 0, user: null };
-  }
+  const normalizedId = normalizePanelistId(userId);
+  const path = appendListQuery(API_ROUTES.rewardHistory.list, {
+    page,
+    limit,
+    search,
+    extra: {
+      user_id: String(userId ?? "").trim(),
+      panelist_id: String(userId ?? "").trim(),
+    },
+  });
+  const data = await apiRequest(path);
+  assertSuccess(data);
 
-  const normalizedSearch = normalizeSearchQuery(search).toLowerCase();
-  const logs = (user.rewardLogs ?? [])
-    .map((entry, index) => normalizeRewardLogEntry(entry, index))
+  const rawItems = Array.isArray(data?.data) ? data.data : [];
+  const hasUserKeys = rawItems.some(
+    (item) =>
+      item?.user_id != null ||
+      item?.userId != null ||
+      item?.panelist_id != null ||
+      item?.panelistId != null
+  );
+  const scopedItems = hasUserKeys
+    ? rawItems.filter((item) => {
+        const candidates = [
+          item?.user_id,
+          item?.userId,
+          item?.panelist_id,
+          item?.panelistId,
+          item?.user?.id,
+          item?.panelist?.id,
+        ];
+        return candidates.some(
+          (value) => value != null && String(value) === String(userId)
+        );
+      })
+    : rawItems;
+
+  const logs = scopedItems
+    .map((entry, index) =>
+      normalizeRewardLogEntry(
+        {
+          id: entry?.id ?? `${normalizedId}-${index + 1}`,
+          rewardPoints:
+            entry?.reward_points ??
+            entry?.rewardPoints ??
+            entry?.points ??
+            0,
+          reason:
+            entry?.reward_type ??
+            entry?.rewardType ??
+            entry?.remark ??
+            entry?.transaction_type ??
+            entry?.reason ??
+            "—",
+          date: formatAppDateValue(
+            entry?.created_at ?? entry?.createdAt ?? entry?.date ?? ""
+          ),
+        },
+        index
+      )
+    )
     .filter(Boolean)
     .filter((entry) => {
       if (filters?.reason && filters.reason !== "all" && entry.reason !== filters.reason) {
@@ -440,25 +488,24 @@ export async function getUserRewardLogs(
       if (filters?.pointsType === "debit" && entry.pointsValue >= 0) {
         return false;
       }
-      if (!normalizedSearch) return true;
-      return (
-        String(entry.id ?? "").includes(normalizedSearch) ||
-        String(entry.rewardPoints ?? "").toLowerCase().includes(normalizedSearch) ||
-        String(entry.reason ?? "").toLowerCase().includes(normalizedSearch) ||
-        String(entry.date ?? "").toLowerCase().includes(normalizedSearch)
-      );
+      return true;
     });
 
-  const total = logs.length;
-  const start = (page - 1) * limit;
-  const items = logs.slice(start, start + limit).map((entry) => ({
-    id: entry.id,
-    rewardPoints: entry.rewardPoints,
-    reason: entry.reason,
-    date: entry.date,
-  }));
+  const total = Number(data?.total);
+  const resolvedTotal = Number.isFinite(total) && !hasUserKeys ? total : logs.length;
+  const start = hasUserKeys ? (page - 1) * limit : 0;
+  const pageItems = hasUserKeys ? logs.slice(start, start + limit) : logs;
 
-  return { items, total, count: total, user };
+  return {
+    items: pageItems.map((entry) => ({
+      id: entry.id,
+      rewardPoints: entry.rewardPoints,
+      reason: entry.reason,
+      date: entry.date,
+    })),
+    total: resolvedTotal,
+    count: resolvedTotal,
+  };
 }
 
 /** PUT /api/panelist/:id */
@@ -550,5 +597,3 @@ export async function downloadPanelists() {
     defaultFilename: buildDatedExportFilename("panelists-export"),
   });
 }
-
-export { toListingRow } from "../data/communityUsersStore";

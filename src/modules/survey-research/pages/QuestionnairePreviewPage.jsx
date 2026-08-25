@@ -1,37 +1,18 @@
-import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import PortalStatusBadge from "../components/PortalStatusBadge";
-import { getPreScreenerGroupById } from "../data/mockSurveyResearchData";
+import { getPreScreenerGroupById } from "../data/surveyResearchData";
 
 function QuestionnairePreviewPage() {
   const { id } = useParams();
-  const [group, setGroup] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setGroup(getPreScreenerGroupById(id));
-      setIsLoading(false);
-    }, 350);
-
-    return () => window.clearTimeout(timer);
-  }, [id]);
-
-  if (isLoading) {
-    return (
-      <div className="srp-card p-12 text-center text-sm" style={{ color: "var(--srp-text-muted)" }}>
-        Loading questionnaire preview...
-      </div>
-    );
-  }
+  const group = getPreScreenerGroupById(id);
 
   if (!group) {
     return (
       <div className="srp-card space-y-4 p-10 text-center">
         <p className="text-lg font-semibold">Questionnaire not found</p>
         <p className="text-sm" style={{ color: "var(--srp-text-muted)" }}>
-          The selected pre-screener group does not exist in the demo dataset.
+          The selected pre-screener group was not found.
         </p>
         <Link to="/survey-research/pre-screener-groups" className="srp-btn-primary inline-flex">
           Back to Groups

@@ -6,7 +6,7 @@ import {
   getPreScreenerGroupById,
   PRESCREENER_GROUPS,
   PROJECT_SURVEY,
-} from "../data/mockSurveyResearchData";
+} from "../data/surveyResearchData";
 
 function DetailItem({ label, value }) {
   return (
@@ -41,7 +41,23 @@ function QuotaBar({ segment, target, filled }) {
 
 function ProjectSurveyManagementPage() {
   const project = PROJECT_SURVEY;
-  const linkedGroup = getPreScreenerGroupById(project.preScreenerGroupId);
+  const linkedGroup = project ? getPreScreenerGroupById(project.preScreenerGroupId) : null;
+
+  if (!project) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--srp-text-muted)" }}>
+            Project & Survey Management
+          </p>
+          <h1 className="text-2xl font-bold tracking-tight">Project & Survey Management</h1>
+        </div>
+        <div className="srp-card p-10 text-center text-sm" style={{ color: "var(--srp-text-muted)" }}>
+          No project data is available from the API.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

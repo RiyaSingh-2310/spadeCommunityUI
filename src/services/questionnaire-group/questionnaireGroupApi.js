@@ -185,7 +185,7 @@ function extractPanelistIdFromUrl(urlString) {
     const base =
       typeof window !== "undefined" && window.location?.origin
         ? window.location.origin
-        : "http://localhost";
+        : "https://example.invalid";
     const url = new URL(raw, base);
     return normalizePanelistId(
       url.searchParams.get("panelist_id") ?? url.searchParams.get("panelistId")

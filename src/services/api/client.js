@@ -1,6 +1,7 @@
 import axios from "axios";
 import { API_DEBUG, API_LOGIN_BEARER_TOKEN, buildApiUrl } from "../../config/api";
 import { getAuthToken } from "../auth/authStorage";
+import { shouldInvalidateSessionOn401 } from "../auth/jwtUtils";
 import { tryRefreshAuthSession } from "../auth/refreshSession";
 import {
   forceLogoutAfterSessionExpired,
@@ -52,16 +53,11 @@ axiosInstance.interceptors.request.use(
     }
 
     if (API_DEBUG) {
-      console.log("[API] Request URL:", config.url);
-      console.log("[API] Method:", String(config.method ?? "get").toUpperCase());
-      const authHeader = config.headers?.Authorization ?? config.headers?.authorization;
-      console.log(
-        "[API] Auth:",
-        authHeader ? "Bearer <token>" : config.skipAuth ? "disabled" : "missing"
+      console.info(
+        "[API]",
+        String(config.method ?? "get").toUpperCase(),
+        config.url ?? ""
       );
-      if (config.data !== undefined) {
-        console.log("[API] Payload:", config.data);
-      }
     }
 
     return config;
@@ -72,15 +68,13 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => {
     if (API_DEBUG) {
-      console.log("[API] Response status:", response.status);
-      console.log("[API] Response data:", response.data);
+      console.info("[API] Response status:", response.status);
     }
     return response;
   },
   (error) => {
     if (API_DEBUG && error.response) {
       console.error("[API] Error status:", error.response.status);
-      console.error("[API] Error body:", error.response.data);
     }
     return Promise.reject(error);
   }
@@ -171,7 +165,7 @@ function toNetworkApiError(error) {
     return new ApiError("Request timed out. Please try again.");
   }
   if (API_DEBUG) {
-    console.error("[API] Network error:", error);
+    console.error("[API] Network error");
   }
   return new ApiError("Unable to reach the server. Please try again.");
 }
@@ -225,7 +219,7 @@ export async function apiRequest(path, options = {}) {
     const token = getAuthToken();
     if (!token) {
       if (API_DEBUG) {
-        console.error("[API] Missing auth token for protected request:", path);
+        console.error("[API] Missing auth token for protected request");
       }
       throw new ApiError(HTTP_STATUS_MESSAGES[401], null, 401);
     }
@@ -273,17 +267,24 @@ export async function apiRequest(path, options = {}) {
       }
 
       // Do not force-logout while the user is explicitly signing out.
-      if (!isIntentionalLogoutInProgress()) {
+      // Do not clear a still-valid JWT just because one endpoint returned 401.
+      const sessionExpired = shouldInvalidateSessionOn401(getAuthToken());
+      if (!isIntentionalLogoutInProgress() && sessionExpired) {
         forceLogoutAfterSessionExpired();
       }
-      throw new ApiError(SESSION_EXPIRED_MESSAGE, data, 401, { sessionExpired: true });
+      throw new ApiError(
+        sessionExpired
+          ? SESSION_EXPIRED_MESSAGE
+          : extractErrorMessage(error.response, data, rawText) || SESSION_EXPIRED_MESSAGE,
+        data,
+        401,
+        { sessionExpired }
+      );
     }
 
     const message = extractErrorMessage(error.response, data, rawText);
     if (API_DEBUG) {
       console.error("[API] Error status:", status);
-      console.error("[API] Error message:", message);
-      console.error("[API] Error body:", data ?? rawText);
     }
     throw new ApiError(message, data, status);
   }

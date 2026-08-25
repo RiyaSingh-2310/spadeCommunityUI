@@ -2,11 +2,8 @@ import { API_ROUTES } from "../../../config/api";
 import { downloadFileExport, sanitizeDownloadFilenamePart } from "../../../services/api/csvExport";
 
 /**
- * Download an invoice PDF from the backend.
- *
- * TODO(backend): Implement GET /api/invoice/:id/pdf that returns a real
- * application/pdf byte stream (with %PDF- header) and optional
- * Content-Disposition filename.
+ * Download an invoice PDF from GET /api/invoice/:id/pdf.
+ * Does not fabricate a PDF when the API fails or returns a non-file body.
  *
  * @param {{ id?: string|number }} row
  */

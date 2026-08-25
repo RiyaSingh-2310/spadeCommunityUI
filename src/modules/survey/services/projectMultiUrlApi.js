@@ -21,7 +21,7 @@ import {
   mapMultiUrlRecordToRow,
   PROJECT_MULTI_URL_COLUMNS,
   PROJECT_MULTI_URL_CSV_TEMPLATE,
-} from "../data/mockProjectMultiUrlData";
+} from "../data/projectMultiUrlModel";
 
 export { PROJECT_MULTI_URL_COLUMNS, PROJECT_MULTI_URL_CSV_TEMPLATE };
 

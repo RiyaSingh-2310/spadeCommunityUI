@@ -8,24 +8,8 @@ import {
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import { createEmptySurveyForm } from "../data/surveyFormData";
-import {
-  getSupplierMappingDetail,
-  getSurveyProjectDetails,
-} from "../data/surveyDetailsData";
-import {
-  cloneMockSurvey,
-  createMockSurvey,
-  delay as mockDelay,
-  deleteMockSurvey,
-  filterMockSurveys,
-  getMockSurveyById,
-  MOCK_SURVEY_PARTNERS,
-  updateMockSurvey,
-} from "../data/mockSurveyStore";
+import { listSupplierMappings } from "./supplierMappingApi";
 import { formatAppDate, formatSurveyListDate, parseUtcToIst } from "../../shared/utils/dateTime";
-
-/** Set true to force mock survey data instead of live APIs. */
-const USE_SURVEY_MOCK_DATA = false;
 
 function toNullableNumber(value) {
   if (value === "" || value == null) return null;
@@ -693,16 +677,7 @@ export function mapSurveyToForm(survey, fallback = null) {
 
 /** GET /api/projects/:id */
 export async function getRecord(id) {
-  if (USE_SURVEY_MOCK_DATA) {
-    await mockDelay();
-    const record = getMockSurveyById(id);
-    if (!record) {
-      throw new ApiError("Project not found.", null, 404);
-    }
-    return record;
-  }
-
-  const normalizedId = normalizeSurveyId(id);
+const normalizedId = normalizeSurveyId(id);
   const data = await apiRequest(API_ROUTES.projects.byId(normalizedId));
   assertSuccess(data);
 
@@ -725,26 +700,16 @@ export function buildUpdateSurveyPayload(form, selectOptions = {}, urlForm = nul
 
 /** GET /api/projects/list */
 export async function getRecords({ page, limit, search, groupProjectId } = {}) {
-  if (USE_SURVEY_MOCK_DATA) {
-    await mockDelay();
-    const result = filterMockSurveys({ page, limit, search, groupProjectId });
-    return {
-      success: true,
-      ...result,
-      total: result.total,
-      count: result.total,
-      page: result.page,
-      limit: result.limit,
-      totalPages: result.totalPages,
-      items: result.data.map((survey) => mapSurveyToRow(survey)),
-    };
+  const extra = {};
+  if (String(groupProjectId ?? "").trim()) {
+    extra.group_project_id = String(groupProjectId).trim();
   }
-
   const data = await apiRequest(
     appendListQuery(API_ROUTES.projects.list, {
       page,
       limit,
       search,
+      extra,
     })
   );
   assertSuccess(data);
@@ -775,18 +740,7 @@ export async function getRecords({ page, limit, search, groupProjectId } = {}) {
  * }} [selectOptions]
  */
 export async function createSurvey(form, selectOptions = {}) {
-  if (USE_SURVEY_MOCK_DATA) {
-    await mockDelay(350);
-    const payload = buildCreateProjectPayload(form, selectOptions);
-    const record = createMockSurvey(payload);
-    return {
-      success: true,
-      message: "Project created successfully (mock).",
-      data: record,
-    };
-  }
-
-  const data = await apiRequest(API_ROUTES.projects.create, {
+const data = await apiRequest(API_ROUTES.projects.create, {
     method: "POST",
     body: buildCreateProjectPayload(form, selectOptions),
   });
@@ -799,21 +753,7 @@ export async function createSurvey(form, selectOptions = {}) {
  * @param {object} form
  */
 export async function createSurveyUnderGroup(groupProjectId, form) {
-  if (USE_SURVEY_MOCK_DATA) {
-    await mockDelay(350);
-    const payload = buildGroupSurveyProjectPayload(form);
-    const record = createMockSurvey({
-      ...payload,
-      group_project_id: groupProjectId,
-    });
-    return {
-      success: true,
-      message: "Survey created under group successfully (mock).",
-      data: record,
-    };
-  }
-
-  const normalizedId = normalizeSurveyId(groupProjectId);
+const normalizedId = normalizeSurveyId(groupProjectId);
   const data = await apiRequest(API_ROUTES.survey.createUnderGroup(normalizedId), {
     method: "POST",
     body: buildGroupSurveyProjectPayload(form),
@@ -831,23 +771,7 @@ export async function createSurveyUnderGroup(groupProjectId, form) {
 export async function updateSurvey(surveyId, form, selectOptions = {}, urlForm = null) {
   const payload = buildUpdateProjectApiPayload(form, selectOptions, urlForm);
 
-  if (USE_SURVEY_MOCK_DATA) {
-    await mockDelay(350);
-    const record = updateMockSurvey(surveyId, {
-      ...buildCreateProjectPayload(form, selectOptions),
-      ...payload,
-    });
-    if (!record) {
-      throw new ApiError("Project not found.", null, 404);
-    }
-    return {
-      success: true,
-      message: "Project updated successfully!",
-      data: record,
-    };
-  }
-
-  const normalizedId = normalizeSurveyId(surveyId);
+const normalizedId = normalizeSurveyId(surveyId);
   const data = await apiRequest(API_ROUTES.projects.update(normalizedId), {
     method: "PUT",
     body: payload,
@@ -867,20 +791,7 @@ export async function updateProjectLinkType(projectId, projectLinkType) {
     link_type: formLinkTypeToApi(linkType),
   };
 
-  if (USE_SURVEY_MOCK_DATA) {
-    await mockDelay(250);
-    const record = updateMockSurvey(projectId, payload);
-    if (!record) {
-      throw new ApiError("Project not found.", null, 404);
-    }
-    return {
-      success: true,
-      message: "Project link type updated successfully.",
-      data: record,
-    };
-  }
-
-  const normalizedId = normalizeSurveyId(projectId);
+const normalizedId = normalizeSurveyId(projectId);
   const data = await apiRequest(API_ROUTES.projects.update(normalizedId), {
     method: "PUT",
     body: payload,
@@ -897,17 +808,7 @@ export async function updateProjectLinkType(projectId, projectLinkType) {
 export async function updateProjectUrlsViaProjectApi(projectId, project, urlForm) {
   const payload = buildUpdateProjectPayloadFromDetails(project, urlForm);
 
-  if (USE_SURVEY_MOCK_DATA) {
-    await mockDelay(350);
-    const record = updateMockSurvey(projectId, payload);
-    return {
-      success: true,
-      message: "Project updated successfully!",
-      data: record,
-    };
-  }
-
-  const normalizedId = normalizeSurveyId(projectId);
+const normalizedId = normalizeSurveyId(projectId);
   const data = await apiRequest(API_ROUTES.projects.update(normalizedId), {
     method: "PUT",
     body: payload,
@@ -917,22 +818,7 @@ export async function updateProjectUrlsViaProjectApi(projectId, project, urlForm
 
 /** PUT /api/survey/:id — status toggle from listing table. */
 export async function updateSurveyStatus(surveyId, { status }) {
-  if (USE_SURVEY_MOCK_DATA) {
-    await mockDelay(250);
-    const record = updateMockSurvey(surveyId, {
-      Status: formValueToApiStatus(status),
-    });
-    if (!record) {
-      throw new ApiError("Project not found.", null, 404);
-    }
-    return {
-      success: true,
-      message: "Project status updated successfully (mock).",
-      data: record,
-    };
-  }
-
-  const normalizedId = normalizeSurveyId(surveyId);
+const normalizedId = normalizeSurveyId(surveyId);
   const data = await apiRequest(API_ROUTES.projects.updateStatus(normalizedId), {
     method: "PATCH",
     body: {
@@ -944,19 +830,7 @@ export async function updateSurveyStatus(surveyId, { status }) {
 
 /** DELETE /api/survey/:id */
 export async function deleteSurvey(surveyId) {
-  if (USE_SURVEY_MOCK_DATA) {
-    await mockDelay(250);
-    const removed = deleteMockSurvey(surveyId);
-    if (!removed) {
-      throw new ApiError("Survey not found.", null, 404);
-    }
-    return {
-      success: true,
-      message: "Survey deleted successfully (mock).",
-    };
-  }
-
-  const normalizedId = normalizeSurveyId(surveyId);
+const normalizedId = normalizeSurveyId(surveyId);
   const data = await apiRequest(API_ROUTES.survey.delete(normalizedId), {
     method: "DELETE",
   });
@@ -1120,20 +994,7 @@ function buildCloneProjectPayload(record) {
  * @param {string|number} surveyId
  */
 export async function cloneSurvey(surveyId) {
-  if (USE_SURVEY_MOCK_DATA) {
-    await mockDelay(350);
-    const record = cloneMockSurvey(surveyId);
-    if (!record) {
-      throw new ApiError("Survey not found.", null, 404);
-    }
-    return {
-      success: true,
-      message: "Project cloned successfully!",
-      data: record,
-    };
-  }
-
-  const record = await getRecord(surveyId);
+const record = await getRecord(surveyId);
   const { payload, urlRows } = buildCloneProjectPayload(record);
 
   if (!payload.Project_Name) {
@@ -1166,78 +1027,49 @@ export async function cloneSurvey(surveyId) {
 }
 
 /**
- * GET supplier mapping details (falls back to demo data when API unavailable).
+ * GET supplier mapping details from GET /api/supplier-mapping/list.
  * @param {string} surveyId
  * @param {string} supplierCode
  */
 export async function fetchSupplierMappingDetails(surveyId, supplierCode) {
-  try {
-    const data = await apiRequest(
-      `/api/survey/${encodeURIComponent(surveyId)}/supplier-mapping/${encodeURIComponent(supplierCode)}`,
-      { method: "GET" }
-    );
-    return data?.supplier ?? data?.data ?? data;
-  } catch {
-    await new Promise((r) => setTimeout(r, 200));
-    const detail = getSupplierMappingDetail(supplierCode);
-    if (!detail) {
-      throw new ApiError("Supplier mapping not found.");
-    }
-    return detail;
+  const rows = await listSupplierMappings({ projectId: surveyId });
+  const code = String(supplierCode ?? "").trim();
+  const match = rows.find((row) => {
+    const candidates = [
+      row?.partnerid,
+      row?.partner_id,
+      row?.partnerId,
+      row?.supplierCode,
+      row?.supplier_code,
+      row?.code,
+    ];
+    return candidates.some((value) => value != null && String(value) === code);
+  });
+  if (!match) {
+    throw new ApiError("Supplier mapping not found.", null, 404);
   }
+  return match;
 }
 
 /**
- * PUT project status (demo fallback).
+ * PATCH /api/projects/:id/status
  * @param {string} surveyId
  * @param {string} status
  */
 export async function updateSurveyProjectStatus(surveyId, status) {
-  try {
-    const data = await apiRequest(
-      `/api/survey/${encodeURIComponent(surveyId)}/status`,
-      {
-        method: "PUT",
-        body: { status },
-      }
-    );
-    return assertSuccess(data);
-  } catch (err) {
-    if (err instanceof ApiError && err.status) {
-      throw err;
-    }
-    await new Promise((r) => setTimeout(r, 350));
-    const project = getSurveyProjectDetails(surveyId);
-    if (!project) {
-      throw new ApiError("Survey not found.");
-    }
-    return {
-      success: true,
-      message: `Project status updated to ${status}.`,
-    };
-  }
+  return updateSurveyStatus(surveyId, { status });
 }
 
 export async function updateSupplierMapping(surveyId, payload) {
-  try {
-    const data = await apiRequest(
-      `/api/survey/${encodeURIComponent(surveyId)}/supplier-mapping`,
-      {
-        method: "PUT",
-        body: payload,
-      }
-    );
-    return assertSuccess(data);
-  } catch (err) {
-    if (err instanceof ApiError && err.status) {
-      throw err;
-    }
-    await new Promise((r) => setTimeout(r, 350));
-    return {
-      success: true,
-      message: "Supplier mapping updated successfully.",
-    };
+  const mappingId = payload?.id ?? payload?.mappingId;
+  if (mappingId == null || String(mappingId).trim() === "") {
+    throw new ApiError("Supplier mapping id is required.", null);
   }
+  const data = await apiRequest(API_ROUTES.supplierMapping.update(mappingId), {
+    method: "PUT",
+    body: payload,
+  });
+  return assertSuccess(data);
 }
 
 function toPartnerMappingBoolean(value, fallback = false) {
@@ -1414,35 +1246,14 @@ export function resolveSurveyNumericId(idOrRecord) {
 
 /** GET /api/survey/:id/eligible-partners */
 export async function getEligiblePartners(surveyId) {
-  if (USE_SURVEY_MOCK_DATA) {
-    await mockDelay();
-    void surveyId;
-    return {
-      success: true,
-      data: MOCK_SURVEY_PARTNERS.map((partner) => ({ ...partner })),
-    };
-  }
-
-  const normalizedId = normalizeSurveyId(surveyId);
+const normalizedId = normalizeSurveyId(surveyId);
   const data = await apiRequest(API_ROUTES.survey.eligiblePartners(normalizedId));
   return assertSuccess(data);
 }
 
 /** GET /api/survey/:id/partners */
 export async function getAssignedPartners(surveyId) {
-  if (USE_SURVEY_MOCK_DATA) {
-    await mockDelay();
-    const record = getMockSurveyById(surveyId);
-    const assignedIds = Array.isArray(record?.partner_ids)
-      ? record.partner_ids.map(String)
-      : [];
-    const partners = MOCK_SURVEY_PARTNERS.filter((partner) =>
-      assignedIds.includes(String(partner.partner_id))
-    );
-    return partners.map((partner) => ({ ...partner }));
-  }
-
-  const normalizedId = normalizeSurveyId(surveyId);
+const normalizedId = normalizeSurveyId(surveyId);
   const data = await apiRequest(API_ROUTES.survey.partners(normalizedId));
   assertSuccess(data);
   return extractPartnersList(data);
@@ -1454,31 +1265,7 @@ export async function getAssignedPartners(surveyId) {
  * @param {Array<string|number>} partnerIds
  */
 export async function assignPartners(surveyId, partnerIds = []) {
-  if (USE_SURVEY_MOCK_DATA) {
-    await mockDelay(300);
-    const ids = partnerIds
-      .map((partnerId) => resolveNumericId(partnerId))
-      .filter((partnerId) => partnerId != null);
-    const names = MOCK_SURVEY_PARTNERS.filter((partner) =>
-      ids.includes(partner.partner_id)
-    )
-      .map((partner) => partner.name)
-      .join(", ");
-    const record = updateMockSurvey(surveyId, {
-      partner_ids: ids,
-      partner_names: names,
-    });
-    if (!record) {
-      throw new ApiError("Survey not found.", null, 404);
-    }
-    return {
-      success: true,
-      message: "Partners assigned successfully (mock).",
-      data: record,
-    };
-  }
-
-  const normalizedId = normalizeSurveyId(surveyId);
+const normalizedId = normalizeSurveyId(surveyId);
   const ids = partnerIds
     .map((partnerId) => resolveNumericId(partnerId))
     .filter((partnerId) => partnerId != null);
@@ -1497,24 +1284,7 @@ export async function assignPartners(surveyId, partnerIds = []) {
  * @param {string|number} allocatedSize
  */
 export async function updatePartnerAllocation(surveyId, partnerId, allocatedSize) {
-  if (USE_SURVEY_MOCK_DATA) {
-    await mockDelay(250);
-    const record = getMockSurveyById(surveyId);
-    if (!record) {
-      throw new ApiError("Survey not found.", null, 404);
-    }
-    const allocations = {
-      ...(record.partner_allocations ?? {}),
-      [String(partnerId)]: String(allocatedSize ?? ""),
-    };
-    updateMockSurvey(surveyId, { partner_allocations: allocations });
-    return {
-      success: true,
-      message: "Partner allocation updated (mock).",
-    };
-  }
-
-  const normalizedSurveyId = normalizeSurveyId(surveyId);
+const normalizedSurveyId = normalizeSurveyId(surveyId);
   const normalizedPartnerId = normalizeSurveyId(partnerId);
   const data = await apiRequest(
     API_ROUTES.survey.partnerAllocation(normalizedSurveyId, normalizedPartnerId),
@@ -1528,28 +1298,7 @@ export async function updatePartnerAllocation(surveyId, partnerId, allocatedSize
 
 /** DELETE /api/survey/:id/partners/:pid */
 export async function removeSurveyPartner(surveyId, partnerId) {
-  if (USE_SURVEY_MOCK_DATA) {
-    await mockDelay(250);
-    const record = getMockSurveyById(surveyId);
-    if (!record) {
-      throw new ApiError("Survey not found.", null, 404);
-    }
-    const ids = (record.partner_ids ?? []).filter(
-      (id) => String(id) !== String(partnerId)
-    );
-    const names = MOCK_SURVEY_PARTNERS.filter((partner) =>
-      ids.map(String).includes(String(partner.partner_id))
-    )
-      .map((partner) => partner.name)
-      .join(", ");
-    updateMockSurvey(surveyId, { partner_ids: ids, partner_names: names });
-    return {
-      success: true,
-      message: "Partner removed (mock).",
-    };
-  }
-
-  const normalizedSurveyId = normalizeSurveyId(surveyId);
+const normalizedSurveyId = normalizeSurveyId(surveyId);
   const normalizedPartnerId = normalizeSurveyId(partnerId);
   const data = await apiRequest(
     API_ROUTES.survey.removePartner(normalizedSurveyId, normalizedPartnerId),

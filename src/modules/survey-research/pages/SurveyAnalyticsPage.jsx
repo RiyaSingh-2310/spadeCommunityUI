@@ -5,7 +5,7 @@ import {
   OutcomeDonut,
   TrendBarChart,
 } from "../components/PortalAnalyticsWidgets";
-import { ANALYTICS_SUMMARY } from "../data/mockSurveyResearchData";
+import { ANALYTICS_SUMMARY } from "../data/surveyResearchData";
 
 function SurveyAnalyticsPage() {
   const data = ANALYTICS_SUMMARY;

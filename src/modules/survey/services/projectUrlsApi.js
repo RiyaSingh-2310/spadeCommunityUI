@@ -7,19 +7,10 @@ import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import {
-  createMockProjectUrl,
-  deleteMockProjectUrl,
-  getMockPreScreeners,
-  getMockProjectUrlById,
-  listMockProjectUrls,
-  listMockProjectUrlsByProjectId,
   PROJECT_URL_COUNTRY_OPTIONS,
   PROJECT_URL_LANGUAGE_OPTIONS,
   PROJECT_URL_STATUS_OPTIONS,
-  updateMockProjectUrl,
-  updateMockProjectUrlById,
-} from "../data/mockProjectUrlsData";
-import { delay } from "../data/mockSurveyStore";
+} from "../data/projectUrlOptions";
 import { getRecords as getQuestionnaireGroups } from "../../../services/questionnaire-group/questionnaireGroupApi";
 import { PRESCREEN_LANGUAGES } from "../../prescreen/data/prescreenLanguages";
 import { parseUtcToIst } from "../../shared/utils/dateTime";
@@ -127,9 +118,6 @@ export {
   PROJECT_URL_STATUS_OPTIONS,
   PRESCREEN_LANGUAGES as PROJECT_URL_PRESCREEN_LANGUAGES,
 };
-
-/** Toggle when Project URLs should fall back to local mock store. */
-const USE_PROJECT_URLS_MOCK = false;
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -308,7 +296,6 @@ export function mapProjectUrlToForm(record) {
   };
 }
 
-/** Maps GET /api/projects/:id `urlInfo[]` row into the Project URLs form. */
 export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = null) {
   if (!urlInfo || typeof urlInfo !== "object") {
     return createEmptyProjectUrlForm(projectId);
@@ -603,6 +590,38 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
 }
 
 /**
+ * Single Project URL model used by list, edit, detail, and mapping.
+ * Accepts either an API urlInfo row or an already-normalized form record.
+ *
+ * @param {object | null | undefined} source
+ * @param {string|number} [projectId]
+ * @param {object | null} [projectRecord]
+ */
+export function normalizeProjectUrl(source, projectId = "", projectRecord = null) {
+  if (!source || typeof source !== "object") {
+    return createEmptyProjectUrlForm(projectId);
+  }
+
+  const looksLikeApiRow =
+    source.project_url_code != null ||
+    source.Project_URL_Code != null ||
+    source["LOI(Minute)"] != null ||
+    source.url_id != null ||
+    source.Url_Id != null ||
+    source.Live_Link != null ||
+    source.Test_Link != null;
+
+  const form = looksLikeApiRow
+    ? mapApiUrlInfoToForm(source, projectId, projectRecord)
+    : mapProjectUrlToForm({
+        ...source,
+        projectId: source.projectId ?? projectId,
+      });
+
+  return normalizeProjectUrlFormForState(form);
+}
+
+/**
  * Loads a single Project URL form for edit.
  * Uses GET /api/projects/:id/url/list (backend has no GET /api/projects/url/:urlId).
  * @param {string|number} projectId
@@ -613,30 +632,15 @@ export async function getProjectUrlFormForEdit(projectId, urlId, fallbackForm = 
   const normalizedUrlId = String(urlId ?? "").trim();
   if (!normalizedUrlId) return null;
 
-  if (USE_PROJECT_URLS_MOCK) {
-    await delay();
-    const record = getMockProjectUrlById(normalizedUrlId);
-    const mapped = record ? mapProjectUrlToForm(record) : null;
-    return mapped
-      ? normalizeProjectUrlFormForState(
-          mergeProjectUrlForms(mapped, fallbackForm)
-        )
-      : fallbackForm
-        ? normalizeProjectUrlFormForState(mapProjectUrlToForm(fallbackForm))
-        : null;
-  }
-
-  try {
+try {
     const listResponse = await listProjectUrlsByProject(projectId);
     const rows = Array.isArray(listResponse?.data) ? listResponse.data : [];
     const matched = rows.find(
       (row) => String(row?.id ?? "") === normalizedUrlId
     );
     if (matched) {
-      const mapped = mapApiUrlInfoToForm(matched, projectId);
-      return normalizeProjectUrlFormForState(
-        mergeProjectUrlForms(mapped, fallbackForm)
-      );
+      const mapped = normalizeProjectUrl(matched, projectId);
+      return mergeProjectUrlForms(mapped, fallbackForm);
     }
   } catch {
     // Fall through to project details urlInfo.
@@ -648,62 +652,14 @@ export async function getProjectUrlFormForEdit(projectId, urlId, fallbackForm = 
   if (!raw && !fallbackForm) return null;
 
   const mapped = raw
-    ? mapApiUrlInfoToForm(raw, projectId, record)
-    : mapProjectUrlToForm({
+    ? normalizeProjectUrl(raw, projectId, record)
+    : normalizeProjectUrl({
         ...createEmptyProjectUrlForm(projectId),
         ...fallbackForm,
         id: normalizedUrlId,
-      });
+      }, projectId);
 
-  return normalizeProjectUrlFormForState(
-    mergeProjectUrlForms(mapped, fallbackForm)
-  );
-}
-
-function buildProjectUrlUpdatePayload(form) {
-  const surveyGroupId = form.preScreen
-    ? String(form.surveyGroupId ?? form.preScreenerId ?? "").trim()
-    : "";
-  const preScreenName = form.preScreen
-    ? String(form.preScreenerName ?? form.preScreenName ?? "").trim()
-    : "";
-
-  return {
-    clientProjectId: String(form.clientProjectId ?? "").trim(),
-    clientUrl: String(form.clientUrl ?? "").trim(),
-    discussion: String(form.discussion ?? "").trim(),
-    loi: form.loi === "" ? null : Number(form.loi),
-    ir: form.ir === "" ? null : Number(form.ir),
-    country: String(form.country ?? "").trim(),
-    language: String(form.language ?? "").trim(),
-    cpiRate: form.cpiRate === "" ? null : Number(form.cpiRate),
-    sampleSize: form.sampleSize === "" ? null : Number(form.sampleSize),
-    startDate: form.startDate ?? "",
-    endDate: form.endDate ?? "",
-    status: form.status || "Open",
-    testLink: String(form.testLink ?? "").trim(),
-    liveLink: String(form.liveLink ?? "").trim(),
-    geoLocation: Boolean(form.geoLocation),
-    urlProtection: Boolean(form.urlProtection),
-    uniqueIp: Boolean(form.uniqueIp),
-    fraudDetection: Boolean(form.fraudDetection),
-    preScreen: Boolean(form.preScreen),
-    surveyGroupId,
-    preScreenerId: surveyGroupId,
-    preScreenerName: preScreenName,
-    PreScreenName: preScreenName || undefined,
-    completeRewardPoints:
-      form.completeRewardPoints === "" ? null : Number(form.completeRewardPoints),
-    terminationRewardPoints:
-      form.terminationRewardPoints === ""
-        ? null
-        : Number(form.terminationRewardPoints),
-    redirectComplete: String(form.redirectComplete ?? "").trim(),
-    redirectTerminate: String(form.redirectTerminate ?? "").trim(),
-    redirectOverQuota: String(form.redirectOverQuota ?? "").trim(),
-    redirectQualityTerm: String(form.redirectQualityTerm ?? "").trim(),
-    redirectSurveyClose: String(form.redirectSurveyClose ?? "").trim(),
-  };
+  return mergeProjectUrlForms(mapped, fallbackForm);
 }
 
 /**
@@ -829,42 +785,31 @@ export async function generateProjectUrlCode(projectId) {
 
 /** GET all Project URL configs for a project. Uses GET /api/projects/:id/url/list. */
 export async function listProjectUrlsByProject(projectId) {
-  if (!USE_PROJECT_URLS_MOCK) {
-    const normalizedId = normalizeProjectId(projectId);
+  const normalizedId = normalizeProjectId(projectId);
 
+  try {
+    const listData = await apiRequest(API_ROUTES.projects.urlList(normalizedId));
+    assertSuccess(listData);
+    const rawRows = Array.isArray(listData?.data) ? listData.data : [];
+    return {
+      success: true,
+      data: rawRows.map((row) => normalizeProjectUrl(row, projectId, null)),
+      records: rawRows,
+    };
+  } catch (listError) {
     try {
-      const listData = await apiRequest(API_ROUTES.projects.urlList(normalizedId));
-      assertSuccess(listData);
-      const rawRows = Array.isArray(listData?.data) ? listData.data : [];
+      const record = await getRecord(projectId);
+      const urlInfo = normalizeUrlInfoList(record);
       return {
         success: true,
-        data: rawRows.map((row) => mapApiUrlInfoToForm(row, projectId, null)),
-        records: rawRows,
+        data: urlInfo.map((row) => normalizeProjectUrl(row, projectId, record)),
+        records: urlInfo,
+        project: mapSurveyToProjectDetails(record),
       };
-    } catch (listError) {
-      // Fallback: project details payload may still include urlInfo.
-      try {
-        const record = await getRecord(projectId);
-        const urlInfo = normalizeUrlInfoList(record);
-        return {
-          success: true,
-          data: urlInfo.map((row) => mapApiUrlInfoToForm(row, projectId, record)),
-          records: urlInfo,
-          project: mapSurveyToProjectDetails(record),
-        };
-      } catch {
-        throw listError;
-      }
+    } catch {
+      throw listError;
     }
   }
-
-  await delay();
-  const mockRows = listMockProjectUrlsByProjectId(projectId);
-  return {
-    success: true,
-    data: mockRows,
-    records: mockRows,
-  };
 }
 
 /** GET single Project URL record. Legacy helper. */
@@ -876,23 +821,9 @@ export async function getProjectUrls(projectId) {
   };
 }
 
-/** PUT/update a Project URL by url id (mock). */
-export async function updateProjectUrlById(urlId, form) {
-  await delay(350);
-  const payload = buildProjectUrlUpdatePayload(form);
-  const record = updateMockProjectUrlById(urlId, payload);
-  if (!record) {
-    return {
-      success: false,
-      message: "Project URL not found.",
-      data: null,
-    };
-  }
-  return {
-    success: true,
-    message: "Project URLs updated successfully.",
-    data: record,
-  };
+/** PUT /api/projects/url/:urlId */
+export async function updateProjectUrlById(urlId, form, options = {}) {
+  return updateProjectUrl(urlId, form, options);
 }
 
 /**
@@ -921,11 +852,7 @@ export async function updateProjectUrl(urlId, form = {}, options = {}) {
     status: form.status || "Open",
   };
 
-  if (USE_PROJECT_URLS_MOCK) {
-    return updateProjectUrlById(urlId, form);
-  }
-
-  const normalizedUrlId = normalizeUrlId(urlId);
+const normalizedUrlId = normalizeUrlId(urlId);
   const body = isMultiLink
     ? buildProjectUrlMultipartFormData(normalizedForm, { csvFiles })
     : buildUpdateProjectUrlApiPayload(normalizedForm);
@@ -945,35 +872,21 @@ export async function updateProjectUrl(urlId, form = {}, options = {}) {
  */
 export async function updateProjectUrls(projectId, form, options = {}) {
   const urlId = String(form?.id ?? options?.urlId ?? "").trim();
-  if (!USE_PROJECT_URLS_MOCK) {
-    if (!urlId) {
-      throw new ApiError("Project URL ID is required for update.", null);
+  if (!urlId) {
+    throw new ApiError("Project URL ID is required for update.", null);
+  }
+  return updateProjectUrl(
+    urlId,
+    {
+      ...form,
+      id: urlId,
+      projectId: form.projectId || projectId,
+    },
+    {
+      isMultiLink: options.isMultiLink,
+      csvFiles: options.csvFiles,
     }
-    return updateProjectUrl(
-      urlId,
-      {
-        ...form,
-        id: urlId,
-        projectId: form.projectId || projectId,
-      },
-      {
-        isMultiLink: options.isMultiLink,
-        csvFiles: options.csvFiles,
-      }
-    );
-  }
-
-  if (urlId) {
-    return updateProjectUrlById(urlId, form);
-  }
-  await delay(350);
-  const payload = buildProjectUrlUpdatePayload(form);
-  const record = updateMockProjectUrl(projectId, payload);
-  return {
-    success: true,
-    message: "Project updated successfully!",
-    data: record,
-  };
+  );
 }
 
 /**
@@ -993,19 +906,7 @@ export async function createProjectUrl(projectId, form = {}, options = {}) {
     status: form.status || "Open",
   };
 
-  if (USE_PROJECT_URLS_MOCK) {
-    await delay(350);
-    const record = createMockProjectUrl(projectId, {
-      ...buildProjectUrlUpdatePayload(normalizedForm),
-    });
-    return {
-      success: true,
-      message: "Project URL added successfully!",
-      data: { id: record.id },
-    };
-  }
-
-  const normalizedId = normalizeProjectId(projectId);
+const normalizedId = normalizeProjectId(projectId);
   const body = isMultiLink
     ? buildProjectUrlMultipartFormData(normalizedForm, { csvFiles })
     : buildCreateProjectUrlApiPayload(normalizedForm);
@@ -1021,18 +922,7 @@ export async function createProjectUrl(projectId, form = {}, options = {}) {
 export async function deleteProjectUrl(urlId) {
   const normalizedUrlId = normalizeUrlId(urlId);
 
-  if (USE_PROJECT_URLS_MOCK) {
-    await delay(200);
-    const removed = deleteMockProjectUrl(normalizedUrlId);
-    return {
-      success: removed,
-      message: removed
-        ? "Project URL deleted successfully!"
-        : "Project URL not found.",
-    };
-  }
-
-  const data = await apiRequest(API_ROUTES.projects.deleteUrl(normalizedUrlId), {
+const data = await apiRequest(API_ROUTES.projects.deleteUrl(normalizedUrlId), {
     method: "DELETE",
   });
   return assertSuccess(data);
@@ -1047,24 +937,7 @@ export async function updateProjectUrlLinkMode(urlId, linkMode) {
   const normalizedUrlId = normalizeUrlId(urlId);
   const nextMode = normalizeLinkMode(linkMode);
 
-  if (USE_PROJECT_URLS_MOCK) {
-    await delay(200);
-    const record = updateMockProjectUrlById(normalizedUrlId, { linkMode: nextMode });
-    if (!record) {
-      return {
-        success: false,
-        message: "Project URL not found.",
-        data: null,
-      };
-    }
-    return {
-      success: true,
-      message: `Link mode switched to ${nextMode}!`,
-      data: record,
-    };
-  }
-
-  const data = await apiRequest(API_ROUTES.projects.updateUrlLinkMode(normalizedUrlId), {
+const data = await apiRequest(API_ROUTES.projects.updateUrlLinkMode(normalizedUrlId), {
     method: "PATCH",
     body: { link_mode: nextMode },
   });
@@ -1083,15 +956,7 @@ export async function getProjectUrlById(urlId, projectId) {
     throw new ApiError("Project URL ID is required.", null);
   }
 
-  if (USE_PROJECT_URLS_MOCK) {
-    await delay();
-    return {
-      success: true,
-      data: getMockProjectUrlById(rawUrlId),
-    };
-  }
-
-  const normalizedProjectId = String(projectId ?? "").trim();
+const normalizedProjectId = String(projectId ?? "").trim();
   if (!normalizedProjectId) {
     throw new ApiError("Project id is required to load a Project URL.", null);
   }
@@ -1106,13 +971,9 @@ export async function getProjectUrlById(urlId, projectId) {
   return { success: true, data: matched };
 }
 
-/** Filtered pre-screener options for Country + Language (mock). */
-export async function getPreScreenerOptions({ country, language } = {}) {
-  await delay(120);
-  return {
-    success: true,
-    data: getMockPreScreeners({ country, language }),
-  };
+/** Survey groups for Pre-Screen, filtered by selected language. */
+export async function getPreScreenerOptions({ language } = {}) {
+  return getSurveyGroupOptionsForLanguage(language);
 }
 
 async function fetchAllQuestionnaireGroupItems() {
@@ -1150,55 +1011,28 @@ export async function getSurveyGroupOptionsForLanguage(language) {
     return { success: true, data: [] };
   }
 
-  try {
-    const items = await fetchAllQuestionnaireGroupItems();
-    const options = dedupeSelectOptions(
-      items
-        .filter(
-          (item) =>
-            String(item.language ?? "")
-              .trim()
-              .toLowerCase() === languageKey
-        )
-        .map((item) => {
-          const label = String(item.surveyTitle || item.title || "").trim();
-          const value = String(item.id ?? "").trim();
-          if (!value || !label) return null;
-          return { value, label };
-        })
-        .filter(Boolean)
-    );
-
-    if (options.length > 0) {
-      return { success: true, data: options };
-    }
-  } catch {
-    // Fall through to empty options in production; mock options in development only.
-  }
-
-  if (import.meta.env.PROD) {
-    return { success: true, data: [] };
-  }
-
-  await delay(120);
-  const mockOptions = dedupeSelectOptions(
-    getMockPreScreeners({ language })
+  const items = await fetchAllQuestionnaireGroupItems();
+  const options = dedupeSelectOptions(
+    items
+      .filter(
+        (item) =>
+          String(item.language ?? "")
+            .trim()
+            .toLowerCase() === languageKey
+      )
       .map((item) => {
-        const label = String(item.label ?? "").trim();
-        const value = String(item.value ?? "").trim();
+        const label = String(item.surveyTitle || item.title || "").trim();
+        const value = String(item.id ?? "").trim();
         if (!value || !label) return null;
         return { value, label };
       })
       .filter(Boolean)
   );
-  return { success: true, data: mockOptions };
+
+  return { success: true, data: options };
 }
 
-/** Optional listing helper for future multi-URL views. */
+/** Listing Project URLs requires a project id — use listProjectUrlsByProject. */
 export async function listProjectUrls() {
-  await delay();
-  return {
-    success: true,
-    data: listMockProjectUrls(),
-  };
+  throw new ApiError("Project id is required to list Project URLs.", null);
 }

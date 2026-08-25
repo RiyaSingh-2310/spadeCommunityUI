@@ -13,6 +13,8 @@ import {
   mapProjectManagersToSelectOptions,
 } from "../hooks/useSurveyFormSelectOptions";
 import { getRecords as getProjectManagers } from "../../../services/projectManagers/projectManagersApi";
+import { getRecords as getGroupSurveys } from "../services/groupSurveyApi";
+import { MAX_API_LIST_LIMIT } from "../../shared/utils/listQueryParams";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { isFormValid, limitTextInput, NAME_FIELD_MAX_LENGTH } from "../../shared/utils/validation";
@@ -21,7 +23,6 @@ import {
   CURRENCY_OPTIONS,
   LANGUAGE_OPTIONS,
   PROJECT_LINK_TYPES,
-  SURVEY_GROUP_OPTIONS,
 } from "../data/surveyFormData";
 import {
   createEmptyRecontactSurveyForm,
@@ -68,6 +69,7 @@ function AddRecontactSurveyForm({
     ...initialValues,
   }));
   const [projectManagerOptions, setProjectManagerOptions] = useState([]);
+  const [surveyGroupOptions, setSurveyGroupOptions] = useState([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -81,16 +83,28 @@ function AddRecontactSurveyForm({
     const loadOptions = async () => {
       setIsLoadingOptions(true);
       try {
-        const projectManagers = await getProjectManagers({
-          page: 1,
-          limit: 100,
-        });
+        const [projectManagers, groups] = await Promise.all([
+          getProjectManagers({
+            page: 1,
+            limit: 100,
+          }),
+          getGroupSurveys({ page: 1, limit: MAX_API_LIST_LIMIT }),
+        ]);
         if (!cancelled) {
           setProjectManagerOptions(mapProjectManagersToSelectOptions(projectManagers.items));
+          setSurveyGroupOptions(
+            (groups.items ?? [])
+              .map((item) => ({
+                value: String(item.id ?? ""),
+                label: String(item.projectName ?? item.groupProject ?? "").trim(),
+              }))
+              .filter((option) => option.value && option.label)
+          );
         }
       } catch {
         if (!cancelled) {
           setProjectManagerOptions([]);
+          setSurveyGroupOptions([]);
         }
       } finally {
         if (!cancelled) setIsLoadingOptions(false);
@@ -431,7 +445,7 @@ function AddRecontactSurveyForm({
                 inputClass={selectClass}
                 value={form.surveyGroup}
                 onChange={(next) => setField("surveyGroup", next)}
-                options={SURVEY_GROUP_OPTIONS}
+                options={surveyGroupOptions}
                 placeholder="Select Survey Group"
                 disabled={fieldDisabled(readOnly, isSubmitting)}
                 searchPlaceholder="Search survey group..."

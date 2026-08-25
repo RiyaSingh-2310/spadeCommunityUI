@@ -5,25 +5,7 @@ import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { downloadInvoicePdf } from "../utils/downloadInvoicePdf";
 
-// TODO(backend): Replace fixture rows with GET /api/invoice/list (or equivalent)
-// once invoice listing is implemented server-side.
-const CLIENTS = ["Alpha Corp", "Beta Labs", "Gamma Tech", "Delta Works"];
-const PROJECTS = [
-  "Brand Tracker Q2",
-  "CX Pulse Study",
-  "Product Launch Survey",
-  "Employee NPS Wave",
-];
-
-const initialRows = Array.from({ length: 12 }, (_, idx) => ({
-  id: `INV-${1001 + idx}`,
-  client: CLIENTS[idx % CLIENTS.length],
-  projectName: PROJECTS[idx % PROJECTS.length],
-  invoiceDate: `${String(1 + (idx % 28)).padStart(2, "0")}/05/2026`,
-  dueDate: `${String(15 + (idx % 14)).padStart(2, "0")}/06/2026`,
-  grossAmount: `$${(2500 + idx * 350).toLocaleString()}`,
-  status: idx % 3 === 0 ? "Inactive" : "Active",
-}));
+const initialRows = [];
 
 function InvoiceListPage({ isDarkMode }) {
   const { rows, onStatusToggle } = useListingPageActions({

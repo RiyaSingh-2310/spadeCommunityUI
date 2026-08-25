@@ -257,7 +257,7 @@ export function getSurveyOutcomeKeyFromUrl(url, origin) {
 
   const base =
     String(origin ?? "").trim() ||
-    (typeof window !== "undefined" ? window.location.origin : "http://localhost");
+    (typeof window !== "undefined" ? window.location.origin : "https://example.invalid");
 
   try {
     const parsed = new URL(raw, base);

@@ -1,4 +1,36 @@
-const DEFAULT_API_BASE_URL = "https://backhand-spade-community.onrender.com/api";
+/**
+ * Resolves the API base URL from Vite env.
+ * Production must set VITE_API_BASE_URL and must never use localhost.
+ *
+ * @param {{ configuredUrl?: string, isProduction?: boolean }} [options]
+ */
+export function resolveApiBaseUrl({
+  configuredUrl = import.meta.env.VITE_API_BASE_URL,
+  isProduction = import.meta.env.PROD,
+} = {}) {
+  const url = String(configuredUrl ?? "").trim().replace(/\/$/, "");
+  if (!url) {
+    throw new Error(
+      "VITE_API_BASE_URL is required. Set it in .env.development or .env.production."
+    );
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error("VITE_API_BASE_URL must be a valid absolute URL.");
+  }
+
+  if (isProduction) {
+    const host = parsed.hostname.toLowerCase();
+    if (host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1") {
+      throw new Error("Production API base URL must not point to localhost.");
+    }
+  }
+
+  return url;
+}
 
 /** Backend route paths (must match server; always include /api prefix). */
 export const API_ROUTES = {
@@ -233,7 +265,9 @@ export const API_ROUTES = {
     list: "/api/email-templates/list",
     create: "/api/email-templates/add",
     byId: (id) => `/api/email-templates/${id}`,
+    update: (id) => `/api/email-templates/${id}`,
     updateStatus: (id) => `/api/email-templates/${id}/status`,
+    delete: (id) => `/api/email-templates/${id}`,
   },
   findUser: {
     questions: "/api/find-user/questions",
@@ -250,7 +284,6 @@ export const API_ROUTES = {
   },
   invoice: {
     settings: "/api/invoice/settings",
-    // TODO(backend): Implement GET /api/invoice/:id/pdf returning application/pdf.
     downloadPdf: (id) =>
       `/api/invoice/${encodeURIComponent(String(id ?? "").trim())}/pdf`,
   },
@@ -268,9 +301,14 @@ export const API_ROUTES = {
     redeemList: "/api/reward-history/redeem/list",
     redeemUpdateStatus: (id) => `/api/reward-history/redeem/${id}/status`,
   },
+  // Alias of emailTemplates — System Email UI uses /api/email-templates/*.
   systemEmails: {
-    list: "/api/system-emails/list",
-    byId: (id) => `/api/system-emails/${id}`,
+    list: "/api/email-templates/list",
+    create: "/api/email-templates/add",
+    byId: (id) => `/api/email-templates/${id}`,
+    update: (id) => `/api/email-templates/${id}`,
+    updateStatus: (id) => `/api/email-templates/${id}/status`,
+    delete: (id) => `/api/email-templates/${id}`,
   },
   messages: {
     list: "/api/messages/list",
@@ -294,13 +332,11 @@ export const API_ROUTES = {
   },
 };
 
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.trim()?.replace(/\/$/, "") ||
-  DEFAULT_API_BASE_URL;
+export const API_BASE_URL = resolveApiBaseUrl();
 
 /**
  * Optional static Bearer for pre-auth endpoints (login / forgot-password).
- * M4: This value is public in the Vite bundle — not a real secret. Prefer
+ * This value is public in the Vite bundle — not a real secret. Prefer
  * server-side rate limiting / CAPTCHA. Leave empty unless the backend requires it.
  */
 export const API_LOGIN_BEARER_TOKEN =
@@ -308,11 +344,11 @@ export const API_LOGIN_BEARER_TOKEN =
 
 /**
  * Dev-only API request/response console logging.
- * M7: Gated by import.meta.env.DEV so production `vite build` never enables it.
- * Do not deploy with `vite build --mode development` or ship .env.development values.
+ * Production builds never enable this, even if VITE_API_DEBUG is set.
+ * Debug logs must never include tokens, passwords, or request/response payloads.
  */
 export const API_DEBUG =
-  import.meta.env.DEV && import.meta.env.VITE_API_DEBUG === "true";
+  Boolean(import.meta.env.DEV) && import.meta.env.VITE_API_DEBUG === "true";
 
 /**
  * @param {string} path Path starting with /api/...

@@ -220,9 +220,6 @@ export function buildSupplierMappingApiPayload({
 
 /**
  * GET /api/supplier-mapping/list
- * Matches provided cURL:
- *   curl --location 'http://localhost:5050/api/supplier-mapping/list'
- *     --header 'Authorization: Bearer …'
  * Response: { success, data: [...], total, page, limit, totalPages }
  */
 export async function listSupplierMappings({ projectId, projectUrlId } = {}) {
@@ -263,7 +260,7 @@ function dynamicUrlMatchesDoSurveyToken(dynamicUrl, token) {
   if (url.includes(`/dosurvey/${normalizedToken}`)) return true;
 
   try {
-    const parsed = new URL(url, "http://localhost");
+    const parsed = new URL(url, "https://example.invalid");
     const segments = parsed.pathname.split("/").filter(Boolean);
     const pathToken = segments[segments.length - 1];
     return pathToken === normalizedToken;
