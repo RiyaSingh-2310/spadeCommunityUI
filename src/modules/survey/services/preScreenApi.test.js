@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   normalizePreScreenStatus,
@@ -28,6 +31,20 @@ describe("normalizePreScreenStatus", () => {
     expect(normalizePreScreenStatus("completed")).toBe(PRESCREEN_RESPONSE_STATUSES.COMPLETED);
     expect(normalizePreScreenStatus("IN_PROGRESS")).toBe(PRESCREEN_RESPONSE_STATUSES.IN_PROGRESS);
     expect(normalizePreScreenStatus("terminated")).toBe(PRESCREEN_RESPONSE_STATUSES.TERMINATED);
+  });
+});
+
+describe("DoSurveyStartPage does not call end API early", () => {
+  it("does not send IN_PROGRESS when pre-screen opens", () => {
+    const source = readFileSync(
+      path.join(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "../../public-survey/pages/DoSurveyStartPage.jsx"
+      ),
+      "utf8"
+    );
+    expect(source).not.toMatch(/IN_PROGRESS/);
+    expect(source).not.toMatch(/pagehide/);
   });
 });
 

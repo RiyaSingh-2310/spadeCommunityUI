@@ -53,7 +53,10 @@ import {
 } from "../utils/projectUrlFormValidation";
 import { PROJECT_URL_VIEW_IDS } from "../utils/surveyDetailsNavigation";
 import { dedupeSelectOptions } from "../utils/dedupeSelectOptions";
-import { applyPrefillSingleLinkUrls } from "../utils/surveyLinkPlaceholders";
+import {
+  applyPrefillSingleLinkUrls,
+  DEFAULT_SURVEY_LINK_PLACEHOLDER,
+} from "../utils/surveyLinkPlaceholders";
 import {
   SectionDivider,
   primaryBtnClass,
@@ -1230,7 +1233,7 @@ function ProjectUrlsTab({
                       setField("liveLink", trimOnBlur(event.target.value));
                       touch("liveLink");
                     }}
-                    placeholder="https://samplepolls.com/survey?pid=PROJECT_URL_CODE&uid=XXXX"
+                    placeholder={DEFAULT_SURVEY_LINK_PLACEHOLDER}
                     disabled={!canWrite}
                     aria-invalid={Boolean(showError("liveLink") && errors.liveLink)}
                   />
@@ -1255,7 +1258,7 @@ function ProjectUrlsTab({
                       setField("testLink", trimOnBlur(event.target.value));
                       touch("testLink");
                     }}
-                    placeholder="https://samplepolls.com/survey?pid=PROJECT_URL_CODE&uid=XXXX"
+                    placeholder={DEFAULT_SURVEY_LINK_PLACEHOLDER}
                     disabled={!canWrite}
                     aria-invalid={Boolean(showError("testLink") && errors.testLink)}
                   />

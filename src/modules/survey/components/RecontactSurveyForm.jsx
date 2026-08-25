@@ -39,6 +39,7 @@ import {
   sanitizeProjectUrlDecimal,
   sanitizeProjectUrlInteger,
 } from "../utils/projectUrlFormValidation";
+import { DEFAULT_SURVEY_LINK_PLACEHOLDER } from "../utils/surveyLinkPlaceholders";
 
 function FilterCheckbox({ label, checked, onChange, disabled }) {
   return (
@@ -357,7 +358,7 @@ function RecontactSurveyForm({
             >
               <input
                 className={inputClass}
-                placeholder="https://samplepolls.com/survey?pid=PROJECT_URL_CODE&uid=XXXX"
+                placeholder={DEFAULT_SURVEY_LINK_PLACEHOLDER}
                 value={form.liveUrl}
                 onChange={(e) => setField("liveUrl", e.target.value)}
                 onBlur={() => touch("liveUrl")}
@@ -371,7 +372,7 @@ function RecontactSurveyForm({
             >
               <input
                 className={inputClass}
-                placeholder="https://samplepolls.com/survey?pid=PROJECT_URL_CODE&uid=XXXX"
+                placeholder={DEFAULT_SURVEY_LINK_PLACEHOLDER}
                 value={form.testUrl}
                 onChange={(e) => setField("testUrl", e.target.value)}
                 onBlur={() => touch("testUrl")}

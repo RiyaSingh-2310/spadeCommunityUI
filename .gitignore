@@ -1,12 +1,7 @@
 node_modules
 .npm-cache
 dist/
-.env
 .env.local
 .env.*.local
-!.env.example
-!.env.development
-!.env.production
-!.env.test
 .DS_Store
 **/.DS_Store

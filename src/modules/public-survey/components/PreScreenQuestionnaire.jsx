@@ -25,6 +25,7 @@ function PreScreenQuestionnaire({
   const [answers, setAnswers] = useState({});
   const [showValidation, setShowValidation] = useState(false);
   const submitLockRef = useRef(false);
+  const [isBusy, setIsBusy] = useState(false);
 
   const currentQuestion = questions[currentIndex];
   const isLastStep = total > 0 && currentIndex === total - 1;
@@ -38,6 +39,7 @@ function PreScreenQuestionnaire({
 
   const surveyTitle = String(prescreen?.surveyTitle ?? "").trim() || "Pre-Screen";
   const language = String(prescreen?.language ?? "").trim();
+  const controlsLocked = isSubmitting || isBusy;
 
   async function persistCurrentAnswer() {
     if (!currentQuestion) return;
@@ -47,26 +49,27 @@ function PreScreenQuestionnaire({
   }
 
   function handleAnswerChange(nextValue) {
-    if (!currentQuestion || isSubmitting) return;
+    if (!currentQuestion || controlsLocked) return;
     setAnswers((prev) => ({ ...prev, [currentQuestion.id]: nextValue }));
     setShowValidation(false);
   }
 
   function handlePrevious() {
-    if (isSubmitting || submitLockRef.current) return;
+    if (controlsLocked || submitLockRef.current) return;
     setTransitionDirection("back");
     setShowValidation(false);
     setCurrentIndex((index) => Math.max(0, index - 1));
   }
 
   async function handleNext() {
-    if (isSubmitting || submitLockRef.current) return;
+    if (controlsLocked || submitLockRef.current) return;
     if (!canProceed) {
       setShowValidation(true);
       return;
     }
 
     submitLockRef.current = true;
+    setIsBusy(true);
     try {
       await persistCurrentAnswer();
       setTransitionDirection("forward");
@@ -76,17 +79,19 @@ function PreScreenQuestionnaire({
       // Parent surfaces the API error; stay on this question.
     } finally {
       submitLockRef.current = false;
+      setIsBusy(false);
     }
   }
 
   async function handleSubmit() {
-    if (isSubmitting || submitLockRef.current) return;
+    if (controlsLocked || submitLockRef.current) return;
     if (total > 0 && !canProceed) {
       setShowValidation(true);
       return;
     }
 
     submitLockRef.current = true;
+    setIsBusy(true);
     try {
       if (total > 0) {
         await persistCurrentAnswer();
@@ -99,6 +104,7 @@ function PreScreenQuestionnaire({
     } catch {
       // Parent surfaces the API error; do not advance.
       submitLockRef.current = false;
+      setIsBusy(false);
     }
   }
 
@@ -112,11 +118,11 @@ function PreScreenQuestionnaire({
         <button
           type="button"
           onClick={() => handleSubmit()}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isBusy}
           className="pq-nav-btn pq-nav-btn--primary admin-btn-primary mt-4"
-          aria-busy={isSubmitting}
+          aria-busy={isSubmitting || isBusy}
         >
-          {isSubmitting ? (
+          {isSubmitting || isBusy ? (
             <>
               <Loader2 className="pq-btn-spinner" size={18} aria-hidden />
               Continuing...
@@ -198,7 +204,7 @@ function PreScreenQuestionnaire({
         <button
           type="button"
           onClick={handlePrevious}
-          disabled={currentIndex === 0 || isSubmitting}
+          disabled={currentIndex === 0 || controlsLocked}
           className={`pq-nav-btn pq-nav-btn--secondary ${getAdminCancelButtonClass()}`}
         >
           Previous
@@ -208,11 +214,11 @@ function PreScreenQuestionnaire({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting || !canProceed}
+            disabled={controlsLocked || !canProceed}
             className="pq-nav-btn pq-nav-btn--primary admin-btn-primary"
-            aria-busy={isSubmitting}
+            aria-busy={controlsLocked}
           >
-            {isSubmitting ? (
+            {controlsLocked ? (
               <>
                 <Loader2 className="pq-btn-spinner" size={18} aria-hidden />
                 Continuing...
@@ -225,7 +231,7 @@ function PreScreenQuestionnaire({
           <button
             type="button"
             onClick={handleNext}
-            disabled={isSubmitting || !canProceed}
+            disabled={controlsLocked || !canProceed}
             className="pq-nav-btn pq-nav-btn--primary admin-btn-primary"
           >
             Next

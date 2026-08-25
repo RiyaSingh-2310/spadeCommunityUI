@@ -11,7 +11,7 @@ export function resolveApiBaseUrl({
   const url = String(configuredUrl ?? "").trim().replace(/\/$/, "");
   if (!url) {
     throw new Error(
-      "VITE_API_BASE_URL is required. Set it in .env.development or .env.production."
+      "VITE_API_BASE_URL is required. Set it in .env."
     );
   }
 

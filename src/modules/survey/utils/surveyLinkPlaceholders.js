@@ -14,9 +14,13 @@ export const SURVEY_LINK_PLACEHOLDER_TOKENS = Object.freeze([
 export const DEFAULT_SURVEY_LINK_UID_PLACEHOLDER = "XXXX";
 
 const DEFAULT_SURVEY_LINK_ORIGIN = "https://samplepolls.com";
-const DEFAULT_SURVEY_LINK_PATH = "/survey";
+const DEFAULT_SURVEY_LINK_PATH = "/survey_simulator.php";
+const LEGACY_SURVEY_LINK_PATHS = Object.freeze(["/survey"]);
 const DEFAULT_REDIRECT_ORIGIN = "https://spade-community.com";
 const DEFAULT_REDIRECT_UID_PLACEHOLDER = "identifier";
+
+/** Placeholder shown in Live Link / Test Link inputs. */
+export const DEFAULT_SURVEY_LINK_PLACEHOLDER = `${DEFAULT_SURVEY_LINK_ORIGIN}${DEFAULT_SURVEY_LINK_PATH}?pid=PROJECT_URL_CODE&uid=${DEFAULT_SURVEY_LINK_UID_PLACEHOLDER}`;
 
 const PID_PARAM_NAMES = ["pid"];
 const UID_PARAM_NAMES = ["uid"];
@@ -110,6 +114,44 @@ function getSurveyLinkOrigin() {
   return DEFAULT_SURVEY_LINK_ORIGIN;
 }
 
+function normalizePathname(pathname) {
+  const trimmed = String(pathname ?? "").replace(/\/+$/, "");
+  return trimmed || "/";
+}
+
+function isSamplePollsHost(hostname) {
+  return String(hostname ?? "")
+    .replace(/^www\./i, "")
+    .toLowerCase() === "samplepolls.com";
+}
+
+/**
+ * True for empty-equivalent Live/Test defaults: the current simulator path
+ * or the previous /survey path on samplepolls.com.
+ */
+function isLegacyOrDefaultSurveyLink(url) {
+  const parsed = parseAbsoluteUrl(url);
+  if (!parsed) return false;
+  if (!isSamplePollsHost(parsed.hostname)) return false;
+  const path = normalizePathname(parsed.pathname);
+  return path === DEFAULT_SURVEY_LINK_PATH || LEGACY_SURVEY_LINK_PATHS.includes(path);
+}
+
+function syncPidUidOnAbsoluteUrl(trimmed, pid, defaultUid) {
+  const parsed = parseAbsoluteUrl(trimmed);
+  if (!parsed) return trimmed;
+
+  const pidParam = getQueryParamIgnoreCase(parsed.searchParams, PID_PARAM_NAMES);
+  parsed.searchParams.set(pidParam.key || "pid", pid);
+
+  const uidParam = getQueryParamIgnoreCase(parsed.searchParams, UID_PARAM_NAMES);
+  if (!uidParam.key) {
+    parsed.searchParams.set("uid", defaultUid);
+  }
+
+  return parsed.toString();
+}
+
 /**
  * Build a Single Link Live/Test URL with pid = Project URL Code and a supported UID placeholder.
  * Does not invent a second PID value.
@@ -152,18 +194,18 @@ export function withSurveyLinkPid(url, projectUrlCode) {
   if (!pid) return trimmed;
   if (!trimmed) return buildPrefillSurveyLink(pid);
 
-  const parsed = parseAbsoluteUrl(trimmed);
-  if (!parsed) return trimmed;
-
-  const pidParam = getQueryParamIgnoreCase(parsed.searchParams, PID_PARAM_NAMES);
-  parsed.searchParams.set(pidParam.key || "pid", pid);
-
-  const uidParam = getQueryParamIgnoreCase(parsed.searchParams, UID_PARAM_NAMES);
-  if (!uidParam.key) {
-    parsed.searchParams.set("uid", DEFAULT_SURVEY_LINK_UID_PLACEHOLDER);
+  if (isLegacyOrDefaultSurveyLink(trimmed)) {
+    const parsed = parseAbsoluteUrl(trimmed);
+    const uidParam = parsed
+      ? getQueryParamIgnoreCase(parsed.searchParams, UID_PARAM_NAMES)
+      : { key: "", value: "" };
+    const uid = isSupportedUidPlaceholder(uidParam.value)
+      ? coerceText(uidParam.value)
+      : DEFAULT_SURVEY_LINK_UID_PLACEHOLDER;
+    return buildPrefillSurveyLink(pid, uid);
   }
 
-  return parsed.toString();
+  return syncPidUidOnAbsoluteUrl(trimmed, pid, DEFAULT_SURVEY_LINK_UID_PLACEHOLDER);
 }
 
 /**
@@ -211,12 +253,14 @@ export function withRedirectUrlPid(url, projectUrlCode, fallbackPath = "") {
   if (!trimmed) {
     return fallbackPath ? buildPrefillRedirectUrl(fallbackPath, pid) : "";
   }
-  return withSurveyLinkPid(trimmed, pid);
+  return syncPidUidOnAbsoluteUrl(trimmed, pid, DEFAULT_REDIRECT_UID_PLACEHOLDER);
 }
 
 /**
  * Prefill Single Link live/test fields with pid = Project URL Code.
- * Does not change Multi Link forms. Existing URLs keep their structure; only pid is synced.
+ * Empty and legacy samplepolls /survey defaults become the simulator URL.
+ * Custom user-edited URLs keep their host/path; only pid is synced.
+ * Does not change Multi Link forms or redirect fields.
  * @param {object} form
  * @param {unknown} [projectUrlCode]
  */
