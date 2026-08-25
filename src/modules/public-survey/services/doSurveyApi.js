@@ -12,12 +12,6 @@ import { dedupeQuestionsByIdentity } from "../../survey/utils/dedupeSelectOption
 import { isLocalSurveyOutcomeUrl, getSurveyOutcomeKeyFromUrl } from "../utils/surveyFlowParams";
 import { interpretSurveyStartAccess } from "../utils/doSurveyHelpers";
 
-const MOCK_LOAD_DELAY_MS = 450;
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 function isApiSuccess(data) {
   const value = data?.success;
   return (
@@ -322,32 +316,6 @@ export function mapDoSurveyStartDetails(
   });
 }
 
-function buildMockSurveyDetails(
-  token,
-  uid,
-  {
-    isTest = false,
-    projectId = "",
-    projectUrlId = "",
-    projectUrlCode = "",
-    partnerId = "",
-  } = {}
-) {
-  return mapDoSurveyStartDetails(
-    {
-      surveyTitle: "Market Research Survey",
-      surveyDescription:
-        "You have been invited to share your opinions. Your responses are confidential and will be used for research purposes only.",
-      language: "english",
-      loiMinutes: 15,
-      irPercent: 35,
-      partnerCode: "P001",
-      IsTest: isTest ? 1 : 0,
-    },
-    { token, uid, projectId, projectUrlId, projectUrlCode, partnerId }
-  );
-}
-
 async function resolveStartDetailsFromSupplierMapping(token, uid) {
   if (!getAuthToken()) return null;
 
@@ -415,15 +383,11 @@ export async function fetchDoSurveyStartDetails(
 
   // Public / no mapping match: show the start page shell. Token + uid are
   // validated by POST /api/survey/activity and GET /api/survey/prescreen on start.
-  if (!import.meta.env.PROD) {
-    await delay(MOCK_LOAD_DELAY_MS);
-  }
-
   return applyFlowMeta(
-    buildMockSurveyDetails(normalizedToken, uid, {
-      isTest: toDoSurveyIsTest(isTest, false),
-      ...flowMeta,
-    })
+    mapDoSurveyStartDetails(
+      { IsTest: toDoSurveyIsTest(isTest, false) ? 1 : 0 },
+      { token: normalizedToken, uid, ...flowMeta }
+    )
   );
 }
 
@@ -460,6 +424,39 @@ export async function storeSurveyActivity({ token, uid } = {}) {
 
 /** Alias — Partner URL Start Survey activity step. */
 export const startSurveyActivity = storeSurveyActivity;
+
+function isPrescreenAlreadyCompleted(data, payload) {
+  const prescreenStatus = coerceText(
+    pickField(payload, [
+      "prescreen_status",
+      "preScreenStatus",
+      "prescreenStatus",
+      "pre_screen_status",
+      "PreScreenStatus",
+    ])
+  ).toUpperCase();
+  if (prescreenStatus === "COMPLETED") return true;
+
+  if (
+    isTruthyFlag(
+      pickField(payload, [
+        "prescreen_completed",
+        "preScreenCompleted",
+        "isPrescreenCompleted",
+        "is_prescreen_completed",
+      ])
+    )
+  ) {
+    return true;
+  }
+
+  const message = coerceText(data?.message).toLowerCase();
+  return (
+    message.includes("pre-screen already") ||
+    message.includes("prescreen already") ||
+    message.includes("pre screen already")
+  );
+}
 
 function isTruthyFlag(value) {
   return (
@@ -498,6 +495,15 @@ function mapPrescreenQuestion(record) {
 
   return {
     id,
+    questionTitle: coerceText(
+      pickField(record, [
+        "question_title",
+        "questionTitle",
+        "question_text",
+        "questionText",
+        "title",
+      ])
+    ),
     questionText: coerceText(
       pickField(record, [
         "question_title",
@@ -547,17 +553,23 @@ export function mapSurveyPrescreenResponse(data) {
     "pre_screen",
   ]);
 
-  const required = explicitlyNotRequired
+  const completed = isPrescreenAlreadyCompleted(data, payload);
+  const required = completed
     ? false
-    : isTruthyFlag(requiredRaw) || isTruthyFlag(preScreenFlag);
+    : explicitlyNotRequired
+      ? false
+      : isTruthyFlag(requiredRaw) || isTruthyFlag(preScreenFlag);
 
   const questionsRaw = Array.isArray(payload?.questions) ? payload.questions : [];
-  const questions = dedupeQuestionsByIdentity(
-    questionsRaw.map(mapPrescreenQuestion).filter(Boolean)
-  );
+  const questions = completed
+    ? []
+    : dedupeQuestionsByIdentity(
+        questionsRaw.map(mapPrescreenQuestion).filter(Boolean)
+      );
 
   return {
     required,
+    completed,
     message: coerceText(data?.message),
     surveyTitle: coerceText(
       pickField(payload, [
@@ -593,8 +605,12 @@ export async function fetchSurveyPrescreen(token) {
   const path = `${API_ROUTES.survey.prescreen}?token=${encodeURIComponent(normalizedToken)}`;
   try {
     const data = await apiRequest(path, partnerSurveyRequestOptions());
+    const mapped = mapSurveyPrescreenResponse(data);
+    if (mapped.completed && isApiSuccess(data)) {
+      return mapped;
+    }
     assertSurveyStartAllowed(data);
-    return mapSurveyPrescreenResponse(data);
+    return mapped;
   } catch (error) {
     rethrowSurveyStartError(error);
   }
@@ -720,15 +736,15 @@ export async function initiateSurveyStart({
   }
   const prescreen = await checkSurveyPreScreen(token);
 
-  if (prescreen.required) {
+  if (prescreen.completed || !prescreen.required) {
     return {
-      prescreenRequired: true,
+      prescreenRequired: false,
       prescreen,
     };
   }
 
   return {
-    prescreenRequired: false,
+    prescreenRequired: true,
     prescreen,
   };
 }

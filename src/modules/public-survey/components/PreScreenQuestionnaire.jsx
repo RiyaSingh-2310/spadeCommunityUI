@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import QuestionRenderer from "../../public-questionnaire/components/QuestionRenderer";
 import SurveyProgress from "../../public-questionnaire/components/SurveyProgress";
@@ -11,6 +11,8 @@ import { getAdminCancelButtonClass } from "../../shared/utils/formStyles";
  */
 function PreScreenQuestionnaire({
   prescreen,
+  onSaveAnswer,
+  onComplete,
   onSubmit,
   isSubmitting = false,
   submitError = "",
@@ -22,6 +24,7 @@ function PreScreenQuestionnaire({
   const [transitionDirection, setTransitionDirection] = useState("forward");
   const [answers, setAnswers] = useState({});
   const [showValidation, setShowValidation] = useState(false);
+  const submitLockRef = useRef(false);
 
   const currentQuestion = questions[currentIndex];
   const isLastStep = total > 0 && currentIndex === total - 1;
@@ -36,6 +39,13 @@ function PreScreenQuestionnaire({
   const surveyTitle = String(prescreen?.surveyTitle ?? "").trim() || "Pre-Screen";
   const language = String(prescreen?.language ?? "").trim();
 
+  async function persistCurrentAnswer() {
+    if (!currentQuestion) return;
+    if (typeof onSaveAnswer === "function") {
+      await onSaveAnswer(currentQuestion, currentAnswer);
+    }
+  }
+
   function handleAnswerChange(nextValue) {
     if (!currentQuestion || isSubmitting) return;
     setAnswers((prev) => ({ ...prev, [currentQuestion.id]: nextValue }));
@@ -43,30 +53,53 @@ function PreScreenQuestionnaire({
   }
 
   function handlePrevious() {
-    if (isSubmitting) return;
+    if (isSubmitting || submitLockRef.current) return;
     setTransitionDirection("back");
     setShowValidation(false);
     setCurrentIndex((index) => Math.max(0, index - 1));
   }
 
-  function handleNext() {
-    if (isSubmitting) return;
+  async function handleNext() {
+    if (isSubmitting || submitLockRef.current) return;
     if (!canProceed) {
       setShowValidation(true);
       return;
     }
-    setTransitionDirection("forward");
-    setShowValidation(false);
-    setCurrentIndex((index) => Math.min(total - 1, index + 1));
+
+    submitLockRef.current = true;
+    try {
+      await persistCurrentAnswer();
+      setTransitionDirection("forward");
+      setShowValidation(false);
+      setCurrentIndex((index) => Math.min(total - 1, index + 1));
+    } catch {
+      // Parent surfaces the API error; stay on this question.
+    } finally {
+      submitLockRef.current = false;
+    }
   }
 
-  function handleSubmit() {
-    if (isSubmitting) return;
-    if (!canProceed) {
+  async function handleSubmit() {
+    if (isSubmitting || submitLockRef.current) return;
+    if (total > 0 && !canProceed) {
       setShowValidation(true);
       return;
     }
-    onSubmit?.({ questions, answers });
+
+    submitLockRef.current = true;
+    try {
+      if (total > 0) {
+        await persistCurrentAnswer();
+      }
+      if (typeof onComplete === "function") {
+        await onComplete({ questions, answers });
+      } else {
+        await onSubmit?.({ questions, answers });
+      }
+    } catch {
+      // Parent surfaces the API error; do not advance.
+      submitLockRef.current = false;
+    }
   }
 
   if (total === 0) {
@@ -78,7 +111,7 @@ function PreScreenQuestionnaire({
         </p>
         <button
           type="button"
-          onClick={() => onSubmit?.({ questions: [], answers: {} })}
+          onClick={() => handleSubmit()}
           disabled={isSubmitting}
           className="pq-nav-btn pq-nav-btn--primary admin-btn-primary mt-4"
           aria-busy={isSubmitting}
@@ -197,7 +230,8 @@ function PreScreenQuestionnaire({
           >
             Next
           </button>
-        )}      </div>
+        )}
+      </div>
     </div>
   );
 }

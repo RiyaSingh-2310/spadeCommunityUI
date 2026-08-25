@@ -18,6 +18,12 @@ import {
   toFlowErrorMessage,
 } from "../services/doSurveyApi";
 import {
+  endPreScreenResponse,
+  PRESCREEN_RESPONSE_STATUSES,
+  savePreScreenResponse,
+  toPreScreenAnswerArray,
+} from "../../survey/services/preScreenApi";
+import {
   classifyDoSurveyError,
   interpretSurveyStartAccess,
 } from "../utils/doSurveyHelpers";
@@ -96,6 +102,10 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const startFlowInFlightRef = useRef(false);
   const activityReadyRef = useRef(false);
   const notifiedMessageRef = useRef("");
+  const prescreenFinishedRef = useRef(false);
+  const inProgressSentRef = useRef(false);
+  const savedAnswerSignaturesRef = useRef(new Map());
+  const saveAnswerInFlightRef = useRef(false);
 
   const flowParams = useMemo(
     () =>
@@ -266,6 +276,10 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       setIsRedirecting(false);
       activityReadyRef.current = false;
       notifiedMessageRef.current = "";
+      prescreenFinishedRef.current = false;
+      inProgressSentRef.current = false;
+      savedAnswerSignaturesRef.current = new Map();
+      saveAnswerInFlightRef.current = false;
 
       try {
         const data = await fetchDoSurveyStartDetails(normalizedToken, {
@@ -317,6 +331,26 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     flowParams.projectUrlCode,
     flowParams.partnerId,
   ]);
+
+  useEffect(() => {
+    if (!showPrescreen) return undefined;
+
+    const onPageHide = () => {
+      if (prescreenFinishedRef.current) return;
+      const partnerToken = String(flowParams.token || token || "").trim();
+      if (!partnerToken) return;
+      endPreScreenResponse(
+        {
+          token: partnerToken,
+          status: PRESCREEN_RESPONSE_STATUSES.TERMINATED,
+        },
+        { keepalive: true }
+      );
+    };
+
+    window.addEventListener("pagehide", onPageHide);
+    return () => window.removeEventListener("pagehide", onPageHide);
+  }, [showPrescreen, flowParams.token, token]);
 
   const errorVariant = classifyDoSurveyError(loadError);
 
@@ -432,6 +466,13 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
         setShowPrescreen(true);
         setIsStarting(false);
         startFlowInFlightRef.current = false;
+        if (!inProgressSentRef.current) {
+          inProgressSentRef.current = true;
+          endPreScreenResponse({
+            token: partnerToken,
+            status: PRESCREEN_RESPONSE_STATUSES.IN_PROGRESS,
+          }).catch(() => {});
+        }
         return;
       }
 
@@ -458,10 +499,50 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
     }
   }
 
-  async function handlePrescreenSubmit() {
+  async function handleSavePrescreenAnswer(question, answer) {
+    if (saveAnswerInFlightRef.current) {
+      throw new Error("Please wait for the previous answer to save.");
+    }
+
+    const partnerToken = getPartnerToken();
+    if (!partnerToken) {
+      const message = "Missing survey token. Please use a valid partner survey link.";
+      setPrescreenError(message);
+      notifyOnce(message, "error");
+      throw new Error(message);
+    }
+
+    const signature = `${String(question?.id ?? "")}:${JSON.stringify(
+      toPreScreenAnswerArray(answer)
+    )}`;
+    if (savedAnswerSignaturesRef.current.get(String(question?.id)) === signature) {
+      return;
+    }
+
+    saveAnswerInFlightRef.current = true;
+    setIsSubmittingPrescreen(true);
+    setPrescreenError("");
+    try {
+      await savePreScreenResponse({
+        token: partnerToken,
+        question,
+        answer,
+      });
+      savedAnswerSignaturesRef.current.set(String(question?.id), signature);
+    } catch (error) {
+      const message = toFlowErrorMessage(error, "Unable to save the pre-screen answer.");
+      setPrescreenError(message);
+      notifyOnce(message, "error");
+      throw error;
+    } finally {
+      saveAnswerInFlightRef.current = false;
+      setIsSubmittingPrescreen(false);
+    }
+  }
+
+  async function handlePrescreenComplete() {
     if (
       startFlowInFlightRef.current ||
-      isSubmittingPrescreen ||
       isRedirecting ||
       isStarting ||
       startBlocked
@@ -475,13 +556,25 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       return;
     }
 
+    const partnerToken = getPartnerToken();
+    if (!partnerToken) {
+      const message = "Missing survey token. Please use a valid partner survey link.";
+      setPrescreenError(message);
+      notifyOnce(message, "error");
+      return;
+    }
+
     startFlowInFlightRef.current = true;
     setPrescreenError("");
     setIsSubmittingPrescreen(true);
 
     try {
+      await endPreScreenResponse({
+        token: partnerToken,
+        status: PRESCREEN_RESPONSE_STATUSES.COMPLETED,
+      });
+      prescreenFinishedRef.current = true;
       await redirectToSurveyLink(actionUid);
-      // Keep loading UI until the browser navigates away.
     } catch (error) {
       const access = interpretSurveyStartAccess(error);
       const message = toFlowErrorMessage(error, LINK_FLOW_ERROR);
@@ -538,7 +631,8 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
       {pageReady && survey && showPrescreen && prescreen ? (
         <PreScreenQuestionnaire
           prescreen={prescreen}
-          onSubmit={handlePrescreenSubmit}
+          onSaveAnswer={handleSavePrescreenAnswer}
+          onComplete={handlePrescreenComplete}
           isSubmitting={isSubmittingPrescreen || isRedirecting}
           submitError={prescreenError}
         />

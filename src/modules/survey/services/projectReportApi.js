@@ -15,6 +15,10 @@ import {
   normalizeProjectReportType,
   PROJECT_REPORT_TYPES,
 } from "../utils/projectReportNavigation";
+import {
+  downloadPreScreenReportCsv,
+  getPreScreenReport,
+} from "./preScreenApi";
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -321,6 +325,15 @@ export async function fetchProjectReportList({
     };
   }
 
+  if (normalizedType === PROJECT_REPORT_TYPES.PRESCREEN) {
+    return getPreScreenReport({
+      projectId: resolvedProjectId,
+      page,
+      limit,
+      search,
+    });
+  }
+
   const basePath = API_ROUTES.projects.reportList(resolvedProjectId, normalizedType);
   const url = appendListQuery(basePath, {
     page,
@@ -391,6 +404,10 @@ export async function downloadProjectReport({
         ),
       }
     );
+  }
+
+  if (normalizedType === PROJECT_REPORT_TYPES.PRESCREEN) {
+    return downloadPreScreenReportCsv({ projectId: resolvedProjectId });
   }
 
   const basePath = API_ROUTES.projects.reportDownload(resolvedProjectId, normalizedType);

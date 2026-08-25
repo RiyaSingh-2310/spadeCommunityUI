@@ -170,6 +170,10 @@ export const API_ROUTES = {
     activity: "/api/survey/activity",
     /** Partner URL gateway — check whether pre-screen is required. */
     prescreen: "/api/survey/prescreen",
+    /** Partner URL gateway — save one pre-screen answer. */
+    prescreenResponse: "/api/survey/prescreenResponse",
+    /** Partner URL gateway — update pre-screen status (COMPLETED | IN_PROGRESS | TERMINATED). */
+    prescreenResponseEnd: "/api/survey/prescreenResponseEnd",
     /** Partner URL gateway — resolve live survey redirect URL. */
     link: "/api/survey/link",
     /** Public result-page status updates (pid + uid query). */
@@ -216,6 +220,8 @@ export const API_ROUTES = {
       `/api/project-reports/${encodeURIComponent(String(projectId ?? "").trim())}/supplier/${encodeURIComponent(String(supplierId ?? "").trim())}`,
     supplierExportCsv: (projectId, supplierId) =>
       `/api/project-reports/${encodeURIComponent(String(projectId ?? "").trim())}/supplier/${encodeURIComponent(String(supplierId ?? "").trim())}/export/csv`,
+    preScreenReport: "/api/project-reports/pre-screen-report",
+    preScreenReportExportCsv: "/api/project-reports/pre-screen-report/export/csv",
   },
   supplierMapping: {
     list: "/api/supplier-mapping/list",
