@@ -11,6 +11,7 @@ const SUPPLIER_COLUMNS = [
   "S.No",
   "Supplier Code",
   "Supplier Name",
+  "Quota",
   "Total Respondent",
   "Complete",
   "Terminate",
@@ -27,6 +28,7 @@ function renderSupplierCell(row, col) {
     "S.No": row.sno,
     "Supplier Code": row.supplierCode,
     "Supplier Name": row.supplierName,
+    Quota: row.quota,
     "Total Respondent": row.totalRespondent,
     Complete: row.complete,
     Terminate: row.terminate,
@@ -37,12 +39,12 @@ function renderSupplierCell(row, col) {
   return map[col] ?? "—";
 }
 
-function RecontactSupplierDetailsModal({ isOpen, onClose, surveyId }) {
+function RecontactSupplierDetailsModal({ isOpen, onClose, projectId }) {
   const [rows, setRows] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!isOpen || !surveyId) {
+    if (!isOpen || !projectId) {
       setRows([]);
       return undefined;
     }
@@ -50,7 +52,7 @@ function RecontactSupplierDetailsModal({ isOpen, onClose, surveyId }) {
     let cancelled = false;
     setIsLoading(true);
 
-    getRecontactSupplierDetails(surveyId)
+    getRecontactSupplierDetails(projectId)
       .then((data) => {
         if (!cancelled) setRows(data);
       })
@@ -67,7 +69,7 @@ function RecontactSupplierDetailsModal({ isOpen, onClose, surveyId }) {
     return () => {
       cancelled = true;
     };
-  }, [isOpen, surveyId]);
+  }, [isOpen, projectId]);
 
   if (!isOpen) return null;
 
@@ -131,7 +133,7 @@ function RecontactSupplierDetailsModal({ isOpen, onClose, surveyId }) {
                     </tr>
                   ) : (
                     rows.map((row, rowIdx) => (
-                      <tr key={row.supplierCode ?? rowIdx} className="align-middle">
+                      <tr key={`${row.sno}-${row.supplierId}-${rowIdx}`} className="align-middle">
                         {SUPPLIER_COLUMNS.map((col) => (
                           <td key={col} className="admin-text align-middle text-sm">
                             {renderSupplierCell(row, col)}

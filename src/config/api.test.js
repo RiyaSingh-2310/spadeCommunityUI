@@ -62,6 +62,13 @@ describe("buildApiUrl", () => {
     expect(API_ROUTES.invoice.downloadPdf("INV-1")).toBe("/api/invoice/INV-1/pdf");
   });
 
+  it("uses the project partners contract for Recontact supplier details", () => {
+    expect(API_ROUTES.projects.partners(1)).toBe("/api/projects/1/partners");
+    expect(API_ROUTES.survey.recontactSupplierDetails(1)).toBe(
+      "/api/projects/1/partners"
+    );
+  });
+
   it("uses the pre-screen response and report contracts", () => {
     expect(API_ROUTES.survey.prescreenResponse).toBe("/api/survey/prescreenResponse");
     expect(API_ROUTES.survey.prescreenResponseEnd).toBe("/api/survey/prescreenResponseEnd");

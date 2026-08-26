@@ -36,6 +36,7 @@ describe("CRUD API contracts", () => {
     expect(API_ROUTES.projects.byId(5)).toBe("/api/projects/5");
     expect(API_ROUTES.projects.update(5)).toBe("/api/projects/5");
     expect(API_ROUTES.projects.delete(5)).toBe("/api/projects/5");
+    expect(API_ROUTES.projects.partners(1)).toBe("/api/projects/1/partners");
   });
 
   it("project URLs", () => {

@@ -2,7 +2,7 @@ import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import { formatCountryLabel } from "../../../services/countries/countriesApi";
-import { getAssignedPartners, getRecord, getRecords } from "./surveyApi";
+import { getRecord, getRecords } from "./surveyApi";
 import { matchesSearchQuery, normalizeSearchQuery } from "../../shared/utils/searchQuery";
 
 function assertSuccess(data) {
@@ -118,20 +118,51 @@ export function mapSurveyToRecontactFormDefaults(survey) {
   };
 }
 
+function pickPartnerField(record, keys, fallback = "—") {
+  if (!record || typeof record !== "object") return fallback;
+  for (const key of keys) {
+    const value = record[key];
+    if (value != null && value !== "") return value;
+  }
+  return fallback;
+}
+
+function extractPartnerRows(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.data?.partners)) return payload.data.partners;
+  if (Array.isArray(payload?.partners)) return payload.partners;
+  return [];
+}
+
 /**
+ * Maps GET /api/projects/:id/partners rows for the Supplier Details modal.
  * @param {object[]} partners
  */
 export function mapPartnersToSupplierDetailRows(partners = []) {
+  if (!Array.isArray(partners)) return [];
+
   return partners.map((partner, index) => ({
-    sno: index + 1,
-    supplierCode: partner?.code ?? "—",
-    supplierName: partner?.name ?? "—",
-    totalRespondent: partner?.panel_size ?? partner?.allocated_size ?? "—",
-    complete: partner?.complete_val ?? "—",
-    terminate: partner?.terminate_val ?? "—",
-    overQuota: partner?.over_quota_val ?? "—",
-    qualityTerm: partner?.quality_term_val ?? "—",
-    dropout: partner?.dropout ?? partner?.dropout_val ?? "—",
+    sno: pickPartnerField(partner, ["s_no", "sNo", "sno"], index + 1),
+    supplierId: pickPartnerField(partner, ["supplier_id", "supplierId"], ""),
+    supplierCode: pickPartnerField(partner, ["supplier_code", "supplierCode", "code"]),
+    supplierName: pickPartnerField(partner, ["supplier_name", "supplierName", "name"]),
+    quota: pickPartnerField(partner, ["quota"]),
+    totalRespondent: pickPartnerField(partner, [
+      "total_respondent",
+      "totalRespondent",
+      "panel_size",
+      "allocated_size",
+    ]),
+    complete: pickPartnerField(partner, ["complete", "complete_val"]),
+    terminate: pickPartnerField(partner, ["terminate", "terminate_val"]),
+    overQuota: pickPartnerField(partner, ["over_quota", "overQuota", "over_quota_val"]),
+    qualityTerm: pickPartnerField(partner, [
+      "quality_term",
+      "qualityTerm",
+      "quality_term_val",
+    ]),
+    dropout: pickPartnerField(partner, ["dropout", "dropout_val"]),
   }));
 }
 
@@ -148,10 +179,16 @@ export async function searchRecontactProjects(search = "") {
   return items.filter((item) => matchesSearchQuery(item.projectName, normalized));
 }
 
-/** GET /api/survey/:id/partners — supplier details for selected parent survey. */
-export async function getRecontactSupplierDetails(surveyId) {
-  const partners = await getAssignedPartners(surveyId);
-  return mapPartnersToSupplierDetailRows(partners);
+/** GET /api/projects/:id/partners — supplier details for the selected project. */
+export async function getRecontactSupplierDetails(projectId) {
+  const id = resolveNumericId(projectId);
+  if (id == null) {
+    throw new ApiError("Project is required.", null);
+  }
+
+  const data = await apiRequest(API_ROUTES.projects.partners(id));
+  assertSuccess(data);
+  return mapPartnersToSupplierDetailRows(extractPartnerRows(data));
 }
 
 /** @deprecated Use getRecontactSupplierDetails */

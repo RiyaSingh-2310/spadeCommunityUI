@@ -276,7 +276,7 @@ function RecontactSurveyPage({ isDarkMode }) {
       <RecontactSupplierDetailsModal
         isOpen={showSupplierModal}
         onClose={() => setShowSupplierModal(false)}
-        surveyId={selectedSurveyId}
+        projectId={selectedSurveyId}
       />
     </div>
   );

@@ -164,8 +164,8 @@ export const API_ROUTES = {
     removePartner: (surveyId, partnerId) =>
       `/api/survey/${surveyId}/partners/${partnerId}`,
     recontactCreate: "/api/projects/recontact/add",
-    recontactSupplierDetails: (surveyId) =>
-      `/api/survey/recontact/${encodeURIComponent(surveyId)}/supplier-details`,
+    recontactSupplierDetails: (projectId) =>
+      `/api/projects/${encodeURIComponent(String(projectId ?? "").trim())}/partners`,
     /** Partner URL gateway — store activity before survey start. */
     activity: "/api/survey/activity",
     /** Partner URL gateway — check whether pre-screen is required. */
@@ -206,6 +206,8 @@ export const API_ROUTES = {
     uploadMultiUrls: (id) => `/api/projects/${id}/multiple-url/csv-upload`,
     multiLinkStats: (id) => `/api/projects/${id}/multi-link-stats`,
     recontactAdd: "/api/projects/recontact/add",
+    partners: (id) =>
+      `/api/projects/${encodeURIComponent(String(id ?? "").trim())}/partners`,
     reportList: (id, reportType) =>
       `/api/projects/${encodeURIComponent(String(id ?? "").trim())}/reports/${encodeURIComponent(String(reportType ?? "").trim())}`,
     reportDownload: (id, reportType) =>
