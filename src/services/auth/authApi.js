@@ -10,13 +10,13 @@ import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
 import { LOGIN_ROLES } from "./loginRole";
 import { toastApiSuccess } from "../toast/apiToast";
-import toast from "../toast/toast";
 import { clearAuthSession, getAuthToken } from "./authStorage";
 import { mapAuthFlowResponse } from "./mapAuthFlowResponse";
 import { mapLoginResponse } from "./mapLoginResponse";
 import {
   beginIntentionalLogout,
   endIntentionalLogout,
+  isSessionExpiredHandled,
 } from "./sessionExpiry";
 import { stopAuthSessionLifecycle } from "./sessionLifecycle";
 
@@ -26,7 +26,7 @@ const AUTH_FLOW_REQUEST_OPTIONS = {
   loginBearer: true,
 };
 
-/** Prevents duplicate Sign Out / idle-logout calls. */
+/** Prevents duplicate Sign Out / session-expired logout calls. */
 let logoutInFlight = null;
 
 function logAuthDebug(scope, label, value) {
@@ -195,9 +195,18 @@ export async function logoutAdmin() {
 /**
  * Calls logout API first, then clears local auth state and redirects to login.
  * @param {(path: string) => void} navigate
- * @param {{ reason?: "manual" | "inactivity" }} [options]
+ * @param {{ reason?: "manual" }} [options]
  */
 export async function performLogout(navigate, { reason = "manual" } = {}) {
+  if (isSessionExpiredHandled()) {
+    if (typeof navigate === "function") {
+      navigate("/auth");
+    } else if (typeof window !== "undefined") {
+      window.location.replace("/auth");
+    }
+    return logoutInFlight;
+  }
+
   if (logoutInFlight) {
     return logoutInFlight;
   }
@@ -214,9 +223,7 @@ export async function performLogout(navigate, { reason = "manual" } = {}) {
       clearAuthSession();
 
       if (result.success) {
-        if (reason === "inactivity") {
-          toast.success("You were signed out due to inactivity.");
-        } else {
+        if (reason === "manual") {
           toastApiSuccess(result);
         }
       } else if (API_DEBUG) {

@@ -1,6 +1,6 @@
 import toast from "../toast/toast";
 import { notifyPartnerUrlTabsAdminLogout } from "../../modules/survey/utils/partnerUrlTabSync";
-import { clearAuthSession } from "./authStorage";
+import { clearAuthSession, getAuthToken } from "./authStorage";
 
 export const SESSION_EXPIRED_MESSAGE =
   "Your session has expired. Please log in again.";
@@ -13,6 +13,9 @@ let sessionExpiredHandled = false;
 
 /** True while an intentional Sign Out is in progress (skip duplicate forced logout). */
 let intentionalLogoutInProgress = false;
+
+/** Single in-flight expired-session logout (API + clear + redirect). */
+let expiredLogoutInFlight = null;
 
 export function isSessionExpiredHandled() {
   return sessionExpiredHandled;
@@ -35,6 +38,7 @@ export function endIntentionalLogout() {
 export function resetSessionExpiredState() {
   sessionExpiredHandled = false;
   intentionalLogoutInProgress = false;
+  expiredLogoutInFlight = null;
 }
 
 /**
@@ -49,17 +53,7 @@ export function consumeSessionExpiredToast() {
   toast.error(SESSION_EXPIRED_MESSAGE);
 }
 
-/**
- * Clears auth state, shows session-expired toast once, and redirects to login.
- * Safe to call from multiple concurrent 401 handlers — only runs once.
- */
-export function forceLogoutAfterSessionExpired() {
-  if (intentionalLogoutInProgress || sessionExpiredHandled) return;
-  sessionExpiredHandled = true;
-
-  notifyPartnerUrlTabsAdminLogout();
-  clearAuthSession();
-
+function redirectToLoginAfterExpiry() {
   if (typeof window === "undefined") return;
 
   const { pathname } = window.location;
@@ -73,4 +67,41 @@ export function forceLogoutAfterSessionExpired() {
 
   sessionStorage.setItem(PENDING_SESSION_EXPIRED_TOAST_KEY, "1");
   window.location.replace(LOGIN_PATH);
+}
+
+/**
+ * Clears auth state after the token/session expires.
+ * Calls POST /api/admin/logout once when a token is still present, then
+ * redirects to login. Safe to call from JWT expiry and concurrent 401s.
+ */
+export function forceLogoutAfterSessionExpired() {
+  if (intentionalLogoutInProgress || sessionExpiredHandled) {
+    return expiredLogoutInFlight;
+  }
+  sessionExpiredHandled = true;
+  beginIntentionalLogout();
+
+  expiredLogoutInFlight = (async () => {
+    try {
+      const { stopAuthSessionLifecycle } = await import("./sessionLifecycle");
+      stopAuthSessionLifecycle();
+    } catch {
+      // Lifecycle may already be stopped.
+    }
+
+    try {
+      if (getAuthToken()) {
+        const { logoutAdmin } = await import("./authApi");
+        await logoutAdmin();
+      }
+    } catch {
+      // Logout API may reject an already-expired token; still clear locally.
+    }
+
+    notifyPartnerUrlTabsAdminLogout();
+    clearAuthSession();
+    redirectToLoginAfterExpiry();
+  })();
+
+  return expiredLogoutInFlight;
 }

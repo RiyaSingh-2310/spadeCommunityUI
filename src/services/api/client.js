@@ -1,7 +1,6 @@
 import axios from "axios";
 import { API_DEBUG, API_LOGIN_BEARER_TOKEN, buildApiUrl } from "../../config/api";
 import { getAuthToken } from "../auth/authStorage";
-import { shouldInvalidateSessionOn401 } from "../auth/jwtUtils";
 import { tryRefreshAuthSession } from "../auth/refreshSession";
 import {
   forceLogoutAfterSessionExpired,
@@ -266,20 +265,14 @@ export async function apiRequest(path, options = {}) {
         }
       }
 
-      // Do not force-logout while the user is explicitly signing out.
-      // Do not clear a still-valid JWT just because one endpoint returned 401.
-      const sessionExpired = shouldInvalidateSessionOn401(getAuthToken());
-      if (!isIntentionalLogoutInProgress() && sessionExpired) {
+      // Authenticated 401 after a failed refresh is an expired/invalid session.
+      // 400/403/404/422/500 do not go through this branch.
+      if (!isIntentionalLogoutInProgress()) {
         forceLogoutAfterSessionExpired();
       }
-      throw new ApiError(
-        sessionExpired
-          ? SESSION_EXPIRED_MESSAGE
-          : extractErrorMessage(error.response, data, rawText) || SESSION_EXPIRED_MESSAGE,
-        data,
-        401,
-        { sessionExpired }
-      );
+      throw new ApiError(SESSION_EXPIRED_MESSAGE, data, 401, {
+        sessionExpired: true,
+      });
     }
 
     const message = extractErrorMessage(error.response, data, rawText);

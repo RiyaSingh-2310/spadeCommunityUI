@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getJwtExpiryMs,
   getJwtMsUntilExpiry,
-  shouldInvalidateSessionOn401,
+  isJwtExpired,
 } from "./jwtUtils";
 
 function encodeJwt(payload) {
@@ -31,18 +31,18 @@ describe("jwtUtils", () => {
     expect(getJwtExpiryMs(token)).toBe(expMs);
   });
 
-  it("does not treat a still-valid JWT as session-expired on 401", () => {
+  it("treats a future exp as not expired", () => {
     const token = encodeJwt({ exp: Math.floor(Date.now() / 1000) + 30 * 60 });
-    expect(shouldInvalidateSessionOn401(token)).toBe(false);
+    expect(isJwtExpired(token)).toBe(false);
   });
 
-  it("treats an expired JWT as session-expired on 401", () => {
+  it("treats a past exp as expired", () => {
     const token = encodeJwt({ exp: Math.floor(Date.now() / 1000) - 30 });
-    expect(shouldInvalidateSessionOn401(token)).toBe(true);
+    expect(isJwtExpired(token)).toBe(true);
   });
 
-  it("treats missing or opaque tokens as expired on 401", () => {
-    expect(shouldInvalidateSessionOn401("")).toBe(true);
-    expect(shouldInvalidateSessionOn401("opaque-token")).toBe(true);
+  it("returns null when exp cannot be read", () => {
+    expect(isJwtExpired("")).toBe(null);
+    expect(isJwtExpired("opaque-token")).toBe(null);
   });
 });

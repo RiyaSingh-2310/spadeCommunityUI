@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { tryRefreshAuthSession } from "./refreshSession";
 import {
-  getLastActivityAt,
-  SESSION_INACTIVITY_MS,
   startAuthSessionLifecycle,
   stopAuthSessionLifecycle,
 } from "./sessionLifecycle";
@@ -10,11 +9,32 @@ vi.mock("./refreshSession", () => ({
   tryRefreshAuthSession: vi.fn(async () => false),
 }));
 
-describe("admin inactivity session lifecycle", () => {
+function encodeJwt(payload) {
+  const header = btoa(JSON.stringify({ alg: "none", typ: "JWT" }))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+  const body = btoa(JSON.stringify(payload))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+  return `${header}.${body}.sig`;
+}
+
+function setAccessToken(expSecondsFromNow) {
+  const token = encodeJwt({
+    exp: Math.floor(Date.now() / 1000) + expSecondsFromNow,
+  });
+  localStorage.setItem("authToken", token);
+  return token;
+}
+
+describe("admin token-expiry session lifecycle", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-08-25T12:00:00.000Z"));
-    localStorage.setItem("authToken", "test-token");
+    vi.setSystemTime(new Date("2026-08-26T12:00:00.000Z"));
+    localStorage.clear();
+    tryRefreshAuthSession.mockResolvedValue(false);
   });
 
   afterEach(() => {
@@ -23,77 +43,65 @@ describe("admin inactivity session lifecycle", () => {
     vi.useRealTimers();
   });
 
-  it("does not log out while the user keeps interacting", () => {
-    const onIdleLogout = vi.fn();
-    startAuthSessionLifecycle({ onIdleLogout });
+  it("does not log out while the JWT is still valid, even with no activity", () => {
+    setAccessToken(60 * 60);
+    const onSessionExpired = vi.fn();
+    startAuthSessionLifecycle({ onSessionExpired });
 
-    for (let minute = 1; minute <= 10; minute += 1) {
-      vi.advanceTimersByTime(60_000);
-      window.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-      window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "a" }));
-    }
-
-    expect(onIdleLogout).not.toHaveBeenCalled();
-  });
-
-  it("logs out after 7 minutes of complete inactivity", () => {
-    const onIdleLogout = vi.fn();
-    startAuthSessionLifecycle({ onIdleLogout });
-
-    vi.advanceTimersByTime(SESSION_INACTIVITY_MS - 1_000);
-    expect(onIdleLogout).not.toHaveBeenCalled();
-
-    vi.advanceTimersByTime(1_000);
-    expect(onIdleLogout).toHaveBeenCalledTimes(1);
-  });
-
-  it("resets the idle window after activity at 6 minutes", () => {
-    const onIdleLogout = vi.fn();
-    startAuthSessionLifecycle({ onIdleLogout });
-
-    vi.advanceTimersByTime(6 * 60_000);
+    vi.advanceTimersByTime(10 * 60 * 1000);
     window.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-
-    vi.advanceTimersByTime(6 * 60_000);
-    expect(onIdleLogout).not.toHaveBeenCalled();
-
-    vi.advanceTimersByTime(60_000);
-    expect(onIdleLogout).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not treat tab visibility or window focus as user activity", () => {
-    const onIdleLogout = vi.fn();
-    startAuthSessionLifecycle({ onIdleLogout });
-    const startedAt = getLastActivityAt();
-
-    vi.advanceTimersByTime(2 * 60_000);
-    document.dispatchEvent(new Event("visibilitychange"));
-    window.dispatchEvent(new Event("focus"));
-
-    expect(getLastActivityAt()).toBe(startedAt);
-
-    vi.advanceTimersByTime(SESSION_INACTIVITY_MS - 2 * 60_000);
-    expect(onIdleLogout).toHaveBeenCalledTimes(1);
-  });
-
-  it("logs out when returning to a tab that was idle for more than 7 minutes", () => {
-    const onIdleLogout = vi.fn();
-    startAuthSessionLifecycle({ onIdleLogout });
-
-    vi.advanceTimersByTime(SESSION_INACTIVITY_MS + 30_000);
     document.dispatchEvent(new Event("visibilitychange"));
 
-    expect(onIdleLogout).toHaveBeenCalledTimes(1);
+    expect(onSessionExpired).not.toHaveBeenCalled();
   });
 
-  it("registers a single idle handler even if start is called again", () => {
-    const first = vi.fn();
-    const second = vi.fn();
-    startAuthSessionLifecycle({ onIdleLogout: first });
-    startAuthSessionLifecycle({ onIdleLogout: second });
+  it("does not log out an opaque token after a fixed idle duration", () => {
+    localStorage.setItem("authToken", "opaque-token");
+    const onSessionExpired = vi.fn();
+    startAuthSessionLifecycle({ onSessionExpired });
 
-    vi.advanceTimersByTime(SESSION_INACTIVITY_MS);
-    expect(second).toHaveBeenCalledTimes(1);
-    expect(first).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(30 * 60 * 1000);
+    expect(onSessionExpired).not.toHaveBeenCalled();
+  });
+
+  it("logs out when the JWT expires and refresh is unavailable", async () => {
+    setAccessToken(30);
+    const onSessionExpired = vi.fn();
+    startAuthSessionLifecycle({ onSessionExpired });
+
+    vi.advanceTimersByTime(24_000);
+    expect(onSessionExpired).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(onSessionExpired).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes before expiry instead of logging out when a refresh token exists", async () => {
+    setAccessToken(30);
+    localStorage.setItem("refreshToken", "refresh-token");
+    tryRefreshAuthSession.mockImplementation(async () => {
+      setAccessToken(60 * 60);
+      return true;
+    });
+
+    const onSessionExpired = vi.fn();
+    startAuthSessionLifecycle({ onSessionExpired });
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(tryRefreshAuthSession).toHaveBeenCalled();
+    expect(onSessionExpired).not.toHaveBeenCalled();
+  });
+
+  it("logs out once if refresh fails at token expiry", async () => {
+    setAccessToken(20);
+    localStorage.setItem("refreshToken", "stale-refresh");
+    tryRefreshAuthSession.mockResolvedValue(false);
+
+    const onSessionExpired = vi.fn();
+    startAuthSessionLifecycle({ onSessionExpired });
+    startAuthSessionLifecycle({ onSessionExpired });
+
+    await vi.advanceTimersByTimeAsync(25_000);
+    expect(onSessionExpired).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,9 +1,9 @@
 /**
- * Lightweight JWT helpers for session keep-alive (expiry only — no signature verify).
+ * Lightweight JWT helpers for session expiry (no signature verify).
  */
 
 /** Treat the access token as expired this close to JWT `exp`. */
-const EXPIRY_SKEW_MS = 5_000;
+export const JWT_EXPIRY_SKEW_MS = 5_000;
 
 /** Values above this are unix milliseconds; JWT spec uses seconds. */
 const EXP_MILLISECONDS_THRESHOLD = 1e12;
@@ -57,17 +57,11 @@ export function getJwtMsUntilExpiry(token) {
 }
 
 /**
- * Whether a 401 should end the admin session.
- * A still-valid JWT must not be cleared just because one endpoint returned 401.
- *
  * @param {string | null | undefined} token
- * @returns {boolean}
+ * @returns {boolean | null} true when expired, false when still valid, null when exp is unknown
  */
-export function shouldInvalidateSessionOn401(token) {
-  const raw = String(token ?? "").trim();
-  if (!raw) return true;
-
-  const msLeft = getJwtMsUntilExpiry(raw);
-  if (msLeft == null) return true;
-  return msLeft <= EXPIRY_SKEW_MS;
+export function isJwtExpired(token) {
+  const msLeft = getJwtMsUntilExpiry(token);
+  if (msLeft == null) return null;
+  return msLeft <= JWT_EXPIRY_SKEW_MS;
 }

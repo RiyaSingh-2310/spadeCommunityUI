@@ -1,28 +1,20 @@
-import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import {
   AUTH_SESSION_CHANGED_EVENT,
   isAuthenticated,
 } from "../../../services/auth/authStorage";
-import { performLogout } from "../../../services/auth/authApi";
+import { forceLogoutAfterSessionExpired } from "../../../services/auth/sessionExpiry";
 import {
   startAuthSessionLifecycle,
   stopAuthSessionLifecycle,
 } from "../../../services/auth/sessionLifecycle";
 
 /**
- * Keeps the admin session alive while the user is active, and signs out after
- * 7 minutes of genuine inactivity (lastActivityAt). Tab visibility does not
- * count as activity.
+ * Watch the authenticated admin session for JWT expiry (and refresh-before-expiry).
+ * Does not use an inactivity timer. Automatic logout runs only when the token
+ * expires or an authenticated request reports an expired session.
  */
 export function useAuthSessionLifecycle() {
-  const navigate = useNavigate();
-  const navigateRef = useRef(navigate);
-
-  useEffect(() => {
-    navigateRef.current = navigate;
-  }, [navigate]);
-
   useEffect(() => {
     const syncLifecycle = () => {
       if (!isAuthenticated()) {
@@ -31,8 +23,7 @@ export function useAuthSessionLifecycle() {
       }
 
       startAuthSessionLifecycle({
-        onIdleLogout: () =>
-          performLogout(navigateRef.current, { reason: "inactivity" }),
+        onSessionExpired: () => forceLogoutAfterSessionExpired(),
       });
     };
 
