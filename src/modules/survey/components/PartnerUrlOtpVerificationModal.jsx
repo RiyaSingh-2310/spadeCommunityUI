@@ -279,7 +279,7 @@ function PartnerUrlOtpVerificationModal({
 
             <div className="space-y-4">
               <label
-                className="admin-text-muted text-xs font-semibold uppercase tracking-wide"
+                className="admin-text-muted text-xs font-semibold tracking-[0.02em]"
                 htmlFor="partner-url-identifier"
               >
                 Email ID or UID
@@ -333,7 +333,7 @@ function PartnerUrlOtpVerificationModal({
 
             <form onSubmit={handleVerifyOtp} className="space-y-4">
               <label
-                className="admin-text-muted text-xs font-semibold uppercase tracking-wide"
+                className="admin-text-muted text-xs font-semibold tracking-[0.02em]"
                 htmlFor="partner-url-otp"
               >
                 OTP

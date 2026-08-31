@@ -1,20 +1,26 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
 import {
   createTinyMceInit,
   TINYMCE_API_KEY,
-  TINYMCE_TOOLBAR_COMPACT,
+  TINYMCE_TOOLBAR_COLLAPSED,
   TINYMCE_TOOLBAR_FULL,
+  TINYMCE_TOOLBAR_FULL_WITH_EXPAND,
 } from "./richTextEditorConfig";
 
 const TinyMceEditor = lazy(() =>
   import("@tinymce/tinymce-react").then((module) => ({ default: module.Editor }))
 );
 
+/** One-line collapsed editor height (content area only). */
+export const RICH_TEXT_COMPACT_HEIGHT = 42;
+/** Comfortable expanded writing area without excessive whitespace. */
+export const RICH_TEXT_EXPANDED_HEIGHT = 340;
+
 /**
  * Shared admin rich-text editor.
- * When `initiallyCollapsed` is true, starts compact with a limited toolbar and
- * an expand control — matching Project Description UX requirements.
+ * Collapsed by default: compact writing area, formatting hidden, expand control
+ * at the end of the existing TinyMCE toolbar.
+ * Expanded: full toolbar and a larger typing area; the same toolbar control collapses.
  */
 function RichTextEditor({
   value = "",
@@ -23,9 +29,9 @@ function RichTextEditor({
   isDarkMode = false,
   placeholder = "Enter content...",
   disabled = false,
-  height = 240,
-  compactHeight = 140,
-  initiallyCollapsed = false,
+  height = RICH_TEXT_EXPANDED_HEIGHT,
+  compactHeight = RICH_TEXT_COMPACT_HEIGHT,
+  initiallyCollapsed = true,
   id,
   contentKey,
 }) {
@@ -38,7 +44,11 @@ function RichTextEditor({
 
   const isCompact = initiallyCollapsed && !expanded;
   const editorHeight = isCompact ? compactHeight : height;
-  const toolbar = isCompact ? TINYMCE_TOOLBAR_COMPACT : TINYMCE_TOOLBAR_FULL;
+  const toolbar = initiallyCollapsed
+    ? isCompact
+      ? TINYMCE_TOOLBAR_COLLAPSED
+      : TINYMCE_TOOLBAR_FULL_WITH_EXPAND
+    : TINYMCE_TOOLBAR_FULL;
 
   const init = useMemo(
     () =>
@@ -47,31 +57,29 @@ function RichTextEditor({
         placeholder,
         height: editorHeight,
         toolbar,
+        menubar: isCompact ? false : "table",
         resize: !isCompact,
         onBlur: () => onBlurRef.current?.(),
+        onToggleExpand: initiallyCollapsed
+          ? () => setExpanded((prev) => !prev)
+          : undefined,
+        expandActive: initiallyCollapsed && expanded,
       }),
-    [isDarkMode, placeholder, editorHeight, toolbar, isCompact]
+    [
+      isDarkMode,
+      placeholder,
+      editorHeight,
+      toolbar,
+      isCompact,
+      initiallyCollapsed,
+      expanded,
+    ]
   );
 
-  const fallbackHeight = typeof editorHeight === "number" ? editorHeight : 240;
+  const fallbackHeight = typeof editorHeight === "number" ? editorHeight : RICH_TEXT_EXPANDED_HEIGHT;
 
   return (
     <div className="overflow-hidden rounded-xl border border-[var(--admin-input-border)]">
-      {initiallyCollapsed ? (
-        <div className="flex items-center justify-end border-b border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] px-2 py-1">
-          <button
-            type="button"
-            onClick={() => setExpanded((prev) => !prev)}
-            className="admin-text-subtle inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium transition hover:opacity-90"
-            aria-label={expanded ? "Collapse description editor" : "Expand description editor"}
-            title={expanded ? "Collapse" : "Expand"}
-            disabled={disabled}
-          >
-            {expanded ? "Collapse" : "Expand"}
-            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-        </div>
-      ) : null}
       <Suspense
         fallback={
           <div

@@ -6,6 +6,7 @@ import {
   ADMIN_TABLE_INNER_SHELL_CLASS,
   TABLE_HEAD_BASE,
 } from "../../shared/utils/tableHelpers";
+import { toUiSentenceCase } from "../../shared/utils/uiText";
 import {
   getPartnerDetailCached,
   getPartnerExpandableSections,
@@ -65,7 +66,7 @@ function ExpandableSectionTable({ title, fields }) {
             <tr className="admin-text-muted">
               {fields.map((field) => (
                 <th key={field.label} className={`${TABLE_HEAD_BASE} text-left`}>
-                  {field.label}
+                  {toUiSentenceCase(field.label)}
                 </th>
               ))}
             </tr>
@@ -96,7 +97,7 @@ function ExpandableUrlDetails({ title, fields }) {
       <dl className="flex flex-col gap-4">
         {fields.map((field) => (
           <div key={field.label} className="min-w-0 max-w-full">
-            <dt className="admin-text-muted mb-1 text-xs font-semibold uppercase tracking-wide">
+            <dt className="admin-text-muted mb-1 text-xs font-semibold tracking-[0.02em]">
               {field.label}
             </dt>
             <dd className="admin-text text-sm leading-relaxed">

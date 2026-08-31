@@ -153,6 +153,7 @@ const NOWRAP_DATA_KEYS = new Set([
 ]);
 
 import { formatStatusLabel } from "./statusLabels";
+import { toUiSentenceCase, UI_SENTENCE_CASE_VALUE_KEYS } from "./uiText";
 
 export function getColumnKey(columnLabel) {
   if (COLUMN_KEY_MAP[columnLabel]) {
@@ -224,7 +225,15 @@ export function getRowValue(row, columnLabel) {
       if (key === "status" || k === "status") {
         return formatStatusLabel(row.statusLabel ?? value);
       }
-      return formatCellDisplayValue(value);
+      const formatted = formatCellDisplayValue(value);
+      if (
+        UI_SENTENCE_CASE_VALUE_KEYS.has(key) &&
+        typeof formatted === "string" &&
+        formatted !== "-"
+      ) {
+        return toUiSentenceCase(formatted);
+      }
+      return formatted;
     }
   }
   return "-";
@@ -268,7 +277,7 @@ export function isProfileImageColumn(columnLabel) {
 }
 
 export const TABLE_HEAD_BASE =
-  "px-4 py-3.5 text-[12px] font-bold uppercase tracking-[0.06em] whitespace-nowrap";
+  "px-4 py-3.5 text-[12px] font-semibold tracking-[0.02em] whitespace-nowrap";
 
 /** Nested / inner tables (expandable rows, detail sections, modals). */
 export const ADMIN_TABLE_INNER_CLASS = "admin-table admin-table-inner min-w-full text-sm";

@@ -14,7 +14,7 @@ function PortalDrawer({ isOpen, group, onClose }) {
           style={{ borderColor: "var(--srp-border)", background: "var(--srp-surface)" }}
         >
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--srp-text-muted)" }}>
+            <p className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
               Pre-Screener Group
             </p>
             <h2 className="mt-1 text-lg font-semibold">{group.questionnaireTitle}</h2>
@@ -27,37 +27,37 @@ function PortalDrawer({ isOpen, group, onClose }) {
         <div className="space-y-6 p-5">
           <dl className="grid gap-4 sm:grid-cols-2">
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--srp-text-muted)" }}>
+              <dt className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
                 Group Name
               </dt>
               <dd className="mt-1 text-sm font-medium">{group.groupName}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--srp-text-muted)" }}>
+              <dt className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
                 Language
               </dt>
               <dd className="mt-1 text-sm font-medium">{group.language}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--srp-text-muted)" }}>
+              <dt className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
                 Total Questions
               </dt>
               <dd className="mt-1 text-sm font-medium">{group.totalQuestions}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--srp-text-muted)" }}>
+              <dt className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
                 Created By
               </dt>
               <dd className="mt-1 text-sm font-medium">{group.createdBy}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--srp-text-muted)" }}>
+              <dt className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
                 Created Date
               </dt>
               <dd className="mt-1 text-sm font-medium">{group.createdDate}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--srp-text-muted)" }}>
+              <dt className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
                 Status
               </dt>
               <dd className="mt-1">

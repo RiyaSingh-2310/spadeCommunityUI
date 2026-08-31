@@ -1,4 +1,5 @@
 import CopyValueButton from "../../survey/components/CopyValueButton";
+import { toUiSentenceCase } from "../../shared/utils/uiText";
 
 function DetailField({
   label,
@@ -10,10 +11,11 @@ function DetailField({
   const display = value != null && String(value).trim() !== "" ? String(value) : "—";
   const canCopy = copyable && display !== "—";
   const showTitle = ellipsis && display !== "—";
+  const displayLabel = toUiSentenceCase(label);
 
   return (
     <div className="min-w-0">
-      <p className="admin-text-subtle text-xs font-semibold uppercase tracking-wide">{label}</p>
+      <p className="admin-text-subtle text-xs font-semibold tracking-[0.02em]">{displayLabel}</p>
       <div className="mt-1 flex min-w-0 items-center gap-2">
         <p
           className={`admin-text min-w-0 flex-1 text-sm ${

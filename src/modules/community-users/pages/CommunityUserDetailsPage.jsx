@@ -13,7 +13,7 @@ import CommunityUserExpandableDetails from "../components/CommunityUserExpandabl
 import { getRecord, getUserProfilingAnswers } from "../services/communityUsersApi";
 
 const TABLE_HEAD =
-  "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+  "admin-text-muted text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap";
 
 function CommunityUserDetailsPage({ isDarkMode }) {
   const navigate = useNavigate();

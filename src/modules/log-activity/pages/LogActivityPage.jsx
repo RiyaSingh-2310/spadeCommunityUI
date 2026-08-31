@@ -95,7 +95,7 @@ function LogActivityPage({ isDarkMode }) {
                 {["S.No", "Name", "Date and Time", ...(canWrite ? ["Action"] : [])].map((h) => (
                   <th
                     key={h}
-                    className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap"
+                    className="px-4 py-3 text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap"
                   >
                     {h}
                   </th>

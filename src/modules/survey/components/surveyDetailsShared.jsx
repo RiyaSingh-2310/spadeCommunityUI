@@ -3,6 +3,7 @@ import TableCard from "../../../components/admin/TableCard";
 import { ExternalLink } from "lucide-react";
 import { ADMIN_TABLE_INNER_CLASS } from "../../shared/utils/tableHelpers";
 import { formatStatusLabel } from "../../shared/utils/statusLabels";
+import { toUiSentenceCase } from "../../shared/utils/uiText";
 import CopyValueButton from "./CopyValueButton";
 
 export function SectionDivider() {
@@ -59,8 +60,8 @@ export function DetailField({
 
   return (
     <div className={className}>
-      <dt className="admin-text-muted mb-1 text-xs font-semibold uppercase tracking-wide">
-        {label}
+      <dt className="admin-text-muted mb-1 text-xs font-semibold tracking-[0.02em]">
+        {toUiSentenceCase(label)}
       </dt>
       <dd className="admin-text flex items-start gap-2 break-words text-sm font-medium">
         <span className="min-w-0 flex-1">{content}</span>
@@ -170,7 +171,7 @@ export function StatusBadge({ status }) {
 }
 
 const TABLE_HEAD =
-  "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+  "admin-text-muted text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap";
 
 export function SurveyDataTable({
   title,

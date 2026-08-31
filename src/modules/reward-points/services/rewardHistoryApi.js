@@ -3,6 +3,7 @@ import { ApiError } from "../../../services/api/ApiError";
 import { apiRequest } from "../../../services/api/client";
 import { appendListQuery } from "../../shared/utils/listQueryParams";
 import { formatSurveyListDate } from "../../shared/utils/dateTime";
+import { toUiSentenceCase } from "../../shared/utils/uiText";
 
 function assertSuccess(data) {
   if (data?.success !== true && data?.success !== "true") {
@@ -19,7 +20,7 @@ function toNumber(value, fallback = 0) {
 function normalizeStatus(value) {
   const status = String(value ?? "").trim();
   if (!status) return "Pending";
-  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  return toUiSentenceCase(status);
 }
 
 function coerceText(value, fallback = "—") {

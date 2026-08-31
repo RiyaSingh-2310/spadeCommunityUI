@@ -2,7 +2,12 @@ import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import { formatCountryLabel } from "../../../services/countries/countriesApi";
-import { getRecord, getRecords } from "./surveyApi";
+import {
+  getRecord,
+  getRecords,
+  mapSurveyToForm,
+  mapSurveyToProjectDetails,
+} from "./surveyApi";
 import { matchesSearchQuery, normalizeSearchQuery } from "../../shared/utils/searchQuery";
 
 function assertSuccess(data) {
@@ -78,6 +83,29 @@ export function mapSurveyToRecontactParentOption(survey) {
   };
 }
 
+function pickNonEmpty(...values) {
+  for (const value of values) {
+    if (value == null || value === "") continue;
+    const text = String(value).trim();
+    if (text && text !== "—") return text;
+  }
+  return "";
+}
+
+function resolveProjectCountryLabel(survey, details) {
+  const raw = pickNonEmpty(
+    details?.projectCountry,
+    survey?.project_country,
+    survey?.country,
+    survey?.Country,
+    survey?.country_name,
+    survey?.Country_Name
+  );
+  if (!raw) return "";
+  const labeled = formatCountryLabel(raw);
+  return labeled && labeled !== "—" ? labeled : raw;
+}
+
 /**
  * @param {object} survey
  */
@@ -86,35 +114,49 @@ export function mapSurveyToRecontactFormDefaults(survey) {
     return {};
   }
 
+  const details = mapSurveyToProjectDetails(survey);
+  const formMapped = mapSurveyToForm(survey);
   const referenceProjectId =
     survey.recordId ?? survey.record_id ?? survey.id ?? survey.project_id;
 
+  const projectManager = pickNonEmpty(formMapped.projectManager, details?.projectManager);
+  const projectManagerLabel = pickNonEmpty(
+    details?.projectManager,
+    survey.Project_Manager,
+    survey.project_manager_name,
+    survey.projectManagerName
+  );
+
+  const stripPlaceholder = (value) => {
+    const text = String(value ?? "").trim();
+    return text && text !== "—" ? text : "";
+  };
+
   return {
     parentSurveyId: referenceProjectId != null ? String(referenceProjectId) : "",
-    client: survey.client_name ?? survey.Clients ?? survey.clientName ?? "",
-    projectManager:
-      survey.project_manager_id != null
-        ? String(survey.project_manager_id)
-        : survey.Project_Manager != null
-          ? String(survey.Project_Manager)
-          : "",
-    projectCountry:
-      formatCountryLabel(survey.project_country ?? survey.country) !== "—"
-        ? formatCountryLabel(survey.project_country ?? survey.country)
-        : (survey.project_country ?? survey.country ?? ""),
-    loi: survey.loi != null ? String(survey.loi) : survey.LOI != null ? String(survey.LOI) : "",
-    ir: survey.ir != null ? String(survey.ir) : "",
-    sampleSize:
-      survey.sample_size != null
-        ? String(survey.sample_size)
-        : survey.SampleSize != null
-          ? String(survey.SampleSize)
-          : "",
-    currency: survey.currency ?? "",
-    cpi: survey.cpi != null ? String(survey.cpi) : "",
-    liveUrl: survey.live_url ?? survey.Live_Link ?? "",
-    testUrl: survey.test_url ?? survey.Test_Link ?? "",
-    description: survey.description ?? "",
+    client: pickNonEmpty(
+      details?.clientName,
+      survey.client_name,
+      survey.Clients,
+      survey.clientName
+    ),
+    projectManager,
+    projectManagerLabel,
+    projectCountry: resolveProjectCountryLabel(survey, details),
+    loi: pickNonEmpty(stripPlaceholder(details?.loiMinutes), survey.loi, survey.LOI),
+    ir: pickNonEmpty(stripPlaceholder(details?.irPercent), survey.ir, survey.IR),
+    sampleSize: pickNonEmpty(
+      stripPlaceholder(details?.sampleSize),
+      survey.sample_size,
+      survey.SampleSize
+    ),
+    currency: pickNonEmpty(details?.currency, survey.currency),
+    cpi: pickNonEmpty(stripPlaceholder(details?.cpiUsd), survey.cpi, survey.CPI),
+    liveUrl: pickNonEmpty(details?.liveLink, survey.live_url, survey.Live_Link),
+    testUrl: pickNonEmpty(details?.testLink, survey.test_url, survey.Test_Link),
+    description: pickNonEmpty(formMapped.description, details?.description, survey.description),
+    startDate: formMapped.startDate || "",
+    endDate: formMapped.endDate || "",
   };
 }
 

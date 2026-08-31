@@ -11,7 +11,7 @@ import {
 function DetailItem({ label, value }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--srp-text-muted)" }}>
+      <p className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
         {label}
       </p>
       <p className="mt-1 text-sm font-medium">{value}</p>
@@ -47,7 +47,7 @@ function ProjectSurveyManagementPage() {
     return (
       <div className="space-y-6">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--srp-text-muted)" }}>
+          <p className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
             Project & Survey Management
           </p>
           <h1 className="text-2xl font-bold tracking-tight">Project & Survey Management</h1>
@@ -63,7 +63,7 @@ function ProjectSurveyManagementPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--srp-text-muted)" }}>
+          <p className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
             Project & Survey Management
           </p>
           <h1 className="text-2xl font-bold tracking-tight">{project.projectName}</h1>
@@ -192,7 +192,7 @@ function ProjectSurveyManagementPage() {
               style={{ borderColor: "var(--srp-border)", background: "var(--srp-surface-muted)" }}
             >
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--srp-text-muted)" }}>
+                <p className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
                   {item.label}
                 </p>
                 <p className="mt-1 break-all font-mono text-xs">{item.value}</p>

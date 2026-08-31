@@ -6,7 +6,7 @@ import { getProjectReportColumns } from "../utils/projectReportColumns";
 import { PROJECT_REPORT_TYPES } from "../utils/projectReportNavigation";
 
 const TABLE_HEAD =
-  "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+  "admin-text-muted text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap";
 
 function ProjectReportTable({
   rows,

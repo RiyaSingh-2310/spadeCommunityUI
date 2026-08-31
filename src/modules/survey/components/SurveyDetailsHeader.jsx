@@ -104,7 +104,7 @@ function SurveyDetailsHeader({
 
         {!readOnly ? (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-            <label className="admin-text-muted text-xs font-semibold uppercase tracking-wide sm:sr-only">
+            <label className="admin-text-muted text-xs font-semibold tracking-[0.02em] sm:sr-only">
               Project Status
             </label>
             <SearchableSelect
@@ -130,7 +130,7 @@ function SurveyDetailsHeader({
           </div>
         ) : (
           <div className="flex flex-col items-end justify-end gap-1">
-            <span className="admin-text-muted text-xs font-semibold uppercase tracking-wide">
+            <span className="admin-text-muted text-xs font-semibold tracking-[0.02em]">
               Project Status
             </span>
             <span className="admin-text text-sm font-semibold">{projectStatus}</span>

@@ -16,7 +16,7 @@ const COLUMNS = [
 ];
 
 const TABLE_HEAD =
-  "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+  "admin-text-muted text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap";
 
 const iconBtnClass = (isDarkMode, disabled) =>
   `inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${

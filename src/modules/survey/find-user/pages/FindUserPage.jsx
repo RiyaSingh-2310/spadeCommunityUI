@@ -465,7 +465,7 @@ function FindUserPage({ isDarkMode }) {
         </div>
         {ineligibleProjectUrls.length > 0 ? (
           <div className="mt-4 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-header-search-bg)] px-4 py-3">
-            <p className="admin-text-muted mb-2 text-xs font-medium uppercase tracking-wide">
+            <p className="admin-text-muted mb-2 text-xs font-medium tracking-[0.02em]">
               Excluded from fresh invitation
             </p>
             <ul className="space-y-1 text-sm">

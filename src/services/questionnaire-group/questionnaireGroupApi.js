@@ -2,6 +2,7 @@ import { API_ROUTES } from "../../config/api";
 import { extractListTotalFromResponse, safeMapListItems } from "../../modules/shared/utils/listResponse";
 import { appendListQuery, MAX_API_LIST_LIMIT } from "../../modules/shared/utils/listQueryParams";
 import { normalizeSurveyGroupTitle } from "../../modules/prescreen/utils/surveyGroupTitle";
+import { toUiSentenceCase } from "../../modules/shared/utils/uiText";
 import {
   apiStatusToFormValue,
   formValueToApiStatus,
@@ -51,7 +52,7 @@ function normalizeQuestionnaireGroupLanguage(language) {
 function formatQuestionnaireGroupLanguageForUi(language) {
   const slug = normalizeQuestionnaireGroupLanguage(language);
   if (!slug) return "";
-  return slug.charAt(0).toUpperCase() + slug.slice(1);
+  return toUiSentenceCase(slug);
 }
 
 function extractQuestionnaireGroupList(data) {

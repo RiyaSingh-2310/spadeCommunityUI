@@ -28,7 +28,7 @@ function QuestionnairePreviewPage() {
           <ArrowLeft size={16} />
         </Link>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--srp-text-muted)" }}>
+          <p className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
             Questionnaire Preview
           </p>
           <h1 className="text-2xl font-bold tracking-tight">{group.questionnaireTitle}</h1>
@@ -37,19 +37,19 @@ function QuestionnairePreviewPage() {
 
       <div className="srp-card grid gap-4 p-5 sm:grid-cols-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--srp-text-muted)" }}>
+          <p className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
             Language
           </p>
-          <p className="mt-1 font-medium">{group.language}</p>
+          <p className="mt-1 font-medium capitalize">{group.language}</p>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--srp-text-muted)" }}>
+          <p className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
             Estimated LOI
           </p>
           <p className="mt-1 font-medium">{group.estimatedLoi}</p>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--srp-text-muted)" }}>
+          <p className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
             Status
           </p>
           <div className="mt-1">
@@ -61,7 +61,7 @@ function QuestionnairePreviewPage() {
       <div className="srp-card divide-y" style={{ borderColor: "var(--srp-border)" }}>
         {group.questions.map((question, index) => (
           <div key={question.id} className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--srp-text-muted)" }}>
+            <p className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
               Question {index + 1}
             </p>
             <p className="mt-2 text-base font-medium">{question.text}</p>

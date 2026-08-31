@@ -15,8 +15,16 @@ const TINYMCE_PLUGINS = [
   "code",
 ].join(" ");
 
+export const TINYMCE_TOOLBAR_EXPAND = "editorExpand";
+
 export const TINYMCE_TOOLBAR_FULL =
   "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist | outdent indent | link | table | tabledelete tableprops tablerowprops tablecellprops | tableinsertrowbefore tableinsertrowafter tabledeleterow | tableinsertcolbefore tableinsertcolafter tabledeletecol | removeformat | fullscreen | htmlEmbed";
+
+/** Full formatting toolbar with expand/collapse at the end. */
+export const TINYMCE_TOOLBAR_FULL_WITH_EXPAND = `${TINYMCE_TOOLBAR_FULL} | ${TINYMCE_TOOLBAR_EXPAND}`;
+
+/** Collapsed editor: formatting hidden; expand control stays in the toolbar. */
+export const TINYMCE_TOOLBAR_COLLAPSED = TINYMCE_TOOLBAR_EXPAND;
 
 /** Compact toolbar for collapsed description editors. */
 export const TINYMCE_TOOLBAR_COMPACT =
@@ -33,22 +41,44 @@ const CONTENT_STYLE =
  *   isDarkMode?: boolean,
  *   placeholder?: string,
  *   height?: number,
- *   toolbar?: string,
+ *   toolbar?: string | false,
+ *   menubar?: string | false,
  *   resize?: boolean,
+ *   contentPaddingRight?: number,
  *   onBlur?: () => void,
+ *   onToggleExpand?: () => void,
+ *   expandActive?: boolean,
  * }} options
  */
 export function createTinyMceInit({
   isDarkMode = false,
   placeholder = "Enter content...",
-  height = 240,
+  height = 300,
   toolbar = TINYMCE_TOOLBAR,
+  menubar,
   resize = true,
+  contentPaddingRight,
   onBlur,
+  onToggleExpand,
+  expandActive = false,
 } = {}) {
+  const resolvedMenubar =
+    menubar !== undefined
+      ? menubar
+      : toolbar === false ||
+          toolbar === TINYMCE_TOOLBAR_COMPACT ||
+          toolbar === TINYMCE_TOOLBAR_COLLAPSED
+        ? false
+        : "table";
+
+  const contentStyle =
+    contentPaddingRight != null
+      ? `${CONTENT_STYLE} body { padding-right: ${contentPaddingRight}px; }`
+      : CONTENT_STYLE;
+
   return {
     height,
-    menubar: toolbar === TINYMCE_TOOLBAR_COMPACT ? false : "table",
+    menubar: resolvedMenubar,
     branding: false,
     promotion: false,
     statusbar: false,
@@ -78,7 +108,7 @@ export function createTinyMceInit({
     extended_valid_elements:
       "script[type|src|language|defer|async],iframe[src|frameborder|style|scrolling|class|width|height|name|align|id|title|allow|allowfullscreen|loading|referrerpolicy]",
     valid_children: "+body[style|script|iframe|div|span|p]",
-    content_style: CONTENT_STYLE,
+    content_style: contentStyle,
     setup: (editor) => {
       editor.ui.registry.addButton("htmlEmbed", {
         icon: "sourcecode",
@@ -87,6 +117,18 @@ export function createTinyMceInit({
           editor.execCommand("mceCodeEditor");
         },
       });
+
+      if (onToggleExpand) {
+        editor.ui.registry.addToggleButton("editorExpand", {
+          icon: expandActive ? "chevron-up" : "chevron-down",
+          tooltip: expandActive ? "Collapse editor" : "Expand editor",
+          onAction: () => onToggleExpand(),
+          onSetup: (api) => {
+            api.setActive(Boolean(expandActive));
+            return () => {};
+          },
+        });
+      }
 
       if (onBlur) {
         editor.on("blur", () => onBlur());

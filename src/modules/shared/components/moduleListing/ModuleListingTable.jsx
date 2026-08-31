@@ -7,6 +7,7 @@ import {
   isStatusColumn,
   TABLE_HEAD_BASE,
 } from "../../utils/tableHelpers";
+import { toUiSentenceCase } from "../../utils/uiText";
 import ModuleListingTableBody from "./ModuleListingTableBody";
 
 function SortableHeader({ columnLabel, columnSort, onColumnSort }) {
@@ -14,6 +15,7 @@ function SortableHeader({ columnLabel, columnSort, onColumnSort }) {
   const direction = columnSort?.direction;
   const upActive = isActive && direction === "asc";
   const downActive = isActive && direction === "desc";
+  const displayLabel = toUiSentenceCase(columnLabel);
   return (
     <button
       type="button"
@@ -21,9 +23,9 @@ function SortableHeader({ columnLabel, columnSort, onColumnSort }) {
       className={`admin-table-sort-trigger inline-flex cursor-pointer items-center gap-1.5 transition hover:text-[var(--admin-foreground)] ${
         isActive ? "text-[var(--admin-primary-color)]" : ""
       }`}
-      aria-label={`Sort by ${columnLabel}`}
+      aria-label={`Sort by ${displayLabel}`}
     >
-      <span>{columnLabel}</span>
+      <span>{displayLabel}</span>
       <span className="inline-flex flex-col leading-none" aria-hidden>
         <ArrowUp
           size={11}
@@ -85,7 +87,7 @@ function ModuleListingTable({
                       onColumnSort={onColumnSort}
                     />
                   ) : (
-                    h
+                    toUiSentenceCase(h)
                   )}
                 </th>
               );

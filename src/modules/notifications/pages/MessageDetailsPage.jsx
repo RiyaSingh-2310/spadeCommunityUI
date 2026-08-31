@@ -267,7 +267,7 @@ function MessageDetailsPage({ isDarkMode }) {
           </div>
 
           <div className="mt-6 border-t pt-5" style={SECTION_BORDER}>
-            <p className="admin-text-subtle mb-1.5 text-xs font-semibold uppercase tracking-wide">
+            <p className="admin-text-subtle mb-1.5 text-xs font-semibold tracking-[0.02em]">
               Subject
             </p>
             <p className="admin-text text-base font-bold break-words sm:text-lg">
@@ -276,7 +276,7 @@ function MessageDetailsPage({ isDarkMode }) {
           </div>
 
           <div className="mt-5 border-t pt-5" style={SECTION_BORDER}>
-            <p className="admin-text-subtle mb-3 text-xs font-semibold uppercase tracking-wide">
+            <p className="admin-text-subtle mb-3 text-xs font-semibold tracking-[0.02em]">
               Message
             </p>
             <div className="admin-text whitespace-pre-wrap break-words text-sm leading-7 sm:text-[15px] sm:leading-8">
@@ -286,7 +286,7 @@ function MessageDetailsPage({ isDarkMode }) {
 
           {replies.length > 0 ? (
             <div className="mt-5 border-t pt-5" style={SECTION_BORDER}>
-              <p className="admin-text-subtle mb-3 text-xs font-semibold uppercase tracking-wide">
+              <p className="admin-text-subtle mb-3 text-xs font-semibold tracking-[0.02em]">
                 Replies
               </p>
               <ul className="space-y-4">

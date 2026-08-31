@@ -48,7 +48,7 @@ function DetailSection({ title, fields, row, emptyLabel = "—" }) {
 
   return (
     <div className="mb-4">
-      <h3 className="admin-text-muted mb-2 text-xs font-semibold uppercase tracking-[0.04em]">
+      <h3 className="admin-text-muted mb-2 text-xs font-semibold tracking-[0.02em]">
         {title}
       </h3>
       <dl className="grid gap-2 sm:grid-cols-2">
@@ -75,7 +75,7 @@ function RequestSummarySection({ row }) {
 
   return (
     <div className="mb-4">
-      <h3 className="admin-text-muted mb-2 text-xs font-semibold uppercase tracking-[0.04em]">
+      <h3 className="admin-text-muted mb-2 text-xs font-semibold tracking-[0.02em]">
         Request Details
       </h3>
       <dl className="space-y-2.5">

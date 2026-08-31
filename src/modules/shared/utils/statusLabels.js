@@ -1,3 +1,5 @@
+import { toUiSentenceCase } from "./uiText";
+
 /** UI-facing status labels (never send "Activated"/"Deactivated" to the UI). */
 export const STATUS_UI_ACTIVE = "Active";
 export const STATUS_UI_INACTIVE = "Inactive";
@@ -28,7 +30,7 @@ export function formatStatusLabel(status) {
   if (raw === "Activated") return STATUS_UI_ACTIVE;
   if (raw === "Deactivated") return STATUS_UI_INACTIVE;
 
-  return raw;
+  return toUiSentenceCase(raw);
 }
 
 /**

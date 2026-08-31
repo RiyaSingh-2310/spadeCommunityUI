@@ -91,7 +91,7 @@ function RfqSalesLogListModal({ isOpen, onClose, row, isDarkMode, refreshKey = 0
                     (heading) => (
                       <th
                         key={heading}
-                        className="text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap"
+                        className="text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap"
                       >
                         {heading}
                       </th>

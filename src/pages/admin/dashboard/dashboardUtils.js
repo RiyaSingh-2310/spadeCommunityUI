@@ -2,7 +2,7 @@ import { apiRequest } from "../../../services/api/client";
 
 export const STATUS_ACTIVE = "active";
 export const TABLE_HEAD =
-  "px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+  "px-3 py-3 text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap";
 
 export function normalizeStatus(value) {
   return String(value ?? "").trim().toLowerCase();

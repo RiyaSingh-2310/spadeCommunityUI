@@ -66,7 +66,7 @@ function SurveyResearchPortalLayout({ isDarkMode, onToggleTheme }) {
               </button>
             ) : null}
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--srp-text-muted)" }}>
+              <p className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
                 Market Research Platform
               </p>
               <p className="text-sm font-semibold">Survey Management Workflow</p>

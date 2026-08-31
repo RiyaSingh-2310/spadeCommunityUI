@@ -27,6 +27,11 @@ export {
   normalizeStatusKey,
 } from "./statusLabels";
 export {
+  shouldPreserveUiCasing,
+  toUiSentenceCase,
+  UI_SENTENCE_CASE_VALUE_KEYS,
+} from "./uiText";
+export {
   sanitizeInteger,
   sanitizeDecimal,
   isValidDecimalPlaces,

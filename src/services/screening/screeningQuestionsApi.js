@@ -17,6 +17,7 @@ import {
   normalizeOptionsForQuestionType,
   normalizeQuestionTypeLabel,
 } from "../../modules/user-screening/data/profilingQuestionsStore";
+import { toUiSentenceCase } from "../../modules/shared/utils/uiText";
 
 function isApiSuccess(data) {
   if (!data || typeof data !== "object") return false;
@@ -363,7 +364,7 @@ function normalizePanelQuestionnaireLanguage(language) {
 function formatPanelQuestionnaireLanguageForUi(language) {
   const slug = normalizePanelQuestionnaireLanguage(language);
   if (!slug) return "";
-  return slug.charAt(0).toUpperCase() + slug.slice(1);
+  return toUiSentenceCase(slug);
 }
 
 function resolveOptionsAsStrings(payload) {

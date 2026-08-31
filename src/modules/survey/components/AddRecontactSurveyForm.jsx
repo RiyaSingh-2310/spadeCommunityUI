@@ -10,11 +10,12 @@ import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import {
+  ensureSelectOption,
   mapProjectManagersToSelectOptions,
+  resolveSelectValue,
 } from "../hooks/useSurveyFormSelectOptions";
+import { useRecontactPreScreen } from "../hooks/useRecontactPreScreen";
 import { getRecords as getProjectManagers } from "../../../services/projectManagers/projectManagersApi";
-import { getRecords as getGroupSurveys } from "../services/groupSurveyApi";
-import { MAX_API_LIST_LIMIT } from "../../shared/utils/listQueryParams";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { isFormValid, limitTextInput, NAME_FIELD_MAX_LENGTH } from "../../shared/utils/validation";
@@ -70,9 +71,19 @@ function AddRecontactSurveyForm({
     ...initialValues,
   }));
   const [projectManagerOptions, setProjectManagerOptions] = useState([]);
-  const [surveyGroupOptions, setSurveyGroupOptions] = useState([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const {
+    surveyGroupOptions,
+    questions: preScreenQuestions,
+    isLoadingGroups,
+    isLoadingQuestions,
+  } = useRecontactPreScreen({
+    language: form.language,
+    surveyGroup: form.surveyGroup,
+    enabled: Boolean(form.filters.preScreen),
+  });
 
   const inputClass = getAdminInputClass();
   const selectClass = `${inputClass} appearance-none`;
@@ -84,28 +95,16 @@ function AddRecontactSurveyForm({
     const loadOptions = async () => {
       setIsLoadingOptions(true);
       try {
-        const [projectManagers, groups] = await Promise.all([
-          getProjectManagers({
-            page: 1,
-            limit: 100,
-          }),
-          getGroupSurveys({ page: 1, limit: MAX_API_LIST_LIMIT }),
-        ]);
+        const projectManagers = await getProjectManagers({
+          page: 1,
+          limit: 100,
+        });
         if (!cancelled) {
           setProjectManagerOptions(mapProjectManagersToSelectOptions(projectManagers.items));
-          setSurveyGroupOptions(
-            (groups.items ?? [])
-              .map((item) => ({
-                value: String(item.id ?? ""),
-                label: String(item.projectName ?? item.groupProject ?? "").trim(),
-              }))
-              .filter((option) => option.value && option.label)
-          );
         }
       } catch {
         if (!cancelled) {
           setProjectManagerOptions([]);
-          setSurveyGroupOptions([]);
         }
       } finally {
         if (!cancelled) setIsLoadingOptions(false);
@@ -124,9 +123,54 @@ function AddRecontactSurveyForm({
       ...prev,
       parentSurveyId: parentSurveyId ?? prev.parentSurveyId,
       client: initialValues.client ?? prev.client,
+      projectManager: initialValues.projectManager ?? prev.projectManager,
       projectCountry: initialValues.projectCountry ?? prev.projectCountry,
+      currency: initialValues.currency ?? prev.currency,
     }));
-  }, [lockParentFields, parentSurveyId, initialValues.client, initialValues.projectCountry]);
+  }, [
+    lockParentFields,
+    parentSurveyId,
+    initialValues.client,
+    initialValues.projectManager,
+    initialValues.projectCountry,
+    initialValues.currency,
+  ]);
+
+  useEffect(() => {
+    const nextManager = resolveSelectValue(
+      projectManagerOptions,
+      initialValues.projectManager,
+      initialValues.projectManagerLabel
+    );
+    if (!nextManager) return;
+    setForm((prev) =>
+      prev.projectManager === nextManager ? prev : { ...prev, projectManager: nextManager }
+    );
+  }, [
+    projectManagerOptions,
+    initialValues.projectManager,
+    initialValues.projectManagerLabel,
+  ]);
+
+  useEffect(() => {
+    const raw = String(initialValues.currency ?? "").trim();
+    if (!raw) return;
+    const match = CURRENCY_OPTIONS.find(
+      (option) => String(option).toLowerCase() === raw.toLowerCase()
+    );
+    if (!match) return;
+    setForm((prev) => (prev.currency === match ? prev : { ...prev, currency: match }));
+  }, [initialValues.currency]);
+
+  const mergedProjectManagerOptions = useMemo(
+    () =>
+      ensureSelectOption(
+        projectManagerOptions,
+        form.projectManager,
+        initialValues.projectManagerLabel
+      ),
+    [projectManagerOptions, form.projectManager, initialValues.projectManagerLabel]
+  );
 
   const errors = useMemo(() => getRecontactSurveyFormErrors(form), [form]);
   const { showError, touch, validateSubmit } = useFormValidation({
@@ -208,9 +252,6 @@ function AddRecontactSurveyForm({
               onChange={(value) => setField("description", value)}
               placeholder="Enter Project Description"
               disabled={fieldDisabled(readOnly, isSubmitting)}
-              initiallyCollapsed
-              height={260}
-              compactHeight={140}
             />
           </FormField>
         </div>
@@ -233,7 +274,7 @@ function AddRecontactSurveyForm({
               value={form.projectManager}
               onChange={(next) => setField("projectManager", next)}
               onBlur={() => touch("projectManager")}
-              options={projectManagerOptions}
+              options={mergedProjectManagerOptions}
               placeholder="Select Project Manager"
               disabled={fieldDisabled(readOnly, isSubmitting)}
               loading={isLoadingOptions}
@@ -432,7 +473,9 @@ function AddRecontactSurveyForm({
               <SearchableSelect
                 inputClass={selectClass}
                 value={form.language}
-                onChange={(next) => setField("language", next)}
+                onChange={(next) =>
+                  setForm((prev) => ({ ...prev, language: next, surveyGroup: "" }))
+                }
                 onBlur={() => touch("language")}
                 options={LANGUAGE_OPTIONS}
                 placeholder="Select Language"
@@ -447,12 +490,47 @@ function AddRecontactSurveyForm({
                 value={form.surveyGroup}
                 onChange={(next) => setField("surveyGroup", next)}
                 options={surveyGroupOptions}
-                placeholder="Select Survey Group"
-                disabled={fieldDisabled(readOnly, isSubmitting)}
+                placeholder={
+                  !form.language
+                    ? "Select language first"
+                    : isLoadingGroups
+                      ? "Loading survey groups..."
+                      : surveyGroupOptions.length === 0
+                        ? "No survey groups found"
+                        : "Select Survey Group"
+                }
+                disabled={
+                  fieldDisabled(readOnly, isSubmitting) || !form.language || isLoadingGroups
+                }
+                loading={isLoadingGroups}
+                loadingLabel="Loading survey groups..."
                 searchPlaceholder="Search survey group..."
                 aria-label="Select survey group"
               />
             </FormField>
+            {form.language ? (
+              <div className="md:col-span-2">
+                <FormField label="Questions">
+                  {isLoadingQuestions ? (
+                    <p className="admin-text-muted text-sm">Loading questions...</p>
+                  ) : !form.surveyGroup ? (
+                    <p className="admin-text-muted text-sm">
+                      Select a survey group to load questions for this language.
+                    </p>
+                  ) : preScreenQuestions.length === 0 ? (
+                    <p className="admin-text-muted text-sm">
+                      No questions found for this language and survey group.
+                    </p>
+                  ) : (
+                    <ul className="admin-text space-y-1.5 text-sm">
+                      {preScreenQuestions.map((question) => (
+                        <li key={question.id}>{question.questionTitle}</li>
+                      ))}
+                    </ul>
+                  )}
+                </FormField>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </TableCard>

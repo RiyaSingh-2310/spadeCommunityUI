@@ -14,16 +14,17 @@ import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { isFormValid, limitTextInput, NAME_FIELD_MAX_LENGTH } from "../../shared/utils/validation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { getRecords as getProjectManagers } from "../../../services/projectManagers/projectManagersApi";
-import { getRecords as getGroupSurveys } from "../services/groupSurveyApi";
-import { MAX_API_LIST_LIMIT } from "../../shared/utils/listQueryParams";
 import {
   CURRENCY_OPTIONS,
   LANGUAGE_OPTIONS,
   PROJECT_LINK_TYPES,
 } from "../data/surveyFormData";
 import {
+  ensureSelectOption,
   mapProjectManagersToSelectOptions,
+  resolveSelectValue,
 } from "../hooks/useSurveyFormSelectOptions";
+import { useRecontactPreScreen } from "../hooks/useRecontactPreScreen";
 import {
   createEmptyRecontactSurveyForm,
   createRecontactSurvey,
@@ -66,11 +67,21 @@ function RecontactSurveyForm({
   const { readOnly, showSubmit } = useFormAccess();
   const [form, setForm] = useState(createEmptyRecontactSurveyForm);
   const [projectManagerOptions, setProjectManagerOptions] = useState([]);
-  const [surveyGroupOptions, setSurveyGroupOptions] = useState([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputClass = getAdminInputClass();
   const selectClass = `${inputClass} appearance-none`;
+
+  const {
+    surveyGroupOptions,
+    questions: preScreenQuestions,
+    isLoadingGroups,
+    isLoadingQuestions,
+  } = useRecontactPreScreen({
+    language: form.language,
+    surveyGroup: form.surveyGroup,
+    enabled: Boolean(form.filters.preScreen),
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -78,23 +89,13 @@ function RecontactSurveyForm({
     const loadOptions = async () => {
       setIsLoadingOptions(true);
       try {
-        const [managers, groups] = await Promise.all([
-          getProjectManagers(),
-          getGroupSurveys({ page: 1, limit: MAX_API_LIST_LIMIT }),
-        ]);
+        const managers = await getProjectManagers();
         if (!cancelled) {
           setProjectManagerOptions(mapProjectManagersToSelectOptions(managers.items));
-          setSurveyGroupOptions(
-            (groups.items ?? []).map((item) => ({
-              value: String(item.id ?? ""),
-              label: String(item.projectName ?? item.groupProject ?? "").trim(),
-            })).filter((option) => option.value && option.label)
-          );
         }
       } catch {
         if (!cancelled) {
           setProjectManagerOptions([]);
-          setSurveyGroupOptions([]);
         }
       } finally {
         if (!cancelled) setIsLoadingOptions(false);
@@ -107,14 +108,49 @@ function RecontactSurveyForm({
     };
   }, []);
 
+  const parentDefaults = useMemo(
+    () => mapSurveyToRecontactFormDefaults(parentSurveyRecord),
+    [parentSurveyRecord]
+  );
+
   useEffect(() => {
-    const defaults = mapSurveyToRecontactFormDefaults(parentSurveyRecord);
+    const currencyRaw = String(parentDefaults.currency ?? "").trim();
+    const currencyMatch = CURRENCY_OPTIONS.find(
+      (option) => String(option).toLowerCase() === currencyRaw.toLowerCase()
+    );
     setForm({
       ...createEmptyRecontactSurveyForm(),
-      ...defaults,
-      parentSurveyId: parentSurveyId ?? defaults.parentSurveyId ?? "",
+      ...parentDefaults,
+      currency: currencyMatch || parentDefaults.currency || "",
+      parentSurveyId: parentSurveyId ?? parentDefaults.parentSurveyId ?? "",
     });
-  }, [parentSurveyId, parentSurveyRecord]);
+  }, [parentSurveyId, parentDefaults]);
+
+  useEffect(() => {
+    const nextManager = resolveSelectValue(
+      projectManagerOptions,
+      parentDefaults.projectManager,
+      parentDefaults.projectManagerLabel
+    );
+    if (!nextManager) return;
+    setForm((prev) =>
+      prev.projectManager === nextManager ? prev : { ...prev, projectManager: nextManager }
+    );
+  }, [
+    projectManagerOptions,
+    parentDefaults.projectManager,
+    parentDefaults.projectManagerLabel,
+  ]);
+
+  const mergedProjectManagerOptions = useMemo(
+    () =>
+      ensureSelectOption(
+        projectManagerOptions,
+        form.projectManager,
+        parentDefaults.projectManagerLabel
+      ),
+    [projectManagerOptions, form.projectManager, parentDefaults.projectManagerLabel]
+  );
 
   const errors = useMemo(() => getRecontactSurveyFormErrors(form), [form]);
   const { showError, touch, validateSubmit } = useFormValidation({
@@ -203,7 +239,7 @@ function RecontactSurveyForm({
               value={form.projectManager}
               onChange={(next) => setField("projectManager", next)}
               onBlur={() => touch("projectManager")}
-              options={projectManagerOptions}
+              options={mergedProjectManagerOptions}
               placeholder="Select Project Manager"
               disabled={fieldDisabled(readOnly, isSubmitting)}
               loading={isLoadingOptions}
@@ -324,9 +360,6 @@ function RecontactSurveyForm({
               onChange={(value) => setField("description", value)}
               placeholder="Enter Project Description"
               disabled={fieldDisabled(readOnly, isSubmitting)}
-              initiallyCollapsed
-              height={260}
-              compactHeight={140}
             />
           </FormField>
         </div>
@@ -417,7 +450,9 @@ function RecontactSurveyForm({
               <SearchableSelect
                 inputClass={selectClass}
                 value={form.language}
-                onChange={(next) => setField("language", next)}
+                onChange={(next) =>
+                  setForm((prev) => ({ ...prev, language: next, surveyGroup: "" }))
+                }
                 onBlur={() => touch("language")}
                 options={LANGUAGE_OPTIONS}
                 placeholder="Select Language"
@@ -433,12 +468,47 @@ function RecontactSurveyForm({
                 onChange={(next) => setField("surveyGroup", next)}
                 onBlur={() => touch("surveyGroup")}
                 options={surveyGroupOptions}
-                placeholder="Select Survey Group"
-                disabled={fieldDisabled(readOnly, isSubmitting)}
+                placeholder={
+                  !form.language
+                    ? "Select language first"
+                    : isLoadingGroups
+                      ? "Loading survey groups..."
+                      : surveyGroupOptions.length === 0
+                        ? "No survey groups found"
+                        : "Select Survey Group"
+                }
+                disabled={
+                  fieldDisabled(readOnly, isSubmitting) || !form.language || isLoadingGroups
+                }
+                loading={isLoadingGroups}
+                loadingLabel="Loading survey groups..."
                 searchPlaceholder="Search survey group..."
                 aria-label="Select survey group"
               />
             </FormField>
+            {form.language ? (
+              <div className="md:col-span-2">
+                <FormField label="Questions">
+                  {isLoadingQuestions ? (
+                    <p className="admin-text-muted text-sm">Loading questions...</p>
+                  ) : !form.surveyGroup ? (
+                    <p className="admin-text-muted text-sm">
+                      Select a survey group to load questions for this language.
+                    </p>
+                  ) : preScreenQuestions.length === 0 ? (
+                    <p className="admin-text-muted text-sm">
+                      No questions found for this language and survey group.
+                    </p>
+                  ) : (
+                    <ul className="admin-text space-y-1.5 text-sm">
+                      {preScreenQuestions.map((question) => (
+                        <li key={question.id}>{question.questionTitle}</li>
+                      ))}
+                    </ul>
+                  )}
+                </FormField>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </TableCard>

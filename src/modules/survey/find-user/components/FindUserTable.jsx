@@ -3,6 +3,7 @@ import TableCard from "../../../../components/admin/TableCard";
 import TableLoadingSkeleton from "../../../../components/admin/TableLoadingSkeleton";
 import { ADMIN_TABLE_INNER_CLASS } from "../../../shared/utils/tableHelpers";
 import { formatStatusLabel } from "../../../shared/utils/statusLabels";
+import { toUiSentenceCase } from "../../../shared/utils/uiText";
 
 const COLUMNS = [
   "S.No",
@@ -18,7 +19,7 @@ const COLUMNS = [
 ];
 
 const TABLE_HEAD =
-  "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+  "admin-text-muted text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap";
 
 function FindUserTable({
   users,
@@ -78,7 +79,7 @@ function FindUserTable({
                       aria-label="Select all rows"
                     />
                   ) : (
-                    col
+                    toUiSentenceCase(col)
                   )}
                 </th>
               ))}

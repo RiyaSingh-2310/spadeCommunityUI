@@ -1,9 +1,13 @@
+import { toUiSentenceCase } from "../../shared/utils/uiText";
+
 function DetailField({ label, value, ellipsis = false }) {
   const display = value != null && String(value).trim() !== "" ? String(value) : "—";
 
   return (
     <div className="min-w-0">
-      <p className="admin-text-subtle text-xs font-semibold uppercase tracking-wide">{label}</p>
+      <p className="admin-text-subtle text-xs font-semibold tracking-[0.02em]">
+        {toUiSentenceCase(label)}
+      </p>
       <p
         className={`admin-text mt-1 text-sm ${ellipsis ? "max-w-[280px] truncate" : "break-words"}`}
         title={ellipsis && display !== "—" ? display : undefined}

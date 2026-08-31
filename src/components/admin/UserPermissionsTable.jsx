@@ -153,10 +153,10 @@ function UserPermissionsTable({
         <table className="admin-table min-w-full text-sm">
           <thead className="admin-permissions-table__head sticky top-0 z-10">
             <tr className="admin-text-muted">
-              <th className="admin-text px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap">
+              <th className="admin-text px-4 py-3 text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap">
                 Module
               </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide whitespace-nowrap">
+              <th className="px-4 py-3 text-center text-xs font-semibold tracking-[0.02em] whitespace-nowrap">
                 <label className="admin-permissions-table__label inline-flex items-center justify-center gap-2">
                   <input
                     type="checkbox"
@@ -170,7 +170,7 @@ function UserPermissionsTable({
                   <span className="admin-text-muted">Select All Read</span>
                 </label>
               </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide whitespace-nowrap">
+              <th className="px-4 py-3 text-center text-xs font-semibold tracking-[0.02em] whitespace-nowrap">
                 <label className="admin-permissions-table__label inline-flex items-center justify-center gap-2">
                   <input
                     type="checkbox"

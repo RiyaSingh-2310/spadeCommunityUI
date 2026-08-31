@@ -65,7 +65,7 @@ function MessageReplyModal({
           <div>
             <label
               htmlFor="message-reply-body"
-              className="admin-text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wide"
+              className="admin-text-muted mb-1.5 block text-xs font-semibold tracking-[0.02em]"
             >
               Reply
             </label>

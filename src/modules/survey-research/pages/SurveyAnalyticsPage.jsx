@@ -13,7 +13,7 @@ function SurveyAnalyticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--srp-text-muted)" }}>
+        <p className="text-xs font-semibold tracking-[0.02em]" style={{ color: "var(--srp-text-muted)" }}>
           Survey Analytics
         </p>
         <h1 className="text-2xl font-bold tracking-tight">Performance Dashboard</h1>

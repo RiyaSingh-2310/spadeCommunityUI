@@ -319,21 +319,18 @@ function AddPrescreenGroupPage({ isDarkMode }) {
         ? await updatePrescreenGroup(id, payload)
         : await createPrescreenGroup(form);
 
-      const websiteUrl = String(data?.websiteUrl ?? data?.data?.website_url ?? "").trim();
       const baseMessage =
         String(data?.message ?? "").trim() ||
         (isEdit
-          ? "Prescreen group updated successfully."
-          : "Prescreen group added successfully.");
+          ? "Questionnaire group updated successfully."
+          : "Questionnaire groups added successfully.");
 
       navigate("/prescreen/group", {
         replace: true,
         state: {
           flash: {
             type: "success",
-            message: websiteUrl
-              ? `${baseMessage} Website URL: ${websiteUrl}`
-              : baseMessage,
+            message: baseMessage,
           },
           refresh: true,
         },

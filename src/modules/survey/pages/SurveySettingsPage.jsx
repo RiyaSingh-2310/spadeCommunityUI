@@ -254,9 +254,6 @@ function SurveySettingsPage({ isDarkMode }) {
                   onBlur={() => touch(key)}
                   placeholder={`Enter ${label.toLowerCase()}...`}
                   disabled={readOnly}
-                  initiallyCollapsed
-                  height={240}
-                  compactHeight={140}
                 />
               </FormField>
             ))}

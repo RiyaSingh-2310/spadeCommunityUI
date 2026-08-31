@@ -21,7 +21,7 @@ const SUPPLIER_COLUMNS = [
 ];
 
 const TABLE_HEAD =
-  "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+  "admin-text-muted text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap";
 
 function renderSupplierCell(row, col) {
   const map = {

@@ -61,7 +61,7 @@ function AuditLogSettingsTab({ isDarkMode }) {
                 {TABLE_COLUMNS.map((column) => (
                   <th
                     key={column}
-                    className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap"
+                    className="px-4 py-3 text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap"
                   >
                     {column}
                   </th>

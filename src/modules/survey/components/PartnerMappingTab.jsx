@@ -289,7 +289,7 @@ function mergeRedirects(preferred, fallback) {
 function MappingStat({ label, value, emphasize = false, align = "left" }) {
   return (
     <div className={align === "right" ? "sm:text-right" : undefined}>
-      <p className="admin-text-muted text-xs font-medium uppercase tracking-wide">
+      <p className="admin-text-muted text-xs font-medium tracking-[0.02em]">
         {label}
       </p>
       <p

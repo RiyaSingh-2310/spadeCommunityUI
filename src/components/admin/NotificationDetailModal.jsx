@@ -19,7 +19,7 @@ function NotificationDetailModal({ notification, onClose, onMarkAsRead }) {
         aria-modal="true"
         aria-labelledby="notification-modal-title"
       >
-        <p className="admin-text-subtle mb-1 text-xs font-semibold uppercase tracking-wide">
+        <p className="admin-text-subtle mb-1 text-xs font-semibold tracking-[0.02em]">
           Notification Details
         </p>
         <h2 id="notification-modal-title" className="admin-text mb-2 text-lg font-bold">

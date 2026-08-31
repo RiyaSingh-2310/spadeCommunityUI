@@ -43,14 +43,14 @@ function LogCard({ log, isDarkMode }) {
         </div>
 
         <div>
-          <p className="admin-text-subtle text-xs font-semibold uppercase tracking-wide">
+          <p className="admin-text-subtle text-xs font-semibold tracking-[0.02em]">
             Comment By:
           </p>
           <p className="admin-text mt-1 text-sm">{log.commentBy || "—"}</p>
         </div>
 
         <div>
-          <p className="admin-text-subtle text-xs font-semibold uppercase tracking-wide">
+          <p className="admin-text-subtle text-xs font-semibold tracking-[0.02em]">
             Description:
           </p>
           <div className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap">

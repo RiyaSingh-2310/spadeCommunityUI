@@ -11,7 +11,7 @@ import { toastApiError } from "../../../../services/toast/apiToast";
 import { getInvitedFindUsers } from "../services/findUserApi";
 
 const TABLE_HEAD =
-  "admin-text-muted text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap";
+  "admin-text-muted text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap";
 
 const COLUMNS = [
   "S.No",

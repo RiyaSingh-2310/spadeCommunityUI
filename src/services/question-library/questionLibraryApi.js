@@ -10,6 +10,7 @@ import { apiRequest } from "../api/client";
 import { buildDatedExportFilename, downloadCsvExport } from "../api/csvExport";
 import { ApiError } from "../api/ApiError";
 import { formatLocaleDateTime } from "../../modules/shared/utils/dateTime";
+import { toUiSentenceCase } from "../../modules/shared/utils/uiText";
 
 const UI_TO_API_QUESTION_TYPE = {
   "Text Box": "textbox",
@@ -230,7 +231,7 @@ function appendQuestionLibraryListQuery(basePath, { page, limit, search } = {}) 
 function formatQuestionLibraryLanguageForUi(language) {
   const slug = String(language ?? "").trim();
   if (!slug) return "";
-  return slug.charAt(0).toUpperCase() + slug.slice(1).toLowerCase();
+  return toUiSentenceCase(slug);
 }
 
 export function mapQuestionToForm(record) {
