@@ -10,9 +10,8 @@ import {
 } from "../../../services/auth/sessionLifecycle";
 
 /**
- * Watch the authenticated admin session for JWT expiry (and refresh-before-expiry).
- * Does not use an inactivity timer. Automatic logout runs only when the token
- * expires or an authenticated request reports an expired session.
+ * Watch the authenticated admin session for JWT expiry, refresh-before-expiry,
+ * and idle auto-logout. Idle logout uses the same session-expired logout flow.
  */
 export function useAuthSessionLifecycle() {
   useEffect(() => {

@@ -2,14 +2,48 @@ import { getAuthToken, getRefreshToken, isAuthenticated } from "./authStorage";
 import { getJwtMsUntilExpiry, JWT_EXPIRY_SKEW_MS } from "./jwtUtils";
 import { tryRefreshAuthSession } from "./refreshSession";
 
+/** Idle logout after this much time with no genuine user interaction. */
+export const SESSION_INACTIVITY_HOURS = 2;
+export const SESSION_INACTIVITY_MS = SESSION_INACTIVITY_HOURS * 60 * 60_000;
+
 /** Refresh access token this long before JWT `exp` (only if a refresh token exists). */
 const REFRESH_BEFORE_EXPIRY_MS = 90_000;
+
+/** Avoid decoding JWT / scheduling refresh on every mousemove. */
+const REFRESH_CHECK_THROTTLE_MS = 10_000;
+
+const ACTIVITY_EVENTS = [
+  "mousedown",
+  "mouseup",
+  "mousemove",
+  "click",
+  "dblclick",
+  "keydown",
+  "keyup",
+  "scroll",
+  "wheel",
+  "touchstart",
+  "touchmove",
+  "touchend",
+  "pointerdown",
+  "pointermove",
+  "pointerup",
+  "input",
+  "change",
+];
+
+const ACTIVITY_LISTENER_OPTIONS = { capture: true, passive: true };
 
 let started = false;
 let refreshTimerId = null;
 let expiryLogoutTimerId = null;
+let inactivityTimerId = null;
+let lastActivityAt = 0;
+let lastRefreshCheckAt = 0;
 let sessionExpiredHandler = null;
 let sessionExpiredQueued = false;
+let activityBound = null;
+let visibilityBound = null;
 
 function clearTimer(id) {
   if (id != null) window.clearTimeout(id);
@@ -49,6 +83,27 @@ function scheduleExpiryRefresh() {
   }, delay);
 }
 
+function maybeRefreshOnActivity() {
+  const now = Date.now();
+  if (now - lastRefreshCheckAt < REFRESH_CHECK_THROTTLE_MS) return;
+  lastRefreshCheckAt = now;
+
+  const msUntilExpiry = getJwtMsUntilExpiry(getAuthToken());
+  if (msUntilExpiry != null && msUntilExpiry <= REFRESH_BEFORE_EXPIRY_MS) {
+    refreshIfNeeded().catch(() => {});
+  }
+}
+
+function scheduleInactivityTimeout() {
+  inactivityTimerId = clearTimer(inactivityTimerId);
+  if (!started || !isAuthenticated() || sessionExpiredQueued) return;
+
+  const remaining = SESSION_INACTIVITY_MS - (Date.now() - lastActivityAt);
+  inactivityTimerId = window.setTimeout(() => {
+    checkInactivity();
+  }, Math.max(0, remaining));
+}
+
 function triggerSessionExpired() {
   if (sessionExpiredQueued) return;
   sessionExpiredQueued = true;
@@ -64,8 +119,31 @@ function triggerSessionExpired() {
       result.catch(() => {});
     }
   } catch {
-    // Token-expiry logout must not throw from a timer callback.
+    // Session logout must not throw from a timer callback.
   }
+}
+
+function checkInactivity() {
+  if (!started || !isAuthenticated() || sessionExpiredQueued) return;
+
+  const idleFor = Date.now() - lastActivityAt;
+  if (idleFor < SESSION_INACTIVITY_MS) {
+    scheduleInactivityTimeout();
+    return;
+  }
+
+  triggerSessionExpired();
+}
+
+function onUserActivity() {
+  if (!started || sessionExpiredQueued) return;
+  lastActivityAt = Date.now();
+  maybeRefreshOnActivity();
+}
+
+function onVisibilityOrFocus() {
+  if (!started) return;
+  checkInactivity();
 }
 
 async function handleTokenExpiry() {
@@ -93,7 +171,7 @@ function scheduleTokenExpiryLogout() {
 
   const msUntilExpiry = getJwtMsUntilExpiry(getAuthToken());
   if (msUntilExpiry == null) {
-    // Opaque tokens have no exp claim; wait for an authenticated 401 instead.
+    // Opaque tokens have no exp claim; wait for inactivity or an authenticated 401.
     return;
   }
 
@@ -103,9 +181,45 @@ function scheduleTokenExpiryLogout() {
   }, delay);
 }
 
+function bindActivityListeners() {
+  if (activityBound) return;
+
+  activityBound = onUserActivity;
+  visibilityBound = onVisibilityOrFocus;
+
+  ACTIVITY_EVENTS.forEach((eventName) => {
+    window.addEventListener(eventName, activityBound, ACTIVITY_LISTENER_OPTIONS);
+  });
+  document.addEventListener("visibilitychange", visibilityBound);
+  window.addEventListener("focus", visibilityBound);
+}
+
+function unbindActivityListeners() {
+  if (activityBound) {
+    ACTIVITY_EVENTS.forEach((eventName) => {
+      window.removeEventListener(eventName, activityBound, ACTIVITY_LISTENER_OPTIONS);
+    });
+    activityBound = null;
+  }
+
+  if (visibilityBound) {
+    document.removeEventListener("visibilitychange", visibilityBound);
+    window.removeEventListener("focus", visibilityBound);
+    visibilityBound = null;
+  }
+}
+
 /**
- * Start JWT expiry monitoring and optional refresh-before-expiry.
- * Does not use inactivity, activity events, or a fixed idle duration.
+ * Last genuine user interaction (or session-start) timestamp.
+ * @returns {number}
+ */
+export function getLastActivityAt() {
+  return lastActivityAt;
+}
+
+/**
+ * Start JWT expiry monitoring, refresh-before-expiry, and idle auto-logout.
+ * Idle logout uses the same `onSessionExpired` handler as token expiry.
  * @param {{ onSessionExpired?: () => void | Promise<void> }} [options]
  */
 export function startAuthSessionLifecycle({ onSessionExpired } = {}) {
@@ -117,18 +231,23 @@ export function startAuthSessionLifecycle({ onSessionExpired } = {}) {
     sessionExpiredHandler = onSessionExpired ?? sessionExpiredHandler;
     scheduleExpiryRefresh();
     scheduleTokenExpiryLogout();
+    scheduleInactivityTimeout();
     return;
   }
 
   started = true;
   sessionExpiredQueued = false;
   sessionExpiredHandler = onSessionExpired ?? null;
+  lastActivityAt = Date.now();
+  lastRefreshCheckAt = 0;
 
+  bindActivityListeners();
   scheduleExpiryRefresh();
   scheduleTokenExpiryLogout();
+  scheduleInactivityTimeout();
 }
 
-/** Stop expiry monitoring (logout / leaving admin shell). */
+/** Stop expiry and inactivity monitoring (logout / leaving admin shell). */
 export function stopAuthSessionLifecycle() {
   if (typeof window === "undefined") return;
 
@@ -136,4 +255,6 @@ export function stopAuthSessionLifecycle() {
   sessionExpiredHandler = null;
   refreshTimerId = clearTimer(refreshTimerId);
   expiryLogoutTimerId = clearTimer(expiryLogoutTimerId);
+  inactivityTimerId = clearTimer(inactivityTimerId);
+  unbindActivityListeners();
 }

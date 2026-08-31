@@ -7,7 +7,6 @@ import {
   BriefcaseBusiness,
   BadgeDollarSign,
   ClipboardList,
-  ReceiptIndianRupee,
   History,
   ChevronLeft,
   ChevronRight,
@@ -31,11 +30,6 @@ export default function Sidebar({ isDarkMode }) {
     { icon: <BadgeDollarSign size={18} />, label: "Sales", hasArrow: true },
     { icon: <ClipboardList size={18} />, label: "Pre Screen", hasArrow: true },
     { icon: <ClipboardList size={18} />, label: "Survey", hasArrow: true },
-    {
-      icon: <ReceiptIndianRupee size={18} />,
-      label: "Invoice",
-      hasArrow: true,
-    },
     { icon: <History size={18} />, label: "Log Activity", hasArrow: false },
   ];
 

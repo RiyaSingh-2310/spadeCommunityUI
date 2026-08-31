@@ -182,7 +182,7 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
               />
             </div>
 
-            <div className="flex items-center justify-end gap-0.5 sm:gap-1">
+            <div className="flex shrink-0 items-center justify-end gap-0.5 sm:gap-1">
               {themeButton}
               {notificationButton}
               {profileDropdown}
@@ -191,9 +191,11 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
         ) : (
           <div className="flex w-full items-center justify-end gap-2.5 sm:gap-3">
             <HeaderSearch />
-            {notificationButton}
-            {themeButton}
-            {profileDropdown}
+            <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
+              {themeButton}
+              {notificationButton}
+              {profileDropdown}
+            </div>
           </div>
         )}
       </header>

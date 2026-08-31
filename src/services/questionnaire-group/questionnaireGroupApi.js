@@ -1,6 +1,7 @@
 import { API_ROUTES } from "../../config/api";
 import { extractListTotalFromResponse, safeMapListItems } from "../../modules/shared/utils/listResponse";
-import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
+import { appendListQuery, MAX_API_LIST_LIMIT } from "../../modules/shared/utils/listQueryParams";
+import { normalizeSurveyGroupTitle } from "../../modules/prescreen/utils/surveyGroupTitle";
 import {
   apiStatusToFormValue,
   formValueToApiStatus,
@@ -400,6 +401,38 @@ export function mapPrescreenGroupToForm(record) {
       questionTitle: item.questionTitle || `Question #${item.id}`,
     })),
   };
+}
+
+/**
+ * True when `title` matches another Survey Group (case/whitespace-insensitive).
+ * `excludeId` is the record being edited so its own title remains valid.
+ * @param {unknown} title
+ * @param {{ excludeId?: string|number|null }} [options]
+ * @returns {Promise<boolean>}
+ */
+export async function surveyGroupTitleExists(title, { excludeId } = {}) {
+  const normalized = normalizeSurveyGroupTitle(title);
+  if (!normalized) return false;
+
+  const exclude = excludeId != null ? String(excludeId).trim() : "";
+  const limit = MAX_API_LIST_LIMIT;
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const response = await getRecords({ page, limit });
+    const items = response?.items ?? [];
+    const conflict = items.some((item) => {
+      if (exclude && String(item?.id ?? "") === exclude) return false;
+      return normalizeSurveyGroupTitle(item?.surveyTitle ?? item?.title) === normalized;
+    });
+    if (conflict) return true;
+
+    totalPages = Math.max(1, Number(response?.totalPages) || 1);
+    page += 1;
+  } while (page <= totalPages && page <= 50);
+
+  return false;
 }
 
 /** GET /api/questionnaire-group/list */

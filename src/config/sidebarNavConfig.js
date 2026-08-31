@@ -124,27 +124,6 @@ export const SIDEBAR_NAV_ITEMS = [
   },
   {
     type: "group",
-    label: "Invoice",
-    key: "invoice",
-    matcher: /^\/invoice(\/|$)/,
-    permissionKeys: ["invoice", "invoice_settings", "invoices"],
-    children: [
-      {
-        label: "Invoice Settings",
-        root: "/invoice/settings",
-        matcher: /^\/invoice\/settings(\/|$)/,
-        permissionKeys: ["invoice_settings"],
-      },
-      {
-        label: "Invoices",
-        root: "/invoice/list",
-        matcher: /^\/invoice\/list(\/|$)/,
-        permissionKeys: ["invoices"],
-      },
-    ],
-  },
-  {
-    type: "group",
     label: "Notifications",
     key: "notifications",
     matcher: /^\/(notifications|messages)(\/|$)/,

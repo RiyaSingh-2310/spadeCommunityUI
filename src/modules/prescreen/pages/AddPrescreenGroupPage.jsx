@@ -4,12 +4,18 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
-import { toastApiError } from "../../../services/toast/apiToast";
+import toast from "../../../services/toast/toast";
+import { resolveApiToastMessage, toastApiError } from "../../../services/toast/apiToast";
 import {
   createPrescreenGroup,
   getRecordForForm,
+  surveyGroupTitleExists,
   updatePrescreenGroup,
 } from "../../../services/questionnaire-group/questionnaireGroupApi";
+import {
+  isSurveyGroupTitleDuplicateError,
+  SURVEY_GROUP_TITLE_DUPLICATE_MESSAGE,
+} from "../utils/surveyGroupTitle";
 import { getQuestionnaireOptionsForLanguage } from "../../../services/question-library/questionLibraryApi";
 import { PRESCREEN_LANGUAGES } from "../data/prescreenLanguages";
 import { useAdminFormAccess } from "../../permissions/FormAccessContext";
@@ -298,6 +304,14 @@ function AddPrescreenGroupPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
+      const titleTaken = await surveyGroupTitleExists(form.surveyTitle, {
+        excludeId: isEdit ? id : undefined,
+      });
+      if (titleTaken) {
+        toast.error(SURVEY_GROUP_TITLE_DUPLICATE_MESSAGE);
+        return;
+      }
+
       const payload = isEdit
         ? { ...form, status: initialSnapshot?.status ?? form.status }
         : form;
@@ -325,7 +339,13 @@ function AddPrescreenGroupPage({ isDarkMode }) {
         },
       });
     } catch (error) {
-      toastApiError(error);
+      if (isSurveyGroupTitleDuplicateError(error)) {
+        toast.error(
+          resolveApiToastMessage(error, SURVEY_GROUP_TITLE_DUPLICATE_MESSAGE)
+        );
+      } else {
+        toastApiError(error);
+      }
     } finally {
       setIsSubmitting(false);
     }

@@ -22,7 +22,6 @@ import { SIDEBAR_NAV_ITEMS } from "../../config/sidebarNavConfig";
 
 /** @type {Record<string, string>} */
 const GROUP_API_PARENT_KEYS = {
-  invoice: "invoice",
   notifications: "notifications",
   "reward-points": "reward_points",
 };

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { tryRefreshAuthSession } from "./refreshSession";
 import {
+  SESSION_INACTIVITY_MS,
   startAuthSessionLifecycle,
   stopAuthSessionLifecycle,
 } from "./sessionLifecycle";
@@ -55,12 +56,33 @@ describe("admin token-expiry session lifecycle", () => {
     expect(onSessionExpired).not.toHaveBeenCalled();
   });
 
-  it("does not log out an opaque token after a fixed idle duration", () => {
+  it("does not log out an opaque token before 2 hours of inactivity", () => {
     localStorage.setItem("authToken", "opaque-token");
     const onSessionExpired = vi.fn();
     startAuthSessionLifecycle({ onSessionExpired });
 
-    vi.advanceTimersByTime(30 * 60 * 1000);
+    vi.advanceTimersByTime(SESSION_INACTIVITY_MS - 1_000);
+    expect(onSessionExpired).not.toHaveBeenCalled();
+  });
+
+  it("logs out an idle session after 2 hours with no activity", () => {
+    localStorage.setItem("authToken", "opaque-token");
+    const onSessionExpired = vi.fn();
+    startAuthSessionLifecycle({ onSessionExpired });
+
+    vi.advanceTimersByTime(SESSION_INACTIVITY_MS);
+    expect(onSessionExpired).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not idle-logout when the user stays active", () => {
+    localStorage.setItem("authToken", "opaque-token");
+    const onSessionExpired = vi.fn();
+    startAuthSessionLifecycle({ onSessionExpired });
+
+    vi.advanceTimersByTime(SESSION_INACTIVITY_MS - 60_000);
+    window.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    vi.advanceTimersByTime(SESSION_INACTIVITY_MS - 60_000);
+
     expect(onSessionExpired).not.toHaveBeenCalled();
   });
 
