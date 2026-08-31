@@ -72,5 +72,6 @@ describe("CRUD API contracts", () => {
     expect(API_ROUTES.screening.create).toBe("/api/panel-questionnaire/add");
     expect(API_ROUTES.screening.update(11)).toBe("/api/panel-questionnaire/11");
     expect(API_ROUTES.screening.delete(11)).toBe("/api/panel-questionnaire/11");
+    expect(API_ROUTES.questionaire).toBeUndefined();
   });
 });

@@ -69,6 +69,10 @@ describe("buildApiUrl", () => {
     );
   });
 
+  it("does not keep dead /api/questionaire adapters", () => {
+    expect(API_ROUTES.questionaire).toBeUndefined();
+  });
+
   it("uses the pre-screen response and report contracts", () => {
     expect(API_ROUTES.survey.prescreenResponse).toBe("/api/survey/prescreenResponse");
     expect(API_ROUTES.survey.prescreenResponseEnd).toBe("/api/survey/prescreenResponseEnd");

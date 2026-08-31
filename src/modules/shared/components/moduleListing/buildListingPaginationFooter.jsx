@@ -15,6 +15,7 @@ export function buildListingPaginationFooter({
   pageSize,
   handlePageChange,
   handlePageSizeChange,
+  visibleItemCountOverride = null,
 }) {
   if (
     !showPagination ||
@@ -31,7 +32,9 @@ export function buildListingPaginationFooter({
       totalPages={pagination.totalPages}
       totalItems={pagination.totalItems}
       visibleItemCount={
-        totalRecords != null && (usesServerListing || !normalizedQuery)
+        visibleItemCountOverride != null
+          ? visibleItemCountOverride
+          : totalRecords != null && (usesServerListing || !normalizedQuery)
           ? usesServerListing
             ? pagination.currentPage >= pagination.totalPages
               ? pagination.totalItems

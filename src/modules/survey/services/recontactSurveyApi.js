@@ -166,7 +166,7 @@ export function mapPartnersToSupplierDetailRows(partners = []) {
   }));
 }
 
-/** GET /api/survey/list — search Survey Projects by project name. */
+/** GET /api/projects/list — search Survey Projects by project name. */
 export async function searchRecontactProjects(search = "") {
   const normalized = normalizeSearchQuery(search);
   if (!normalized) {

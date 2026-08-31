@@ -15,6 +15,18 @@ export function paginateItems(items, page = 1, pageSize = DEFAULT_PAGE_SIZE) {
   };
 }
 
+/**
+ * When a listing hides the signed-in user on the current page, subtract them
+ * from the server total so "Showing X of Y" matches the visible rows.
+ */
+export function listingTotalAfterExcludingCurrentUser(totalRecords, excludedCount) {
+  const total = Number(totalRecords);
+  const excluded = Number(excludedCount);
+  if (!Number.isFinite(total) || total <= 0) return totalRecords;
+  if (!Number.isFinite(excluded) || excluded <= 0) return totalRecords;
+  return Math.max(0, total - excluded);
+}
+
 /** Items visible on the current page (for "Showing X of Y Entries"). */
 export function getVisibleEntryCount(currentPage, pageSize, totalItems) {
   if (totalItems <= 0) return 0;

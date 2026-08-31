@@ -204,11 +204,15 @@ export async function deleteRecord(id) {
   return assertSuccess(data);
 }
 
-/** PATCH /api/email-templates/:id/status */
+/**
+ * Toggle template status via PUT /api/email-templates/:id.
+ * Backend has no PATCH /api/email-templates/:id/status route; status is
+ * an optional field on the existing updateEmailTemplate handler.
+ */
 export async function updateStatus(id, { status }) {
   const normalizedId = normalizeTemplateId(id);
-  const data = await apiRequest(API_ROUTES.emailTemplates.updateStatus(normalizedId), {
-    method: "PATCH",
+  const data = await apiRequest(API_ROUTES.emailTemplates.byId(normalizedId), {
+    method: "PUT",
     body: {
       status: formValueToApiStatus(status),
     },

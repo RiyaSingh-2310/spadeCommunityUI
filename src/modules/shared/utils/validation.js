@@ -244,6 +244,12 @@ export function getPasswordError(
   if (trimmed.length < minLength) {
     return `Password must be at least ${minLength} characters`;
   }
+  if (!/[A-Za-z]/.test(trimmed)) {
+    return "Password must include at least one letter";
+  }
+  if (!/\d/.test(trimmed)) {
+    return "Password must include at least one number";
+  }
   return "";
 }
 

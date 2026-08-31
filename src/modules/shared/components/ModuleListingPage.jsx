@@ -96,6 +96,7 @@ function ModuleListingPage({
   onBulkDeleteRequest = null,
   hideSelectAllCheckbox = false,
   totalRecords = null,
+  visibleItemCount = null,
   serverPaginated = false,
   serverSearch = false,
   paginationPage = 1,
@@ -299,6 +300,7 @@ function ModuleListingPage({
     pageSize,
     handlePageChange,
     handlePageSizeChange,
+    visibleItemCountOverride: visibleItemCount,
   });
 
   const displayColumns = useMemo(() => {

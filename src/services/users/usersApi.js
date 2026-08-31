@@ -277,17 +277,22 @@ export async function updateRecord(id, payload) {
 }
 
 /**
- * PUT /api/admin/permissions/:id
+ * Persist admin module permissions via the existing update-admin contract.
+ * Backend has no dedicated PUT /api/admin/permissions/:id route — permissions
+ * are saved on PUT /api/admin/updateadmin/:id (same path as profile/status edits).
  * @param {string|number} id
  * @param {object} permissions
  */
 export async function updatePermissions(id, permissions) {
-  const data = await apiRequest(API_ROUTES.admin.updatePermissions(id), {
-    method: "PUT",
-    body: buildPermissionsPayload(permissions),
-  });
+  const admin = await getRecord(id);
+  const mapped = mapAdminToUserRow(admin);
 
-  return assertSuccess(data);
+  return updateRecord(id, {
+    name: mapped.name || String(admin?.name ?? "").trim() || `User #${id}`,
+    permission_type: mapped.permission_type || "user",
+    status: formStatusToApiStatus(mapped.status || admin?.status || "active"),
+    permissions,
+  });
 }
 
 export async function deleteRecord(id) {

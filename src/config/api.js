@@ -49,6 +49,8 @@ export const API_ROUTES = {
     byId: (id) => `/api/admin/${id}`,
     create: "/api/admin/add-user",
     update: (id) => `/api/admin/updateadmin/${id}`,
+    // Legacy — backend has no dedicated permissions route. Frontend saves
+    // permissions via `update` (PUT /api/admin/updateadmin/:id).
     updatePermissions: (id) => `/api/admin/permissions/${id}`,
     delete: (id) => `/api/admin/delete/${id}`,
     exportCsv: "/api/admin/export/csv",
@@ -104,12 +106,6 @@ export const API_ROUTES = {
     updateStatus: (id) => `/api/salesmanager/status/${id}`,
     delete: (id) => `/api/salesmanager/${id}`,
     exportCsv: "/api/salesmanager/export/csv",
-  },
-  questionaire: {
-    create: "/api/questionaire/createQuestionaire",
-    list: "/api/questionaire/survey",
-    update: (id) => `/api/questionaire/survey/${id}`,
-    delete: (id) => `/api/questionaire/survey/${id}`,
   },
   screening: {
     list: "/api/panel-questionnaire/list",

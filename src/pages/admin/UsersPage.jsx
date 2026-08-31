@@ -7,7 +7,10 @@ import { useCsvExport } from "../../modules/shared/hooks/useCsvExport";
 import { useFlashMessage } from "../../modules/shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../modules/shared/hooks/useListingRefresh";
 import { useNameColumnSort } from "../../modules/shared/hooks/useNameColumnSort";
-import { DEFAULT_PAGE_SIZE } from "../../modules/shared/utils/pagination";
+import {
+  DEFAULT_PAGE_SIZE,
+  listingTotalAfterExcludingCurrentUser,
+} from "../../modules/shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../services/toast/apiToast";
 import { getAdminUser } from "../../services/auth/authStorage";
 import {
@@ -53,6 +56,10 @@ function UsersPage({ isDarkMode }) {
     rows: filteredUsers,
     columnLabel: "Name",
   });
+  const listingTotalRecords = listingTotalAfterExcludingCurrentUser(
+    totalRecords,
+    users.length - filteredUsers.length
+  );
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -148,7 +155,8 @@ function UsersPage({ isDarkMode }) {
         onManagePermissions={navigateToUserPermissions}
         onStatusToggle={handleStatusToggle}
         onSearch={handleSearch}
-        totalRecords={totalRecords}
+        totalRecords={listingTotalRecords}
+        visibleItemCount={sortedRows.length}
         serverPaginated
         serverSearch
         paginationPage={currentPage}
