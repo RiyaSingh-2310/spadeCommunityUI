@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { mapPartnersToSupplierDetailRows } from "../services/recontactSurveyApi";
+import {
+  mapPartnersToSupplierDetailRows,
+  mapSurveyToRecontactFormDefaults,
+} from "../services/recontactSurveyApi";
 
 describe("mapPartnersToSupplierDetailRows", () => {
   it("maps GET /api/projects/:id/partners rows into the supplier details table", () => {
@@ -34,5 +37,27 @@ describe("mapPartnersToSupplierDetailRows", () => {
         dropout: 0,
       },
     ]);
+  });
+});
+
+describe("mapSurveyToRecontactFormDefaults", () => {
+  it("maps nested project manager id and urlInfo country from the parent project", () => {
+    const mapped = mapSurveyToRecontactFormDefaults({
+      id: 42,
+      Clients: "Acme",
+      project_manager: { id: 7, name: "Jordan Lee" },
+      Project_Manager: "Jordan Lee",
+      currency: "usd",
+      urlInfo: [{ country: "Germany", LOI: 12, IR: 40 }],
+    });
+
+    expect(mapped.parentSurveyId).toBe("42");
+    expect(mapped.client).toBe("Acme");
+    expect(mapped.projectManager).toBe("7");
+    expect(mapped.projectManagerLabel).toBe("Jordan Lee");
+    expect(mapped.projectCountry).toMatch(/Germany/i);
+    expect(mapped.currency.toLowerCase()).toBe("usd");
+    expect(mapped.loi).toBe("12");
+    expect(mapped.ir).toBe("40");
   });
 });

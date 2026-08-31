@@ -508,7 +508,7 @@ function AddRecontactSurveyForm({
                 aria-label="Select survey group"
               />
             </FormField>
-            {form.language ? (
+            {/* {form.language ? (
               <div className="md:col-span-2">
                 <FormField label="Questions">
                   {isLoadingQuestions ? (
@@ -530,7 +530,7 @@ function AddRecontactSurveyForm({
                   )}
                 </FormField>
               </div>
-            ) : null}
+            ) : null} */}
           </div>
         ) : null}
       </TableCard>

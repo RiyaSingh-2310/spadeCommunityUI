@@ -23,17 +23,82 @@ export const TINYMCE_TOOLBAR_FULL =
 /** Full formatting toolbar with expand/collapse at the end. */
 export const TINYMCE_TOOLBAR_FULL_WITH_EXPAND = `${TINYMCE_TOOLBAR_FULL} | ${TINYMCE_TOOLBAR_EXPAND}`;
 
-/** Collapsed editor: formatting hidden; expand control stays in the toolbar. */
-export const TINYMCE_TOOLBAR_COLLAPSED = TINYMCE_TOOLBAR_EXPAND;
-
-/** Compact toolbar for collapsed description editors. */
+/**
+ * First-line collapsed toolbar: formatting controls (left) matching the compact
+ * toolbar screenshot, with expand control as its own trailing group.
+ */
 export const TINYMCE_TOOLBAR_COMPACT =
-  "bold italic underline strikethrough | alignleft aligncenter alignright alignjustify";
+  "bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist";
+
+/** Collapsed editor: compact formatting + expand on the same toolbar row. */
+export const TINYMCE_TOOLBAR_COLLAPSED = `${TINYMCE_TOOLBAR_COMPACT} | ${TINYMCE_TOOLBAR_EXPAND}`;
 
 const TINYMCE_TOOLBAR = TINYMCE_TOOLBAR_FULL;
 
 const CONTENT_STYLE =
   "body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; margin: 8px; }";
+
+/**
+ * Pins the expand control to the far right of the first toolbar row while
+ * formatting controls stay left-aligned on that same row.
+ */
+const COLLAPSED_TOOLBAR_ALIGN_STYLE_ID = "rich-text-editor-collapsed-toolbar-align";
+const COLLAPSED_TOOLBAR_ALIGN_CSS = `
+.rich-text-editor--collapsed .tox-editor-header {
+  position: relative;
+}
+.rich-text-editor--collapsed .tox-editor-header .tox-toolbar,
+.rich-text-editor--collapsed .tox-editor-header .tox-toolbar__primary {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding-right: 2.5rem !important;
+}
+.rich-text-editor--collapsed .tox-editor-header .tox-toolbar > .tox-toolbar__group:last-child,
+.rich-text-editor--collapsed .tox-editor-header .tox-toolbar__primary > .tox-toolbar__group:last-child {
+  position: absolute !important;
+  top: 50%;
+  right: 0.35rem;
+  transform: translateY(-50%);
+  margin: 0 !important;
+}
+`;
+
+function ensureCollapsedToolbarAlignStyles() {
+  if (typeof document === "undefined") return;
+  let style = document.getElementById(COLLAPSED_TOOLBAR_ALIGN_STYLE_ID);
+  if (!style) {
+    style = document.createElement("style");
+    style.id = COLLAPSED_TOOLBAR_ALIGN_STYLE_ID;
+    document.head.appendChild(style);
+  }
+  style.textContent = COLLAPSED_TOOLBAR_ALIGN_CSS;
+}
+
+function alignCollapsedExpandControl(editor) {
+  ensureCollapsedToolbarAlignStyles();
+  const container = editor.getContainer?.();
+  if (!container) return;
+  const header = container.querySelector(".tox-editor-header");
+  const toolbar =
+    container.querySelector(".tox-toolbar__primary") ||
+    container.querySelector(".tox-toolbar");
+  if (!header || !toolbar) return;
+
+  header.style.position = "relative";
+  toolbar.style.boxSizing = "border-box";
+  toolbar.style.paddingRight = "2.5rem";
+
+  const groups = [...toolbar.children].filter((el) =>
+    el.classList?.contains("tox-toolbar__group")
+  );
+  const lastGroup = groups[groups.length - 1];
+  if (!lastGroup) return;
+  lastGroup.style.position = "absolute";
+  lastGroup.style.top = "50%";
+  lastGroup.style.right = "0.35rem";
+  lastGroup.style.transform = "translateY(-50%)";
+  lastGroup.style.margin = "0";
+}
 
 /**
  * Shared TinyMCE init used by the admin RichTextEditor.
@@ -48,6 +113,7 @@ const CONTENT_STYLE =
  *   onBlur?: () => void,
  *   onToggleExpand?: () => void,
  *   expandActive?: boolean,
+ *   alignExpandEnd?: boolean,
  * }} options
  */
 export function createTinyMceInit({
@@ -61,13 +127,15 @@ export function createTinyMceInit({
   onBlur,
   onToggleExpand,
   expandActive = false,
+  alignExpandEnd = false,
 } = {}) {
+  const isCollapsedToolbar = toolbar === TINYMCE_TOOLBAR_COLLAPSED;
   const resolvedMenubar =
     menubar !== undefined
       ? menubar
       : toolbar === false ||
           toolbar === TINYMCE_TOOLBAR_COMPACT ||
-          toolbar === TINYMCE_TOOLBAR_COLLAPSED
+          isCollapsedToolbar
         ? false
         : "table";
 
@@ -83,7 +151,7 @@ export function createTinyMceInit({
     promotion: false,
     statusbar: false,
     resize,
-    toolbar_mode: "wrap",
+    toolbar_mode: isCollapsedToolbar || alignExpandEnd ? "scrolling" : "wrap",
     auto_focus: false,
     skin: isDarkMode ? "oxide-dark" : "oxide",
     content_css: isDarkMode ? "dark" : "default",
@@ -127,6 +195,14 @@ export function createTinyMceInit({
             api.setActive(Boolean(expandActive));
             return () => {};
           },
+        });
+      }
+
+      if (alignExpandEnd) {
+        editor.on("init", () => {
+          alignCollapsedExpandControl(editor);
+          // TinyMCE can reflow the scrolling toolbar after first paint.
+          requestAnimationFrame(() => alignCollapsedExpandControl(editor));
         });
       }
 

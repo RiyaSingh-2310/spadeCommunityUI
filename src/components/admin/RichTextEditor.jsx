@@ -11,15 +11,19 @@ const TinyMceEditor = lazy(() =>
   import("@tinymce/tinymce-react").then((module) => ({ default: module.Editor }))
 );
 
-/** One-line collapsed editor height (content area only). */
-export const RICH_TEXT_COMPACT_HEIGHT = 42;
+/**
+ * Collapsed editor total height: one toolbar row + compact writing area.
+ * TinyMCE `height` includes the toolbar, so this stays above the prior 42px
+ * content-only value now that the compact formatting row is visible.
+ */
+export const RICH_TEXT_COMPACT_HEIGHT = 96;
 /** Comfortable expanded writing area without excessive whitespace. */
 export const RICH_TEXT_EXPANDED_HEIGHT = 340;
 
 /**
  * Shared admin rich-text editor.
- * Collapsed by default: compact writing area, formatting hidden, expand control
- * at the end of the existing TinyMCE toolbar.
+ * Collapsed by default: compact writing area, first-line formatting toolbar with
+ * the expand control right-aligned on that same row.
  * Expanded: full toolbar and a larger typing area; the same toolbar control collapses.
  */
 function RichTextEditor({
@@ -64,6 +68,7 @@ function RichTextEditor({
           ? () => setExpanded((prev) => !prev)
           : undefined,
         expandActive: initiallyCollapsed && expanded,
+        alignExpandEnd: isCompact,
       }),
     [
       isDarkMode,
@@ -79,7 +84,11 @@ function RichTextEditor({
   const fallbackHeight = typeof editorHeight === "number" ? editorHeight : RICH_TEXT_EXPANDED_HEIGHT;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[var(--admin-input-border)]">
+    <div
+      className={`overflow-hidden rounded-xl border border-[var(--admin-input-border)]${
+        isCompact ? " rich-text-editor--collapsed" : ""
+      }`}
+    >
       <Suspense
         fallback={
           <div
