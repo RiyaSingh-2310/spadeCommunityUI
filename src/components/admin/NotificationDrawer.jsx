@@ -153,7 +153,7 @@ function NotificationDrawer({ isOpen, onClose }) {
           )}
         </div>
 
-        <div
+        {/* <div
           className="shrink-0 border-t p-4"
           style={{ borderColor: "var(--admin-header-surface-border)" }}
         >
@@ -165,7 +165,7 @@ function NotificationDrawer({ isOpen, onClose }) {
           >
             View All Notifications
           </button>
-        </div>
+        </div> */}
       </aside>
     </>
   );
