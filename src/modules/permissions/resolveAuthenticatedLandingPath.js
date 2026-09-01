@@ -1,7 +1,7 @@
 import { getSidebarNavItemsForRole } from "../../config/roleSidebarNav";
 import { getAdminUser } from "../../services/auth/authStorage";
 import { getLoginRole } from "../../services/auth/loginRole";
-import { getEffectivePermissions, isSuperAdminUser } from "./getEffectivePermissions";
+import { getEffectivePermissions } from "./getEffectivePermissions";
 import { canReadModule } from "./permissionsUtils";
 
 /**
@@ -45,14 +45,10 @@ export function resolveAuthenticatedLandingPath() {
   const admin = getAdminUser();
   const loginRole = getLoginRole();
   const permissions = getEffectivePermissions(admin);
-  const superAdmin = isSuperAdminUser(admin);
   const navItems = getSidebarNavItemsForRole(loginRole);
-
   const canAccessNavItem = (permissionKeys = []) => {
     if (!permissionKeys || permissionKeys.length === 0) return true;
-    return permissionKeys.some((key) =>
-      canReadModule(permissions, key, { isSuperAdmin: superAdmin })
-    );
+    return permissionKeys.some((key) => canReadModule(permissions, key));
   };
 
   return getFirstAccessibleNavPath(navItems, canAccessNavItem) ?? "/";

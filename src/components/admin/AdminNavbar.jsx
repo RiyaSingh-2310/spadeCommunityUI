@@ -9,14 +9,12 @@ import {
 } from "../../services/auth/authStorage";
 import { performLogout } from "../../services/auth/authApi";
 import { useMessages } from "../../modules/notifications/context/MessagesContext";
-import { usePermissions } from "../../modules/permissions/PermissionsContext";
 import HeaderSearch from "./HeaderSearch";
 import NotificationDrawer from "./NotificationDrawer";
 
 function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobileMenu }) {
   const navigate = useNavigate();
   const { unreadCount } = useMessages();
-  const { canShowNotificationBell } = usePermissions();
   const [admin, setAdmin] = useState(() => getAdminUser());
   const adminName = admin?.displayName || "Admin";
   const adminEmail = admin?.email || "";
@@ -186,7 +184,7 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
 
             <div className="flex shrink-0 items-center justify-end gap-0.5 sm:gap-1">
               {themeButton}
-              {canShowNotificationBell ? notificationButton : null}
+              {notificationButton}
               {profileDropdown}
             </div>
           </div>
@@ -195,20 +193,18 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
             <HeaderSearch />
             <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
               {themeButton}
-              {canShowNotificationBell ? notificationButton : null}
+              {notificationButton}
               {profileDropdown}
             </div>
           </div>
         )}
       </header>
 
-      {canShowNotificationBell ? (
-        <NotificationDrawer
-          isOpen={isNotificationOpen}
-          onClose={() => setIsNotificationOpen(false)}
-          isDarkMode={isDarkMode}
-        />
-      ) : null}
+      <NotificationDrawer
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        isDarkMode={isDarkMode}
+      />
     </>
   );
 }

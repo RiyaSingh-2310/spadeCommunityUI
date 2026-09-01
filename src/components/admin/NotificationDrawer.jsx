@@ -4,16 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { toastApiError, toastApiSuccess } from "../../services/toast/apiToast";
 import { useMessages } from "../../modules/notifications/context/MessagesContext";
 import { usePermissions } from "../../modules/permissions/PermissionsContext";
-import { PermissionDeniedModal } from "./PermissionDenied";
-
-const MESSAGES_ACCESS_DENIED_MESSAGE =
-  "You do not have permission to view messages. Contact your administrator.";
+import { getMessage } from "../../modules/notifications/services/messagesApi";
+import NotificationMessageModal from "./NotificationMessageModal";
 
 function NotificationDrawer({ isOpen, onClose, isDarkMode }) {
   const navigate = useNavigate();
   const drawerRef = useRef(null);
   const { canOpenMessagesPage, canMutateNotificationInbox } = usePermissions();
-  const [isAccessDeniedOpen, setIsAccessDeniedOpen] = useState(false);
+  const [preview, setPreview] = useState({ open: false, loading: false, message: null });
   const {
     recentItems,
     unreadCount,
@@ -29,18 +27,20 @@ function NotificationDrawer({ isOpen, onClose, isDarkMode }) {
   }, [isOpen, refreshRecent]);
 
   const handleClose = useCallback(() => {
+    if (preview.open) return;
     onClose();
-  }, [onClose]);
+  }, [onClose, preview.open]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
     const handleOutsideClick = (event) => {
+      if (preview.open) return;
       if (drawerRef.current?.contains(event.target)) return;
       handleClose();
     };
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [isOpen, handleClose]);
+  }, [isOpen, handleClose, preview.open]);
 
   const handleMarkAllAsRead = async () => {
     if (!canMutateNotificationInbox) return;
@@ -52,25 +52,39 @@ function NotificationDrawer({ isOpen, onClose, isDarkMode }) {
     }
   };
 
-  const handleNotificationClick = (notification) => {
+  const closePreview = () => {
+    setPreview({ open: false, loading: false, message: null });
+  };
+
+  const handleNotificationClick = async (notification) => {
     const messageId = String(notification?.id ?? "").trim();
     if (!messageId || messageId === "undefined" || messageId === "null") {
       return;
     }
 
-    if (!canOpenMessagesPage) {
-      setIsAccessDeniedOpen(true);
+    if (canOpenMessagesPage) {
+      onClose();
+      if (!notification?.isRead) {
+        markAsRead(messageId);
+      }
+      navigate(`/messages/${encodeURIComponent(messageId)}`);
       return;
     }
 
-    handleClose();
+    setPreview({ open: true, loading: true, message: notification });
     if (!notification?.isRead) {
       markAsRead(messageId);
     }
-    navigate(`/messages/${encodeURIComponent(messageId)}`);
+
+    try {
+      const fullMessage = await getMessage(messageId);
+      setPreview({ open: true, loading: false, message: fullMessage });
+    } catch {
+      setPreview({ open: true, loading: false, message: notification });
+    }
   };
 
-  if (!isOpen && !isAccessDeniedOpen) return null;
+  if (!isOpen && !preview.open) return null;
 
   return (
     <>
@@ -97,7 +111,10 @@ function NotificationDrawer({ isOpen, onClose, isDarkMode }) {
                 <h2 className="admin-text mb-3 text-lg font-bold">Notifications</h2>
                 <button
                   type="button"
-                  onClick={handleClose}
+                  onClick={() => {
+                    if (preview.open) return;
+                    onClose();
+                  }}
                   className="admin-icon-btn admin-text-subtle flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors duration-200"
                   aria-label="Close notifications drawer"
                 >
@@ -166,11 +183,12 @@ function NotificationDrawer({ isOpen, onClose, isDarkMode }) {
         </>
       ) : null}
 
-      <PermissionDeniedModal
-        isOpen={isAccessDeniedOpen}
-        onClose={() => setIsAccessDeniedOpen(false)}
+      <NotificationMessageModal
+        isOpen={preview.open}
+        onClose={closePreview}
         isDarkMode={isDarkMode}
-        message={MESSAGES_ACCESS_DENIED_MESSAGE}
+        isLoading={preview.loading}
+        message={preview.message}
       />
     </>
   );

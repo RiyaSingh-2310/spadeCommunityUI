@@ -84,6 +84,9 @@ const MODULE_KEY_ALIASES = {
   salesmanagers: "sales_manager",
   projectmanager: "project_managers",
   projectmanagers: "project_managers",
+  reward: "reward_points",
+  rewardmanagement: "reward_points",
+  reward_management: "reward_points",
 };
 
 function resolveModuleKey(moduleName) {
@@ -340,7 +343,7 @@ export function normalizePermissions(raw) {
     base[key] = parsePermissionEntry(map[key]);
   }
 
-  return syncAllParentsFromChildren(base);
+  return syncAllParentsFromChildren(base, { preserveExplicitApiParents: true });
 }
 
 /**
@@ -436,8 +439,12 @@ export function computeAggregatedParentFlags(permissions, childKeys) {
 /**
  * Syncs every group parentKey from its children using aggregation rules.
  * @param {PermissionsMap} permissions
+ * @param {{ preserveExplicitApiParents?: boolean }} [options]
  */
-export function syncAllParentsFromChildren(permissions) {
+export function syncAllParentsFromChildren(
+  permissions,
+  { preserveExplicitApiParents = false } = {}
+) {
   const next = { ...permissions };
 
   for (const node of getPermissionGroups()) {
@@ -448,7 +455,18 @@ export function syncAllParentsFromChildren(permissions) {
 
     const apiParentKey = node.apiParentKey;
     if (apiParentKey && !childKeys.includes(apiParentKey)) {
-      next[apiParentKey] = aggregated;
+      const existing = permissions[apiParentKey] ?? createEmptyModulePermission();
+      if (
+        preserveExplicitApiParents &&
+        apiParentKey === "notifications" &&
+        (existing.canRead || existing.canWrite) &&
+        !aggregated.canRead &&
+        !aggregated.canWrite
+      ) {
+        next[apiParentKey] = existing;
+      } else {
+        next[apiParentKey] = aggregated;
+      }
     }
   }
 
@@ -553,12 +571,6 @@ export function areAllPermissionsSelected(permissions, type) {
   return PERMISSION_MODULE_KEYS.every((key) => permissions[key]?.[type] === true);
 }
 
-/** Modules that inherit access from related keys when the API has not granted them yet. */
-const MODULE_ACCESS_FALLBACKS = {
-  reward_history: ["pending_rewards", "completed_rewards", "reward_points"],
-  reward_settings: ["reward_points", "pending_rewards", "completed_rewards"],
-};
-
 function moduleHasGrant(permissions, key) {
   const flags = permissions?.[key];
   return flags?.canRead === true || flags?.canWrite === true;
@@ -569,15 +581,8 @@ function resolveModuleFlags(permissions, moduleKey) {
     return permissions[moduleKey];
   }
 
-  const fallbacks = MODULE_ACCESS_FALLBACKS[moduleKey];
-  if (!fallbacks) {
-    return permissions?.[moduleKey];
-  }
-
-  for (const key of fallbacks) {
-    if (moduleHasGrant(permissions, key)) {
-      return permissions[key];
-    }
+  if (moduleKey === "messages" && moduleHasGrant(permissions, "notifications")) {
+    return permissions.notifications;
   }
 
   return permissions?.[moduleKey];
@@ -587,8 +592,7 @@ function resolveModuleFlags(permissions, moduleKey) {
  * @param {PermissionsMap | null | undefined} permissions
  * @param {string} moduleKey
  */
-export function canReadModule(permissions, moduleKey, { isSuperAdmin = false } = {}) {
-  if (isSuperAdmin) return true;
+export function canReadModule(permissions, moduleKey, _options = {}) {
   const flags = {
     ...createEmptyModulePermission(),
     ...resolveModuleFlags(permissions, moduleKey),
@@ -600,8 +604,7 @@ export function canReadModule(permissions, moduleKey, { isSuperAdmin = false } =
  * @param {PermissionsMap | null | undefined} permissions
  * @param {string} moduleKey
  */
-export function canWriteModule(permissions, moduleKey, { isSuperAdmin = false } = {}) {
-  if (isSuperAdmin) return true;
+export function canWriteModule(permissions, moduleKey, _options = {}) {
   const flags = {
     ...createEmptyModulePermission(),
     ...resolveModuleFlags(permissions, moduleKey),
@@ -614,22 +617,28 @@ export function moduleHasReadAccess(permissions, moduleKey, options) {
   return canReadModule(permissions, moduleKey, options);
 }
 
-/** Header bell: visible with Notifications or Messages read (or write). */
-export function canShowNotificationBell(permissions, options) {
-  return (
-    canReadModule(permissions, "notifications", options) ||
-    canReadModule(permissions, "messages", options)
-  );
+export const REWARD_MODULE_KEYS = [
+  "reward_points",
+  "reward_history",
+  "pending_rewards",
+  "completed_rewards",
+  "reward_settings",
+];
+
+export function canAccessRewardManagement(permissions, options) {
+  return REWARD_MODULE_KEYS.some((key) => canReadModule(permissions, key, options));
 }
 
-/**
- * Internal /messages routes: Notifications or Messages write only.
- * Read-only notification access can show the header bell, but must not open /messages.
- */
+/** Header bell is always available in the authenticated admin shell. */
+export function canShowNotificationBell() {
+  return true;
+}
+
+/** Messages listing/details — assigned Notifications or Messages access. */
 export function canOpenMessagesPage(permissions, options) {
   return (
-    canWriteModule(permissions, "messages", options) ||
-    canWriteModule(permissions, "notifications", options)
+    canReadModule(permissions, "messages", options) ||
+    canReadModule(permissions, "notifications", options)
   );
 }
 

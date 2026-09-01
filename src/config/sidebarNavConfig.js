@@ -177,12 +177,7 @@ export const SIDEBAR_NAV_ITEMS = [
         label: "Reward History",
         root: "/reward-points/history",
         matcher: /^\/reward-points\/history(\/|$)/,
-        permissionKeys: [
-          "reward_history",
-          "pending_rewards",
-          "completed_rewards",
-          "reward_points",
-        ],
+        permissionKeys: ["reward_history"],
       },
       {
         label: "Reward Request",
@@ -190,23 +185,11 @@ export const SIDEBAR_NAV_ITEMS = [
         matcher: /^\/reward-points\/pending(\/|$)/,
         permissionKeys: ["pending_rewards"],
       },
-      // Hidden — restore when Completed Rewards is needed again
-      // {
-      //   label: "Completed Rewards",
-      //   root: "/reward-points/completed",
-      //   matcher: /^\/reward-points\/completed(\/|$)/,
-      //   permissionKeys: ["completed_rewards"],
-      // },
       {
         label: "Reward Settings",
         root: "/reward-points/settings",
         matcher: /^\/reward-points\/settings(\/|$)/,
-        permissionKeys: [
-          "reward_settings",
-          "reward_points",
-          "pending_rewards",
-          "completed_rewards",
-        ],
+        permissionKeys: ["reward_settings"],
       },
     ],
   },

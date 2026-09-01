@@ -10,7 +10,6 @@ import {
   canMutateNotificationInbox,
   canOpenMessagesPage,
   canReadModule,
-  canShowNotificationBell,
   canWriteModule,
 } from "./permissionsUtils";
 import { hasPathPermissionAccess } from "./routePermissions";
@@ -31,31 +30,26 @@ export function PermissionsProvider({ children }) {
   const token = useMemo(() => getAuthToken(), [sessionVersion]);
 
   const value = useMemo(() => {
-    const superAdmin = isSuperAdminUser(admin);
     const permissions = getEffectivePermissions(admin);
 
-    const canRead = (moduleKey) =>
-      canReadModule(permissions, moduleKey, { isSuperAdmin: superAdmin });
-    const canWrite = (moduleKey) =>
-      canWriteModule(permissions, moduleKey, { isSuperAdmin: superAdmin });
+    const canRead = (moduleKey) => canReadModule(permissions, moduleKey);
+    const canWrite = (moduleKey) => canWriteModule(permissions, moduleKey);
 
     const canAccessNavItem = (permissionKeys = []) => {
       if (!permissionKeys.length) return true;
       return permissionKeys.some((key) => canRead(key));
     };
 
-    const options = { isSuperAdmin: superAdmin };
-
     return {
       permissions,
-      isSuperAdmin: superAdmin,
+      isSuperAdmin: isSuperAdminUser(admin),
       canRead,
       canWrite,
       canAccessNavItem,
-      canShowNotificationBell: canShowNotificationBell(permissions, options),
-      canOpenMessagesPage: canOpenMessagesPage(permissions, options),
-      canMutateNotificationInbox: canMutateNotificationInbox(permissions, options),
-      hasPathAccess: (pathname) => hasPathPermissionAccess(pathname, permissions, options),
+      canShowNotificationBell: true,
+      canOpenMessagesPage: canOpenMessagesPage(permissions),
+      canMutateNotificationInbox: canMutateNotificationInbox(permissions),
+      hasPathAccess: (pathname) => hasPathPermissionAccess(pathname, permissions),
     };
   }, [admin, token, location.pathname]);
 

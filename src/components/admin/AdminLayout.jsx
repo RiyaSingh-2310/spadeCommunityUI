@@ -9,6 +9,7 @@ import {
   useMediaQuery,
 } from "../../modules/shared/hooks/useMediaQuery";
 import { useAuthSessionLifecycle } from "../../modules/shared/hooks/useAuthSessionLifecycle";
+import { useSyncSessionPermissions } from "../../modules/permissions/useSyncSessionPermissions";
 import ScrollToTopOnNavigate from "../shared/ScrollToTopOnNavigate";
 import PageErrorBoundary from "../shared/PageErrorBoundary";
 import AdminNavbar from "./AdminNavbar";
@@ -22,6 +23,7 @@ function AdminLayoutContent({ isDarkMode, onToggleTheme }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   useAuthSessionLifecycle();
+  useSyncSessionPermissions();
   const hasAccess = hasPathAccess(location.pathname);
 
   const isDashboardRoute = location.pathname === "/" || location.pathname === "";

@@ -12,7 +12,6 @@ import {
   getMessages,
   markAllMessagesAsRead,
 } from "../services/messagesApi";
-import { usePermissionsOptional } from "../../permissions/PermissionsContext";
 
 const MessagesContext = createContext(null);
 const RECENT_LIMIT = 100;
@@ -32,10 +31,6 @@ function markItemRead(item) {
 }
 
 export function MessagesProvider({ children }) {
-  const permissions = usePermissionsOptional();
-  const canFetchInbox = Boolean(
-    permissions?.canShowNotificationBell || permissions?.canOpenMessagesPage
-  );
   const [recentItems, setRecentItems] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -78,13 +73,6 @@ export function MessagesProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (!canFetchInbox) {
-      setRecentItems([]);
-      setUnreadCount(0);
-      setHasLoaded(true);
-      return undefined;
-    }
-
     let cancelled = false;
 
     const poll = () => {
@@ -93,7 +81,6 @@ export function MessagesProvider({ children }) {
       });
     };
 
-    // Initial load + single interval (cleared on unmount / logout leaving AdminLayout).
     poll();
     const intervalId = window.setInterval(poll, NOTIFICATION_POLL_INTERVAL_MS);
 
@@ -101,7 +88,7 @@ export function MessagesProvider({ children }) {
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [canFetchInbox, refreshRecent]);
+  }, [refreshRecent]);
 
   /**
    * Local-only read sync.

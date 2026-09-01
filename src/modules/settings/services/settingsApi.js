@@ -11,7 +11,10 @@ import {
   isManagerLoginRole,
   isSalesLoginRole,
 } from "../../../services/auth/loginRole";
-import { buildPermissionsPayload } from "../../permissions/permissionsUtils";
+import {
+  buildPermissionsPayload,
+  extractPermissionsRawFromRecord,
+} from "../../permissions/permissionsUtils";
 import { encryptValue } from "../../shared/utils/encryption";
 import {
   extractAdminFromResponse,
@@ -55,9 +58,14 @@ function extractSelfRecord(data) {
 
 function syncAuthSessionFromRecord(record) {
   if (!record) return;
+  const existing = getAdminUser();
+  const hasIncomingPermissions = extractPermissionsRawFromRecord(record) != null;
+  const admin = hasIncomingPermissions
+    ? record
+    : { ...record, permissions: existing?.permissions };
   saveAuthSession({
     token: getAuthToken(),
-    admin: normalizeAdminUser(record),
+    admin: normalizeAdminUser(admin),
     loginRole: getLoginRole(),
   });
 }

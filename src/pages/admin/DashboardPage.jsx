@@ -4,6 +4,8 @@ import AdminPageHeader from "../../components/admin/AdminPageHeader";
 import PermissionDenied from "../../components/admin/PermissionDenied";
 import TableCard from "../../components/admin/TableCard";
 import { useModulePermission } from "../../modules/permissions/useModulePermission";
+import { usePermissions } from "../../modules/permissions/PermissionsContext";
+import { canAccessRewardManagement } from "../../modules/permissions/permissionsUtils";
 import { formatDashboardDate } from "../../modules/shared/utils/dateTime";
 import { formatStatusLabel } from "../../modules/shared/utils/statusLabels";
 import { BarsChart, DonutChart, PolylineChart, SummaryCard } from "./dashboard/dashboardCharts";
@@ -14,6 +16,8 @@ import { useDashboardData } from "./dashboard/useDashboardData";
 function DashboardPage({ isDarkMode }) {
   const navigate = useNavigate();
   const { canRead } = useModulePermission("dashboard");
+  const { permissions, canRead: canReadModule, canWrite } = usePermissions();
+  const showRewardWidgets = canAccessRewardManagement(permissions);
   const borderRow = isDarkMode ? "border-[#263850]" : "border-[#e6edf5]";
   const headClass = "admin-text-muted";
 
@@ -287,11 +291,21 @@ function DashboardPage({ isDarkMode }) {
           <TableCard title="Quick Actions" isDarkMode={isDarkMode}>
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                { label: "View Projects", path: "/survey" },
-                { label: "Add Project", path: "/survey/add" },
-                { label: "Group Surveys", path: "/survey/group" },
-                { label: "Settings", path: "/settings?tab=profile" },
-              ].map((action) => (
+                { label: "View Projects", path: "/survey", show: canReadModule("survey") },
+                {
+                  label: "Add Project",
+                  path: "/survey/add",
+                  show: canWrite("survey"),
+                },
+                {
+                  label: "Group Surveys",
+                  path: "/survey/group",
+                  show: canReadModule("group_survey"),
+                },
+                { label: "Settings", path: "/settings?tab=profile", show: true },
+              ]
+                .filter((action) => action.show)
+                .map((action) => (
                 <button
                   key={action.label}
                   type="button"
@@ -413,6 +427,7 @@ function DashboardPage({ isDarkMode }) {
             </TableCard>
           </div>
 
+          {showRewardWidgets ? (
           <div className="grid gap-4 lg:grid-cols-2">
             <TableCard title="Reward Statistics" isDarkMode={isDarkMode}>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -426,6 +441,7 @@ function DashboardPage({ isDarkMode }) {
               <PolylineChart data={rewardTrend} />
             </TableCard>
           </div>
+          ) : null}
 
           {dashboard.loading && (
             <p className="admin-text-muted text-center text-sm">
