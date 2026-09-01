@@ -73,7 +73,7 @@ function ModuleListingTableBody({
                     : "border-[var(--admin-primary-color)] text-[var(--admin-primary-color)]"
                 }`}
                 aria-label={isExpanded ? "Collapse row" : "Expand row"}
-                aria-expanded={isExpanded}
+                aria-expanded={isExpanded} 
               >
                 {isExpanded ? (
                   <Minus size={14} strokeWidth={2.5} />
