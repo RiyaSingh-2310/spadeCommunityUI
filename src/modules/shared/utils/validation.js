@@ -222,6 +222,39 @@ export function getPasswordError(
   return "";
 }
 
+export const NEW_PASSWORD_SAME_AS_CURRENT_MESSAGE =
+  "New password cannot be the same as the current password.";
+
+/**
+ * Validates a new password and rejects it when it matches the current password.
+ */
+export function getNewPasswordError(
+  newPassword,
+  currentPassword,
+  minLength = DEFAULT_PASSWORD_MIN_LENGTH,
+  maxLength = PASSWORD_FIELD_MAX_LENGTH
+) {
+  const formatError = getPasswordError(newPassword, minLength, maxLength);
+  if (formatError) return formatError;
+
+  const next = String(newPassword ?? "").trim();
+  const current = String(currentPassword ?? "").trim();
+  if (current && next && next === current) {
+    return NEW_PASSWORD_SAME_AS_CURRENT_MESSAGE;
+  }
+  return "";
+}
+
+export function getOptionalNewPasswordError(
+  newPassword,
+  currentPassword,
+  minLength = DEFAULT_PASSWORD_MIN_LENGTH,
+  maxLength = PASSWORD_FIELD_MAX_LENGTH
+) {
+  if (!String(newPassword ?? "").trim()) return "";
+  return getNewPasswordError(newPassword, currentPassword, minLength, maxLength);
+}
+
 export function getConfirmPasswordError(
   password,
   confirmPassword,
@@ -325,7 +358,14 @@ export function getDateRangeError(startDate, endDate, { endLabel = "End Date" } 
   return "";
 }
 
-export { getPhoneError } from "./phoneValidation";
+export {
+  getPhoneError,
+  getPanelistMobileError,
+  preventNonDigitPhoneKeys,
+  limitNationalPhoneDigits,
+  sanitizePhoneDigits,
+  parsePhoneValue,
+} from "./phoneValidation";
 
 /**
  * Show a field error only after the user has blurred the field or submitted the form.

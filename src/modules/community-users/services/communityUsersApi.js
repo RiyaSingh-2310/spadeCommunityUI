@@ -13,6 +13,7 @@ import {
 } from "../../shared/utils/statusLabels";
 import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
 import { formatAppDateValue } from "../../shared/utils/dateTime";
+import { parsePhoneValue } from "../../shared/utils/phoneValidation";
 import { encryptValue } from "../../shared/utils/encryption";
 import { normalizeRewardLogEntry } from "../utils/rewardLogUtils";
 
@@ -168,7 +169,10 @@ export function mapPanelistToForm(panelist) {
   return {
     name: formValueFromDisplay(panelist?.name),
     email: formValueFromDisplay(panelist?.email ?? panelist?.emailAddress),
-    mobileNumber: resolvePanelistPhone(panelist),
+    mobileNumber: parsePhoneValue(resolvePanelistPhone(panelist), "IN").nationalNumber.slice(
+      0,
+      10
+    ),
     status: apiStatusToFormValue(panelist?.status),
     supportsProfileImage:
       typeof panelist?.supportsProfileImage === "boolean"

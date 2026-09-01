@@ -17,12 +17,10 @@ describe("mapPanelistToForm", () => {
     expect(mapped.status).toBe("Active");
   });
 
-  it("does not treat display dashes as a saved phone", () => {
+  it("prefills mobile as 10 national digits when the API includes a country code", () => {
     const mapped = mapPanelistToForm({
-      phone: "—",
-      mobileNumber: "9123456789",
+      phone: "+91 9876543210",
     });
-
-    expect(mapped.mobileNumber).toBe("9123456789");
+    expect(mapped.mobileNumber).toBe("9876543210");
   });
 });

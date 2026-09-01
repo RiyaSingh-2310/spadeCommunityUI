@@ -1,15 +1,53 @@
 import {
   findPhoneCountry,
-  getPhoneCountries,
   getPhoneCountryByCode,
+  getPhoneCountries,
 } from "../data/phoneCountries";
 
-/** Contact Number national length across Admin forms. */
+/** Default national length when a country does not define one. */
 export const CONTACT_NUMBER_DIGIT_LENGTH = 10;
 
 /** Digits-only national number (no country code). */
 export function sanitizePhoneDigits(raw) {
   return String(raw ?? "").replace(/\D/g, "");
+}
+
+export function getNationalPhoneLength(countryCode, fallback = CONTACT_NUMBER_DIGIT_LENGTH) {
+  const length = Number(getPhoneCountryByCode(countryCode)?.nationalLength);
+  return Number.isFinite(length) && length > 0 ? length : fallback;
+}
+
+export function limitNationalPhoneDigits(raw, maxLength = CONTACT_NUMBER_DIGIT_LENGTH) {
+  return sanitizePhoneDigits(raw).slice(0, maxLength);
+}
+
+/**
+ * Blocks non-numeric keystrokes in phone fields (letters, spaces, decimals, symbols).
+ */
+export function preventNonDigitPhoneKeys(event) {
+  const key = event.key;
+
+  if (event.ctrlKey || event.metaKey) return;
+
+  if (
+    key === "Backspace" ||
+    key === "Delete" ||
+    key === "Tab" ||
+    key === "Enter" ||
+    key === "Escape" ||
+    key === "ArrowLeft" ||
+    key === "ArrowRight" ||
+    key === "ArrowUp" ||
+    key === "ArrowDown" ||
+    key === "Home" ||
+    key === "End"
+  ) {
+    return;
+  }
+
+  if (typeof key === "string" && /^[0-9]$/.test(key)) return;
+
+  event.preventDefault();
 }
 
 /**
@@ -62,19 +100,25 @@ export function formatPhoneValue(countryCode, nationalNumber) {
 /**
  * @param {string} countryCode
  * @param {string} nationalNumber
+ * @param {string} [label]
  */
-export function validateNationalPhoneNumber(countryCode, nationalNumber) {
+export function validateNationalPhoneNumber(
+  countryCode,
+  nationalNumber,
+  label = "Contact Number"
+) {
   const country = getPhoneCountryByCode(countryCode);
+  const expectedLength = getNationalPhoneLength(country.code);
   const digits = sanitizePhoneDigits(nationalNumber);
 
   if (!digits) {
-    return { valid: false, message: "Contact Number is required" };
+    return { valid: false, message: `${label} is required` };
   }
 
-  if (digits.length !== CONTACT_NUMBER_DIGIT_LENGTH) {
+  if (digits.length !== expectedLength) {
     return {
       valid: false,
-      message: `Contact Number must be exactly ${CONTACT_NUMBER_DIGIT_LENGTH} digits`,
+      message: `${label} must be exactly ${expectedLength} digits for ${country.name}`,
     };
   }
 
@@ -94,11 +138,16 @@ export function validateNationalPhoneNumber(countryCode, nationalNumber) {
 
 /**
  * @param {string} fullValue
- * @param {{ required?: boolean, label?: string, defaultCountryCode?: string }} [options]
+ * @param {{ required?: boolean, label?: string, defaultCountryCode?: string, exactLength?: number }} [options]
  */
 export function getPhoneError(
   fullValue,
-  { required = true, label = "Contact Number", defaultCountryCode = "IN" } = {}
+  {
+    required = true,
+    label = "Contact Number",
+    defaultCountryCode = "IN",
+    exactLength,
+  } = {}
 ) {
   const trimmed = String(fullValue ?? "").trim();
   if (!trimmed) {
@@ -107,14 +156,27 @@ export function getPhoneError(
 
   const parsed = parsePhoneValue(trimmed, defaultCountryCode);
   const country = findPhoneCountry(parsed.countryCode) ?? getPhoneCountryByCode(parsed.countryCode);
-  const result = validateNationalPhoneNumber(country.code, parsed.nationalNumber);
+  const expectedLength = exactLength ?? getNationalPhoneLength(country.code);
+  const digits = sanitizePhoneDigits(parsed.nationalNumber);
 
-  if (!result.valid) {
-    if (result.message.startsWith("Contact Number")) {
-      return result.message.replace(/^Contact Number/, label);
-    }
-    return result.message;
+  if (digits.length !== expectedLength) {
+    return `${label} must be exactly ${expectedLength} digits`;
   }
 
-  return "";
+  const result = validateNationalPhoneNumber(country.code, digits, label);
+  return result.valid ? "" : result.message;
+}
+
+/** Panelist mobile: optional or required 10-digit numeric Indian mobile. */
+export function getPanelistMobileError(value, { required = false, label = "Mobile" } = {}) {
+  const digits = sanitizePhoneDigits(value);
+  if (!digits) {
+    return required ? `${label} is required` : "";
+  }
+  return getPhoneError(digits, {
+    required,
+    label,
+    defaultCountryCode: "IN",
+    exactLength: 10,
+  });
 }

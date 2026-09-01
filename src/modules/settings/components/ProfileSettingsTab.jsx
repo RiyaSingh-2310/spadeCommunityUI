@@ -16,7 +16,7 @@ import {
   NAME_FIELD_MAX_LENGTH,
   PASSWORD_FIELD_MAX_LENGTH,
   getConfirmPasswordError,
-  getPasswordError,
+  getNewPasswordError,
   getRequiredError,
   getUserNameError,
   preventBlockedNameKeys,
@@ -150,7 +150,10 @@ function ProfileSettingsTab({ isDarkMode }) {
         passwordForm.currentPassword,
         "Current Password"
       ),
-      newPassword: getPasswordError(passwordForm.newPassword),
+      newPassword: getNewPasswordError(
+        passwordForm.newPassword,
+        passwordForm.currentPassword
+      ),
       confirmPassword: getConfirmPasswordError(
         passwordForm.newPassword,
         passwordForm.confirmPassword

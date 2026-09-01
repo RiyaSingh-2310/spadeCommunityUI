@@ -17,10 +17,12 @@ import {
   PASSWORD_FIELD_MAX_LENGTH,
   getOptionalConfirmPasswordError,
   getOptionalPasswordError,
-  getPhoneError,
+  getPanelistMobileError,
   getUserNameError,
   preventBlockedNameKeys,
+  preventNonDigitPhoneKeys,
   isFormValid,
+  limitNationalPhoneDigits,
   limitTextInput,
 } from "../../shared/utils/validation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
@@ -120,7 +122,7 @@ function EditCommunityUserPage({ isDarkMode }) {
   const errors = useMemo(
     () => ({
       name: getUserNameError(form.name),
-      mobileNumber: getPhoneError(form.mobileNumber, {
+      mobileNumber: getPanelistMobileError(form.mobileNumber, {
         required: false,
         label: "Mobile",
       }),
@@ -160,7 +162,7 @@ function EditCommunityUserPage({ isDarkMode }) {
     try {
       const data = await updateRecord(id, {
         name: form.name.trim(),
-        phone: form.mobileNumber.trim(),
+        phone: limitNationalPhoneDigits(form.mobileNumber, 10),
         status: form.status,
         password: form.password.trim(),
         ...(showProfileImage && imageFile ? { imageFile } : {}),
@@ -289,8 +291,20 @@ function EditCommunityUserPage({ isDarkMode }) {
               <input
                 className={inputClass}
                 value={form.mobileNumber}
-                placeholder="Enter Mobile"
-                onChange={(event) => setField("mobileNumber", event.target.value)}
+                placeholder="Enter 10-digit mobile number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="tel-national"
+                maxLength={10}
+                onChange={(event) =>
+                  setField("mobileNumber", limitNationalPhoneDigits(event.target.value, 10))
+                }
+                onPaste={(event) => {
+                  event.preventDefault();
+                  const pasted = event.clipboardData.getData("text");
+                  setField("mobileNumber", limitNationalPhoneDigits(pasted, 10));
+                }}
+                onKeyDown={preventNonDigitPhoneKeys}
                 onBlur={() => touch("mobileNumber")}
                 disabled={fieldDisabled(readOnly, isSubmitting)}
               />

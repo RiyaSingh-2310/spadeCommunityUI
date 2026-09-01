@@ -195,6 +195,13 @@ export async function changePassword(payload) {
   const plainNew = String(payload.newPassword ?? "");
   const plainConfirm = String(payload.confirmPassword ?? "");
 
+  if (plainCurrent && plainNew && plainCurrent === plainNew) {
+    throw new ApiError(
+      "New password cannot be the same as the current password.",
+      null
+    );
+  }
+
   const encryptedCurrent = encryptValue(plainCurrent);
   const encryptedNew = encryptValue(plainNew);
   // Reuse the same ciphertext so validator `confirm === new` succeeds.

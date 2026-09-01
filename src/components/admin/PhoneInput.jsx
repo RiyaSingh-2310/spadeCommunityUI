@@ -4,10 +4,11 @@ import {
   getPhoneCountryByCode,
 } from "../../modules/shared/data/phoneCountries";
 import {
-  CONTACT_NUMBER_DIGIT_LENGTH,
   formatPhoneValue,
+  getNationalPhoneLength,
+  limitNationalPhoneDigits,
   parsePhoneValue,
-  sanitizePhoneDigits,
+  preventNonDigitPhoneKeys,
 } from "../../modules/shared/utils/phoneValidation";
 
 function PhoneInput({
@@ -34,10 +35,15 @@ function PhoneInput({
   );
 
   const country = getPhoneCountryByCode(countryCode);
+  const nationalLength = getNationalPhoneLength(countryCode);
 
   const nationalNumber = useMemo(
-    () => parsePhoneValue(value, countryCode).nationalNumber,
-    [value, countryCode]
+    () =>
+      limitNationalPhoneDigits(
+        parsePhoneValue(value, countryCode).nationalNumber,
+        nationalLength
+      ),
+    [value, countryCode, nationalLength]
   );
 
   const prevCountryLabelRef = useRef(formCountryLabel);
@@ -49,7 +55,11 @@ function PhoneInput({
     prevCountryLabelRef.current = formCountryLabel;
 
     const nextCode = getDefaultPhoneCountryCode(formCountryLabel);
-    const national = parsePhoneValue(value, nextCode).nationalNumber;
+    const maxLen = getNationalPhoneLength(nextCode);
+    const national = limitNationalPhoneDigits(
+      parsePhoneValue(value, nextCode).nationalNumber,
+      maxLen
+    );
     const nextValue = national ? formatPhoneValue(nextCode, national) : "";
     if (nextValue !== value) {
       onChange?.(nextValue);
@@ -59,7 +69,7 @@ function PhoneInput({
   const isDisabled = disabled || !hasCountry;
 
   const handleNationalChange = (raw) => {
-    const digits = sanitizePhoneDigits(raw).slice(0, CONTACT_NUMBER_DIGIT_LENGTH);
+    const digits = limitNationalPhoneDigits(raw, nationalLength);
     onChange?.(digits ? formatPhoneValue(countryCode, digits) : "");
   };
 
@@ -67,10 +77,7 @@ function PhoneInput({
     event.preventDefault();
     const pasted = event.clipboardData.getData("text");
     const parsed = parsePhoneValue(pasted, countryCode);
-    const digits = sanitizePhoneDigits(parsed.nationalNumber).slice(
-      0,
-      CONTACT_NUMBER_DIGIT_LENGTH
-    );
+    const digits = limitNationalPhoneDigits(parsed.nationalNumber, nationalLength);
     onChange?.(digits ? formatPhoneValue(countryCode, digits) : "");
   };
 
@@ -86,23 +93,20 @@ function PhoneInput({
         </span>
       )}
       <input
-        type="tel"
+        type="text"
         inputMode="numeric"
+        pattern="[0-9]*"
         autoComplete="tel-national"
         id={id}
         aria-label={ariaLabel}
         disabled={isDisabled}
         placeholder={hasCountry ? placeholder : "Select a country first"}
         value={nationalNumber}
-        maxLength={CONTACT_NUMBER_DIGIT_LENGTH}
+        maxLength={nationalLength}
         onChange={(e) => handleNationalChange(e.target.value)}
         onPaste={handlePaste}
         onBlur={onBlur}
-        onKeyDown={(e) => {
-          if (["e", "E", "+", "-", ".", ","].includes(e.key)) {
-            e.preventDefault();
-          }
-        }}
+        onKeyDown={preventNonDigitPhoneKeys}
         className="admin-number-input admin-text min-w-0 flex-1 border-0 bg-transparent p-0 text-sm outline-none shadow-none ring-0 placeholder:text-[var(--admin-subtle-foreground)] focus:border-0 focus:outline-none focus:ring-0 focus:shadow-none disabled:cursor-not-allowed"
       />
     </div>
