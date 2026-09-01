@@ -613,3 +613,29 @@ export function canWriteModule(permissions, moduleKey, { isSuperAdmin = false } 
 export function moduleHasReadAccess(permissions, moduleKey, options) {
   return canReadModule(permissions, moduleKey, options);
 }
+
+/** Header bell: visible with Notifications or Messages read (or write). */
+export function canShowNotificationBell(permissions, options) {
+  return (
+    canReadModule(permissions, "notifications", options) ||
+    canReadModule(permissions, "messages", options)
+  );
+}
+
+/**
+ * Internal /messages routes: Notifications or Messages write only.
+ * Read-only notification access can show the header bell, but must not open /messages.
+ */
+export function canOpenMessagesPage(permissions, options) {
+  return (
+    canWriteModule(permissions, "messages", options) ||
+    canWriteModule(permissions, "notifications", options)
+  );
+}
+
+export function canMutateNotificationInbox(permissions, options) {
+  return (
+    canWriteModule(permissions, "messages", options) ||
+    canWriteModule(permissions, "notifications", options)
+  );
+}

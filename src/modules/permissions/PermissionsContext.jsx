@@ -6,7 +6,14 @@ import {
   getAuthToken,
 } from "../../services/auth/authStorage";
 import { getEffectivePermissions, isSuperAdminUser } from "./getEffectivePermissions";
-import { canReadModule, canWriteModule } from "./permissionsUtils";
+import {
+  canMutateNotificationInbox,
+  canOpenMessagesPage,
+  canReadModule,
+  canShowNotificationBell,
+  canWriteModule,
+} from "./permissionsUtils";
+import { hasPathPermissionAccess } from "./routePermissions";
 
 const PermissionsContext = createContext(null);
 
@@ -37,12 +44,18 @@ export function PermissionsProvider({ children }) {
       return permissionKeys.some((key) => canRead(key));
     };
 
+    const options = { isSuperAdmin: superAdmin };
+
     return {
       permissions,
       isSuperAdmin: superAdmin,
       canRead,
       canWrite,
       canAccessNavItem,
+      canShowNotificationBell: canShowNotificationBell(permissions, options),
+      canOpenMessagesPage: canOpenMessagesPage(permissions, options),
+      canMutateNotificationInbox: canMutateNotificationInbox(permissions, options),
+      hasPathAccess: (pathname) => hasPathPermissionAccess(pathname, permissions, options),
     };
   }, [admin, token, location.pathname]);
 

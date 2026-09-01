@@ -146,6 +146,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
     if (!permissionsEqual(form.permissions, initialSnapshot.permissions)) return true;
     if (form.password.trim()) return true;
     if (form.confirmPassword.trim()) return true;
+    if (form.status !== initialSnapshot.status) return true;
 
     return false;
   }, [isEdit, initialSnapshot, form, imageFile]);

@@ -94,14 +94,39 @@ function formValueFromDisplay(value) {
   return text;
 }
 
+function firstNonEmptyString(...values) {
+  for (const value of values) {
+    if (value == null || typeof value === "object") continue;
+    const text = formValueFromDisplay(value);
+    if (text) return text;
+  }
+  return "";
+}
+
 function resolvePanelistPhone(panelist) {
-  return formValueFromDisplay(
-    panelist?.phone ??
-      panelist?.mobileNumber ??
-      panelist?.mobile_number ??
-      panelist?.mobile ??
-      panelist?.contact_no ??
-      ""
+  const nested =
+    panelist?.user && typeof panelist.user === "object" ? panelist.user : null;
+  const profile =
+    panelist?.profile && typeof panelist.profile === "object"
+      ? panelist.profile
+      : null;
+
+  return firstNonEmptyString(
+    panelist?.phone,
+    panelist?.phone_number,
+    panelist?.phoneNumber,
+    panelist?.mobileNumber,
+    panelist?.mobile_number,
+    panelist?.mobile,
+    panelist?.contact_no,
+    panelist?.contactNumber,
+    nested?.phone,
+    nested?.mobileNumber,
+    nested?.mobile,
+    nested?.contact_no,
+    profile?.phone,
+    profile?.mobileNumber,
+    profile?.mobile
   );
 }
 
@@ -195,13 +220,7 @@ function buildPanelistUpdateFormData(payload) {
 
 /** Maps GET /api/panelist/list record to listing row shape. */
 export function mapPanelistToListingRow(panelist) {
-  const phone =
-    panelist?.phone ??
-    panelist?.mobile_number ??
-    panelist?.mobileNumber ??
-    panelist?.mobile ??
-    panelist?.contact_no ??
-    "";
+  const phone = resolvePanelistPhone(panelist);
 
   return {
     id: panelist?.id,
@@ -268,13 +287,7 @@ function toPanelistDetailRecord(panelist) {
     ...panelist,
     supportsProfileImage: panelistProvidesProfileImage(panelist),
   });
-  const phone =
-    panelist?.phone ??
-    panelist?.mobile_number ??
-    panelist?.mobileNumber ??
-    panelist?.mobile ??
-    panelist?.contact_no ??
-    "";
+  const phone = form.mobileNumber;
   const balancePoint = panelist?.balance_point ?? panelist?.balancePoint ?? "";
   const createdAt = panelist?.created_at ?? panelist?.createdAt ?? "";
   const updatedAt = panelist?.updated_at ?? panelist?.updatedAt ?? "";
@@ -293,7 +306,7 @@ function toPanelistDetailRecord(panelist) {
     email: panelist?.email ?? panelist?.emailAddress ?? form.email ?? "",
     emailAddress: panelist?.email ?? panelist?.emailAddress ?? listing.emailAddress ?? "",
     phone: displayOrDash(phone),
-    mobileNumber: displayOrDash(phone),
+    mobileNumber: phone,
     photo,
     isVerified: mapIsVerified(panelist?.is_verified ?? panelist?.isVerified),
     emailVerified: mapIsVerified(panelist?.is_verified ?? panelist?.isVerified),

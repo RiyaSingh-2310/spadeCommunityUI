@@ -133,6 +133,7 @@ function AddSalesManagerPage({ isDarkMode }) {
     if (form.name.trim() !== initialSnapshot.name) return true;
     if (form.password.trim()) return true;
     if (form.confirmPassword.trim()) return true;
+    if (form.status !== initialSnapshot.status) return true;
 
     return false;
   }, [isEdit, initialSnapshot, form, profileImage]);

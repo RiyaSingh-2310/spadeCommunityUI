@@ -3,7 +3,6 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { PermissionsProvider, usePermissions } from "../../modules/permissions/PermissionsContext";
 import { FormAccessProvider, isFormRoute } from "../../modules/permissions/FormAccessContext";
 import { MessagesProvider } from "../../modules/notifications/context/MessagesContext";
-import { getRoutePermissionAccess } from "../../modules/permissions/routePermissions";
 import { resolveAuthenticatedLandingPath } from "../../modules/permissions/resolveAuthenticatedLandingPath";
 import {
   ADMIN_MOBILE_MEDIA_QUERY,
@@ -18,14 +17,12 @@ import PermissionDenied from "./PermissionDenied";
 
 function AdminLayoutContent({ isDarkMode, onToggleTheme }) {
   const location = useLocation();
-  const { canRead, canWrite } = usePermissions();
+  const { hasPathAccess } = usePermissions();
   const isMobile = useMediaQuery(ADMIN_MOBILE_MEDIA_QUERY);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   useAuthSessionLifecycle();
-  const { moduleKey, requiresWrite } = getRoutePermissionAccess(location.pathname);
-  const hasAccess =
-    !moduleKey || (requiresWrite ? canWrite(moduleKey) : canRead(moduleKey));
+  const hasAccess = hasPathAccess(location.pathname);
 
   const isDashboardRoute = location.pathname === "/" || location.pathname === "";
   const landingPath = !hasAccess && isDashboardRoute ? resolveAuthenticatedLandingPath() : null;

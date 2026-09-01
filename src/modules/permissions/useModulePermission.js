@@ -47,16 +47,15 @@ export function useModulePermission(moduleKey) {
  */
 export function useFormPermissions() {
   const location = useLocation();
+  const { hasPathAccess } = usePermissions();
   const { moduleKey, requiresWrite } = getRoutePermissionAccess(location.pathname);
   const module = useModulePermission(moduleKey);
-
-  const allowed = requiresWrite ? module.canWrite : module.canRead;
 
   return {
     ...module,
     moduleKey,
     requiresWrite,
-    allowed,
+    allowed: hasPathAccess(location.pathname),
     readOnly: module.canRead && !module.canWrite,
     showSubmit: module.canWrite,
   };

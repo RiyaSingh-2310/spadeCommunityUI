@@ -18,6 +18,9 @@ export const MODULE_LISTING_READ_MODES = {
   messages: "details-only",
   user_screening_management: "hide-action-column",
   community_users: "community-user-read",
+  prescreen: "hide-action-column",
+  prescreen_group: "hide-action-column",
+  invoices: "pdf-only",
   user_email_templates: "hide-action-column",
   system_email_templates: "hide-action-column",
   log_activity: "hide-action-column",
@@ -116,7 +119,7 @@ export function hasNativeReadOnlyListingActions({
   }
 
   if (mode === "community-user-read") {
-    return Boolean(onView || onRewardLog || onDownload);
+    return Boolean(onView);
   }
 
   if (actionVariant === "view-edit" && (onFindUser || onUserSurveyData || onSurveyClone || onProjectUrlInfo)) {
@@ -177,7 +180,10 @@ export function shouldShowListingActionColumn({
   if (actionVariant === "community-user") {
     const showEdit = allowWrite && Boolean(onEdit || editPath);
     const showDelete = allowWrite && showDeleteAction && Boolean(onDelete);
-    return Boolean(onView || onRewardLog || onDownload || showEdit || showDelete);
+    if (allowWrite) {
+      return Boolean(onView || onRewardLog || onDownload || showEdit || showDelete);
+    }
+    return Boolean(onView);
   }
 
   if (actionVariant === "user-management") {

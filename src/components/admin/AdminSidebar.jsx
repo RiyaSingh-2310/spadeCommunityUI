@@ -49,25 +49,31 @@ function AdminSidebar({
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { canAccessNavItem } = usePermissions();
+  const { canAccessNavItem, canOpenMessagesPage } = usePermissions();
 
   const sidebarItems = useMemo(() => {
     const filterChildren = (children = []) =>
-      children.filter((child) => canAccessNavItem(child.permissionKeys));
+      children.filter((child) => {
+        const keys = child.permissionKeys ?? [];
+        if (keys.includes("messages")) {
+          return canOpenMessagesPage;
+        }
+        return canAccessNavItem(keys);
+      });
 
     const navItems = getSidebarNavItemsForRole(getLoginRole());
 
     return navItems.map((item) => {
       if (item.type === "group") {
         const children = filterChildren(item.children);
-        if (!canAccessNavItem(item.permissionKeys) && children.length === 0) {
+        if (children.length === 0) {
           return null;
         }
         return { ...item, children };
       }
       return canAccessNavItem(item.permissionKeys) ? item : null;
     }).filter(Boolean);
-  }, [canAccessNavItem]);
+  }, [canAccessNavItem, canOpenMessagesPage]);
 
   const iconMap = {
     Dashboard: <LayoutDashboard size={21} strokeWidth={2} />,

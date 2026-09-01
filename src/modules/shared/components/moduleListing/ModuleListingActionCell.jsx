@@ -61,13 +61,15 @@ function ModuleListingActionCell({
   if (communityUser) {
     const showEdit = allowWrite && Boolean(onEdit || editPath);
     const showDelete = allowWrite && showDeleteAction && Boolean(onDelete);
+    const showRewardLog = allowWrite && Boolean(onRewardLog);
+    const showDownload = allowWrite && Boolean(onDownload);
     const hasCommunityActions =
       (allowRead && onView) ||
       showEdit ||
       showDelete ||
-      (allowRead && onRewardLog) ||
+      showRewardLog ||
       (allowWrite && onResendEmail) ||
-      (allowRead && onDownload);
+      showDownload;
 
     if (!hasCommunityActions) return null;
 
@@ -78,9 +80,9 @@ function ModuleListingActionCell({
         onView={allowRead && onView ? () => onView(row, globalIdx) : undefined}
         onEdit={showEdit ? () => handleEdit(row, globalIdx) : undefined}
         onDelete={showDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}
-        onRewardLog={allowRead && onRewardLog ? () => onRewardLog(row, globalIdx) : undefined}
+        onRewardLog={showRewardLog ? () => onRewardLog(row, globalIdx) : undefined}
         onResendEmail={allowWrite && onResendEmail ? () => onResendEmail(row, globalIdx) : undefined}
-        onDownload={allowRead && onDownload ? () => onDownload(row, globalIdx) : undefined}
+        onDownload={showDownload ? () => onDownload(row, globalIdx) : undefined}
         showEdit={showEdit}
         showDelete={showDelete}
       />

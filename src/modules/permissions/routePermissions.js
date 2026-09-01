@@ -1,3 +1,9 @@
+import {
+  canOpenMessagesPage,
+  canReadModule,
+  canWriteModule,
+} from "./permissionsUtils";
+
 /**
  * Maps URL paths to permission module keys for route guards.
  * First matching rule wins.
@@ -80,6 +86,7 @@ const ROUTE_RULES = [
 
 const WRITE_PATH_PATTERNS = [
   /\/add\/?$/,
+  /\/edit(\/|$)/,
   /\/permissions\/?$/,
   /\/sort\/?$/,
 ];
@@ -110,4 +117,23 @@ export function getRoutePermissionAccess(pathname) {
     moduleKey: rule.module,
     requiresWrite,
   };
+}
+
+/**
+ * Whether the current session may render this path (UI guard; backend still authorizes).
+ * @param {string} pathname
+ * @param {import("./permissionsUtils").PermissionsMap | null | undefined} permissions
+ * @param {{ isSuperAdmin?: boolean }} [options]
+ */
+export function hasPathPermissionAccess(pathname, permissions, options) {
+  const { moduleKey, requiresWrite } = getRoutePermissionAccess(pathname);
+  if (!moduleKey) return true;
+
+  if (moduleKey === "messages" && !requiresWrite) {
+    return canOpenMessagesPage(permissions, options);
+  }
+
+  return requiresWrite
+    ? canWriteModule(permissions, moduleKey, options)
+    : canReadModule(permissions, moduleKey, options);
 }
