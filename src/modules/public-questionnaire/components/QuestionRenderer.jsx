@@ -1,3 +1,7 @@
+import AdminDatePicker from "../../../components/admin/AdminDatePicker";
+import AdminDateTimePicker from "../../../components/admin/AdminDateTimePicker";
+import AdminTimePicker from "../../../components/admin/AdminTimePicker";
+
 function normalizeOptions(options = []) {
   return options.map((option) => {
     if (typeof option === "string") {
@@ -162,11 +166,10 @@ function QuestionRenderer({ question, value, onChange }) {
 
   if (questionType === "Date") {
     return (
-      <input
-        type="date"
-        className="pq-input"
+      <AdminDatePicker
         value={value ?? ""}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={onChange}
+        placeholder="Select date"
         aria-label={question.questionText}
       />
     );
@@ -174,11 +177,10 @@ function QuestionRenderer({ question, value, onChange }) {
 
   if (questionType === "Time") {
     return (
-      <input
-        type="time"
-        className="pq-input"
+      <AdminTimePicker
         value={value ?? ""}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={onChange}
+        placeholder="Select time"
         aria-label={question.questionText}
       />
     );
@@ -186,11 +188,9 @@ function QuestionRenderer({ question, value, onChange }) {
 
   if (questionType === "Date-Time") {
     return (
-      <input
-        type="datetime-local"
-        className="pq-input"
+      <AdminDateTimePicker
         value={value ?? ""}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={onChange}
         aria-label={question.questionText}
       />
     );

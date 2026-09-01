@@ -480,6 +480,29 @@ body {
   outline: none;
 }
 
+.admin-shell .admin-input:hover:not(:disabled):not([disabled]):not(:focus):not(:focus-within) {
+  border-color: color-mix(in srgb, var(--admin-primary-color) 35%, var(--admin-input-border));
+}
+
+/* Native date/time widgets: hide OS chrome so themed pickers are used instead. */
+.admin-shell input[type="date"],
+.admin-shell input[type="time"],
+.admin-shell input[type="datetime-local"],
+.admin-shell input[type="month"],
+.admin-shell input[type="week"] {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.admin-shell input[type="date"]::-webkit-calendar-picker-indicator,
+.admin-shell input[type="time"]::-webkit-calendar-picker-indicator,
+.admin-shell input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.admin-shell input[type="month"]::-webkit-calendar-picker-indicator,
+.admin-shell input[type="week"]::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+}
+
 /* Search fields: no green focus ring (header + listing + wrapper). */
 .admin-shell .admin-search-field:focus-within,
 .admin-shell .admin-header-search-input:focus-within {
@@ -1264,6 +1287,78 @@ input[type="number"],
 .admin-date-range-picker__clear:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.admin-time-picker-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.admin-time-picker-col {
+  display: flex;
+  max-height: 14.5rem;
+  flex-direction: column;
+  overflow-y: auto;
+  border-radius: 0.5rem;
+  border: 1px solid var(--drp-control-border);
+  background-color: var(--drp-control-bg);
+}
+
+.admin-time-picker-col-label {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.375rem 0.5rem;
+  border-bottom: 1px solid var(--drp-control-border);
+  background-color: var(--drp-surface);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--drp-muted);
+}
+
+.admin-time-picker-option {
+  width: 100%;
+  flex-shrink: 0;
+  padding: 0.375rem 0.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--drp-text);
+  font-size: 0.875rem;
+  line-height: 1.25;
+  text-align: center;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.admin-time-picker-option:hover {
+  background-color: var(--drp-hover-bg);
+}
+
+.admin-time-picker-option--selected {
+  background-color: var(--drp-primary);
+  color: var(--drp-primary-fg);
+  font-weight: 600;
+}
+
+.admin-time-picker-option--selected:hover {
+  background-color: var(--drp-primary-hover);
+  color: var(--drp-primary-fg);
+}
+
+.admin-datetime-picker {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .admin-datetime-picker {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .admin-header-overlay {

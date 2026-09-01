@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import AdminDateRangeFilter from "../../../components/admin/AdminDateRangeFilter";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import RewardDetailsModal from "../components/RewardDetailsModal";
@@ -13,7 +13,6 @@ import {
   fetchRedeemRequests,
   updateRedeemRequestStatus,
 } from "../services/rewardHistoryApi";
-import { filterRewardHistoryRows } from "../utils/rewardHistoryFilters";
 
 function validateRejectComment(comment) {
   if (String(comment ?? "").trim().length < 3) {
@@ -33,12 +32,19 @@ function PendingRewardsPage({ isDarkMode }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchRedeemList = useCallback(
-    (params) =>
-      fetchRedeemRequests({
+    async (params) => {
+      const data = await fetchRedeemRequests({
         ...params,
         status: statusFilter,
-      }),
-    [statusFilter]
+        start_date: fromDate || undefined,
+        end_date: toDate || undefined,
+      });
+      return {
+        items: data.items,
+        total: data.total,
+      };
+    },
+    [statusFilter, fromDate, toDate]
   );
 
   const {
@@ -58,17 +64,8 @@ function PendingRewardsPage({ isDarkMode }) {
     preserveRowOrder: true,
   });
 
-  const filteredRows = useMemo(
-    () =>
-      filterRewardHistoryRows(rows, {
-        statusFilter,
-        fromDate,
-        toDate,
-      }),
-    [rows, statusFilter, fromDate, toDate]
-  );
   const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
-    rows: filteredRows,
+    rows,
     columnLabel: "User Name",
   });
 
@@ -89,6 +86,16 @@ function PendingRewardsPage({ isDarkMode }) {
 
   const handleStatusFilterChange = (value) => {
     setStatusFilter(value);
+    handlePageChange(1);
+  };
+
+  const handleFromDateChange = (value) => {
+    setFromDate(value);
+    handlePageChange(1);
+  };
+
+  const handleToDateChange = (value) => {
+    setToDate(value);
     handlePageChange(1);
   };
 
@@ -128,8 +135,8 @@ function PendingRewardsPage({ isDarkMode }) {
       <AdminDateRangeFilter
         fromDate={fromDate}
         toDate={toDate}
-        onFromChange={setFromDate}
-        onToChange={setToDate}
+        onFromChange={handleFromDateChange}
+        onToChange={handleToDateChange}
       />
       <RewardHistoryStatusFilter value={statusFilter} onChange={handleStatusFilterChange} />
     </div>

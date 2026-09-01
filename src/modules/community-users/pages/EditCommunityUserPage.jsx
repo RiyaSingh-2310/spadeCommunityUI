@@ -4,18 +4,20 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
 import FormStatusSelect from "../../../components/admin/FormStatusSelect";
+import ProfileImageUpload from "../../../components/admin/ProfileImageUpload";
 import TableCard from "../../../components/admin/TableCard";
 import PasswordField from "../../settings/components/PasswordField";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
+import { resolveProfileImageUrl } from "../../shared/utils/userAvatar";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   EMAIL_FIELD_MAX_LENGTH,
   NAME_FIELD_MAX_LENGTH,
   PASSWORD_FIELD_MAX_LENGTH,
-  getEmailError,
   getOptionalConfirmPasswordError,
   getOptionalPasswordError,
+  getPhoneError,
   getUserNameError,
   preventBlockedNameKeys,
   isFormValid,
@@ -24,15 +26,24 @@ import {
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { getRecord, mapPanelistToForm, updateRecord } from "../services/communityUsersApi";
 
-const FORM_FIELDS = ["name", "email", "password", "confirmPassword"];
+const FORM_FIELDS = ["name", "mobileNumber", "password", "confirmPassword"];
 
 const EMPTY_FORM = {
   name: "",
   email: "",
+  mobileNumber: "",
   status: "Active",
   password: "",
   confirmPassword: "",
 };
+
+function splitFullName(name) {
+  const parts = String(name ?? "").trim().split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts[0] ?? "",
+    lastName: parts.slice(1).join(" "),
+  };
+}
 
 function EditCommunityUserPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -41,11 +52,16 @@ function EditCommunityUserPage({ isDarkMode }) {
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [initialSnapshot, setInitialSnapshot] = useState(null);
+  const [showProfileImage, setShowProfileImage] = useState(false);
+  const [existingImage, setExistingImage] = useState("");
+  const [preview, setPreview] = useState("");
+  const [imageFile, setImageFile] = useState(null);
   const [isLoadingRecord, setIsLoadingRecord] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputClass = getAdminInputClass();
+  const { firstName, lastName } = splitFullName(form.name);
 
   useEffect(() => {
     if (!id) {
@@ -68,14 +84,24 @@ function EditCommunityUserPage({ isDarkMode }) {
         const snapshot = {
           name: mapped.name.trim(),
           email: mapped.email.trim(),
+          mobileNumber: mapped.mobileNumber.trim(),
           status: mapped.status,
         };
 
         setForm({
           ...EMPTY_FORM,
-          ...mapped,
+          name: mapped.name,
+          email: mapped.email,
+          mobileNumber: mapped.mobileNumber,
+          status: mapped.status,
         });
         setInitialSnapshot(snapshot);
+        setShowProfileImage(Boolean(mapped.supportsProfileImage));
+        setExistingImage(
+          mapped.supportsProfileImage ? resolveProfileImageUrl(record) ?? "" : ""
+        );
+        setPreview("");
+        setImageFile(null);
       } catch (error) {
         if (cancelled) return;
         toastApiError(error);
@@ -94,7 +120,10 @@ function EditCommunityUserPage({ isDarkMode }) {
   const errors = useMemo(
     () => ({
       name: getUserNameError(form.name),
-      email: getEmailError(form.email, { label: "Email Address" }),
+      mobileNumber: getPhoneError(form.mobileNumber, {
+        required: false,
+        label: "Mobile",
+      }),
       password: getOptionalPasswordError(form.password),
       confirmPassword: getOptionalConfirmPasswordError(form.password, form.confirmPassword),
     }),
@@ -110,10 +139,13 @@ function EditCommunityUserPage({ isDarkMode }) {
     if (!initialSnapshot) return false;
     return (
       form.name.trim() !== initialSnapshot.name ||
-      form.email.trim() !== initialSnapshot.email ||
-      form.status !== initialSnapshot.status
+      form.mobileNumber.trim() !== initialSnapshot.mobileNumber ||
+      form.status !== initialSnapshot.status ||
+      Boolean(form.password.trim()) ||
+      Boolean(form.confirmPassword.trim()) ||
+      Boolean(imageFile)
     );
-  }, [form, initialSnapshot]);
+  }, [form, initialSnapshot, imageFile]);
 
   const canSubmit =
     showSubmit && !readOnly && isFormValid(errors) && !isSubmitting && isDirty && !loadFailed;
@@ -122,14 +154,16 @@ function EditCommunityUserPage({ isDarkMode }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!validateSubmit() || !isFormValid(errors) || !id || !isDirty) return;
+    if (!validateSubmit() || !isFormValid(errors) || !id || !isDirty || readOnly) return;
 
     setIsSubmitting(true);
     try {
       const data = await updateRecord(id, {
         name: form.name.trim(),
-        email: form.email.trim(),
+        phone: form.mobileNumber.trim(),
         status: form.status,
+        password: form.password.trim(),
+        ...(showProfileImage && imageFile ? { imageFile } : {}),
       });
       toastApiSuccess(data, "Panelist updated successfully.");
       navigate("/community-users", { replace: true, state: { refresh: true } });
@@ -183,64 +217,92 @@ function EditCommunityUserPage({ isDarkMode }) {
       />
       <TableCard title="User Details" isDarkMode={isDarkMode}>
         <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-          <FormField label="Name" required error={showError("name")}>
-            <input
-              className={inputClass}
-              value={form.name}
-              maxLength={NAME_FIELD_MAX_LENGTH}
-              onChange={(event) =>
-                setField("name", limitTextInput(event.target.value, NAME_FIELD_MAX_LENGTH))
+          {showProfileImage ? (
+            <ProfileImageUpload
+              isDarkMode={isDarkMode}
+              preview={preview}
+              onPreviewChange={setPreview}
+              onFileChange={setImageFile}
+              existingImage={existingImage}
+              showCurrentLabel
+              name={form.name}
+              firstName={firstName}
+              lastName={lastName}
+            />
+          ) : null}
+
+          <div className="grid gap-5 md:grid-cols-2">
+            <FormField label="Name" required error={showError("name")}>
+              <input
+                className={inputClass}
+                value={form.name}
+                maxLength={NAME_FIELD_MAX_LENGTH}
+                onChange={(event) =>
+                  setField("name", limitTextInput(event.target.value, NAME_FIELD_MAX_LENGTH))
+                }
+                onKeyDown={preventBlockedNameKeys}
+                onBlur={() => touch("name")}
+                disabled={fieldDisabled(readOnly, isSubmitting)}
+              />
+            </FormField>
+
+            <FormField label="Email Address" required>
+              <input
+                type="email"
+                className={`${inputClass} cursor-not-allowed opacity-70`}
+                value={form.email}
+                maxLength={EMAIL_FIELD_MAX_LENGTH}
+                readOnly
+                disabled={fieldDisabled(true, isSubmitting)}
+              />
+            </FormField>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            <PasswordField
+              label="Password"
+              value={form.password}
+              onChange={(value) =>
+                setField("password", limitTextInput(value, PASSWORD_FIELD_MAX_LENGTH))
               }
-              onKeyDown={preventBlockedNameKeys}
-              onBlur={() => touch("name")}
+              onBlur={() => touch("password")}
+              error={showError("password")}
+              placeholder="Enter New Password"
               disabled={fieldDisabled(readOnly, isSubmitting)}
             />
-          </FormField>
 
-          <FormField label="Email Address" required error={showError("email")}>
-            <input
-              type="email"
-              className={inputClass}
-              value={form.email}
-              maxLength={EMAIL_FIELD_MAX_LENGTH}
-              onChange={(event) =>
-                setField("email", limitTextInput(event.target.value, EMAIL_FIELD_MAX_LENGTH))
+            <PasswordField
+              label="Confirm New Password"
+              value={form.confirmPassword}
+              onChange={(value) =>
+                setField("confirmPassword", limitTextInput(value, PASSWORD_FIELD_MAX_LENGTH))
               }
-              onBlur={() => touch("email")}
+              onBlur={() => touch("confirmPassword")}
+              error={showError("confirmPassword")}
+              placeholder="Enter Confirm New Password"
               disabled={fieldDisabled(readOnly, isSubmitting)}
             />
-          </FormField>
+          </div>
 
-          <FormStatusSelect
-            value={form.status}
-            onChange={(status) => setField("status", status)}
-            inputClass={inputClass}
-            disabled={fieldDisabled(readOnly, isSubmitting)}
-          />
+          <div className="grid gap-5 md:grid-cols-2">
+            <FormField label="Mobile" error={showError("mobileNumber")}>
+              <input
+                className={inputClass}
+                value={form.mobileNumber}
+                placeholder="Enter Mobile"
+                onChange={(event) => setField("mobileNumber", event.target.value)}
+                onBlur={() => touch("mobileNumber")}
+                disabled={fieldDisabled(readOnly, isSubmitting)}
+              />
+            </FormField>
 
-          <PasswordField
-            label="New Password"
-            value={form.password}
-            onChange={(value) =>
-              setField("password", limitTextInput(value, PASSWORD_FIELD_MAX_LENGTH))
-            }
-            onBlur={() => touch("password")}
-            error={showError("password")}
-            placeholder="Enter New Password"
-            disabled={fieldDisabled(readOnly, isSubmitting)}
-          />
-
-          <PasswordField
-            label="Confirm New Password"
-            value={form.confirmPassword}
-            onChange={(value) =>
-              setField("confirmPassword", limitTextInput(value, PASSWORD_FIELD_MAX_LENGTH))
-            }
-            onBlur={() => touch("confirmPassword")}
-            error={showError("confirmPassword")}
-            placeholder="Enter Confirm New Password"
-            disabled={fieldDisabled(readOnly, isSubmitting)}
-          />
+            <FormStatusSelect
+              value={form.status}
+              onChange={(status) => setField("status", status)}
+              inputClass={inputClass}
+              disabled={fieldDisabled(readOnly, isSubmitting)}
+            />
+          </div>
 
           <div className="admin-form-actions flex flex-wrap items-center gap-3 pt-2">
             {showSubmit && !readOnly && (

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
-import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
+import { getAdminDateTriggerClass } from "../../modules/shared/utils/formStyles";
 import { PORTAL_DROPDOWN_Z_INDEX } from "../../modules/shared/constants/portalDropdown";
 import { usePortalDropdownCloseOthers } from "./portalDropdown/usePortalDropdownCloseOthers";
 import { useTheme } from "../../context/ThemeContext";
@@ -177,7 +177,7 @@ function AdminDateRangeFilter({
   placeholder = "From Date - To Date",
   className = "",
 }) {
-  const inputClass = getAdminInputClass();
+  const triggerClass = getAdminDateTriggerClass();
   const { isDarkMode } = useTheme();
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
@@ -299,7 +299,7 @@ function AdminDateRangeFilter({
         ref={triggerRef}
         type="button"
         onClick={() => (isOpen ? closeMenu() : openMenu())}
-        className={`${inputClass} admin-date-range-trigger flex h-10 w-full items-center gap-2.5 px-3.5 text-left`}
+        className={triggerClass}
         aria-label="Select date range"
         aria-expanded={isOpen}
         aria-haspopup="dialog"

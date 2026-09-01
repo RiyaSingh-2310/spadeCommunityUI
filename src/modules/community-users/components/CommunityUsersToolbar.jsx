@@ -20,6 +20,7 @@ function CommunityUsersToolbar({
   disabled = false,
   isResending = false,
   isDownloading = false,
+  canWrite = true,
 }) {
   return (
     <div className="flex w-full min-w-0 flex-col-reverse gap-3 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between lg:gap-4">
@@ -44,6 +45,7 @@ function CommunityUsersToolbar({
           disabled={disabled}
           isResending={isResending}
           isDownloading={isDownloading}
+          canWrite={canWrite}
         />
       </div>
 

@@ -103,13 +103,22 @@ export async function fetchRewardHistoryList({ page = 1, limit = 10, search } = 
 }
 
 /** GET /api/reward-history/redeem/list */
-export async function fetchRedeemRequests({ page = 1, limit = 10, search, status } = {}) {
+export async function fetchRedeemRequests({
+  page = 1,
+  limit = 10,
+  search,
+  status,
+  start_date,
+  end_date,
+} = {}) {
   const extra = {};
   const statusQuery = String(status ?? "").trim().toLowerCase();
 
   if (statusQuery && statusQuery !== "all") {
     extra.status = statusQuery === "completed" ? "approved" : statusQuery;
   }
+  if (start_date) extra.start_date = start_date;
+  if (end_date) extra.end_date = end_date;
 
   const path = appendListQuery(API_ROUTES.rewardHistory.redeemList, {
     page,

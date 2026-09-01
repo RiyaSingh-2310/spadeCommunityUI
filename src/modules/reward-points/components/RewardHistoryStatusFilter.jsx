@@ -8,7 +8,7 @@ export const REWARD_HISTORY_STATUS_OPTIONS = [
 ];
 
 const FILTER_LABEL_CLASS = "admin-text mb-2 block text-sm font-semibold";
-const FILTER_SELECT_CLASS = `${getAdminInputClass()} h-10`;
+const FILTER_SELECT_CLASS = getAdminInputClass();
 
 function RewardHistoryStatusFilter({ value = "all", onChange, className = "" }) {
   return (

@@ -19,6 +19,7 @@ export const MODULE_LISTING_READ_MODES = {
   user_screening_management: "hide-action-column",
   community_users: "community-user-read",
   user_email_templates: "hide-action-column",
+  system_email_templates: "hide-action-column",
   log_activity: "hide-action-column",
   pending_rewards: "reward-pending-read",
   reward_history: "reward-pending-read",
@@ -72,8 +73,6 @@ export function hasNativeReadOnlyListingActions({
   onSurveyClone,
   onProjectUrlInfo,
   onPdfDownload,
-  onApprove,
-  onReject,
   onListProjects,
   onViewLogs,
   onRewardLog,
@@ -109,7 +108,7 @@ export function hasNativeReadOnlyListingActions({
   }
 
   if (mode === "reward-pending-read") {
-    return Boolean(onView || onApprove || onReject);
+    return Boolean(onView);
   }
 
   if (mode === "details-only") {
@@ -129,7 +128,7 @@ export function hasNativeReadOnlyListingActions({
   }
 
   if (actionVariant === "reward-pending") {
-    return Boolean(onView || onApprove || onReject);
+    return Boolean(onView);
   }
 
   if (actionVariant === "group-survey") {
@@ -231,8 +230,6 @@ export function shouldShowListingActionColumn({
     onSurveyClone,
     onProjectUrlInfo,
     onPdfDownload,
-    onApprove,
-    onReject,
     onListProjects,
     onViewLogs,
     onRewardLog,

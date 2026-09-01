@@ -1,87 +1,64 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import AdminDateRangeFilter from "../../../components/admin/AdminDateRangeFilter";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import RewardDetailsModal from "../components/RewardDetailsModal";
-import { formatSurveyListDate } from "../../shared/utils/dateTime";
+import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
-import { toastApiError } from "../../../services/toast/apiToast";
+import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
+import { formatSurveyListDate } from "../../shared/utils/dateTime";
 import { fetchRewardTransactions } from "../services/rewardTransactionsApi";
 
-function parseDate(value) {
-  if (!value) return null;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
 function RewardHistoryPage({ isDarkMode }) {
-  const [rows, setRows] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [summary, setSummary] = useState({
-    totalCredit: 0,
-    totalDebit: 0,
-    totalBalance: 0,
-  });
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [viewTarget, setViewTarget] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchRewardHistory = useCallback(
+    async (params) => {
+      const data = await fetchRewardTransactions({
+        ...params,
+        start_date: fromDate || undefined,
+        end_date: toDate || undefined,
+      });
+      return {
+        items: data.rows,
+        total: data.total,
+      };
+    },
+    [fromDate, toDate]
+  );
 
-    const loadRewardHistory = async () => {
-      setIsLoading(true);
-      try {
-        const data = await fetchRewardTransactions({
-          page: currentPage,
-          limit: pageSize,
-        });
-        if (cancelled) return;
+  const {
+    rows,
+    totalRecords,
+    isLoading,
+    listError,
+    currentPage,
+    pageSize,
+    handleSearch,
+    handlePageChange,
+    handlePageSizeChange,
+    refresh: reloadRewardHistory,
+  } = useApiListing({
+    fetchFn: fetchRewardHistory,
+    initialPageSize: DEFAULT_PAGE_SIZE,
+    preserveRowOrder: true,
+  });
 
-        setRows(data.rows);
-        setTotalRecords(data.total);
-        setSummary(data.summary);
-      } catch (error) {
-        if (cancelled) return;
-        setRows([]);
-        setTotalRecords(0);
-        setSummary({
-          totalCredit: 0,
-          totalDebit: 0,
-          totalBalance: 0,
-        });
-        toastApiError(error);
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
-
-    loadRewardHistory();
-    return () => {
-      cancelled = true;
-    };
-  }, [currentPage, pageSize]);
-
-  const filteredRows = useMemo(() => {
-    const from = fromDate ? new Date(fromDate) : null;
-    const to = toDate ? new Date(toDate) : null;
-    if (to) {
-      to.setHours(23, 59, 59, 999);
-    }
-
-    return rows.filter((row) => {
-      const rowDate = parseDate(row.createdAtRaw ?? row.createdAt);
-      if (from && rowDate && rowDate < from) return false;
-      if (to && rowDate && rowDate > to) return false;
-      return true;
-    });
-  }, [fromDate, toDate, rows]);
   const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
-    rows: filteredRows,
+    rows,
     columnLabel: "User Name",
   });
+
+  const handleFromDateChange = (value) => {
+    setFromDate(value);
+    handlePageChange(1);
+  };
+
+  const handleToDateChange = (value) => {
+    setToDate(value);
+    handlePageChange(1);
+  };
 
   const handleView = (row) => {
     if (row?.id == null) return;
@@ -110,34 +87,30 @@ function RewardHistoryPage({ isDarkMode }) {
         columnSort={columnSort}
         onColumnSort={onColumnSort}
         isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={reloadRewardHistory}
         emptyMessage="No reward history found"
-        // summaryCards={[
-        //   { label: "Total Credit", value: summary.totalCredit },
-        //   { label: "Total Debit", value: summary.totalDebit },
-        //   { label: "Total Balance", value: summary.totalBalance },
-        // ]}
         rowIdKey="id"
         showStatus
         statusAsText
         permissionModule="reward_history"
         actionVariant="reward-pending"
+        onSearch={handleSearch}
+        serverSearch
         showPagination
         serverPaginated
         totalRecords={totalRecords}
         paginationPage={currentPage}
         paginationPageSize={pageSize}
-        onPaginationPageChange={setCurrentPage}
-        onPaginationPageSizeChange={(nextSize) => {
-          setPageSize(nextSize);
-          setCurrentPage(1);
-        }}
+        onPaginationPageChange={handlePageChange}
+        onPaginationPageSizeChange={handlePageSizeChange}
         onView={handleView}
         toolbarEnd={
           <AdminDateRangeFilter
             fromDate={fromDate}
             toDate={toDate}
-            onFromChange={setFromDate}
-            onToChange={setToDate}
+            onFromChange={handleFromDateChange}
+            onToChange={handleToDateChange}
           />
         }
       />

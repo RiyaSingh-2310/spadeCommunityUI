@@ -222,7 +222,7 @@ function ModuleListingActionCell({
           showDelete={canShowDelete}
           onEdit={canShowEdit ? () => handleEdit(row, globalIdx) : undefined}
           onClone={allowWrite && onClone ? () => onClone(row, globalIdx) : undefined}
-          onCopy={onCopy ? () => onCopy(row, globalIdx) : undefined}
+          onCopy={allowWrite && onCopy ? () => onCopy(row, globalIdx) : undefined}
           onDelete={canShowDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}
         />
       </div>
@@ -250,16 +250,28 @@ function ModuleListingActionCell({
     const hasDecisionActions = Boolean(onApprove || onReject);
 
     if (isPending && (onApprove || onReject)) {
-      return (
-        <td key={col} className={cellClass}>
-          <RewardPendingActions
-          isDarkMode={isDarkMode}
-          row={row}
-          onApprove={allowWrite && onApprove ? () => onApprove(row, globalIdx) : undefined}
-          onReject={allowWrite && onReject ? () => onReject(row, globalIdx) : undefined}
-        />
-        </td>
-      );
+      if (allowWrite) {
+        return (
+          <td key={col} className={cellClass}>
+            <RewardPendingActions
+              isDarkMode={isDarkMode}
+              row={row}
+              onApprove={onApprove ? () => onApprove(row, globalIdx) : undefined}
+              onReject={onReject ? () => onReject(row, globalIdx) : undefined}
+            />
+          </td>
+        );
+      }
+
+      if (allowRead && onView) {
+        return (
+          <td key={col} className={cellClass}>
+            <ViewActionButton onView={() => onView(row, globalIdx)} iconOnly />
+          </td>
+        );
+      }
+
+      return null;
     }
 
     if ((isViewOnly || !hasDecisionActions || isPending) && allowRead && onView) {
@@ -282,7 +294,7 @@ function ModuleListingActionCell({
       showDelete={canShowDelete}
       onEdit={canShowEdit ? () => handleEdit(row, globalIdx) : undefined}
       onClone={allowWrite && onClone ? () => onClone(row, globalIdx) : undefined}
-      onCopy={onCopy ? () => onCopy(row, globalIdx) : undefined}
+      onCopy={allowWrite && onCopy ? () => onCopy(row, globalIdx) : undefined}
       onDelete={canShowDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}
     />
     </td>

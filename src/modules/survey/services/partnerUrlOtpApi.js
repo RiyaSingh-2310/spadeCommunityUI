@@ -1,6 +1,7 @@
 import { API_ROUTES } from "../../../config/api";
 import { ApiError } from "../../../services/api/ApiError";
 import { apiRequest } from "../../../services/api/client";
+import { isValidEmail } from "../../shared/utils/validation";
 import { getAuthToken } from "../../../services/auth/authStorage";
 
 const TEMP_TOKEN_STORAGE_KEY = "surveyAccessTempToken";
@@ -47,10 +48,6 @@ export function isSurveyAccessDeniedError(error) {
 
 function coerceText(value) {
   return String(value ?? "").trim();
-}
-
-function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(coerceText(value));
 }
 
 /** Persist tempToken for the duration of the OTP flow (survives remounts). */

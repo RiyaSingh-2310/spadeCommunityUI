@@ -13,6 +13,7 @@ import {
 } from "../../shared/utils/statusLabels";
 import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
 import { formatAppDateValue } from "../../shared/utils/dateTime";
+import { encryptValue } from "../../shared/utils/encryption";
 import { normalizeRewardLogEntry } from "../utils/rewardLogUtils";
 
 const LIST_LOAD_ERROR_MESSAGE = "Unable to load panelists. Please try again later.";
@@ -87,12 +88,67 @@ function buildPanelistFilterParams(filters = {}) {
   return extra;
 }
 
+function formValueFromDisplay(value) {
+  const text = String(value ?? "").trim();
+  if (!text || text === "—") return "";
+  return text;
+}
+
+function resolvePanelistPhone(panelist) {
+  return formValueFromDisplay(
+    panelist?.phone ??
+      panelist?.mobileNumber ??
+      panelist?.mobile_number ??
+      panelist?.mobile ??
+      panelist?.contact_no ??
+      ""
+  );
+}
+
+const PANELIST_PROFILE_IMAGE_KEYS = [
+  "photo",
+  "image",
+  "profile_image",
+  "profileImage",
+  "image_url",
+  "imageUrl",
+  "avatar",
+  "photo_url",
+  "photoUrl",
+];
+
+/**
+ * True when the backend record includes a profile-image field or existing image data.
+ */
+export function panelistProvidesProfileImage(panelist) {
+  if (!panelist || typeof panelist !== "object") return false;
+
+  const hasImageField = PANELIST_PROFILE_IMAGE_KEYS.some((key) =>
+    Object.prototype.hasOwnProperty.call(panelist, key)
+  );
+  if (hasImageField) return true;
+
+  const existing = String(
+    panelist.photo ??
+      panelist.image ??
+      panelist.profile_image ??
+      panelist.profileImage ??
+      ""
+  ).trim();
+  return Boolean(existing) && existing !== "—";
+}
+
 /** Maps panelist API record to edit form values. */
 export function mapPanelistToForm(panelist) {
   return {
-    name: panelist?.name ?? "",
-    email: panelist?.email ?? panelist?.emailAddress ?? "",
+    name: formValueFromDisplay(panelist?.name),
+    email: formValueFromDisplay(panelist?.email ?? panelist?.emailAddress),
+    mobileNumber: resolvePanelistPhone(panelist),
     status: apiStatusToFormValue(panelist?.status),
+    supportsProfileImage:
+      typeof panelist?.supportsProfileImage === "boolean"
+        ? panelist.supportsProfileImage
+        : panelistProvidesProfileImage(panelist),
   };
 }
 
@@ -102,13 +158,16 @@ function buildPanelistUpdatePayload(payload) {
   if (payload.name != null) {
     body.name = String(payload.name).trim();
   }
-  if (payload.email != null) {
-    body.email = String(payload.email).trim();
-  } else if (payload.emailAddress != null) {
-    body.email = String(payload.emailAddress).trim();
+  if (payload.phone != null || payload.mobileNumber != null) {
+    body.phone = String(payload.phone ?? payload.mobileNumber ?? "").trim();
   }
   if (payload.status != null) {
     body.status = formValueToApiStatus(payload.status);
+  }
+
+  const password = String(payload.password ?? "").trim();
+  if (password) {
+    body.new_password = encryptValue(password);
   }
 
   return body;
@@ -205,7 +264,10 @@ function mapQuestionnaireAnswers(answers) {
  */
 function toPanelistDetailRecord(panelist) {
   const listing = mapPanelistToListingRow(panelist);
-  const form = mapPanelistToForm(panelist);
+  const form = mapPanelistToForm({
+    ...panelist,
+    supportsProfileImage: panelistProvidesProfileImage(panelist),
+  });
   const phone =
     panelist?.phone ??
     panelist?.mobile_number ??

@@ -8,6 +8,7 @@ import Avatar from "../../../components/shared/Avatar";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import MessageReplyModal from "../components/MessageReplyModal";
 import { useMessages } from "../context/MessagesContext";
+import { useModulePermission } from "../../permissions/useModulePermission";
 import { getMessage, replyToMessage } from "../services/messagesApi";
 
 const MESSAGES_PATH = "/messages";
@@ -46,6 +47,7 @@ function MessageDetailsPage({ isDarkMode }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { markAsReadLocal, removeMessage, refreshRecent } = useMessages();
+  const { canWrite } = useModulePermission("messages");
   const markAsReadLocalRef = useRef(markAsReadLocal);
   const routeMessageId = normalizeRouteMessageId(id);
 
@@ -331,6 +333,7 @@ function MessageDetailsPage({ isDarkMode }) {
             </div>
           ) : null}
 
+          {canWrite ? (
           <div
             className="mt-8 flex flex-wrap items-center justify-start gap-2.5 border-t pt-5"
             style={SECTION_BORDER}
@@ -352,6 +355,7 @@ function MessageDetailsPage({ isDarkMode }) {
               Delete
             </button>
           </div>
+          ) : null}
         </div>
       </TableCard>
 

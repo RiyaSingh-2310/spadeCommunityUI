@@ -11,9 +11,27 @@ function CommunityUsersBulkActions({
   disabled = false,
   isResending = false,
   isDownloading = false,
+  canWrite = true,
 }) {
   const hasSelection = selectedCount > 0;
   const actionsDisabled = disabled || !hasSelection;
+
+  if (!canWrite) {
+    return (
+      <div className="flex h-11 shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">
+        <button
+          type="button"
+          onClick={onBulkDownloadRequest}
+          disabled={actionsDisabled || isDownloading}
+          className="admin-icon-action inline-flex h-9 w-9 items-center justify-center disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label="Download Selected"
+          title="Download Selected"
+        >
+          <Download size={16} strokeWidth={2} />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-11 shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">

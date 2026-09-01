@@ -6,7 +6,6 @@ import {
   getSettingsTabsForRole,
   isValidSettingsTab,
 } from "../constants/settingsTabs";
-import AuditLogSettingsTab from "../components/AuditLogSettingsTab";
 import NotificationsSettingsTab from "../components/NotificationsSettingsTab";
 import ProfileSettingsTab from "../components/ProfileSettingsTab";
 import SettingsTabNav from "../components/SettingsTabNav";
@@ -49,7 +48,6 @@ function SettingsPage({ isDarkMode }) {
       {activeTab === "notifications" && (
         <NotificationsSettingsTab isDarkMode={isDarkMode} />
       )}
-      {activeTab === "audit-log" && <AuditLogSettingsTab isDarkMode={isDarkMode} />}
     </div>
   );
 }

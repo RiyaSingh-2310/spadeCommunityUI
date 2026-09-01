@@ -188,7 +188,6 @@ export async function updateProjectManager(id, payload) {
   if (hasFile) {
     const body = new FormData();
     body.append("name", payload.name.trim());
-    body.append("email", payload.email.trim());
     body.append("status", formValueToApiStatus(payload.status));
     body.append("profile_image", payload.profileImage);
     if (encryptedPassword) body.append("new_password", encryptedPassword);
@@ -205,7 +204,6 @@ export async function updateProjectManager(id, payload) {
     method: "PUT",
     body: {
       name: payload.name.trim(),
-      email: payload.email.trim(),
       status: formValueToApiStatus(payload.status),
       ...(encryptedPassword ? { new_password: encryptedPassword } : {}),
     },

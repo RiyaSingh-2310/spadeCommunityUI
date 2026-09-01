@@ -1,10 +1,9 @@
-import { Bell, ClipboardList, Settings, User } from "lucide-react";
+import { Bell, Settings, User } from "lucide-react";
 
 const TAB_ICONS = {
   profile: User,
   system: Settings,
   notifications: Bell,
-  "audit-log": ClipboardList,
 };
 
 function SettingsTabNav({ tabs, activeTab, onTabChange }) {

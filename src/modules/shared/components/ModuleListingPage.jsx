@@ -285,7 +285,7 @@ function ModuleListingPage({
     onSecondaryActionClick && secondaryActionLabel && allowWrite
   );
   const showCsvExportButton = Boolean(
-    csvExportLabel && (showCsvExport || onCsvExportClick)
+    allowWrite && csvExportLabel && (showCsvExport || onCsvExportClick)
   );
 
   const paginationFooter = buildListingPaginationFooter({

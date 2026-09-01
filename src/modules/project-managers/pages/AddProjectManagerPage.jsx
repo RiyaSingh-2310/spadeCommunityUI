@@ -165,7 +165,6 @@ function AddProjectManagerPage({ isDarkMode }) {
       const data = isEdit
         ? await updateProjectManager(id, {
             name: form.name,
-            email: form.email,
             status: form.status,
             profileImage,
             password: form.password,

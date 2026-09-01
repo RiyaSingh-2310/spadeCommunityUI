@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
-import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
+import { getAdminDateTriggerClass } from "../../modules/shared/utils/formStyles";
 import { PORTAL_DROPDOWN_Z_INDEX } from "../../modules/shared/constants/portalDropdown";
 import { usePortalDropdownCloseOthers } from "./portalDropdown/usePortalDropdownCloseOthers";
 import { useTheme } from "../../context/ThemeContext";
@@ -165,7 +165,7 @@ function AdminDatePicker({
   className = "",
   "aria-label": ariaLabel = "Select date",
 }) {
-  const inputClass = getAdminInputClass();
+  const triggerClass = getAdminDateTriggerClass();
   const { isDarkMode } = useTheme();
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
@@ -243,7 +243,7 @@ function AdminDatePicker({
         type="button"
         onClick={() => (isOpen ? closeMenu() : openMenu())}
         disabled={disabled}
-        className={`${inputClass} admin-date-range-trigger flex h-10 w-full items-center gap-2.5 px-3.5 text-left disabled:cursor-not-allowed disabled:opacity-60`}
+        className={`${triggerClass} disabled:cursor-not-allowed disabled:opacity-60`}
         aria-label={ariaLabel}
         aria-expanded={isOpen}
         aria-haspopup="dialog"

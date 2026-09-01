@@ -1,6 +1,7 @@
 import { Loader2 } from "lucide-react";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import { useModulePermission } from "../../permissions/useModulePermission";
+import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { PROJECT_STATUS_OPTIONS } from "../data/surveyFormData";
 import { primaryBtnClass, secondaryBtnClass } from "./surveyDetailsShared";
 
@@ -108,7 +109,7 @@ function SurveyDetailsHeader({
               Project Status
             </label>
             <SearchableSelect
-              inputClass="admin-text h-10 min-w-[140px] rounded-xl border border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] px-3 text-sm font-medium outline-none"
+              inputClass={`${getAdminInputClass()} min-w-[140px]`}
               value={draftStatus}
               onChange={onStatusChange}
               options={PROJECT_STATUS_OPTIONS}

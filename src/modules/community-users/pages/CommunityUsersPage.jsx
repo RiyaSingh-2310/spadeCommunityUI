@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useModulePermission } from "../../permissions/useModulePermission";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
@@ -36,6 +37,7 @@ const DEFAULT_FILTERS = {
 
 function CommunityUsersPage({ isDarkMode }) {
   const navigate = useNavigate();
+  const { canWrite } = useModulePermission("community_users");
   useFlashMessage();
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
@@ -317,7 +319,7 @@ function CommunityUsersPage({ isDarkMode }) {
         showPagination
         nowrapAllCells
         nameAsText
-        selectable
+        selectable={canWrite}
         hideSelectAllCheckbox
         selectedRowIds={selectedRowIds}
         onSelectedRowIdsChange={setSelectedRowIds}
@@ -340,6 +342,7 @@ function CommunityUsersPage({ isDarkMode }) {
             disabled={isLoading || isDeleting || isDownloading}
             isResending={isResending}
             isDownloading={isDownloading}
+            canWrite={canWrite}
           />
         )}
         renderExpandedContent={(row) => <CommunityUserExpandableDetails row={row} />}

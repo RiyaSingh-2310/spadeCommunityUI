@@ -1,6 +1,7 @@
 import { API_ROUTES } from "../../../config/api";
 import { ApiError } from "../../../services/api/ApiError";
 import { apiRequest } from "../../../services/api/client";
+import { appendListQuery } from "../../shared/utils/listQueryParams";
 import { formatSurveyListDate } from "../../shared/utils/dateTime";
 import { toUiSentenceCase } from "../../shared/utils/uiText";
 
@@ -65,12 +66,24 @@ function mapRewardTransactionDetail(item) {
 }
 
 /** GET /api/rewards/transactions/list */
-export async function fetchRewardTransactions({ page = 1, limit = 10 } = {}) {
-  const params = new URLSearchParams({
-    page: String(page),
-    limit: String(limit),
+export async function fetchRewardTransactions({
+  page = 1,
+  limit = 10,
+  search,
+  start_date,
+  end_date,
+} = {}) {
+  const extra = {};
+  if (start_date) extra.start_date = start_date;
+  if (end_date) extra.end_date = end_date;
+
+  const path = appendListQuery(API_ROUTES.rewardTransactions.list, {
+    page,
+    limit,
+    search,
+    extra,
   });
-  const data = await apiRequest(`${API_ROUTES.rewardTransactions.list}?${params.toString()}`);
+  const data = await apiRequest(path);
   assertSuccess(data);
 
   const items = Array.isArray(data?.data) ? data.data : [];

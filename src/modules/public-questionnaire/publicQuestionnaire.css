@@ -4,7 +4,7 @@
   --pq-page-gutter: 1.25rem;
   --pq-content-max: 72rem;
   --pq-card-radius: 1.5rem;
-  --pq-control-height: 3.25rem;
+  --pq-control-height: 2.75rem;
   --pq-glass-bg: color-mix(in srgb, var(--admin-surface-bg) 88%, transparent);
   --pq-shadow:
     0 1px 2px rgba(15, 23, 42, 0.04),
@@ -392,26 +392,27 @@
 .public-questionnaire-shell .pq-textarea {
   width: 100%;
   min-height: var(--pq-control-height);
-  padding: 0.875rem 1.125rem;
-  border-radius: 1rem;
-  border: 1.5px solid var(--admin-input-border);
+  height: var(--pq-control-height);
+  padding: 0 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--admin-input-border);
   background: var(--admin-input-bg);
   color: var(--admin-foreground);
-  font-size: 1rem;
-  line-height: 1.5;
+  font-size: 0.875rem;
+  line-height: 1.25;
   outline: none;
   transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    background-color 0.2s ease,
-    transform 0.15s ease;
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
 }
 
 .public-questionnaire-shell .pq-textarea {
+  height: auto;
   min-height: 9.5rem;
   resize: vertical;
-  padding-top: 1rem;
-  padding-bottom: 1rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
 }
 
 .public-questionnaire-shell .pq-select-wrap {
@@ -434,15 +435,16 @@
 
 .public-questionnaire-shell .pq-input:hover,
 .public-questionnaire-shell .pq-select:hover,
-.public-questionnaire-shell .pq-textarea:hover {
-  border-color: color-mix(in srgb, var(--admin-primary-color) 40%, var(--admin-input-border));
+.public-questionnaire-shell .pq-textarea:hover,
+.public-questionnaire-shell .admin-date-range-trigger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--admin-primary-color) 35%, var(--admin-input-border));
 }
 
 .public-questionnaire-shell .pq-input:focus,
 .public-questionnaire-shell .pq-select:focus,
 .public-questionnaire-shell .pq-textarea:focus {
   border-color: var(--admin-primary-color);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--admin-primary-color) 16%, transparent);
+  box-shadow: 0 0 0 3px var(--admin-input-focus-ring);
 }
 
 /* ── Custom radio / checkbox ── */

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Loader2, X } from "lucide-react";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { EMAIL_VALIDATION_MESSAGE } from "../../shared/utils/validation";
 import {
   clearSurveyAccessTempToken,
   isSurveyAccessDeniedError,
@@ -105,7 +106,7 @@ function PartnerUrlOtpVerificationModal({
   const validateEmail = (value) => {
     const normalized = String(value ?? "").trim();
     if (!normalized) return "Email is required.";
-    if (!isValidEmail(normalized)) return "Please enter a valid email address.";
+    if (!isValidEmail(normalized)) return EMAIL_VALIDATION_MESSAGE;
     return "";
   };
 

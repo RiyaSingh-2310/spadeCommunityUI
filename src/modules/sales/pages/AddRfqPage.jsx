@@ -160,7 +160,7 @@ function AddRfqPage({ isDarkMode }) {
   const errors = useMemo(
     () => ({
       clientId: getRequiredError(resolvedClientId || form.clientId, "Client Name"),
-      email: getEmailError(form.email),
+      email: isEdit ? "" : getEmailError(form.email),
       country: getRequiredError(form.country, "Country"),
       subject: getRequiredError(form.subject, "Email Subject"),
       salesManagerId: getRequiredError(
@@ -170,7 +170,7 @@ function AddRfqPage({ isDarkMode }) {
       status: getRequiredError(form.status, "Status"),
       comment: getRichTextError(form.comment, "Comment"),
     }),
-    [form, resolvedClientId, resolvedSalesManagerId]
+    [form, resolvedClientId, resolvedSalesManagerId, isEdit]
   );
 
   const { showError, touch, validateSubmit, resetValidation } = useFormValidation({

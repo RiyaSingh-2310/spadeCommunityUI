@@ -1,12 +1,32 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import heroLogo from "../assets/hero.png";
 import {
   EMAIL_FIELD_MAX_LENGTH,
   NAME_FIELD_MAX_LENGTH,
   PASSWORD_FIELD_MAX_LENGTH,
+  getEmailError,
 } from "../modules/shared/utils/validation";
 
+const AUTH_SHELL_CLASS =
+  "kh-input-shell flex h-[52px] items-center rounded-2xl border border-[#d5deea] bg-[#f4f8fc] px-4 transition-all duration-200 focus-within:border-[#18a957] focus-within:ring-2 focus-within:ring-[#18a957]/15";
+
+const AUTH_INPUT_CLASS =
+  "kh-input h-full w-full bg-transparent text-[15px] text-[#18202f] outline-none placeholder:text-[#8f97a7]";
+
 function Signup() {
+  const [email, setEmail] = useState("");
+  const [emailTouched, setEmailTouched] = useState(false);
+
+  const emailError = useMemo(() => getEmailError(email), [email]);
+  const shownEmailError = emailTouched ? emailError : "";
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    setEmailTouched(true);
+    if (emailError) return;
+  };
+
   return (
     <div className="min-h-screen bg-[#edf1f6] px-4 py-10">
       <div className="mx-auto w-full max-w-xl">
@@ -25,29 +45,45 @@ function Signup() {
             Join the Spade Community
           </p>
 
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={handleSubmit} noValidate>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="mb-2 block text-sm font-semibold text-[#2d3747]">
                   Full Name
                 </label>
-                <input
-                  type="text"
-                  placeholder="Enter your full name"
-                  maxLength={NAME_FIELD_MAX_LENGTH}
-                  className="h-[50px] w-full rounded-[14px] border border-[#d9dee7] bg-[#f2f5f9] px-4 text-[15px] text-[#151a23] outline-none"
-                />
+                <div className={AUTH_SHELL_CLASS}>
+                  <input
+                    type="text"
+                    placeholder="Enter your full name"
+                    maxLength={NAME_FIELD_MAX_LENGTH}
+                    className={AUTH_INPUT_CLASS}
+                  />
+                </div>
               </div>
               <div>
                 <label className="mb-2 block text-sm font-semibold text-[#2d3747]">
                   Email
                 </label>
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  maxLength={EMAIL_FIELD_MAX_LENGTH}
-                  className="h-[50px] w-full rounded-[14px] border border-[#d9dee7] bg-[#f2f5f9] px-4 text-[15px] text-[#151a23] outline-none"
-                />
+                <div
+                  className={`${AUTH_SHELL_CLASS} ${
+                    shownEmailError
+                      ? "border-[#de3d3d] focus-within:border-[#de3d3d] focus-within:ring-[#de3d3d]/20"
+                      : ""
+                  }`}
+                >
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    maxLength={EMAIL_FIELD_MAX_LENGTH}
+                    onChange={(event) => setEmail(event.target.value)}
+                    onBlur={() => setEmailTouched(true)}
+                    className={AUTH_INPUT_CLASS}
+                  />
+                </div>
+                {shownEmailError ? (
+                  <p className="mt-1 text-xs text-[#de3d3d]">{shownEmailError}</p>
+                ) : null}
               </div>
             </div>
 
@@ -56,23 +92,27 @@ function Signup() {
                 <label className="mb-2 block text-sm font-semibold text-[#2d3747]">
                   Password
                 </label>
-                <input
-                  type="password"
-                  placeholder="Create a password"
-                  maxLength={PASSWORD_FIELD_MAX_LENGTH}
-                  className="h-[50px] w-full rounded-[14px] border border-[#d9dee7] bg-[#f2f5f9] px-4 text-[15px] text-[#151a23] outline-none"
-                />
+                <div className={AUTH_SHELL_CLASS}>
+                  <input
+                    type="password"
+                    placeholder="Create a password"
+                    maxLength={PASSWORD_FIELD_MAX_LENGTH}
+                    className={AUTH_INPUT_CLASS}
+                  />
+                </div>
               </div>
               <div>
                 <label className="mb-2 block text-sm font-semibold text-[#2d3747]">
                   Confirm Password
                 </label>
-                <input
-                  type="password"
-                  placeholder="Confirm your password"
-                  maxLength={PASSWORD_FIELD_MAX_LENGTH}
-                  className="h-[50px] w-full rounded-[14px] border border-[#d9dee7] bg-[#f2f5f9] px-4 text-[15px] text-[#151a23] outline-none"
-                />
+                <div className={AUTH_SHELL_CLASS}>
+                  <input
+                    type="password"
+                    placeholder="Confirm your password"
+                    maxLength={PASSWORD_FIELD_MAX_LENGTH}
+                    className={AUTH_INPUT_CLASS}
+                  />
+                </div>
               </div>
             </div>
 

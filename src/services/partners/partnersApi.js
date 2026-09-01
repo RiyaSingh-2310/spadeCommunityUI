@@ -238,7 +238,6 @@ export function buildCreatePartnerPayload(form) {
 export function buildUpdatePartnerPayload(form) {
   return {
     name: form.name.trim(),
-    email: form.email.trim(),
     status: formValueToApiStatus(form.status),
     ...buildPartnerSurveyPayload(form),
     ...buildPartnerApiFields(form),

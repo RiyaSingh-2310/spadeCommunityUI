@@ -6,6 +6,11 @@ export function getAdminInputClass() {
   return ADMIN_INPUT_BASE;
 }
 
+/** Shared trigger styling for date / time pickers (same height as text inputs). */
+export function getAdminDateTriggerClass() {
+  return `${ADMIN_INPUT_BASE} admin-date-range-trigger flex w-full items-center gap-2.5 px-3.5 text-left`;
+}
+
 /** Compact themed select trigger for table status cells. */
 export function getAdminTableSelectTriggerClass() {
   return "admin-table-status-select-trigger inline-flex items-center text-left";
