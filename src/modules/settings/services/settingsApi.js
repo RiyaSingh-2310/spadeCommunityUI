@@ -14,6 +14,8 @@ import {
 import {
   buildPermissionsPayload,
   extractPermissionsRawFromRecord,
+  hasAnyPermissionGrant,
+  resolvePermissionsFromRecord,
 } from "../../permissions/permissionsUtils";
 import { encryptValue } from "../../shared/utils/encryption";
 import {
@@ -60,12 +62,24 @@ function syncAuthSessionFromRecord(record) {
   if (!record) return;
   const existing = getAdminUser();
   const hasIncomingPermissions = extractPermissionsRawFromRecord(record) != null;
-  const admin = hasIncomingPermissions
-    ? record
-    : { ...record, permissions: existing?.permissions };
+
+  let merged = record;
+  if (!hasIncomingPermissions) {
+    merged = { ...record, permissions: existing?.permissions };
+  } else {
+    const incoming = resolvePermissionsFromRecord(record);
+    if (
+      !hasAnyPermissionGrant(incoming) &&
+      hasAnyPermissionGrant(existing?.permissions)
+    ) {
+      // /me sometimes omits a usable permission payload; keep the session grants.
+      merged = { ...record, permissions: existing.permissions };
+    }
+  }
+
   saveAuthSession({
     token: getAuthToken(),
-    admin: normalizeAdminUser(admin),
+    admin: normalizeAdminUser(merged),
     loginRole: getLoginRole(),
   });
 }

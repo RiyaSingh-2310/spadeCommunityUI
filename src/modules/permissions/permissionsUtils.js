@@ -45,23 +45,84 @@ function parseBooleanFlag(value) {
   return Boolean(value);
 }
 
+const WRITE_ACTION_TOKENS = new Set([
+  "write",
+  "edit",
+  "update",
+  "add",
+  "create",
+  "delete",
+  "remove",
+  "full",
+  "all",
+  "manage",
+]);
+const READ_ACTION_TOKENS = new Set(["read", "view", "get", "list", ...WRITE_ACTION_TOKENS]);
+
 function parsePermissionEntry(entry) {
-  if (!entry || typeof entry !== "object") {
+  if (entry === true || entry === 1 || entry === "1" || entry === "true") {
+    return { canRead: true, canWrite: true };
+  }
+  if (
+    entry === false ||
+    entry === 0 ||
+    entry === "0" ||
+    entry === "false" ||
+    entry == null
+  ) {
     return createEmptyModulePermission();
   }
-  const canRead = parseBooleanFlag(
+
+  if (typeof entry === "string") {
+    const token = entry.toLowerCase().trim();
+    if (!token) return createEmptyModulePermission();
+    const canWrite = WRITE_ACTION_TOKENS.has(token);
+    const canRead = READ_ACTION_TOKENS.has(token) || canWrite;
+    return { canRead, canWrite };
+  }
+
+  if (Array.isArray(entry)) {
+    const tokens = entry.map((value) => String(value ?? "").toLowerCase().trim());
+    const canWrite = tokens.some((token) => WRITE_ACTION_TOKENS.has(token));
+    const canRead =
+      canWrite || tokens.some((token) => READ_ACTION_TOKENS.has(token));
+    return { canRead, canWrite };
+  }
+
+  if (typeof entry !== "object") {
+    return createEmptyModulePermission();
+  }
+
+  const view = parseBooleanFlag(
+    entry.view ?? entry.View ?? entry.canView ?? entry.can_view
+  );
+  const add = parseBooleanFlag(
+    entry.add ?? entry.Add ?? entry.create ?? entry.Create ?? entry.canAdd ?? entry.can_add
+  );
+  const edit = parseBooleanFlag(
+    entry.edit ??
+      entry.Edit ??
+      entry.update ??
+      entry.Update ??
+      entry.canEdit ??
+      entry.can_edit
+  );
+  const del = parseBooleanFlag(
+    entry.delete ?? entry.Delete ?? entry.canDelete ?? entry.can_delete
+  );
+  const explicitRead = parseBooleanFlag(
     entry.canRead ?? entry.read ?? entry.can_read ?? entry.CanRead
   );
-  const canWrite = parseBooleanFlag(
+  const explicitWrite = parseBooleanFlag(
     entry.canWrite ?? entry.write ?? entry.can_write ?? entry.CanWrite
   );
-  return {
-    canRead: canWrite ? true : canRead,
-    canWrite,
-  };
+
+  const canWrite = explicitWrite || add || edit || del;
+  const canRead = canWrite || explicitRead || view;
+  return { canRead, canWrite };
 }
 
-function looksLikePermissionFlags(value) {
+function looksLikePermissionObject(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   return (
     "canRead" in value ||
@@ -69,13 +130,38 @@ function looksLikePermissionFlags(value) {
     "read" in value ||
     "write" in value ||
     "can_read" in value ||
-    "can_write" in value
+    "can_write" in value ||
+    "view" in value ||
+    "add" in value ||
+    "edit" in value ||
+    "delete" in value ||
+    "create" in value ||
+    "update" in value
   );
+}
+
+function looksLikePermissionFlags(value) {
+  if (typeof value === "boolean") return true;
+  if (typeof value === "string") {
+    const token = value.toLowerCase().trim();
+    return READ_ACTION_TOKENS.has(token) || WRITE_ACTION_TOKENS.has(token);
+  }
+  if (Array.isArray(value)) {
+    return value.every(
+      (item) =>
+        typeof item === "boolean" ||
+        typeof item === "string" ||
+        looksLikePermissionObject(item)
+    );
+  }
+  return looksLikePermissionObject(value);
 }
 
 function looksLikePermissionsMap(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  return Object.values(value).some((entry) => looksLikePermissionFlags(entry));
+  const values = Object.values(value);
+  if (!values.length) return false;
+  return values.some((entry) => looksLikePermissionFlags(entry));
 }
 
 /** API/backend aliases that differ from frontend module keys. */
@@ -87,7 +173,49 @@ const MODULE_KEY_ALIASES = {
   reward: "reward_points",
   rewardmanagement: "reward_points",
   reward_management: "reward_points",
+  user_email: "user_email_templates",
+  useremail: "user_email_templates",
+  user_email_template: "user_email_templates",
+  useremailtemplate: "user_email_templates",
+  useremailtemplates: "user_email_templates",
+  system_email: "system_email_templates",
+  systememail: "system_email_templates",
+  system_email_template: "system_email_templates",
+  systememailtemplate: "system_email_templates",
+  systememailtemplates: "system_email_templates",
+  panelist: "community_users",
+  panelists: "community_users",
+  community_user: "community_users",
+  admin_user: "users",
+  admin_users: "users",
+  logactivity: "log_activity",
+  activity_log: "log_activity",
+  activitylog: "log_activity",
 };
+
+function normalizeLookupToken(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
+}
+
+function stripTrailingPlural(token) {
+  const value = String(token ?? "");
+  if (value.endsWith("ies") && value.length > 4) return `${value.slice(0, -3)}y`;
+  if (value.endsWith("s") && !value.endsWith("ss") && value.length > 3) {
+    return value.slice(0, -1);
+  }
+  return value;
+}
+
+function compactLookupToken(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
 
 function resolveModuleKey(moduleName) {
   const raw = String(moduleName ?? "").trim();
@@ -102,11 +230,39 @@ function resolveModuleKey(moduleName) {
   );
   if (labelMatch) return labelMatch.key;
 
-  const snake = lower.replace(/[\s-]+/g, "_");
+  const compact = compactLookupToken(raw);
+  const compactStem = stripTrailingPlural(compact);
+  const fuzzyLabel = PERMISSION_MODULES.find((module) => {
+    const labelCompact = compactLookupToken(module.label);
+    return (
+      labelCompact === compact ||
+      stripTrailingPlural(labelCompact) === compactStem
+    );
+  });
+  if (fuzzyLabel) return fuzzyLabel.key;
+
+  const snake = normalizeLookupToken(raw);
   if (PERMISSION_MODULE_KEYS.includes(snake)) return snake;
+
+  const snakeStem = stripTrailingPlural(snake);
+  if (PERMISSION_MODULE_KEYS.includes(snakeStem)) return snakeStem;
+  if (PERMISSION_MODULE_KEYS.includes(`${snakeStem}s`)) return `${snakeStem}s`;
 
   if (MODULE_KEY_ALIASES[lower]) return MODULE_KEY_ALIASES[lower];
   if (MODULE_KEY_ALIASES[snake]) return MODULE_KEY_ALIASES[snake];
+  if (MODULE_KEY_ALIASES[compact]) return MODULE_KEY_ALIASES[compact];
+  if (MODULE_KEY_ALIASES[snakeStem]) return MODULE_KEY_ALIASES[snakeStem];
+  if (MODULE_KEY_ALIASES[compactStem]) return MODULE_KEY_ALIASES[compactStem];
+
+  const keyByStem = PERMISSION_MODULE_KEYS.find((key) => {
+    const keyCompact = compactLookupToken(key);
+    return (
+      stripTrailingPlural(key) === snakeStem ||
+      keyCompact === compact ||
+      stripTrailingPlural(keyCompact) === compactStem
+    );
+  });
+  if (keyByStem) return keyByStem;
 
   return null;
 }
@@ -598,6 +754,17 @@ export function canReadModule(permissions, moduleKey, _options = {}) {
     ...resolveModuleFlags(permissions, moduleKey),
   };
   return flags.canRead === true || flags.canWrite === true;
+}
+
+/**
+ * Shared nav/route helper: empty keys = always allowed (e.g. Settings).
+ * @param {PermissionsMap | null | undefined} permissions
+ * @param {string[] | null | undefined} permissionKeys
+ * @param {{ isSuperAdmin?: boolean }} [options]
+ */
+export function canAccessAnyModule(permissions, permissionKeys = [], options) {
+  if (!permissionKeys?.length) return true;
+  return permissionKeys.some((key) => canReadModule(permissions, key, options));
 }
 
 /**

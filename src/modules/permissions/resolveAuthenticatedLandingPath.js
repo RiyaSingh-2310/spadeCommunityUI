@@ -2,7 +2,7 @@ import { getSidebarNavItemsForRole } from "../../config/roleSidebarNav";
 import { getAdminUser } from "../../services/auth/authStorage";
 import { getLoginRole } from "../../services/auth/loginRole";
 import { getEffectivePermissions } from "./getEffectivePermissions";
-import { canReadModule } from "./permissionsUtils";
+import { canAccessAnyModule } from "./permissionsUtils";
 
 /**
  * Walks sidebar nav (links + group children) and returns the first route the
@@ -46,10 +46,8 @@ export function resolveAuthenticatedLandingPath() {
   const loginRole = getLoginRole();
   const permissions = getEffectivePermissions(admin);
   const navItems = getSidebarNavItemsForRole(loginRole);
-  const canAccessNavItem = (permissionKeys = []) => {
-    if (!permissionKeys || permissionKeys.length === 0) return true;
-    return permissionKeys.some((key) => canReadModule(permissions, key));
-  };
+  const canAccessNavItem = (permissionKeys = []) =>
+    canAccessAnyModule(permissions, permissionKeys);
 
   return getFirstAccessibleNavPath(navItems, canAccessNavItem) ?? "/";
 }

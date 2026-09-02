@@ -7,6 +7,7 @@ import {
 } from "../../services/auth/authStorage";
 import { getEffectivePermissions, isSuperAdminUser } from "./getEffectivePermissions";
 import {
+  canAccessAnyModule,
   canMutateNotificationInbox,
   canOpenMessagesPage,
   canReadModule,
@@ -34,11 +35,8 @@ export function PermissionsProvider({ children }) {
 
     const canRead = (moduleKey) => canReadModule(permissions, moduleKey);
     const canWrite = (moduleKey) => canWriteModule(permissions, moduleKey);
-
-    const canAccessNavItem = (permissionKeys = []) => {
-      if (!permissionKeys.length) return true;
-      return permissionKeys.some((key) => canRead(key));
-    };
+    const canAccessNavItem = (permissionKeys = []) =>
+      canAccessAnyModule(permissions, permissionKeys);
 
     return {
       permissions,
