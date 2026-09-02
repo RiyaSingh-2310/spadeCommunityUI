@@ -6,13 +6,21 @@ import FormField from "../../components/admin/FormField";
 import FormStatusSelect from "../../components/admin/FormStatusSelect";
 import ProfileImageUpload from "../../components/admin/ProfileImageUpload";
 import TableCard from "../../components/admin/TableCard";
+import UserPermissionActionBar from "../../components/admin/UserPermissionActionBar";
 import UserPermissionsTable from "../../components/admin/UserPermissionsTable";
-import { toastApiError } from "../../services/toast/apiToast";
+import { toastApiError, toastApiSuccess } from "../../services/toast/apiToast";
 import {
   createDefaultPermissions,
   permissionsEqual,
   resolvePermissionsFromRecord,
 } from "../../modules/permissions/permissionsUtils";
+import {
+  createEmptyDownloadSelections,
+  exportSelectedModulesCsv,
+  getSelectedDownloadModuleKeys,
+  hasAnyDownloadSelection,
+  permissionsForPersist,
+} from "../../modules/permissions/temporaryDownloadSelections";
 import {
   createUser,
   formStatusToApiStatus,
@@ -69,9 +77,17 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
   const [loadFailed, setLoadFailed] = useState(false);
   const [initialSnapshot, setInitialSnapshot] = useState(null);
+  const [downloadSelections, setDownloadSelections] = useState(
+    createEmptyDownloadSelections
+  );
+  const [isDownloadingCsv, setIsDownloadingCsv] = useState(false);
 
   const { readOnly, showSubmit } = useFormAccess();
   const inputClass = getAdminInputClass();
+  const canDownloadCsv = useMemo(
+    () => isEdit && hasAnyDownloadSelection(downloadSelections),
+    [isEdit, downloadSelections]
+  );
 
   const errors = useMemo(
     () => ({
@@ -104,18 +120,23 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
       setImageFile(null);
       setExistingImage("");
       setInitialSnapshot(null);
+      setDownloadSelections(createEmptyDownloadSelections());
       setIsLoadingRecord(true);
       setLoadFailed(false);
       try {
         const admin = await getRecord(id);
         if (cancelled) return;
         const mapped = mapAdminToForm(admin);
-        const normalizedPermissions = resolvePermissionsFromRecord(admin);
+        // Persistable Read/Write only — Download checkboxes always start unchecked.
+        const normalizedPermissions = permissionsForPersist(
+          resolvePermissionsFromRecord(admin)
+        );
         setForm({
           ...mapped,
           permissions: normalizedPermissions,
         });
         setExistingImage(resolveProfileImageUrl(admin) ?? "");
+        setDownloadSelections(createEmptyDownloadSelections());
         setInitialSnapshot({
           name: mapped.name.trim(),
           status: mapped.status,
@@ -160,18 +181,41 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
     !loadFailed &&
     (!isEdit || isClean);
 
+  const handleCancel = () => {
+    setDownloadSelections(createEmptyDownloadSelections());
+    navigate("/users");
+  };
+
+  const handleDownloadCsv = async () => {
+    if (!isEdit || !canDownloadCsv || isDownloadingCsv || isSubmitting) return;
+
+    const selectedKeys = getSelectedDownloadModuleKeys(downloadSelections);
+    setIsDownloadingCsv(true);
+    try {
+      const result = await exportSelectedModulesCsv(selectedKeys);
+      toastApiSuccess(result);
+      setDownloadSelections(createEmptyDownloadSelections());
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsDownloadingCsv(false);
+    }
+  };
+
   const onSubmit = async (event) => {
     event.preventDefault();
     if (readOnly || !showSubmit || !validateSubmit() || !isFormValid(errors)) return;
 
     setIsSubmitting(true);
     try {
+      const permissionsPayload = permissionsForPersist(form.permissions);
+
       if (isEdit) {
         const data = await updateRecord(id, {
           name: form.name,
           permission_type: form.permission_type,
           status: formStatusToApiStatus(form.status),
-          permissions: form.permissions,
+          permissions: permissionsPayload,
           password: form.password.trim(),
           confirmPassword: form.confirmPassword.trim(),
           imageFile,
@@ -182,7 +226,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
           state: {
             flash: {
               type: "success",
-              message: data?.message || "User updated successfully.",
+              message: data?.message || "Admin updated successfully.",
             },
             refresh: true,
           },
@@ -199,7 +243,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
         imageFile,
         permission_type: form.permission_type,
         status: formStatusToApiStatus(form.status),
-        permissions: form.permissions,
+        permissions: permissionsPayload,
       });
 
       navigate("/users", {
@@ -385,36 +429,48 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
             permissions={form.permissions}
             permissionsInitKey={isEdit && initialSnapshot ? id : null}
             onChange={(permissions) => setForm((prev) => ({ ...prev, permissions }))}
-            disabled={fieldDisabled(readOnly, isSubmitting)}
+            disabled={fieldDisabled(readOnly, isSubmitting || isDownloadingCsv)}
+            showDownload={isEdit}
+            downloadSelections={downloadSelections}
+            onDownloadSelectionsChange={setDownloadSelections}
           />
         </TableCard>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {showSubmit && (
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]"
-          >
-            {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-            {isSubmitting
-              ? isEdit
-                ? "Updating..."
-                : "Submitting..."
-              : isEdit
-                ? "Update"
-                : "Submit"}
-          </button>
-          )}
-          <button
-            type="button"
-            onClick={() => navigate("/users")}
-            disabled={fieldDisabled(readOnly, isSubmitting)}
-            className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Cancel
-          </button>
-        </div>
+        {isEdit ? (
+          <UserPermissionActionBar
+            showDownloadCsv
+            canDownloadCsv={canDownloadCsv}
+            isDownloadingCsv={isDownloadingCsv}
+            isSubmitting={isSubmitting}
+            canSubmit={Boolean(showSubmit && canSubmit)}
+            submitLabel="Update"
+            submittingLabel="Updating..."
+            onCancel={handleCancel}
+            onDownloadCsv={handleDownloadCsv}
+            disableCancel={fieldDisabled(readOnly, false)}
+          />
+        ) : (
+          <div className="flex flex-wrap items-center gap-3">
+            {showSubmit ? (
+              <button
+                type="submit"
+                disabled={!canSubmit}
+                className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#10a950]"
+              >
+                {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                {isSubmitting ? "Submitting..." : "Submit"}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={fieldDisabled(readOnly, isSubmitting)}
+              className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </form>
     </div>
   );
