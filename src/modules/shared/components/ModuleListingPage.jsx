@@ -114,6 +114,7 @@ function ModuleListingPage({
   const {
     canRead: allowRead,
     canWrite: allowWrite,
+    canDownload: allowDownload,
     filterColumns,
   } = useModulePermission(permissionModule);
 
@@ -285,7 +286,7 @@ function ModuleListingPage({
     onSecondaryActionClick && secondaryActionLabel && allowWrite
   );
   const showCsvExportButton = Boolean(
-    allowWrite && csvExportLabel && (showCsvExport || onCsvExportClick)
+    allowDownload && csvExportLabel && (showCsvExport || onCsvExportClick)
   );
 
   const paginationFooter = buildListingPaginationFooter({
@@ -310,6 +311,7 @@ function ModuleListingPage({
       actionVariant,
       allowRead,
       allowWrite,
+      allowDownload,
       onView,
       onEdit,
       onDelete,
@@ -338,9 +340,10 @@ function ModuleListingPage({
     return cols;
   }, [
     safeColumns, filterColumns, permissionModule, actionVariant, allowRead, allowWrite,
-    onView, onEdit, onDelete, editPath, showDeleteAction, onManagePermissions, onFindUser,
-    onUserSurveyData, onSurveyClone, onProjectUrlInfo, onClone, onCopy, onPdfDownload, onApprove, onReject,
-    onListProjects, onAddLog, onViewLogs, onRewardLog, onDownload, hasActionColumn,
+    allowDownload, onView, onEdit, onDelete, editPath, showDeleteAction, onManagePermissions,
+    onFindUser, onUserSurveyData, onSurveyClone, onProjectUrlInfo, onClone, onCopy,
+    onPdfDownload, onApprove, onReject, onListProjects, onAddLog, onViewLogs, onRewardLog,
+    onDownload, hasActionColumn,
   ]);
 
   const formatStatusDisplay = (row) =>
@@ -472,7 +475,7 @@ function ModuleListingPage({
           dataCellProps: buildListingDataCellProps({
             rowIdKey, renderCheckboxCell, showStatus, rfq, renderStatus, effectiveStatusAsText,
             formatStatusDisplay, statusColumnClass, statusDropdownOptions, allowWrite,
-            isDarkMode, onStatusChange, setInternalData, effectiveStatusToggle,
+            allowDownload, isDarkMode, onStatusChange, setInternalData, effectiveStatusToggle,
             compactStatusColumn, allowRead, onView, actionVariant, readOnlyListingActions,
             listingReadMode, communityUser, groupSurveyProjects, userMgmtActions,
             canShowEdit, canShowDelete, canShowManagePermissions, editPath, showDeleteAction,

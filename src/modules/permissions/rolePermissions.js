@@ -6,11 +6,11 @@ function createRolePermissions(grants) {
   return PERMISSION_MODULE_KEYS.reduce((acc, key) => {
     acc[key] = grants[key] ?? createEmptyModulePermission();
     return acc;
-  }, /** @type {Record<string, { canRead: boolean, canWrite: boolean }>} */ ({}));
+  }, /** @type {Record<string, { canRead: boolean, canWrite: boolean, canDownload: boolean }>} */ ({}));
 }
 
-const readWrite = { canRead: true, canWrite: true };
-const readOnly = { canRead: true, canWrite: false };
+const readWrite = { canRead: true, canWrite: true, canDownload: true };
+const readOnly = { canRead: true, canWrite: false, canDownload: false };
 
 const SALES_PERMISSIONS = createRolePermissions({
   dashboard: readOnly,

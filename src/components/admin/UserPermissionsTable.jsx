@@ -10,6 +10,12 @@ import {
   setParentGroupPermission,
 } from "../../modules/permissions/permissionsUtils";
 
+const PERMISSION_COLUMNS = [
+  { type: "canRead", label: "Read", selectAllLabel: "Select All Read" },
+  { type: "canWrite", label: "Write", selectAllLabel: "Select All Write" },
+  { type: "canDownload", label: "Download", selectAllLabel: "Select All Download" },
+];
+
 function PermissionCheckboxes({
   label,
   moduleKey,
@@ -17,40 +23,36 @@ function PermissionCheckboxes({
   disabled,
   onChange,
 }) {
-  const flags = permissions[moduleKey] ?? { canRead: false, canWrite: false };
+  const flags = permissions[moduleKey] ?? {
+    canRead: false,
+    canWrite: false,
+    canDownload: false,
+  };
 
   return (
     <>
-      <td className="px-4 py-2.5 text-center">
-        <input
-          type="checkbox"
-          className="admin-checkbox"
-          checked={flags.canRead}
-          disabled={disabled}
-          aria-label={`${label} read`}
-          title="Read"
-          onChange={(e) =>
-            onChange(
-              setChildModulePermission(permissions, moduleKey, "canRead", e.target.checked)
-            )
-          }
-        />
-      </td>
-      <td className="px-4 py-2.5 text-center">
-        <input
-          type="checkbox"
-          className="admin-checkbox"
-          checked={flags.canWrite}
-          disabled={disabled}
-          aria-label={`${label} write`}
-          title="Write"
-          onChange={(e) =>
-            onChange(
-              setChildModulePermission(permissions, moduleKey, "canWrite", e.target.checked)
-            )
-          }
-        />
-      </td>
+      {PERMISSION_COLUMNS.map((column) => (
+        <td key={column.type} className="px-4 py-2.5 text-center">
+          <input
+            type="checkbox"
+            className="admin-checkbox"
+            checked={Boolean(flags[column.type])}
+            disabled={disabled}
+            aria-label={`${label} ${column.label.toLowerCase()}`}
+            title={column.label}
+            onChange={(e) =>
+              onChange(
+                setChildModulePermission(
+                  permissions,
+                  moduleKey,
+                  column.type,
+                  e.target.checked
+                )
+              )
+            }
+          />
+        </td>
+      ))}
     </>
   );
 }
@@ -63,53 +65,39 @@ function ParentPermissionCheckboxes({
   disabled,
   onChange,
 }) {
-  const canRead = getParentRowPermission(permissions, parentKey, childKeys, "canRead");
-  const canWrite = getParentRowPermission(permissions, parentKey, childKeys, "canWrite");
-
   return (
     <>
-      <td className="px-4 py-2.5 text-center">
-        <input
-          type="checkbox"
-          className="admin-checkbox"
-          checked={canRead}
-          disabled={disabled}
-          aria-label={`${label} read`}
-          title="Read"
-          onChange={(e) =>
-            onChange(
-              setParentGroupPermission(
-                permissions,
-                parentKey,
-                childKeys,
-                "canRead",
-                e.target.checked
-              )
-            )
-          }
-        />
-      </td>
-      <td className="px-4 py-2.5 text-center">
-        <input
-          type="checkbox"
-          className="admin-checkbox"
-          checked={canWrite}
-          disabled={disabled}
-          aria-label={`${label} write`}
-          title="Write"
-          onChange={(e) =>
-            onChange(
-              setParentGroupPermission(
-                permissions,
-                parentKey,
-                childKeys,
-                "canWrite",
-                e.target.checked
-              )
-            )
-          }
-        />
-      </td>
+      {PERMISSION_COLUMNS.map((column) => {
+        const checked = getParentRowPermission(
+          permissions,
+          parentKey,
+          childKeys,
+          column.type
+        );
+        return (
+          <td key={column.type} className="px-4 py-2.5 text-center">
+            <input
+              type="checkbox"
+              className="admin-checkbox"
+              checked={checked}
+              disabled={disabled}
+              aria-label={`${label} ${column.label.toLowerCase()}`}
+              title={column.label}
+              onChange={(e) =>
+                onChange(
+                  setParentGroupPermission(
+                    permissions,
+                    parentKey,
+                    childKeys,
+                    column.type,
+                    e.target.checked
+                  )
+                )
+              }
+            />
+          </td>
+        );
+      })}
     </>
   );
 }
@@ -127,9 +115,6 @@ function UserPermissionsTable({
     if (permissionsInitKey == null) return;
     setExpandedGroups(deriveExpandedPermissionGroupIds(permissions));
   }, [permissionsInitKey, permissions]);
-
-  const allRead = areAllPermissionsSelected(permissions, "canRead");
-  const allWrite = areAllPermissionsSelected(permissions, "canWrite");
 
   const toggleGroup = (groupId) => {
     setExpandedGroups((prev) => {
@@ -156,45 +141,50 @@ function UserPermissionsTable({
               <th className="admin-text px-4 py-3 text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap">
                 Module
               </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold tracking-[0.02em] whitespace-nowrap">
-                <label className="admin-permissions-table__label inline-flex items-center justify-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="admin-checkbox"
-                    checked={allRead}
-                    disabled={disabled}
-                    onChange={(e) =>
-                      onChange(setAllPermissions(permissions, "canRead", e.target.checked))
-                    }
-                  />
-                  <span className="admin-text-muted">Select All Read</span>
-                </label>
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold tracking-[0.02em] whitespace-nowrap">
-                <label className="admin-permissions-table__label inline-flex items-center justify-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="admin-checkbox"
-                    checked={allWrite}
-                    disabled={disabled}
-                    onChange={(e) =>
-                      onChange(setAllPermissions(permissions, "canWrite", e.target.checked))
-                    }
-                  />
-                  <span className="admin-text-muted">Select All Write</span>
-                </label>
-              </th>
+              {PERMISSION_COLUMNS.map((column) => {
+                const allSelected = areAllPermissionsSelected(
+                  permissions,
+                  column.type
+                );
+                return (
+                  <th
+                    key={column.type}
+                    className="px-4 py-3 text-center text-xs font-semibold tracking-[0.02em] whitespace-nowrap"
+                  >
+                    <label className="admin-permissions-table__label inline-flex items-center justify-center gap-2">
+                      <input
+                        type="checkbox"
+                        className="admin-checkbox"
+                        checked={allSelected}
+                        disabled={disabled}
+                        onChange={(e) =>
+                          onChange(
+                            setAllPermissions(
+                              permissions,
+                              column.type,
+                              e.target.checked
+                            )
+                          )
+                        }
+                      />
+                      <span className="admin-text-muted">{column.selectAllLabel}</span>
+                    </label>
+                  </th>
+                );
+              })}
             </tr>
             <tr className="admin-text-muted border-b border-[var(--admin-permissions-table-border)]">
               <th className="px-4 py-2 text-left text-xs font-medium whitespace-nowrap">
                 &nbsp;
               </th>
-              <th className="admin-text-muted px-4 py-2 text-center text-xs font-medium whitespace-nowrap">
-                Read
-              </th>
-              <th className="admin-text-muted px-4 py-2 text-center text-xs font-medium whitespace-nowrap">
-                Write
-              </th>
+              {PERMISSION_COLUMNS.map((column) => (
+                <th
+                  key={column.type}
+                  className="admin-text-muted px-4 py-2 text-center text-xs font-medium whitespace-nowrap"
+                >
+                  {column.label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -265,7 +255,6 @@ function UserPermissionsTable({
                       className="admin-permissions-table__row border-t align-middle transition-colors"
                     >
                       <td className="px-4 py-2.5 whitespace-nowrap">
-                        {/* Indent under parent: chevron column spacer + nest padding */}
                         <div className="flex items-center gap-2 pl-2 sm:pl-3">
                           <span
                             className="inline-flex h-6 w-6 shrink-0"

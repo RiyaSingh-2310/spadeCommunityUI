@@ -13,6 +13,7 @@ export function buildListingDataCellProps(ctx) {
     statusColumnClass: ctx.statusColumnClass,
     statusDropdownOptions: ctx.statusDropdownOptions,
     allowWrite: ctx.allowWrite,
+    allowDownload: ctx.allowDownload,
     isDarkMode: ctx.isDarkMode,
     onStatusChange: ctx.onStatusChange,
     setInternalData: ctx.setInternalData,

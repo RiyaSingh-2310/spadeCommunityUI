@@ -18,6 +18,7 @@ function ModuleListingActionCell({
   actionVariant,
   allowRead,
   allowWrite,
+  allowDownload = false,
   readOnlyListingActions,
   listingReadMode,
   communityUser,
@@ -56,13 +57,13 @@ function ModuleListingActionCell({
   const cellClass = "admin-table-actions-col px-4 py-3 align-middle text-right whitespace-nowrap";
 
   if (!allowRead) return null;
-  if (!allowWrite && !readOnlyListingActions) return null;
+  if (!allowWrite && !allowDownload && !readOnlyListingActions) return null;
 
   if (communityUser) {
     const showEdit = allowWrite && Boolean(onEdit || editPath);
     const showDelete = allowWrite && showDeleteAction && Boolean(onDelete);
     const showRewardLog = allowWrite && Boolean(onRewardLog);
-    const showDownload = allowWrite && Boolean(onDownload);
+    const showDownload = allowDownload && Boolean(onDownload);
     const hasCommunityActions =
       (allowRead && onView) ||
       showEdit ||
@@ -238,7 +239,11 @@ function ModuleListingActionCell({
       <td key={col} className={cellClass}>
         <InvoicePdfAction
         isDarkMode={isDarkMode}
-        onDownload={allowRead && onPdfDownload ? () => onPdfDownload(row, globalIdx) : undefined}
+        onDownload={
+          allowDownload && onPdfDownload
+            ? () => onPdfDownload(row, globalIdx)
+            : undefined
+        }
       />
       </td>
     );

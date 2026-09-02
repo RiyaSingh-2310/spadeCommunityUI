@@ -153,6 +153,7 @@ export function shouldShowListingActionColumn({
   actionVariant,
   allowRead,
   allowWrite,
+  allowDownload = false,
   onView,
   onEdit,
   onDelete,
@@ -180,8 +181,9 @@ export function shouldShowListingActionColumn({
   if (actionVariant === "community-user") {
     const showEdit = allowWrite && Boolean(onEdit || editPath);
     const showDelete = allowWrite && showDeleteAction && Boolean(onDelete);
-    if (allowWrite) {
-      return Boolean(onView || onRewardLog || onDownload || showEdit || showDelete);
+    const showDownload = allowDownload && Boolean(onDownload);
+    if (allowWrite || showDownload) {
+      return Boolean(onView || onRewardLog || showDownload || showEdit || showDelete);
     }
     return Boolean(onView);
   }
@@ -196,6 +198,10 @@ export function shouldShowListingActionColumn({
     });
     const showManagePermissions = allowWrite && Boolean(onManagePermissions);
     return showEdit || showDelete || showManagePermissions;
+  }
+
+  if (allowDownload && (onPdfDownload || onDownload || actionVariant === "pdf-download")) {
+    return true;
   }
 
   if (allowWrite) {
@@ -235,10 +241,10 @@ export function shouldShowListingActionColumn({
     onUserSurveyData,
     onSurveyClone,
     onProjectUrlInfo,
-    onPdfDownload,
+    onPdfDownload: allowDownload ? onPdfDownload : undefined,
     onListProjects,
     onViewLogs,
     onRewardLog,
-    onDownload,
+    onDownload: allowDownload ? onDownload : undefined,
   });
 }

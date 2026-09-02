@@ -215,7 +215,7 @@ function ProjectUrlsTab({
   urlId = "",
   onViewChange,
 }) {
-  const { canWrite } = useModulePermission("survey");
+  const { canWrite, canDownload } = useModulePermission("survey");
   const inputClass = getAdminInputClass();
   const textareaClass = getAdminTextareaClass();
   const projectFk = project?.recordId ?? surveyId;
@@ -1276,6 +1276,7 @@ function ProjectUrlsTab({
               projectUrlId={selectedUrlId || form.id || urlId}
               isDarkMode={isDarkMode}
               canWrite={canWrite && !isSaving}
+              canDownload={canDownload}
               showContextFields={false}
               showRecordsTable={false}
               deferUpload={

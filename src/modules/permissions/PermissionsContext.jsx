@@ -8,6 +8,7 @@ import {
 import { getEffectivePermissions, isSuperAdminUser } from "./getEffectivePermissions";
 import {
   canAccessAnyModule,
+  canDownloadModule,
   canMutateNotificationInbox,
   canOpenMessagesPage,
   canReadModule,
@@ -35,6 +36,7 @@ export function PermissionsProvider({ children }) {
 
     const canRead = (moduleKey) => canReadModule(permissions, moduleKey);
     const canWrite = (moduleKey) => canWriteModule(permissions, moduleKey);
+    const canDownload = (moduleKey) => canDownloadModule(permissions, moduleKey);
     const canAccessNavItem = (permissionKeys = []) =>
       canAccessAnyModule(permissions, permissionKeys);
 
@@ -43,6 +45,7 @@ export function PermissionsProvider({ children }) {
       isSuperAdmin: isSuperAdminUser(admin),
       canRead,
       canWrite,
+      canDownload,
       canAccessNavItem,
       canShowNotificationBell: true,
       canOpenMessagesPage: canOpenMessagesPage(permissions),

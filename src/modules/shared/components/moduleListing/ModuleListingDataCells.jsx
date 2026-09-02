@@ -40,6 +40,7 @@ function ModuleListingDataCells({
   statusColumnClass,
   statusDropdownOptions,
   allowWrite,
+  allowDownload = false,
   isDarkMode,
   onStatusChange,
   setInternalData,
@@ -243,6 +244,7 @@ function ModuleListingDataCells({
           actionVariant={actionVariant}
           allowRead={allowRead}
           allowWrite={allowWrite}
+          allowDownload={allowDownload}
           readOnlyListingActions={readOnlyListingActions}
           listingReadMode={listingReadMode}
           communityUser={communityUser}

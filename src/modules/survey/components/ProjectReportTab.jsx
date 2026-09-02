@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
+import { useModulePermission } from "../../permissions/useModulePermission";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { toastApiError, toastApiInfo } from "../../../services/toast/apiToast";
 import {
@@ -27,6 +28,7 @@ function ReportActions({
   onDownload,
   isDownloading,
   disabled = false,
+  canDownload = false,
 }) {
   return (
     <div className="flex flex-wrap items-center justify-end gap-3">
@@ -38,19 +40,22 @@ function ReportActions({
       >
         View
       </button>
-      <button
-        type="button"
-        className={primaryBtnClass}
-        disabled={disabled || isDownloading}
-        onClick={onDownload}
-      >
-        {isDownloading ? "Downloading..." : "Download"}
-      </button>
+      {canDownload ? (
+        <button
+          type="button"
+          className={primaryBtnClass}
+          disabled={disabled || isDownloading}
+          onClick={onDownload}
+        >
+          {isDownloading ? "Downloading..." : "Download"}
+        </button>
+      ) : null}
     </div>
   );
 }
 
 function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) {
+  const { canDownload } = useModulePermission("survey");
   const [supplierOptions, setSupplierOptions] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
@@ -130,6 +135,8 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) 
   };
 
   const handleDownloadReport = async (reportType, { supplierId } = {}) => {
+    if (!canDownload) return;
+
     const resolvedProjectId = String(projectId ?? "").trim();
     if (!resolvedProjectId) {
       toastApiInfo({ message: "Project id is missing. Unable to download report." });
@@ -167,6 +174,7 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) 
             onView={() => handleViewReport(PROJECT_REPORT_TYPES.PROJECT)}
             onDownload={() => handleDownloadReport(PROJECT_REPORT_TYPES.PROJECT)}
             isDownloading={downloadingType === PROJECT_REPORT_TYPES.PROJECT}
+            canDownload={canDownload}
           />
         }
       />
@@ -179,6 +187,7 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) 
             onView={() => handleViewReport(PROJECT_REPORT_TYPES.PRESCREEN)}
             onDownload={() => handleDownloadReport(PROJECT_REPORT_TYPES.PRESCREEN)}
             isDownloading={downloadingType === PROJECT_REPORT_TYPES.PRESCREEN}
+            canDownload={canDownload}
           />
         }
       />
@@ -215,6 +224,7 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) 
               })
             }
             isDownloading={downloadingType === PROJECT_REPORT_TYPES.SUPPLIER}
+            canDownload={canDownload}
           />
         </div>
       </ReportSection>

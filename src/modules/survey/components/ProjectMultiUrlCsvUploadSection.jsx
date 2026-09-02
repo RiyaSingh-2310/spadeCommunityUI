@@ -84,6 +84,7 @@ function ProjectMultiUrlCsvUploadSection({
   projectUrlId = "",
   isDarkMode,
   canWrite = false,
+  canDownload = false,
   showContextFields = true,
   showUploadControls = true,
   showRecordsTable = true,
@@ -101,6 +102,7 @@ function ProjectMultiUrlCsvUploadSection({
   const fileInputRef = useRef(null);
   const resolvedProjectId = String(projectId ?? "").trim();
   const resolvedProjectUrlId = String(projectUrlId ?? "").trim();
+  const allowDownload = Boolean(canDownload);
 
   const [rows, setRows] = useState([]);
   const [isLoadingRows, setIsLoadingRows] = useState(false);
@@ -304,7 +306,7 @@ function ProjectMultiUrlCsvUploadSection({
   };
 
   const handleDownloadTemplate = async () => {
-    if (isDownloadingTemplate) return;
+    if (!allowDownload || isDownloadingTemplate) return;
     setIsDownloadingTemplate(true);
     try {
       await downloadProjectMultiUrlCsvTemplate();
@@ -370,19 +372,21 @@ function ProjectMultiUrlCsvUploadSection({
           disabled={!canWrite || isUploading}
           onChange={handleFilesSelected}
         />
-        <button
-          type="button"
-          className={`${secondaryBtnClass} inline-flex items-center justify-center gap-2`}
-          onClick={handleDownloadTemplate}
-          disabled={isDownloadingTemplate || isUploading}
-        >
-          {isDownloadingTemplate ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <Download size={16} />
-          )}
-          {isDownloadingTemplate ? "Downloading..." : "Download CSV Template"}
-        </button>
+        {allowDownload ? (
+          <button
+            type="button"
+            className={`${secondaryBtnClass} inline-flex items-center justify-center gap-2`}
+            onClick={handleDownloadTemplate}
+            disabled={isDownloadingTemplate || isUploading}
+          >
+            {isDownloadingTemplate ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Download size={16} />
+            )}
+            {isDownloadingTemplate ? "Downloading..." : "Download CSV Template"}
+          </button>
+        ) : null}
         {!deferUpload ? (
           <button
             type="button"

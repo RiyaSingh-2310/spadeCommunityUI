@@ -10,11 +10,11 @@ import {
   getPermissionGroups,
 } from "./permissionTree";
 
-/** @typedef {{ canRead: boolean, canWrite: boolean }} PermissionFlags */
+/** @typedef {{ canRead: boolean, canWrite: boolean, canDownload: boolean }} PermissionFlags */
 /** @typedef {Record<string, PermissionFlags>} PermissionsMap */
 
 export function createEmptyModulePermission() {
-  return { canRead: false, canWrite: false };
+  return { canRead: false, canWrite: false, canDownload: false };
 }
 
 export function createDefaultPermissions() {
@@ -26,7 +26,7 @@ export function createDefaultPermissions() {
 
 export function createFullPermissions() {
   return PERMISSION_MODULE_KEYS.reduce((acc, key) => {
-    acc[key] = { canRead: true, canWrite: true };
+    acc[key] = { canRead: true, canWrite: true, canDownload: true };
     return acc;
   }, /** @type {PermissionsMap} */ ({}));
 }
@@ -57,11 +57,24 @@ const WRITE_ACTION_TOKENS = new Set([
   "all",
   "manage",
 ]);
-const READ_ACTION_TOKENS = new Set(["read", "view", "get", "list", ...WRITE_ACTION_TOKENS]);
+const DOWNLOAD_ACTION_TOKENS = new Set([
+  "download",
+  "export",
+  "csv",
+  "full",
+  "all",
+]);
+const READ_ACTION_TOKENS = new Set([
+  "read",
+  "view",
+  "get",
+  "list",
+  ...WRITE_ACTION_TOKENS,
+]);
 
 function parsePermissionEntry(entry) {
   if (entry === true || entry === 1 || entry === "1" || entry === "true") {
-    return { canRead: true, canWrite: true };
+    return { canRead: true, canWrite: true, canDownload: true };
   }
   if (
     entry === false ||
@@ -77,16 +90,18 @@ function parsePermissionEntry(entry) {
     const token = entry.toLowerCase().trim();
     if (!token) return createEmptyModulePermission();
     const canWrite = WRITE_ACTION_TOKENS.has(token);
+    const canDownload = DOWNLOAD_ACTION_TOKENS.has(token);
     const canRead = READ_ACTION_TOKENS.has(token) || canWrite;
-    return { canRead, canWrite };
+    return { canRead, canWrite, canDownload };
   }
 
   if (Array.isArray(entry)) {
     const tokens = entry.map((value) => String(value ?? "").toLowerCase().trim());
     const canWrite = tokens.some((token) => WRITE_ACTION_TOKENS.has(token));
+    const canDownload = tokens.some((token) => DOWNLOAD_ACTION_TOKENS.has(token));
     const canRead =
       canWrite || tokens.some((token) => READ_ACTION_TOKENS.has(token));
-    return { canRead, canWrite };
+    return { canRead, canWrite, canDownload };
   }
 
   if (typeof entry !== "object") {
@@ -116,10 +131,23 @@ function parsePermissionEntry(entry) {
   const explicitWrite = parseBooleanFlag(
     entry.canWrite ?? entry.write ?? entry.can_write ?? entry.CanWrite
   );
+  const explicitDownload = parseBooleanFlag(
+    entry.csv_download ??
+      entry.csvDownload ??
+      entry.canDownload ??
+      entry.download ??
+      entry.can_download ??
+      entry.CanDownload ??
+      entry.export ??
+      entry.canExport ??
+      entry.can_export
+  );
 
   const canWrite = explicitWrite || add || edit || del;
   const canRead = canWrite || explicitRead || view;
-  return { canRead, canWrite };
+  // Download is independent — never inferred from write/read.
+  const canDownload = explicitDownload;
+  return { canRead, canWrite, canDownload };
 }
 
 function looksLikePermissionObject(value) {
@@ -127,17 +155,46 @@ function looksLikePermissionObject(value) {
   return (
     "canRead" in value ||
     "canWrite" in value ||
+    "canDownload" in value ||
+    "csv_download" in value ||
+    "csvDownload" in value ||
     "read" in value ||
     "write" in value ||
+    "download" in value ||
     "can_read" in value ||
     "can_write" in value ||
+    "can_download" in value ||
     "view" in value ||
     "add" in value ||
     "edit" in value ||
     "delete" in value ||
     "create" in value ||
-    "update" in value
+    "update" in value ||
+    "export" in value ||
+    "canExport" in value
   );
+}
+
+/** Frontend module key → backend permission module name (checkPermission). */
+export const FRONTEND_TO_API_MODULE_NAME = {
+  users: "Admin",
+  clients: "Client",
+  partners: "Partners",
+  project_managers: "ProjectManager",
+  sales_manager: "SalesManager",
+  prescreen: "QuestionLibrary",
+  prescreen_group: "QuestionnaireGroup",
+};
+
+export function toApiPermissionModuleName(moduleKey) {
+  const key = String(moduleKey ?? "").trim();
+  if (!key) return "";
+  if (FRONTEND_TO_API_MODULE_NAME[key]) return FRONTEND_TO_API_MODULE_NAME[key];
+  return key
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join("");
 }
 
 function looksLikePermissionFlags(value) {
@@ -514,31 +571,58 @@ export function permissionsEqual(a, b) {
   return PERMISSION_MODULE_KEYS.every((key) => {
     const l = left[key] ?? createEmptyModulePermission();
     const r = right[key] ?? createEmptyModulePermission();
-    return l.canRead === r.canRead && l.canWrite === r.canWrite;
+    return (
+      l.canRead === r.canRead &&
+      l.canWrite === r.canWrite &&
+      l.canDownload === r.canDownload
+    );
   });
 }
 
 export function hasAnyPermissionGrant(permissions) {
   const normalized = normalizePermissions(permissions);
   return PERMISSION_MODULE_KEYS.some(
-    (key) => normalized[key]?.canRead || normalized[key]?.canWrite
+    (key) =>
+      normalized[key]?.canRead ||
+      normalized[key]?.canWrite ||
+      normalized[key]?.canDownload
   );
 }
 
 /**
- * @param {PermissionsMap} permissions
- */
-/**
- * API payload: only real module keys (never UI parent keys like survey_parent).
+ * API payload as backend array format:
+ * [{ module: "ProjectManager", read, write, csv_download }, ...]
+ * Also keeps snake_case object map for older readers.
  * @param {PermissionsMap} permissions
  */
 export function buildPermissionsPayload(permissions) {
   const normalized = normalizePermissions(permissions);
-  const payload = PERMISSION_MODULE_KEYS.reduce((acc, key) => {
-    acc[key] = normalized[key] ?? createEmptyModulePermission();
+
+  const asArray = PERMISSION_MODULE_KEYS.map((key) => {
+    const flags = normalized[key] ?? createEmptyModulePermission();
+    return {
+      module: toApiPermissionModuleName(key),
+      read: flags.canRead === true,
+      write: flags.canWrite === true,
+      csv_download: flags.canDownload === true,
+    };
+  });
+
+  const asMap = PERMISSION_MODULE_KEYS.reduce((acc, key) => {
+    const flags = normalized[key] ?? createEmptyModulePermission();
+    acc[key] = {
+      canRead: flags.canRead === true,
+      canWrite: flags.canWrite === true,
+      canDownload: flags.canDownload === true,
+      read: flags.canRead === true,
+      write: flags.canWrite === true,
+      csv_download: flags.canDownload === true,
+    };
     return acc;
-  }, /** @type {PermissionsMap} */ ({}));
-  return { permissions: payload };
+  }, /** @type {Record<string, object>} */ ({}));
+
+  // Backend Permission.getByAdmin prefers an array of { module, read, write, csv_download }.
+  return { permissions: asArray, permissionsMap: asMap };
 }
 
 /**
@@ -552,14 +636,14 @@ export function stripUiParentPermissionKeys(permissions) {
   return next;
 }
 
-/** Group ids that should expand because a child module has Read/Write access. */
+/** Group ids that should expand because a child module has any assigned access. */
 export function deriveExpandedPermissionGroupIds(permissions) {
   const expanded = new Set();
 
   for (const node of getPermissionGroups()) {
     const hasGrant = node.children.some((child) => {
       const flags = permissions?.[child.key];
-      return flags?.canRead || flags?.canWrite;
+      return flags?.canRead || flags?.canWrite || flags?.canDownload;
     });
     if (hasGrant) expanded.add(node.id);
   }
@@ -571,7 +655,7 @@ export function deriveExpandedPermissionGroupIds(permissions) {
  * Child → parent indicator rules (parent row reflects children only).
  * parent.read  = any child has Read OR any child has Write
  * parent.write = any child has Write
- * Parent is cleared only when every child has no Read and no Write.
+ * parent.download = any child has Download
  *
  * @param {PermissionsMap} permissions
  * @param {string[]} childKeys
@@ -579,16 +663,19 @@ export function deriveExpandedPermissionGroupIds(permissions) {
 export function computeAggregatedParentFlags(permissions, childKeys) {
   let anyWrite = false;
   let anyRead = false;
+  let anyDownload = false;
 
   for (const key of childKeys) {
     const flags = { ...createEmptyModulePermission(), ...permissions[key] };
     if (flags.canWrite) anyWrite = true;
     if (flags.canRead) anyRead = true;
+    if (flags.canDownload) anyDownload = true;
   }
 
   return {
     canRead: anyRead || anyWrite,
     canWrite: anyWrite,
+    canDownload: anyDownload,
   };
 }
 
@@ -615,9 +702,10 @@ export function syncAllParentsFromChildren(
       if (
         preserveExplicitApiParents &&
         apiParentKey === "notifications" &&
-        (existing.canRead || existing.canWrite) &&
+        (existing.canRead || existing.canWrite || existing.canDownload) &&
         !aggregated.canRead &&
-        !aggregated.canWrite
+        !aggregated.canWrite &&
+        !aggregated.canDownload
       ) {
         next[apiParentKey] = existing;
       } else {
@@ -638,11 +726,13 @@ function applyModulePermission(permissions, moduleKey, type, checked) {
     if (!checked) {
       current.canWrite = false;
     }
-  } else {
+  } else if (type === "canWrite") {
     current.canWrite = checked;
     if (checked) {
       current.canRead = true;
     }
+  } else if (type === "canDownload") {
+    current.canDownload = checked;
   }
 
   next[moduleKey] = current;
@@ -655,7 +745,7 @@ function applyModulePermission(permissions, moduleKey, type, checked) {
  *
  * @param {PermissionsMap} permissions
  * @param {string} moduleKey
- * @param {"canRead" | "canWrite"} type
+ * @param {"canRead" | "canWrite" | "canDownload"} type
  * @param {boolean} checked
  */
 export function setModulePermission(permissions, moduleKey, type, checked) {
@@ -674,7 +764,7 @@ export const setChildModulePermission = setModulePermission;
  * @param {PermissionsMap} permissions
  * @param {string | undefined} parentKey
  * @param {string[]} childKeys
- * @param {"canRead" | "canWrite"} type
+ * @param {"canRead" | "canWrite" | "canDownload"} type
  * @param {boolean} checked
  */
 export function setParentGroupPermission(
@@ -698,7 +788,7 @@ export function setParentGroupPermission(
  * @param {PermissionsMap} permissions
  * @param {string | undefined} parentKey
  * @param {string[]} childKeys
- * @param {"canRead" | "canWrite"} type
+ * @param {"canRead" | "canWrite" | "canDownload"} type
  */
 export function getParentRowPermission(permissions, parentKey, childKeys, type) {
   if (!parentKey || childKeys.length === 0) return false;
@@ -708,7 +798,7 @@ export function getParentRowPermission(permissions, parentKey, childKeys, type) 
 
 /**
  * @param {PermissionsMap} permissions
- * @param {"canRead" | "canWrite"} type
+ * @param {"canRead" | "canWrite" | "canDownload"} type
  * @param {boolean} checked
  */
 export function setAllPermissions(permissions, type, checked) {
@@ -721,7 +811,7 @@ export function setAllPermissions(permissions, type, checked) {
 
 /**
  * @param {PermissionsMap} permissions
- * @param {"canRead" | "canWrite"} type
+ * @param {"canRead" | "canWrite" | "canDownload"} type
  */
 export function areAllPermissionsSelected(permissions, type) {
   return PERMISSION_MODULE_KEYS.every((key) => permissions[key]?.[type] === true);
@@ -729,7 +819,11 @@ export function areAllPermissionsSelected(permissions, type) {
 
 function moduleHasGrant(permissions, key) {
   const flags = permissions?.[key];
-  return flags?.canRead === true || flags?.canWrite === true;
+  return (
+    flags?.canRead === true ||
+    flags?.canWrite === true ||
+    flags?.canDownload === true
+  );
 }
 
 function resolveModuleFlags(permissions, moduleKey) {
@@ -777,6 +871,19 @@ export function canWriteModule(permissions, moduleKey, _options = {}) {
     ...resolveModuleFlags(permissions, moduleKey),
   };
   return flags.canWrite === true;
+}
+
+/**
+ * Download/export access is independent from Read and Write.
+ * @param {PermissionsMap | null | undefined} permissions
+ * @param {string} moduleKey
+ */
+export function canDownloadModule(permissions, moduleKey, _options = {}) {
+  const flags = {
+    ...createEmptyModulePermission(),
+    ...resolveModuleFlags(permissions, moduleKey),
+  };
+  return flags.canDownload === true;
 }
 
 /** @deprecated Use canReadModule — supports legacy read flag */

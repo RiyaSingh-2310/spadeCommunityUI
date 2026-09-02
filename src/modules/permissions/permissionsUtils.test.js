@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { SIDEBAR_NAV_ITEMS } from "../../config/sidebarNavConfig";
 import {
+  buildPermissionsPayload,
   canAccessAnyModule,
   canAccessRewardManagement,
+  canDownloadModule,
   canOpenMessagesPage,
   canReadModule,
   canWriteModule,
   createDefaultPermissions,
   normalizePermissions,
+  setModulePermission,
 } from "./permissionsUtils";
 import {
   getModuleListingReadMode,
@@ -180,5 +183,68 @@ describe("nested parent menus", () => {
     expect(projectGroup?.children).toEqual(["Projects"]);
     expect(visible.some((item) => item.label === "Reward Management")).toBe(false);
     expect(visible.some((item) => item.label === "User Management")).toBe(false);
+  });
+});
+
+describe("download permission", () => {
+  it("is independent from read and write", () => {
+    let permissions = createDefaultPermissions();
+    permissions = setModulePermission(permissions, "clients", "canDownload", true);
+
+    expect(canDownloadModule(permissions, "clients")).toBe(true);
+    expect(canReadModule(permissions, "clients")).toBe(false);
+    expect(canWriteModule(permissions, "clients")).toBe(false);
+
+    permissions = setModulePermission(permissions, "clients", "canWrite", true);
+    expect(canWriteModule(permissions, "clients")).toBe(true);
+    expect(canReadModule(permissions, "clients")).toBe(true);
+    expect(canDownloadModule(permissions, "clients")).toBe(true);
+
+    permissions = setModulePermission(permissions, "clients", "canRead", false);
+    expect(canWriteModule(permissions, "clients")).toBe(false);
+    expect(canDownloadModule(permissions, "clients")).toBe(true);
+  });
+
+  it("normalizes csv_download from API array format", () => {
+    const permissions = normalizePermissions([
+      {
+        module: "ProjectManager",
+        read: true,
+        write: false,
+        csv_download: true,
+      },
+      {
+        module: "SalesManager",
+        read: true,
+        write: false,
+        csv_download: false,
+      },
+    ]);
+
+    expect(canReadModule(permissions, "project_managers")).toBe(true);
+    expect(canWriteModule(permissions, "project_managers")).toBe(false);
+    expect(canDownloadModule(permissions, "project_managers")).toBe(true);
+    expect(canDownloadModule(permissions, "sales_manager")).toBe(false);
+  });
+
+  it("builds API payload with csv_download module entries", () => {
+    let permissions = createDefaultPermissions();
+    permissions = setModulePermission(permissions, "project_managers", "canRead", true);
+    permissions = setModulePermission(
+      permissions,
+      "project_managers",
+      "canDownload",
+      true
+    );
+
+    const { permissions: payload } = buildPermissionsPayload(permissions);
+    expect(Array.isArray(payload)).toBe(true);
+    const projectManager = payload.find((entry) => entry.module === "ProjectManager");
+    expect(projectManager).toEqual({
+      module: "ProjectManager",
+      read: true,
+      write: false,
+      csv_download: true,
+    });
   });
 });

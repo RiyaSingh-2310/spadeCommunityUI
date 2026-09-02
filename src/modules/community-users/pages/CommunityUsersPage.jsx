@@ -37,7 +37,7 @@ const DEFAULT_FILTERS = {
 
 function CommunityUsersPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const { canWrite } = useModulePermission("community_users");
+  const { canWrite, canDownload } = useModulePermission("community_users");
   useFlashMessage();
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
@@ -191,9 +191,9 @@ function CommunityUsersPage({ isDarkMode }) {
   }, [selectedRowIds, isResending, refresh]);
 
   const handleBulkDownloadRequest = useCallback(() => {
-    if (selectedRowIds.size === 0) return;
+    if (!canDownload || selectedRowIds.size === 0) return;
     setBulkDownloadOpen(true);
-  }, [selectedRowIds]);
+  }, [canDownload, selectedRowIds]);
 
   const handleBulkDownloadCancel = useCallback(() => {
     if (isDownloading) return;
@@ -201,7 +201,7 @@ function CommunityUsersPage({ isDarkMode }) {
   }, [isDownloading]);
 
   const handleBulkDownloadConfirm = useCallback(async () => {
-    if (selectedRowIds.size === 0 || isDownloading) return;
+    if (!canDownload || selectedRowIds.size === 0 || isDownloading) return;
 
     setIsDownloading(true);
     try {
@@ -214,11 +214,11 @@ function CommunityUsersPage({ isDarkMode }) {
     } finally {
       setIsDownloading(false);
     }
-  }, [selectedRowIds, isDownloading]);
+  }, [canDownload, selectedRowIds, isDownloading]);
 
   const handleRowDownload = useCallback(
     async (row) => {
-      if (!row?.id || isDownloading) return;
+      if (!canDownload || !row?.id || isDownloading) return;
 
       setIsDownloading(true);
       try {
@@ -231,7 +231,7 @@ function CommunityUsersPage({ isDarkMode }) {
         setIsDownloading(false);
       }
     },
-    [isDownloading]
+    [canDownload, isDownloading]
   );
 
   const handleResendEmail = useCallback(
@@ -306,7 +306,7 @@ function CommunityUsersPage({ isDarkMode }) {
           navigate(`/community-users/${encodeURIComponent(String(row.id))}/reward-log`)
         }
         onResendEmail={handleResendEmail}
-        onDownload={handleRowDownload}
+        onDownload={canDownload ? handleRowDownload : undefined}
         onStatusToggle={handleStatusToggle}
         onSearch={handleSearch}
         totalRecords={totalRecords}
@@ -319,7 +319,7 @@ function CommunityUsersPage({ isDarkMode }) {
         showPagination
         nowrapAllCells
         nameAsText
-        selectable={canWrite}
+        selectable={canWrite || canDownload}
         hideSelectAllCheckbox
         selectedRowIds={selectedRowIds}
         onSelectedRowIdsChange={setSelectedRowIds}
@@ -343,6 +343,7 @@ function CommunityUsersPage({ isDarkMode }) {
             isResending={isResending}
             isDownloading={isDownloading}
             canWrite={canWrite}
+            canDownload={canDownload}
           />
         )}
         renderExpandedContent={(row) => <CommunityUserExpandableDetails row={row} />}
