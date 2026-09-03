@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
+import AdminPasswordInput from "../../../components/admin/AdminPasswordInput";
 import NumericInput from "../../../components/admin/NumericInput";
 import CountrySelect from "../../../components/admin/CountrySelect";
 import PhoneInput from "../../../components/admin/PhoneInput";
@@ -99,7 +100,6 @@ function AddPartnerPage({ isDarkMode }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
-  const [showSecret, setShowSecret] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -467,24 +467,14 @@ function AddPartnerPage({ isDarkMode }) {
             </div>
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">API Secret Key</label>
-              <div className="relative">
-                <input
-                  type={showSecret ? "text" : "password"}
-                  className={`${inputClass} pr-10`}
-                  placeholder="Enter API Secret Key"
-                  value={form.apiSecretKey}
-                  onChange={(e) => setField("apiSecretKey", e.target.value)}
-                  disabled={controlDisabled}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSecret((prev) => !prev)}
-                  className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
-                  disabled={controlDisabled}
-                >
-                  {showSecret ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
+              <AdminPasswordInput
+                placeholder="Enter API Secret Key"
+                value={form.apiSecretKey}
+                autoComplete="off"
+                aria-label="API Secret Key"
+                onChange={(e) => setField("apiSecretKey", e.target.value)}
+                disabled={controlDisabled}
+              />
             </div>
             <div className="md:col-span-2">
               <label className="admin-text mb-2 block text-sm font-semibold">API Body</label>

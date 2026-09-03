@@ -9,6 +9,7 @@ import {
   canReadModule,
   canWriteModule,
   createDefaultPermissions,
+  hasPermission,
   normalizePermissions,
   setModulePermission,
 } from "./permissionsUtils";
@@ -245,6 +246,53 @@ describe("download permission", () => {
       read: true,
       write: false,
       csv_download: true,
+    });
+  });
+
+  it("hasPermission normalizes module names and action aliases", () => {
+    let permissions = createDefaultPermissions();
+    permissions = setModulePermission(permissions, "clients", "canRead", true);
+    permissions = setModulePermission(permissions, "clients", "canWrite", true);
+    permissions = setModulePermission(permissions, "clients", "canDownload", true);
+    permissions = setModulePermission(permissions, "partners", "canRead", true);
+    permissions = setModulePermission(permissions, "partners", "canWrite", true);
+
+    expect(hasPermission(permissions, "Client", "read")).toBe(true);
+    expect(hasPermission(permissions, "CLIENT", "write")).toBe(true);
+    expect(hasPermission(permissions, "clients", "csv_download")).toBe(true);
+    expect(hasPermission(permissions, "Partners", "csv_download")).toBe(false);
+    expect(hasPermission(permissions, "Admin", "csv_download")).toBe(false);
+  });
+
+  it("sends csv_download with read and write when all three are selected", () => {
+    let permissions = createDefaultPermissions();
+    permissions = setModulePermission(permissions, "clients", "canRead", true);
+    permissions = setModulePermission(permissions, "clients", "canWrite", true);
+    permissions = setModulePermission(permissions, "clients", "canDownload", true);
+    permissions = setModulePermission(permissions, "partners", "canRead", true);
+    permissions = setModulePermission(permissions, "partners", "canWrite", true);
+    permissions = setModulePermission(permissions, "partners", "canDownload", true);
+    permissions = setModulePermission(permissions, "project_managers", "canRead", true);
+    permissions = setModulePermission(permissions, "project_managers", "canWrite", true);
+
+    const { permissions: payload } = buildPermissionsPayload(permissions);
+    expect(payload.find((entry) => entry.module === "Client")).toEqual({
+      module: "Client",
+      read: true,
+      write: true,
+      csv_download: true,
+    });
+    expect(payload.find((entry) => entry.module === "Partners")).toEqual({
+      module: "Partners",
+      read: true,
+      write: true,
+      csv_download: true,
+    });
+    expect(payload.find((entry) => entry.module === "ProjectManager")).toEqual({
+      module: "ProjectManager",
+      read: true,
+      write: true,
+      csv_download: false,
     });
   });
 });

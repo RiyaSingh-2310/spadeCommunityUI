@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../components/admin/AdminPageHeader";
+import AdminPasswordInput from "../../components/admin/AdminPasswordInput";
 import CountrySelect from "../../components/admin/CountrySelect";
 import PhoneInput from "../../components/admin/PhoneInput";
 import TableCard from "../../components/admin/TableCard";
@@ -74,7 +75,6 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
   const [loadFailed, setLoadFailed] = useState(false);
   const [initialSnapshot, setInitialSnapshot] = useState(null);
-  const [showSecret, setShowSecret] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { readOnly, showSubmit, controlDisabled, canSubmitForm, fieldDisabled } =
     useAdminFormAccess(isSubmitting);
@@ -389,22 +389,13 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
             ))}
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">API Secret Key</label>
-              <div className="relative">
-                <input
-                  type={showSecret ? "text" : "password"}
-                  className={`${inputClass} pr-10`}
-                  placeholder="Enter API Secret Key"
-                  value={form.apiSecretKey}
-                  onChange={(e) => setField("apiSecretKey", e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSecret((prev) => !prev)}
-                  className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
-                >
-                  {showSecret ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
+              <AdminPasswordInput
+                placeholder="Enter API Secret Key"
+                value={form.apiSecretKey}
+                autoComplete="off"
+                aria-label="API Secret Key"
+                onChange={(e) => setField("apiSecretKey", e.target.value)}
+              />
             </div>
           </div>
         </TableCard>

@@ -1,26 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../components/admin/AdminPageHeader";
+import AdminPasswordInput from "../../components/admin/AdminPasswordInput";
 import FormField from "../../components/admin/FormField";
 import FormStatusSelect from "../../components/admin/FormStatusSelect";
 import ProfileImageUpload from "../../components/admin/ProfileImageUpload";
 import TableCard from "../../components/admin/TableCard";
 import UserPermissionActionBar from "../../components/admin/UserPermissionActionBar";
 import UserPermissionsTable from "../../components/admin/UserPermissionsTable";
-import { toastApiError, toastApiSuccess } from "../../services/toast/apiToast";
+import { toastApiError } from "../../services/toast/apiToast";
 import {
   createDefaultPermissions,
   permissionsEqual,
   resolvePermissionsFromRecord,
 } from "../../modules/permissions/permissionsUtils";
-import {
-  createEmptyDownloadSelections,
-  exportSelectedModulesCsv,
-  getSelectedDownloadModuleKeys,
-  hasAnyDownloadSelection,
-  permissionsForPersist,
-} from "../../modules/permissions/temporaryDownloadSelections";
 import {
   createUser,
   formStatusToApiStatus,
@@ -71,23 +65,13 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
   const [preview, setPreview] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [existingImage, setExistingImage] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
   const [loadFailed, setLoadFailed] = useState(false);
   const [initialSnapshot, setInitialSnapshot] = useState(null);
-  const [downloadSelections, setDownloadSelections] = useState(
-    createEmptyDownloadSelections
-  );
-  const [isDownloadingCsv, setIsDownloadingCsv] = useState(false);
 
   const { readOnly, showSubmit } = useFormAccess();
   const inputClass = getAdminInputClass();
-  const canDownloadCsv = useMemo(
-    () => isEdit && hasAnyDownloadSelection(downloadSelections),
-    [isEdit, downloadSelections]
-  );
 
   const errors = useMemo(
     () => ({
@@ -120,23 +104,18 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
       setImageFile(null);
       setExistingImage("");
       setInitialSnapshot(null);
-      setDownloadSelections(createEmptyDownloadSelections());
       setIsLoadingRecord(true);
       setLoadFailed(false);
       try {
         const admin = await getRecord(id);
         if (cancelled) return;
         const mapped = mapAdminToForm(admin);
-        // Persistable Read/Write only — Download checkboxes always start unchecked.
-        const normalizedPermissions = permissionsForPersist(
-          resolvePermissionsFromRecord(admin)
-        );
+        const normalizedPermissions = resolvePermissionsFromRecord(admin);
         setForm({
           ...mapped,
           permissions: normalizedPermissions,
         });
         setExistingImage(resolveProfileImageUrl(admin) ?? "");
-        setDownloadSelections(createEmptyDownloadSelections());
         setInitialSnapshot({
           name: mapped.name.trim(),
           status: mapped.status,
@@ -182,24 +161,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
     (!isEdit || isClean);
 
   const handleCancel = () => {
-    setDownloadSelections(createEmptyDownloadSelections());
     navigate("/users");
-  };
-
-  const handleDownloadCsv = async () => {
-    if (!isEdit || !canDownloadCsv || isDownloadingCsv || isSubmitting) return;
-
-    const selectedKeys = getSelectedDownloadModuleKeys(downloadSelections);
-    setIsDownloadingCsv(true);
-    try {
-      const result = await exportSelectedModulesCsv(selectedKeys);
-      toastApiSuccess(result);
-      setDownloadSelections(createEmptyDownloadSelections());
-    } catch (error) {
-      toastApiError(error);
-    } finally {
-      setIsDownloadingCsv(false);
-    }
   };
 
   const onSubmit = async (event) => {
@@ -208,7 +170,7 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
 
     setIsSubmitting(true);
     try {
-      const permissionsPayload = permissionsForPersist(form.permissions);
+      const permissionsPayload = form.permissions;
 
       if (isEdit) {
         const data = await updateRecord(id, {
@@ -353,65 +315,45 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
                 required={!isEdit}
                 error={showError("password")}
               >
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder={isEdit ? "Enter New Password" : "Enter Password"}
-                    className={`${inputClass} pr-10`}
-                    value={form.password}
-                    maxLength={PASSWORD_FIELD_MAX_LENGTH}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        password: limitTextInput(e.target.value, PASSWORD_FIELD_MAX_LENGTH),
-                      })
-                    }
-                    onBlur={() => touch("password")}
-                    disabled={fieldDisabled(readOnly, isSubmitting)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
-                    disabled={fieldDisabled(readOnly, isSubmitting)}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
+                <AdminPasswordInput
+                  placeholder={isEdit ? "Enter New Password" : "Enter Password"}
+                  value={form.password}
+                  maxLength={PASSWORD_FIELD_MAX_LENGTH}
+                  autoComplete="new-password"
+                  aria-label={isEdit ? "New Password" : "Password"}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      password: limitTextInput(e.target.value, PASSWORD_FIELD_MAX_LENGTH),
+                    })
+                  }
+                  onBlur={() => touch("password")}
+                  disabled={fieldDisabled(readOnly, isSubmitting)}
+                />
               </FormField>
               <FormField
                 label={isEdit ? "Confirm New Password" : "Confirm Password"}
                 required={!isEdit}
                 error={showError("confirmPassword")}
               >
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder={isEdit ? "Confirm New Password" : "Confirm Password"}
-                    className={`${inputClass} pr-10`}
-                    value={form.confirmPassword}
-                    maxLength={PASSWORD_FIELD_MAX_LENGTH}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        confirmPassword: limitTextInput(
-                          e.target.value,
-                          PASSWORD_FIELD_MAX_LENGTH
-                        ),
-                      })
-                    }
-                    onBlur={() => touch("confirmPassword")}
-                    disabled={fieldDisabled(readOnly, isSubmitting)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword((prev) => !prev)}
-                    className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
-                    disabled={fieldDisabled(readOnly, isSubmitting)}
-                  >
-                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
+                <AdminPasswordInput
+                  placeholder={isEdit ? "Confirm New Password" : "Confirm Password"}
+                  value={form.confirmPassword}
+                  maxLength={PASSWORD_FIELD_MAX_LENGTH}
+                  autoComplete="new-password"
+                  aria-label={isEdit ? "Confirm New Password" : "Confirm Password"}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      confirmPassword: limitTextInput(
+                        e.target.value,
+                        PASSWORD_FIELD_MAX_LENGTH
+                      ),
+                    })
+                  }
+                  onBlur={() => touch("confirmPassword")}
+                  disabled={fieldDisabled(readOnly, isSubmitting)}
+                />
               </FormField>
               {!isEdit && (
                 <FormStatusSelect
@@ -429,24 +371,17 @@ function UserFormPage({ isDarkMode, mode = "add" }) {
             permissions={form.permissions}
             permissionsInitKey={isEdit && initialSnapshot ? id : null}
             onChange={(permissions) => setForm((prev) => ({ ...prev, permissions }))}
-            disabled={fieldDisabled(readOnly, isSubmitting || isDownloadingCsv)}
-            showDownload={isEdit}
-            downloadSelections={downloadSelections}
-            onDownloadSelectionsChange={setDownloadSelections}
+            disabled={fieldDisabled(readOnly, isSubmitting)}
           />
         </TableCard>
 
         {isEdit ? (
           <UserPermissionActionBar
-            showDownloadCsv
-            canDownloadCsv={canDownloadCsv}
-            isDownloadingCsv={isDownloadingCsv}
             isSubmitting={isSubmitting}
             canSubmit={Boolean(showSubmit && canSubmit)}
             submitLabel="Update"
             submittingLabel="Updating..."
             onCancel={handleCancel}
-            onDownloadCsv={handleDownloadCsv}
             disableCancel={fieldDisabled(readOnly, false)}
           />
         ) : (

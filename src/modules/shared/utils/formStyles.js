@@ -1,5 +1,8 @@
+/** Shared Admin form control radius — keep in sync with `--admin-input-radius`. */
+export const ADMIN_INPUT_RADIUS_CLASS = "rounded-[var(--admin-input-radius)]";
+
 const ADMIN_INPUT_BASE =
-  "admin-input h-11 w-full rounded-xl border px-3 text-sm outline-none transition border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)] disabled:cursor-not-allowed disabled:opacity-60";
+  `admin-input h-11 w-full ${ADMIN_INPUT_RADIUS_CLASS} border px-3 text-sm outline-none transition border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] text-[var(--admin-foreground)] placeholder:text-[var(--admin-subtle-foreground)] disabled:cursor-not-allowed disabled:opacity-60`;
 
 /** Theme-aware form input styling (matches Partner / Client modules). */
 export function getAdminInputClass() {
@@ -24,9 +27,9 @@ export function getAdminTextareaClass(extraClass = "") {
 /** Theme-aware secondary/cancel button (uses .admin-btn-cancel in index.css). */
 export function getAdminCancelButtonClass(size = "form") {
   if (size === "modal") {
-    return "admin-btn-cancel h-10 cursor-pointer rounded-xl px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
+    return `admin-btn-cancel h-10 cursor-pointer ${ADMIN_INPUT_RADIUS_CLASS} px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50`;
   }
-  return "admin-btn-cancel h-11 cursor-pointer rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
+  return `admin-btn-cancel h-11 cursor-pointer ${ADMIN_INPUT_RADIUS_CLASS} px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50`;
 }
 
 export function getFormActions(navigate, cancelPath, canSubmit) {

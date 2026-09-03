@@ -243,8 +243,14 @@ const MODULE_KEY_ALIASES = {
   panelist: "community_users",
   panelists: "community_users",
   community_user: "community_users",
+  admin: "users",
   admin_user: "users",
   admin_users: "users",
+  client: "clients",
+  question_library: "prescreen",
+  questionlibrary: "prescreen",
+  questionnaire_group: "prescreen_group",
+  questionnairegroup: "prescreen_group",
   logactivity: "log_activity",
   activity_log: "log_activity",
   activitylog: "log_activity",
@@ -884,6 +890,59 @@ export function canDownloadModule(permissions, moduleKey, _options = {}) {
     ...resolveModuleFlags(permissions, moduleKey),
   };
   return flags.canDownload === true;
+}
+
+function normalizePermissionAction(action) {
+  const token = compactLookupToken(action);
+  if (
+    token === "read" ||
+    token === "canread" ||
+    token === "view" ||
+    token === "canview"
+  ) {
+    return "read";
+  }
+  if (
+    token === "write" ||
+    token === "canwrite" ||
+    token === "edit" ||
+    token === "update" ||
+    token === "add" ||
+    token === "create" ||
+    token === "delete"
+  ) {
+    return "write";
+  }
+  if (
+    token === "csvdownload" ||
+    token === "candownload" ||
+    token === "download" ||
+    token === "export" ||
+    token === "canexport"
+  ) {
+    return "csv_download";
+  }
+  return "";
+}
+
+/**
+ * Central permission check. Module names are normalized so
+ * `Client`, `clients`, and `CLIENT` resolve to the same module.
+ *
+ * @param {PermissionsMap | null | undefined} permissions
+ * @param {string} moduleName
+ * @param {"read" | "write" | "csv_download" | string} action
+ */
+export function hasPermission(permissions, moduleName, action) {
+  const moduleKey = resolveModuleKey(moduleName) ?? String(moduleName ?? "").trim();
+  const normalizedAction = normalizePermissionAction(action);
+
+  if (normalizedAction === "read") return canReadModule(permissions, moduleKey);
+  if (normalizedAction === "write") return canWriteModule(permissions, moduleKey);
+  if (normalizedAction === "csv_download") {
+    return canDownloadModule(permissions, moduleKey);
+  }
+  return false;
 }
 
 /** @deprecated Use canReadModule — supports legacy read flag */

@@ -8,8 +8,7 @@ import { getRoutePermissionAccess } from "./routePermissions";
  * @param {string | null} moduleKey
  */
 export function useModulePermission(moduleKey) {
-  const { canRead, canWrite, canDownload, permissions, isSuperAdmin } =
-    usePermissions();
+  const { hasPermission, permissions, isSuperAdmin } = usePermissions();
 
   return useMemo(() => {
     if (!moduleKey) {
@@ -27,9 +26,9 @@ export function useModulePermission(moduleKey) {
       };
     }
 
-    const allowRead = canRead(moduleKey);
-    const allowWrite = canWrite(moduleKey);
-    const allowDownload = canDownload(moduleKey);
+    const allowRead = hasPermission(moduleKey, "read");
+    const allowWrite = hasPermission(moduleKey, "write");
+    const allowDownload = hasPermission(moduleKey, "csv_download");
 
     return {
       moduleKey,
@@ -45,7 +44,7 @@ export function useModulePermission(moduleKey) {
       isSuperAdmin,
       filterColumns: (columns = []) => (Array.isArray(columns) ? columns : []),
     };
-  }, [moduleKey, canRead, canWrite, canDownload, permissions, isSuperAdmin]);
+  }, [moduleKey, hasPermission, permissions, isSuperAdmin]);
 }
 
 /**

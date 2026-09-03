@@ -13,6 +13,7 @@ import {
   canOpenMessagesPage,
   canReadModule,
   canWriteModule,
+  hasPermission as hasModulePermission,
 } from "./permissionsUtils";
 import { hasPathPermissionAccess } from "./routePermissions";
 
@@ -37,6 +38,8 @@ export function PermissionsProvider({ children }) {
     const canRead = (moduleKey) => canReadModule(permissions, moduleKey);
     const canWrite = (moduleKey) => canWriteModule(permissions, moduleKey);
     const canDownload = (moduleKey) => canDownloadModule(permissions, moduleKey);
+    const hasPermission = (moduleName, action) =>
+      hasModulePermission(permissions, moduleName, action);
     const canAccessNavItem = (permissionKeys = []) =>
       canAccessAnyModule(permissions, permissionKeys);
 
@@ -46,6 +49,7 @@ export function PermissionsProvider({ children }) {
       canRead,
       canWrite,
       canDownload,
+      hasPermission,
       canAccessNavItem,
       canShowNotificationBell: true,
       canOpenMessagesPage: canOpenMessagesPage(permissions),

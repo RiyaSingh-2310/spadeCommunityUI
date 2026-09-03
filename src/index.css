@@ -46,6 +46,7 @@ body {
   --admin-header-search-border: #d8e3ef;
   --admin-input-bg: #ffffff;
   --admin-input-border: #d8e3ef;
+  --admin-input-radius: 0.75rem; /* matches Tailwind rounded-xl */
   --admin-input-focus-ring: rgba(16, 169, 80, 0.28);
   --admin-skeleton-bg: #e6edf5;
   --admin-header-surface: #ffffff;
@@ -117,6 +118,7 @@ body {
   --admin-header-search-border: #344662;
   --admin-input-bg: #101a2a;
   --admin-input-border: #344662;
+  --admin-input-radius: 0.75rem; /* matches Tailwind rounded-xl */
   --admin-input-focus-ring: rgba(40, 197, 109, 0.35);
   --admin-skeleton-bg: #263850;
   --admin-header-surface: #121d2f;
@@ -470,6 +472,11 @@ body {
   font-weight: 600;
 }
 
+/* Shared form-control shape — keeps text/password/select/textarea corners consistent. */
+.admin-shell .admin-input {
+  border-radius: var(--admin-input-radius);
+}
+
 .admin-shell .admin-input:focus,
 .admin-shell .admin-input:focus-within,
 .admin-shell input:not([type="checkbox"]):not([type="radio"]):not([type="search"]):not(.admin-number-input):focus,
@@ -532,22 +539,36 @@ body {
   outline: none !important;
 }
 
-.admin-input:-webkit-autofill,
-.admin-input:-webkit-autofill:hover,
-.admin-input:-webkit-autofill:focus,
-.admin-input:-webkit-autofill:active {
+/*
+ * Autofill paints an inset fill that can square off corners when radius is
+ * `inherit` from a non-rounded wrapper (common for password + eye-icon fields).
+ * Always pin the shared input radius.
+ */
+.admin-shell .admin-input:-webkit-autofill,
+.admin-shell .admin-input:-webkit-autofill:hover,
+.admin-shell .admin-input:-webkit-autofill:focus,
+.admin-shell .admin-input:-webkit-autofill:active,
+.admin-shell input.admin-input:-webkit-autofill,
+.admin-shell input[type="password"]:-webkit-autofill,
+.admin-shell input[type="password"]:-webkit-autofill:hover,
+.admin-shell input[type="password"]:-webkit-autofill:focus,
+.admin-shell input[type="password"]:-webkit-autofill:active,
+.admin-shell input[type="email"]:-webkit-autofill,
+.admin-shell input[type="text"].admin-input:-webkit-autofill {
   -webkit-text-fill-color: var(--admin-foreground) !important;
   caret-color: var(--admin-foreground);
   box-shadow: 0 0 0 1000px var(--admin-input-bg) inset !important;
   -webkit-box-shadow: 0 0 0 1000px var(--admin-input-bg) inset !important;
-  border-color: var(--admin-input-border);
-  border-radius: inherit;
+  border-color: var(--admin-input-border) !important;
+  border-radius: var(--admin-input-radius) !important;
   transition: background-color 9999s ease-in-out 0s;
 }
 
-.admin-input:-moz-autofill {
+.admin-shell .admin-input:-moz-autofill,
+.admin-shell input[type="password"]:-moz-autofill {
   box-shadow: 0 0 0 1000px var(--admin-input-bg) inset !important;
   -moz-text-fill-color: var(--admin-foreground);
+  border-radius: var(--admin-input-radius) !important;
 }
 
 .admin-avatar-fallback {

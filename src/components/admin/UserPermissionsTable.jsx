@@ -1,11 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { PERMISSION_TREE } from "../../modules/permissions/permissionTree";
-import {
-  areAllDownloadsSelected,
-  createEmptyDownloadSelections,
-  setDownloadSelectionsForKeys,
-} from "../../modules/permissions/temporaryDownloadSelections";
 import {
   areAllPermissionsSelected,
   deriveExpandedPermissionGroupIds,
@@ -14,18 +9,12 @@ import {
   setChildModulePermission,
   setParentGroupPermission,
 } from "../../modules/permissions/permissionsUtils";
-import { PERMISSION_MODULE_KEYS } from "../../modules/permissions/permissionModules";
 
-const BASE_COLUMNS = [
+const PERMISSION_COLUMNS = [
   { type: "canRead", label: "Read", selectAllLabel: "Select All Read" },
   { type: "canWrite", label: "Write", selectAllLabel: "Select All Write" },
+  { type: "canDownload", label: "Download", selectAllLabel: "Select All Download" },
 ];
-
-const DOWNLOAD_COLUMN = {
-  type: "canDownload",
-  label: "Download",
-  selectAllLabel: "Select All Download",
-};
 
 function PermissionCheckboxes({
   label,
@@ -33,9 +22,6 @@ function PermissionCheckboxes({
   permissions,
   disabled,
   onChange,
-  showDownload,
-  downloadSelected,
-  onDownloadToggle,
 }) {
   const flags = permissions[moduleKey] ?? {
     canRead: false,
@@ -43,45 +29,28 @@ function PermissionCheckboxes({
     canDownload: false,
   };
 
-  return (
-    <>
-      {BASE_COLUMNS.map((column) => (
-        <td key={column.type} className="px-4 py-2.5 text-center">
-          <input
-            type="checkbox"
-            className="admin-checkbox"
-            checked={Boolean(flags[column.type])}
-            disabled={disabled}
-            aria-label={`${label} ${column.label.toLowerCase()}`}
-            title={column.label}
-            onChange={(e) =>
-              onChange(
-                setChildModulePermission(
-                  permissions,
-                  moduleKey,
-                  column.type,
-                  e.target.checked
-                )
-              )
-            }
-          />
-        </td>
-      ))}
-      {showDownload ? (
-        <td className="px-4 py-2.5 text-center">
-          <input
-            type="checkbox"
-            className="admin-checkbox"
-            checked={Boolean(downloadSelected)}
-            disabled={disabled}
-            aria-label={`${label} download`}
-            title="Download"
-            onChange={(e) => onDownloadToggle(moduleKey, e.target.checked)}
-          />
-        </td>
-      ) : null}
-    </>
-  );
+  return PERMISSION_COLUMNS.map((column) => (
+    <td key={column.type} className="px-4 py-2.5 text-center">
+      <input
+        type="checkbox"
+        className="admin-checkbox"
+        checked={Boolean(flags[column.type])}
+        disabled={disabled}
+        aria-label={`${label} ${column.label.toLowerCase()}`}
+        title={column.label}
+        onChange={(e) =>
+          onChange(
+            setChildModulePermission(
+              permissions,
+              moduleKey,
+              column.type,
+              e.target.checked
+            )
+          )
+        }
+      />
+    </td>
+  ));
 }
 
 function ParentPermissionCheckboxes({
@@ -91,63 +60,38 @@ function ParentPermissionCheckboxes({
   permissions,
   disabled,
   onChange,
-  showDownload,
-  downloadSelections,
-  onDownloadGroupToggle,
 }) {
-  const parentDownloadChecked = areAllDownloadsSelected(
-    downloadSelections,
-    childKeys
-  );
-
-  return (
-    <>
-      {BASE_COLUMNS.map((column) => {
-        const checked = getParentRowPermission(
-          permissions,
-          parentKey,
-          childKeys,
-          column.type
-        );
-        return (
-          <td key={column.type} className="px-4 py-2.5 text-center">
-            <input
-              type="checkbox"
-              className="admin-checkbox"
-              checked={checked}
-              disabled={disabled}
-              aria-label={`${label} ${column.label.toLowerCase()}`}
-              title={column.label}
-              onChange={(e) =>
-                onChange(
-                  setParentGroupPermission(
-                    permissions,
-                    parentKey,
-                    childKeys,
-                    column.type,
-                    e.target.checked
-                  )
-                )
-              }
-            />
-          </td>
-        );
-      })}
-      {showDownload ? (
-        <td className="px-4 py-2.5 text-center">
-          <input
-            type="checkbox"
-            className="admin-checkbox"
-            checked={parentDownloadChecked}
-            disabled={disabled}
-            aria-label={`${label} download`}
-            title="Download"
-            onChange={(e) => onDownloadGroupToggle(childKeys, e.target.checked)}
-          />
-        </td>
-      ) : null}
-    </>
-  );
+  return PERMISSION_COLUMNS.map((column) => {
+    const checked = getParentRowPermission(
+      permissions,
+      parentKey,
+      childKeys,
+      column.type
+    );
+    return (
+      <td key={column.type} className="px-4 py-2.5 text-center">
+        <input
+          type="checkbox"
+          className="admin-checkbox"
+          checked={checked}
+          disabled={disabled}
+          aria-label={`${label} ${column.label.toLowerCase()}`}
+          title={column.label}
+          onChange={(e) =>
+            onChange(
+              setParentGroupPermission(
+                permissions,
+                parentKey,
+                childKeys,
+                column.type,
+                e.target.checked
+              )
+            )
+          }
+        />
+      </td>
+    );
+  });
 }
 
 /**
@@ -156,9 +100,6 @@ function ParentPermissionCheckboxes({
  *   onChange: (next: object) => void,
  *   disabled?: boolean,
  *   permissionsInitKey?: string | number | null,
- *   showDownload?: boolean,
- *   downloadSelections?: Record<string, boolean>,
- *   onDownloadSelectionsChange?: (next: Record<string, boolean>) => void,
  * }} props
  */
 function UserPermissionsTable({
@@ -166,23 +107,8 @@ function UserPermissionsTable({
   onChange,
   disabled = false,
   permissionsInitKey = null,
-  showDownload = false,
-  downloadSelections,
-  onDownloadSelectionsChange,
 }) {
   const [expandedGroups, setExpandedGroups] = useState(() => new Set());
-  const columns = useMemo(
-    () => (showDownload ? [...BASE_COLUMNS, DOWNLOAD_COLUMN] : BASE_COLUMNS),
-    [showDownload]
-  );
-
-  const resolvedDownloadSelections = useMemo(
-    () => ({
-      ...createEmptyDownloadSelections(),
-      ...(downloadSelections ?? {}),
-    }),
-    [downloadSelections]
-  );
 
   useEffect(() => {
     if (permissionsInitKey == null) return;
@@ -201,31 +127,6 @@ function UserPermissionsTable({
     });
   };
 
-  const handleDownloadToggle = (moduleKey, checked) => {
-    if (!onDownloadSelectionsChange) return;
-    onDownloadSelectionsChange(
-      setDownloadSelectionsForKeys(resolvedDownloadSelections, [moduleKey], checked)
-    );
-  };
-
-  const handleDownloadGroupToggle = (childKeys, checked) => {
-    if (!onDownloadSelectionsChange) return;
-    onDownloadSelectionsChange(
-      setDownloadSelectionsForKeys(resolvedDownloadSelections, childKeys, checked)
-    );
-  };
-
-  const handleSelectAllDownload = (checked) => {
-    if (!onDownloadSelectionsChange) return;
-    onDownloadSelectionsChange(
-      setDownloadSelectionsForKeys(
-        resolvedDownloadSelections,
-        PERMISSION_MODULE_KEYS,
-        checked
-      )
-    );
-  };
-
   const renderModuleLabel = (label) => (
     <span className="admin-text block font-medium">{label}</span>
   );
@@ -239,11 +140,11 @@ function UserPermissionsTable({
               <th className="admin-text px-4 py-3 text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap">
                 Module
               </th>
-              {columns.map((column) => {
-                const allSelected =
-                  column.type === "canDownload"
-                    ? areAllDownloadsSelected(resolvedDownloadSelections)
-                    : areAllPermissionsSelected(permissions, column.type);
+              {PERMISSION_COLUMNS.map((column) => {
+                const allSelected = areAllPermissionsSelected(
+                  permissions,
+                  column.type
+                );
                 return (
                   <th
                     key={column.type}
@@ -255,19 +156,15 @@ function UserPermissionsTable({
                         className="admin-checkbox"
                         checked={allSelected}
                         disabled={disabled}
-                        onChange={(e) => {
-                          if (column.type === "canDownload") {
-                            handleSelectAllDownload(e.target.checked);
-                            return;
-                          }
+                        onChange={(e) =>
                           onChange(
                             setAllPermissions(
                               permissions,
                               column.type,
                               e.target.checked
                             )
-                          );
-                        }}
+                          )
+                        }
                       />
                       <span className="admin-text-muted">{column.selectAllLabel}</span>
                     </label>
@@ -279,7 +176,7 @@ function UserPermissionsTable({
               <th className="px-4 py-2 text-left text-xs font-medium whitespace-nowrap">
                 &nbsp;
               </th>
-              {columns.map((column) => (
+              {PERMISSION_COLUMNS.map((column) => (
                 <th
                   key={column.type}
                   className="admin-text-muted px-4 py-2 text-center text-xs font-medium whitespace-nowrap"
@@ -306,9 +203,6 @@ function UserPermissionsTable({
                       permissions={permissions}
                       disabled={disabled}
                       onChange={onChange}
-                      showDownload={showDownload}
-                      downloadSelected={resolvedDownloadSelections[node.key]}
-                      onDownloadToggle={handleDownloadToggle}
                     />
                   </tr>,
                 ];
@@ -348,9 +242,6 @@ function UserPermissionsTable({
                     permissions={permissions}
                     disabled={disabled}
                     onChange={onChange}
-                    showDownload={showDownload}
-                    downloadSelections={resolvedDownloadSelections}
-                    onDownloadGroupToggle={handleDownloadGroupToggle}
                   />
                 </tr>,
               ];
@@ -379,9 +270,6 @@ function UserPermissionsTable({
                         permissions={permissions}
                         disabled={disabled}
                         onChange={onChange}
-                        showDownload={showDownload}
-                        downloadSelected={resolvedDownloadSelections[child.key]}
-                        onDownloadToggle={handleDownloadToggle}
                       />
                     </tr>
                   );

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
+import AdminPasswordInput from "../../../components/admin/AdminPasswordInput";
 import FormStatusSelect from "../../../components/admin/FormStatusSelect";
 import ProfileImageUpload from "../../../components/admin/ProfileImageUpload";
 import TableCard from "../../../components/admin/TableCard";
@@ -52,8 +53,6 @@ function AddProjectManagerPage({ isDarkMode }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [preview, setPreview] = useState("");
   const [profileImage, setProfileImage] = useState(null);
   const [existingImage, setExistingImage] = useState("");
@@ -305,31 +304,21 @@ function AddProjectManagerPage({ isDarkMode }) {
                 New Password
                 {!isEdit && <span className="text-[var(--admin-danger-text)]"> *</span>}
               </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  className={`${inputClass} pr-10`}
-                  placeholder="Enter New Password"
-                  value={form.password}
-                  maxLength={PASSWORD_FIELD_MAX_LENGTH}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      password: limitTextInput(e.target.value, PASSWORD_FIELD_MAX_LENGTH),
-                    }))
-                  }
-                  onBlur={() => touch("password")}
-                  disabled={fieldDisabled()}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
-                  disabled={fieldDisabled()}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
+              <AdminPasswordInput
+                placeholder="Enter New Password"
+                value={form.password}
+                maxLength={PASSWORD_FIELD_MAX_LENGTH}
+                autoComplete="new-password"
+                aria-label="New Password"
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    password: limitTextInput(e.target.value, PASSWORD_FIELD_MAX_LENGTH),
+                  }))
+                }
+                onBlur={() => touch("password")}
+                disabled={fieldDisabled()}
+              />
               {showError("password") && (
                 <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
                   {showError("password")}
@@ -341,34 +330,24 @@ function AddProjectManagerPage({ isDarkMode }) {
                 Confirm New Password
                 {!isEdit && <span className="text-[var(--admin-danger-text)]"> *</span>}
               </label>
-              <div className="relative">
-                <input
-                  type={showConfirm ? "text" : "password"}
-                  className={`${inputClass} pr-10`}
-                  placeholder="Confirm New Password"
-                  value={form.confirmPassword}
-                  maxLength={PASSWORD_FIELD_MAX_LENGTH}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      confirmPassword: limitTextInput(
-                        e.target.value,
-                        PASSWORD_FIELD_MAX_LENGTH
-                      ),
-                    }))
-                  }
-                  onBlur={() => touch("confirmPassword")}
-                  disabled={fieldDisabled()}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm((prev) => !prev)}
-                  className="admin-text-subtle absolute right-3 top-1/2 -translate-y-1/2"
-                  disabled={fieldDisabled()}
-                >
-                  {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
+              <AdminPasswordInput
+                placeholder="Confirm New Password"
+                value={form.confirmPassword}
+                maxLength={PASSWORD_FIELD_MAX_LENGTH}
+                autoComplete="new-password"
+                aria-label="Confirm New Password"
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    confirmPassword: limitTextInput(
+                      e.target.value,
+                      PASSWORD_FIELD_MAX_LENGTH
+                    ),
+                  }))
+                }
+                onBlur={() => touch("confirmPassword")}
+                disabled={fieldDisabled()}
+              />
               {showError("confirmPassword") && (
                 <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
                   {showError("confirmPassword")}

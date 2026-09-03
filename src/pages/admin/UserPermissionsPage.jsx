@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../components/admin/AdminPageHeader";
@@ -9,14 +9,7 @@ import {
   createDefaultPermissions,
   resolvePermissionsFromRecord,
 } from "../../modules/permissions/permissionsUtils";
-import {
-  createEmptyDownloadSelections,
-  exportSelectedModulesCsv,
-  getSelectedDownloadModuleKeys,
-  hasAnyDownloadSelection,
-  permissionsForPersist,
-} from "../../modules/permissions/temporaryDownloadSelections";
-import { toastApiError, toastApiSuccess } from "../../services/toast/apiToast";
+import { toastApiError } from "../../services/toast/apiToast";
 import {
   getRecord,
   updatePermissions,
@@ -27,18 +20,9 @@ function UserPermissionsPage({ isDarkMode }) {
   const { id } = useParams();
   const [userName, setUserName] = useState("");
   const [permissions, setPermissions] = useState(createDefaultPermissions);
-  const [downloadSelections, setDownloadSelections] = useState(
-    createEmptyDownloadSelections
-  );
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDownloadingCsv, setIsDownloadingCsv] = useState(false);
-
-  const canDownloadCsv = useMemo(
-    () => hasAnyDownloadSelection(downloadSelections),
-    [downloadSelections]
-  );
 
   useEffect(() => {
     if (!id) return undefined;
@@ -48,14 +32,11 @@ function UserPermissionsPage({ isDarkMode }) {
     const load = async () => {
       setIsLoading(true);
       setLoadFailed(false);
-      setDownloadSelections(createEmptyDownloadSelections());
       try {
         const admin = await getRecord(id);
         if (cancelled) return;
         setUserName(admin?.name ?? `User #${id}`);
-        // Load Read/Write only — Download checkboxes always start unchecked.
-        setPermissions(permissionsForPersist(resolvePermissionsFromRecord(admin)));
-        setDownloadSelections(createEmptyDownloadSelections());
+        setPermissions(resolvePermissionsFromRecord(admin));
       } catch (error) {
         if (cancelled) return;
         setLoadFailed(true);
@@ -75,7 +56,7 @@ function UserPermissionsPage({ isDarkMode }) {
     event.preventDefault();
     setIsSubmitting(true);
     try {
-      const data = await updatePermissions(id, permissionsForPersist(permissions));
+      const data = await updatePermissions(id, permissions);
       navigate("/users", {
         replace: true,
         state: {
@@ -94,24 +75,7 @@ function UserPermissionsPage({ isDarkMode }) {
   };
 
   const handleCancel = () => {
-    setDownloadSelections(createEmptyDownloadSelections());
     navigate("/users");
-  };
-
-  const handleDownloadCsv = async () => {
-    if (!canDownloadCsv || isDownloadingCsv || isSubmitting) return;
-
-    const selectedKeys = getSelectedDownloadModuleKeys(downloadSelections);
-    setIsDownloadingCsv(true);
-    try {
-      const result = await exportSelectedModulesCsv(selectedKeys);
-      toastApiSuccess(result);
-      setDownloadSelections(createEmptyDownloadSelections());
-    } catch (error) {
-      toastApiError(error);
-    } finally {
-      setIsDownloadingCsv(false);
-    }
   };
 
   if (isLoading) {
@@ -162,23 +126,16 @@ function UserPermissionsPage({ isDarkMode }) {
           <UserPermissionsTable
             permissions={permissions}
             onChange={setPermissions}
-            disabled={isSubmitting || isDownloadingCsv}
-            showDownload
-            downloadSelections={downloadSelections}
-            onDownloadSelectionsChange={setDownloadSelections}
+            disabled={isSubmitting}
           />
         </TableCard>
 
         <UserPermissionActionBar
-          showDownloadCsv
-          canDownloadCsv={canDownloadCsv}
-          isDownloadingCsv={isDownloadingCsv}
           isSubmitting={isSubmitting}
           canSubmit={!isSubmitting}
           submitLabel="Update"
           submittingLabel="Updating..."
           onCancel={handleCancel}
-          onDownloadCsv={handleDownloadCsv}
         />
       </form>
     </div>
