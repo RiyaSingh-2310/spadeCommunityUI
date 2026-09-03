@@ -145,6 +145,31 @@ export function getOptionalPositiveIntegerError(
   return "";
 }
 
+/** Required whole number greater than zero. */
+export function getRequiredPositiveIntegerError(value, label) {
+  const required = getRequiredError(value, label);
+  if (required) return required;
+  return getOptionalPositiveIntegerError(value, label);
+}
+
+/**
+ * Required number greater than zero.
+ * Allows up to 2 decimal places (e.g. payout amounts).
+ */
+export function getRequiredPositiveDecimalError(value, label) {
+  const required = getRequiredError(value, label);
+  if (required) return required;
+  const trimmed = String(value ?? "").trim();
+  if (trimmed.endsWith(".") || !/^\d+(\.\d{1,2})?$/.test(trimmed)) {
+    return `${label} must be a valid number`;
+  }
+  const num = Number(trimmed);
+  if (!Number.isFinite(num) || num <= 0) {
+    return `${label} must be greater than 0`;
+  }
+  return "";
+}
+
 export function getEmailError(
   value,
   { required = true, label = "Email Address", maxLength = EMAIL_FIELD_MAX_LENGTH } = {}

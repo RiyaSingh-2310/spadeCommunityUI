@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import PermissionDenied from "../../../components/admin/PermissionDenied";
 import NumericInput from "../../../components/admin/NumericInput";
+import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
 import FormRadioGroup from "../../../components/admin/FormRadioGroup";
 import TableCard from "../../../components/admin/TableCard";
@@ -11,31 +12,68 @@ import { useModulePermission } from "../../permissions/useModulePermission";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
-  getRequiredError,
+  getRequiredPositiveDecimalError,
+  getRequiredPositiveIntegerError,
   isFormValidForFields,
 } from "../../shared/utils/validation";
-import toast from "../../../services/toast/toast";
-import { createRewardSettingsForm } from "../data/rewardSettingsMock";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import {
+  fetchRewardSettings,
+  updateRewardSettings,
+} from "../services/rewardSettingsApi";
 
 const REDEMPTION_METHOD_FIELDS = ["amazon", "flipkart", "paypal"];
 
 const YES_NO_OPTIONS = ["Yes", "No"];
 
-/**
- * Reward Settings — frontend-only mock UI.
- * Persist via API in a follow-up; Update currently updates local state only.
- */
+const EMPTY_FORM = {
+  id: null,
+  registrationReward: "",
+  minimumPayout: "",
+  amazon: "No",
+  flipkart: "No",
+  paypal: "No",
+};
+
 function RewardSettingsPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState(() => createRewardSettingsForm());
-  const [initialSnapshot, setInitialSnapshot] = useState(() =>
-    createRewardSettingsForm()
-  );
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { canRead, canWrite, isReadOnly } = useModulePermission("reward_settings");
   const readOnly = isReadOnly;
   const showSubmit = canWrite;
   const inputClass = getAdminInputClass();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSettings = async () => {
+      setIsLoading(true);
+      setLoadFailed(false);
+
+      try {
+        const settings = await fetchRewardSettings();
+        if (cancelled) return;
+
+        setForm(settings);
+        setInitialSnapshot(settings);
+      } catch (error) {
+        if (cancelled) return;
+        toastApiError(error);
+        setLoadFailed(true);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadSettings();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const validationFields = useMemo(
     () => ["registrationReward", "minimumPayout"],
@@ -44,11 +82,14 @@ function RewardSettingsPage({ isDarkMode }) {
 
   const errors = useMemo(
     () => ({
-      registrationReward: getRequiredError(
+      registrationReward: getRequiredPositiveIntegerError(
         form.registrationReward,
         "User Registration Reward Point"
       ),
-      minimumPayout: getRequiredError(form.minimumPayout, "Minimum Payout"),
+      minimumPayout: getRequiredPositiveDecimalError(
+        form.minimumPayout,
+        "Minimum Payout"
+      ),
     }),
     [form]
   );
@@ -74,6 +115,8 @@ function RewardSettingsPage({ isDarkMode }) {
     showSubmit &&
     !readOnly &&
     !isSubmitting &&
+    !isLoading &&
+    !loadFailed &&
     isFormValidForFields(errors, validationFields) &&
     isDirty;
 
@@ -96,11 +139,13 @@ function RewardSettingsPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
-      // Frontend-only: no API call. Ready for rewardSettingsApi integration later.
-      await new Promise((resolve) => setTimeout(resolve, 250));
-      const nextSnapshot = { ...form };
-      setInitialSnapshot(nextSnapshot);
-      toast.success("Reward settings saved locally (mock). API integration pending.");
+      const data = await updateRewardSettings(form);
+      const nextForm = data.form ?? form;
+      setForm(nextForm);
+      setInitialSnapshot({ ...nextForm });
+      toastApiSuccess(data, "Reward settings updated successfully!");
+    } catch (error) {
+      toastApiError(error);
     } finally {
       setIsSubmitting(false);
     }
@@ -108,6 +153,40 @@ function RewardSettingsPage({ isDarkMode }) {
 
   if (!canRead) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center gap-2">
+        <Loader2 size={28} className="animate-spin text-[#10a950]" />
+        <span className="admin-text-muted text-sm">Loading reward settings...</span>
+      </div>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader title="Reward Settings" isDarkMode={isDarkMode} />
+        <p className="admin-text-muted text-sm">Unable to load reward settings.</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white"
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/reward-points/history")}
+            className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -129,7 +208,7 @@ function RewardSettingsPage({ isDarkMode }) {
                   value={form.registrationReward}
                   onChange={(v) => setField("registrationReward", v)}
                   onBlur={() => touch("registrationReward")}
-                  disabled={readOnly}
+                  disabled={readOnly || isSubmitting}
                   readOnly={readOnly}
                   placeholder="200"
                 />
@@ -152,12 +231,12 @@ function RewardSettingsPage({ isDarkMode }) {
                 required
                 error={showError("minimumPayout")}
               >
-                <NumericInput
+                <DecimalInput
                   className={inputClass}
                   value={form.minimumPayout}
                   onChange={(v) => setField("minimumPayout", v)}
                   onBlur={() => touch("minimumPayout")}
-                  disabled={readOnly}
+                  disabled={readOnly || isSubmitting}
                   readOnly={readOnly}
                   placeholder="1000"
                 />
@@ -182,7 +261,7 @@ function RewardSettingsPage({ isDarkMode }) {
                   onChange={(v) => setField("amazon", v)}
                   options={YES_NO_OPTIONS}
                   isDarkMode={isDarkMode}
-                  disabled={readOnly}
+                  disabled={readOnly || isSubmitting}
                   required
                 />
                 <FormRadioGroup
@@ -192,7 +271,7 @@ function RewardSettingsPage({ isDarkMode }) {
                   onChange={(v) => setField("flipkart", v)}
                   options={YES_NO_OPTIONS}
                   isDarkMode={isDarkMode}
-                  disabled={readOnly}
+                  disabled={readOnly || isSubmitting}
                   required
                 />
                 <FormRadioGroup
@@ -202,7 +281,7 @@ function RewardSettingsPage({ isDarkMode }) {
                   onChange={(v) => setField("paypal", v)}
                   options={YES_NO_OPTIONS}
                   isDarkMode={isDarkMode}
-                  disabled={readOnly}
+                  disabled={readOnly || isSubmitting}
                   required
                 />
               </div>
@@ -224,6 +303,7 @@ function RewardSettingsPage({ isDarkMode }) {
           <button
             type="button"
             onClick={() => navigate("/reward-points/history")}
+            disabled={isSubmitting}
             className="admin-btn-cancel h-11 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancel

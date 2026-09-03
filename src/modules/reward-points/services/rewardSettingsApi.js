@@ -19,8 +19,14 @@ function extractSettingsRecord(data) {
 }
 
 function apiFlagToYesNo(value) {
-  if (value === true || value === 1 || value === "1") return "Yes";
+  if (value === true || value === 1 || value === "1" || value === "true") {
+    return "Yes";
+  }
   return "No";
+}
+
+function yesNoToApiFlag(value) {
+  return String(value ?? "").trim().toLowerCase() === "yes";
 }
 
 function toFormNumber(value) {
@@ -28,14 +34,17 @@ function toFormNumber(value) {
   return String(value);
 }
 
+function toApiNumber(value) {
+  const num = Number(String(value ?? "").trim());
+  return Number.isFinite(num) ? num : 0;
+}
+
 export function mapRewardSettingsToForm(record) {
   return {
     id: record?.id ?? null,
-    rewardType: "Registration Reward",
     registrationReward: toFormNumber(
       record?.registration_reward_points ?? record?.registrationRewardPoints
     ),
-    surveyCompletionReward: toFormNumber(record?.redeem_points ?? record?.redeemPoints),
     minimumPayout: toFormNumber(record?.minimum_payout ?? record?.minimumPayout),
     amazon: apiFlagToYesNo(record?.amazon_enabled ?? record?.amazonEnabled),
     flipkart: apiFlagToYesNo(record?.flipkart_enabled ?? record?.flipkartEnabled),
@@ -43,19 +52,16 @@ export function mapRewardSettingsToForm(record) {
   };
 }
 
-function yesNoToApiFlag(value) {
-  return String(value ?? "").trim().toLowerCase() === "yes" ? 1 : 0;
-}
-
-function toApiNumber(value) {
-  const num = Number(String(value ?? "").trim());
-  return Number.isFinite(num) ? num : 0;
-}
-
+/**
+ * PUT body matches:
+ * {
+ *   registration_reward_points, minimum_payout,
+ *   amazon_enabled, flipkart_enabled, paypal_enabled
+ * }
+ */
 export function buildRewardSettingsPayload(form) {
   return {
     registration_reward_points: toApiNumber(form.registrationReward),
-    redeem_points: toApiNumber(form.surveyCompletionReward),
     minimum_payout: toApiNumber(form.minimumPayout),
     amazon_enabled: yesNoToApiFlag(form.amazon),
     flipkart_enabled: yesNoToApiFlag(form.flipkart),
