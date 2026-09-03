@@ -1,0 +1,48 @@
+name: Deploy Admin UI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure SSH known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 45.77.107.111 >> ~/.ssh/known_hosts
+
+      - name: Deploy Admin UI
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: 45.77.107.111
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+
+            cd /var/www/SpadeCommunityAdminUI
+
+            echo "Fetching latest code..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "Restoring production environment..."
+            sudo /usr/bin/install -o deploy -g deploy -m 600 /etc/spade-community/admin-ui.env /var/www/SpadeCommunityAdminUI/.env.production
+
+            echo "Installing dependencies..."
+            npm ci
+
+            echo "Building Admin UI..."
+            npm run build
+
+            echo "Checking build..."
+            test -f /var/www/SpadeCommunityAdminUI/dist/index.html
+
+            echo "Testing website..."
+            curl -f https://admin.spadecommunity.com
+
+            echo "Admin UI deployment successful!"
