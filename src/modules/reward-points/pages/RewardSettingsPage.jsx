@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
@@ -14,69 +14,39 @@ import {
   getRequiredError,
   isFormValidForFields,
 } from "../../shared/utils/validation";
-import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
-import { fetchRewardSettings, updateRewardSettings } from "../services/rewardSettingsApi";
+import toast from "../../../services/toast/toast";
+import { createRewardSettingsForm } from "../data/rewardSettingsMock";
 
 const REDEMPTION_METHOD_FIELDS = ["amazon", "flipkart", "paypal"];
 
 const YES_NO_OPTIONS = ["Yes", "No"];
 
-const DEFAULT_FORM = {
-  registrationReward: "",
-  surveyCompletionReward: "",
-  minimumPayout: "",
-  amazon: "No",
-  flipkart: "No",
-  paypal: "No",
-};
-
+/**
+ * Reward Settings — frontend-only mock UI.
+ * Persist via API in a follow-up; Update currently updates local state only.
+ */
 function RewardSettingsPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState(DEFAULT_FORM);
-  const [initialSnapshot, setInitialSnapshot] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const [form, setForm] = useState(() => createRewardSettingsForm());
+  const [initialSnapshot, setInitialSnapshot] = useState(() =>
+    createRewardSettingsForm()
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { canRead, canWrite, isReadOnly } = useModulePermission("reward_settings");
   const readOnly = isReadOnly;
   const showSubmit = canWrite;
   const inputClass = getAdminInputClass();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadSettings = async () => {
-      setIsLoading(true);
-      setLoadFailed(false);
-
-      try {
-        const settings = await fetchRewardSettings();
-        if (cancelled) return;
-
-        setForm(settings);
-        setInitialSnapshot(settings);
-      } catch (error) {
-        if (cancelled) return;
-        toastApiError(error);
-        setLoadFailed(true);
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
-
-    loadSettings();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const validationFields = useMemo(() => ["registrationReward", "minimumPayout"], []);
+  const validationFields = useMemo(
+    () => ["registrationReward", "minimumPayout"],
+    []
+  );
 
   const errors = useMemo(
     () => ({
       registrationReward: getRequiredError(
         form.registrationReward,
-        "User Registration Reward Points"
+        "User Registration Reward Point"
       ),
       minimumPayout: getRequiredError(form.minimumPayout, "Minimum Payout"),
     }),
@@ -126,16 +96,11 @@ function RewardSettingsPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
-      const data = await updateRewardSettings({
-        ...form,
-        surveyCompletionReward: initialSnapshot?.surveyCompletionReward ?? form.surveyCompletionReward,
-      });
-      const nextForm = data.form ?? form;
-      setForm(nextForm);
-      setInitialSnapshot({ ...nextForm });
-      toastApiSuccess(data);
-    } catch (error) {
-      toastApiError(error);
+      // Frontend-only: no API call. Ready for rewardSettingsApi integration later.
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      const nextSnapshot = { ...form };
+      setInitialSnapshot(nextSnapshot);
+      toast.success("Reward settings saved locally (mock). API integration pending.");
     } finally {
       setIsSubmitting(false);
     }
@@ -145,41 +110,17 @@ function RewardSettingsPage({ isDarkMode }) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[240px] items-center justify-center">
-        <Loader2 size={28} className="animate-spin text-[#10a950]" />
-      </div>
-    );
-  }
-
-  if (loadFailed) {
-    return (
-      <div className="space-y-6">
-        <AdminPageHeader title="Reward Settings" isDarkMode={isDarkMode} />
-        <p className="admin-text-muted text-sm">Unable to load reward settings.</p>
-        <button
-          type="button"
-          onClick={() => navigate("/reward-points/history")}
-          className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white"
-        >
-          Back
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <AdminPageHeader title="Reward Settings" isDarkMode={isDarkMode} />
 
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
-        <TableCard title="Reward Configuration">
+        <TableCard title="Reward Configuration" isDarkMode={isDarkMode}>
           <div className="space-y-8">
             <section className="space-y-5">
               <FormField
                 className="max-w-md"
-                label="User Registration Reward Points"
+                label="User Registration Reward Point"
                 required
                 error={showError("registrationReward")}
               >
@@ -197,9 +138,11 @@ function RewardSettingsPage({ isDarkMode }) {
 
             <section className="space-y-4 border-t border-[var(--admin-header-search-border)] pt-8">
               <div>
-                <h3 className="admin-text text-sm font-semibold">Payout Threshold</h3>
+                <h3 className="text-sm font-semibold text-[var(--admin-danger-text)]">
+                  User Redeem Points Settings
+                </h3>
                 <p className="admin-text-muted mt-1 text-xs">
-                  Minimum redeemable reward amount for panelists.
+                  Configure payout threshold and supported redemption methods.
                 </p>
               </div>
 
@@ -216,14 +159,16 @@ function RewardSettingsPage({ isDarkMode }) {
                   onBlur={() => touch("minimumPayout")}
                   disabled={readOnly}
                   readOnly={readOnly}
-                  placeholder="500"
+                  placeholder="1000"
                 />
               </FormField>
             </section>
 
             <section className="space-y-4 border-t border-[var(--admin-header-search-border)] pt-8">
               <div>
-                <h3 className="admin-text text-sm font-semibold">Supported Reward Methods</h3>
+                <h3 className="admin-text text-sm font-semibold">
+                  Supported Reward Methods
+                </h3>
                 <p className="admin-text-muted mt-1 text-xs">
                   Enable or disable redemption channels for reward payouts.
                 </p>
@@ -238,6 +183,7 @@ function RewardSettingsPage({ isDarkMode }) {
                   options={YES_NO_OPTIONS}
                   isDarkMode={isDarkMode}
                   disabled={readOnly}
+                  required
                 />
                 <FormRadioGroup
                   label="Flipkart"
@@ -247,6 +193,7 @@ function RewardSettingsPage({ isDarkMode }) {
                   options={YES_NO_OPTIONS}
                   isDarkMode={isDarkMode}
                   disabled={readOnly}
+                  required
                 />
                 <FormRadioGroup
                   label="PayPal"
@@ -256,6 +203,7 @@ function RewardSettingsPage({ isDarkMode }) {
                   options={YES_NO_OPTIONS}
                   isDarkMode={isDarkMode}
                   disabled={readOnly}
+                  required
                 />
               </div>
             </section>
@@ -263,16 +211,16 @@ function RewardSettingsPage({ isDarkMode }) {
         </TableCard>
 
         <div className="flex flex-wrap items-center gap-3">
-          {showSubmit && !readOnly && (
+          {showSubmit && !readOnly ? (
             <button
               type="submit"
               disabled={!canSubmit}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white transition hover:bg-[#0f9b49] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-              Update
+              {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : null}
+              {isSubmitting ? "Saving..." : "Submit"}
             </button>
-          )}
+          ) : null}
           <button
             type="button"
             onClick={() => navigate("/reward-points/history")}
