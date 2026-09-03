@@ -7,7 +7,7 @@ const PRODUCTION_SERVICES = [
   "src/modules/survey/services/preScreenApi.js",
   "src/modules/public-survey/services/doSurveyApi.js",
   "src/modules/community-users/services/communityUsersApi.js",
-  "src/modules/system-email/services/systemEmailsApi.js",
+  "src/modules/user-email-templates/services/userEmailTemplatesApi.js",
   "src/services/screening/screeningQuestionsApi.js",
 ];
 

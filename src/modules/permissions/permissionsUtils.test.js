@@ -17,7 +17,10 @@ import {
   getModuleListingReadMode,
   shouldHideActionColumnWhenReadOnly,
 } from "./moduleListingPermissions";
-import { getRoutePermissionAccess, hasPathPermissionAccess } from "./routePermissions";
+import {
+  getRoutePermissionAccess,
+  hasPathPermissionAccess,
+} from "./routePermissions";
 import { PERMISSION_TREE } from "./permissionTree";
 
 function visibleSidebarLabels(permissions) {
@@ -127,48 +130,52 @@ describe("edit routes require write", () => {
 });
 
 describe("email module permission mapping", () => {
-  it("maps common email key aliases and labels", () => {
-    const permissions = normalizePermissions({
-      system_email: { canRead: true, canWrite: false },
+  it("maps common user email key aliases and labels", () => {
+    const fromLabel = normalizePermissions({
       "User Email Template": { view: true, add: true, edit: true, delete: true },
     });
-
-    expect(canReadModule(permissions, "system_email_templates")).toBe(true);
-    expect(canWriteModule(permissions, "system_email_templates")).toBe(false);
-    expect(canReadModule(permissions, "user_email_templates")).toBe(true);
-    expect(canWriteModule(permissions, "user_email_templates")).toBe(true);
-  });
-
-  it("shows Email Templates parent only for permitted children", () => {
-    const systemOnly = normalizePermissions({
-      system_email_templates: { canRead: true, canWrite: true },
+    const fromAlias = normalizePermissions({
+      email_templates: { canRead: true, canWrite: false },
     });
-    const visible = visibleSidebarLabels(systemOnly);
-    const emailGroup = visible.find((item) => item.label === "Email Templates");
 
-    expect(emailGroup).toBeTruthy();
-    expect(emailGroup.children).toEqual(["System Email Template"]);
-    expect(hasPathPermissionAccess("/system-email", systemOnly)).toBe(true);
-    expect(hasPathPermissionAccess("/user-email-templates", systemOnly)).toBe(false);
+    expect(canReadModule(fromLabel, "user_email_templates")).toBe(true);
+    expect(canWriteModule(fromLabel, "user_email_templates")).toBe(true);
+    expect(canReadModule(fromAlias, "user_email_templates")).toBe(true);
+    expect(canWriteModule(fromAlias, "user_email_templates")).toBe(false);
   });
 
-  it("hides Email Templates when neither email module is granted", () => {
+  it("shows User Email Template as a direct sidebar link when granted", () => {
+    const permissions = normalizePermissions({
+      user_email_templates: { canRead: true, canWrite: true },
+    });
+    const visible = visibleSidebarLabels(permissions);
+
+    expect(visible.some((item) => item.label === "User Email Template")).toBe(true);
+    expect(visible.some((item) => item.label === "Email Templates")).toBe(false);
+    expect(hasPathPermissionAccess("/user-email-templates", permissions)).toBe(true);
+    expect(getRoutePermissionAccess("/system-email").moduleKey).toBeNull();
+  });
+
+  it("hides User Email Template when the module is not granted", () => {
     const permissions = normalizePermissions({
       dashboard: { canRead: true, canWrite: false },
     });
     const visible = visibleSidebarLabels(permissions);
+    expect(visible.some((item) => item.label === "User Email Template")).toBe(false);
     expect(visible.some((item) => item.label === "Email Templates")).toBe(false);
   });
 
-  it("includes both email children in the permission assignment tree", () => {
-    const emailGroup = PERMISSION_TREE.find(
-      (node) => node.type === "group" && node.id === "email-templates"
+  it("includes User Email Template as a leaf in the permission assignment tree", () => {
+    const emailLeaf = PERMISSION_TREE.find(
+      (node) => node.type === "leaf" && node.key === "user_email_templates"
     );
-    expect(emailGroup).toBeTruthy();
-    expect(emailGroup.children.map((child) => child.key)).toEqual([
-      "system_email_templates",
-      "user_email_templates",
-    ]);
+    expect(emailLeaf).toBeTruthy();
+    expect(emailLeaf.label).toBe("User Email Template");
+    expect(
+      PERMISSION_TREE.some(
+        (node) => node.type === "group" && node.id === "email-templates"
+      )
+    ).toBe(false);
   });
 });
 

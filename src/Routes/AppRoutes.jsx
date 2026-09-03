@@ -44,11 +44,6 @@ function CreateSurveyEditRoute({ isDarkMode }) {
   });
 }
 
-function EditEmailTemplateRoute({ isDarkMode }) {
-  const { id } = useParams();
-  return withSuspense(Pages.EditEmailTemplatePage, { key: id, isDarkMode });
-}
-
 function EditUserEmailTemplateRoute({ isDarkMode }) {
   const { id } = useParams();
   return withSuspense(Pages.EditUserEmailTemplatePage, { key: id, isDarkMode });
@@ -434,14 +429,6 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
           <Route
             path="/home-page"
             element={withSuspense(Pages.HomePageManagementPage, { isDarkMode })}
-          />
-          <Route
-            path="/system-email"
-            element={withSuspense(Pages.SystemEmailTemplatePage, { isDarkMode })}
-          />
-          <Route
-            path="/system-email/edit/:id"
-            element={<EditEmailTemplateRoute isDarkMode={isDarkMode} />}
           />
           {/* Invalid / unknown routes → Dashboard */}
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -53,7 +53,7 @@ describe("CRUD API contracts", () => {
     expect(API_ROUTES.survey.delete(8)).toBe("/api/survey/8");
   });
 
-  it("system emails", () => {
+  it("user email templates", () => {
     expect(API_ROUTES.emailTemplates.list).toBe("/api/email-templates/list");
     expect(API_ROUTES.emailTemplates.create).toBe("/api/email-templates/add");
     expect(API_ROUTES.emailTemplates.byId(9)).toBe("/api/email-templates/9");

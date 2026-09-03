@@ -149,7 +149,7 @@ function EditUserEmailTemplatePage({ isDarkMode }) {
         <AdminPageHeader
           title="Edit User Email Template"
           breadcrumbs={[
-            { label: "User Email Templates", to: "/user-email-templates" },
+            { label: "User Email Template", to: "/user-email-templates" },
             { label: "Edit User Email Template" },
           ]}
           isDarkMode={isDarkMode}
@@ -171,8 +171,7 @@ function EditUserEmailTemplatePage({ isDarkMode }) {
       <AdminPageHeader
         title="Edit User Email Template"
         breadcrumbs={[
-          // { label: "System Email Template", to: "/system-email" },
-          { label: "User Email Templates", to: "/user-email-templates" },
+          { label: "User Email Template", to: "/user-email-templates" },
           { label: "Edit User Email Template" },
         ]}
         isDarkMode={isDarkMode}

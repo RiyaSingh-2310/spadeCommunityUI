@@ -105,12 +105,6 @@ export const LogActivityPage = lazy(() => import("../modules/log-activity/pages/
 export const HomePageManagementPage = lazy(
   () => import("../modules/home-page/pages/HomePageManagementPage")
 );
-export const SystemEmailTemplatePage = lazy(
-  () => import("../modules/system-email/pages/SystemEmailTemplatePage")
-);
-export const EditEmailTemplatePage = lazy(
-  () => import("../modules/system-email/pages/EditEmailTemplatePage")
-);
 
 /** Notifications & rewards */
 export const MessagesPage = lazy(() => import("../modules/notifications/pages/MessagesPage"));

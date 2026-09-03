@@ -22,7 +22,6 @@ export const MODULE_LISTING_READ_MODES = {
   prescreen_group: "hide-action-column",
   invoices: "pdf-only",
   user_email_templates: "hide-action-column",
-  system_email_templates: "hide-action-column",
   log_activity: "hide-action-column",
   pending_rewards: "reward-pending-read",
   reward_history: "reward-pending-read",

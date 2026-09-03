@@ -80,8 +80,6 @@ const ROUTE_RULES = [
   { matcher: /^\/user-screening\/create-survey(\/|$)/, module: "user_screening_management" },
   { matcher: /^\/user-screening\/questions(\/|$)/, module: "user_screening_management" },
   { matcher: /^\/home-page(\/|$)/, module: "homepage_management" },
-  { matcher: /^\/system-email\/edit/, module: "system_email_templates", requiresWrite: true },
-  { matcher: /^\/system-email(\/|$)/, module: "system_email_templates" },
 ];
 
 const WRITE_PATH_PATTERNS = [

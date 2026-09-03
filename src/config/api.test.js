@@ -49,13 +49,13 @@ describe("buildApiUrl", () => {
     expect(url).not.toContain("/api/api/");
   });
 
-  it("builds email-templates routes for System Emails", () => {
-    expect(API_ROUTES.systemEmails.list).toBe("/api/email-templates/list");
+  it("builds email-templates routes for User Email Templates", () => {
     expect(API_ROUTES.emailTemplates.list).toBe("/api/email-templates/list");
-    expect(API_ROUTES.systemEmails.byId(3)).toBe("/api/email-templates/3");
+    expect(API_ROUTES.emailTemplates.byId(3)).toBe("/api/email-templates/3");
     expect(API_ROUTES.emailTemplates.create).toBe("/api/email-templates/add");
     expect(API_ROUTES.emailTemplates.update(9)).toBe("/api/email-templates/9");
     expect(API_ROUTES.emailTemplates.delete(9)).toBe("/api/email-templates/9");
+    expect(API_ROUTES.systemEmails).toBeUndefined();
   });
 
   it("keeps the invoice PDF contract on GET /api/invoice/:id/pdf", () => {

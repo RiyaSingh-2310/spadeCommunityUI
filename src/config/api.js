@@ -305,15 +305,6 @@ export const API_ROUTES = {
     redeemList: "/api/reward-history/redeem/list",
     redeemUpdateStatus: (id) => `/api/reward-history/redeem/${id}/status`,
   },
-  // Alias of emailTemplates — System Email UI uses /api/email-templates/*.
-  systemEmails: {
-    list: "/api/email-templates/list",
-    create: "/api/email-templates/add",
-    byId: (id) => `/api/email-templates/${id}`,
-    update: (id) => `/api/email-templates/${id}`,
-    updateStatus: (id) => `/api/email-templates/${id}/status`,
-    delete: (id) => `/api/email-templates/${id}`,
-  },
   messages: {
     list: "/api/messages/list",
     unreadCount: "/api/messages/unread-count",
