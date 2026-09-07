@@ -444,11 +444,24 @@ export function cloneProjectUrlForm(form) {
 }
 
 export function normalizeProjectUrlStatus(status) {
+  if (status === true || status === 1) return "Open";
+  if (status === false || status === 0) return "Closed";
+
   const raw = String(status ?? "").trim();
-  const key = raw.toLowerCase();
-  if (!raw || key === "active" || key === "open") return "Open";
-  if (key === "closed" || key === "close") return "Closed";
+  if (!raw) return "Open";
+
+  const key = raw.toLowerCase().replace(/[_-]+/g, " ");
+  if (key === "open" || key === "active" || key === "1" || key === "true") return "Open";
+  if (
+    key === "closed" ||
+    key === "close" ||
+    key === "inactive" ||
+    key === "0" ||
+    key === "false"
+  ) {
+    return "Closed";
+  }
   if (key === "on hold" || key === "onhold" || key === "hold") return "On Hold";
   if (raw === "Open" || raw === "Closed" || raw === "On Hold") return raw;
-  return "Open";
+  return raw;
 }

@@ -312,9 +312,14 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
     ) || rawLanguage;
 
   const rawStatus = String(
-    pickUrlInfoField(urlInfo, ["Status", "url_status", "status"]) ??
-      pickUrlInfoField(projectRecord, ["Status", "url_status", "status"]) ??
-      ""
+    pickUrlInfoField(urlInfo, [
+      "Status",
+      "url_status",
+      "urlStatus",
+      "Url_Status",
+      "URL_Status",
+      "status",
+    ]) ?? ""
   ).trim();
   const status = normalizeProjectUrlStatus(rawStatus);
 
@@ -683,7 +688,8 @@ export function buildCreateProjectUrlApiPayload(form = {}) {
     SampleSize: toApiNumber(form.sampleSize),
     Start_Date: form.startDate || "",
     End_Date: form.endDate || "",
-    Status: form.status || "Open",
+    Status: normalizeProjectUrlStatus(form.status),
+    url_status: normalizeProjectUrlStatus(form.status),
     Project_Link_Type: projectLinkTypeToApi(form.projectLinkType),
     Live_Link: String(form.liveLink ?? "").trim(),
     Test_Link: String(form.testLink ?? "").trim(),
@@ -849,7 +855,7 @@ export async function updateProjectUrl(urlId, form = {}, options = {}) {
   const normalizedForm = {
     ...createEmptyProjectUrlForm(form.projectId),
     ...form,
-    status: form.status || "Open",
+    status: normalizeProjectUrlStatus(form.status),
   };
 
 const normalizedUrlId = normalizeUrlId(urlId);
@@ -903,7 +909,7 @@ export async function createProjectUrl(projectId, form = {}, options = {}) {
   const normalizedForm = {
     ...createEmptyProjectUrlForm(projectId),
     ...form,
-    status: form.status || "Open",
+    status: normalizeProjectUrlStatus(form.status),
   };
 
 const normalizedId = normalizeProjectId(projectId);

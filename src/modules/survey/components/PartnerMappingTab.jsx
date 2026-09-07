@@ -19,17 +19,10 @@ import {
   getDecimalPlacesError,
   sanitizeDecimal,
 } from "../../shared/utils/numericInputUtils";
-import { isFormValid } from "../../shared/utils/validation";
+import { isFormValid, getOptionalUrlError } from "../../shared/utils/validation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { mapPartnersToSelectOptions } from "../services/surveyApi";
 import {
-  FALLBACK_REDIRECT_ORIGIN,
-  getOptionalRedirectUrlPidUidError,
-  withRedirectUrlPid,
-} from "../utils/surveyLinkPlaceholders";
-import {
-  buildSupplierMappingApiPayload,
-  appendIsTestToPartnerUrl,
   createSupplierMapping,
   listSupplierMappings,
   mapSupplierMappingToForm,
@@ -37,14 +30,16 @@ import {
   updateSupplierMappingRecord,
   updateSupplierMappingStatus,
   updateSupplierMappingTestMode,
+  appendIsTestToPartnerUrl,
+  buildSupplierMappingApiPayload,
 } from "../services/supplierMappingApi";
 import { getProjectMultiLinkStats } from "../services/projectMultiUrlApi";
 import { listProjectUrlsByProject } from "../services/projectUrlsApi";
 import {
   formatProjectUrlOptionLabel,
   isProjectUrlEligibleForInvite,
-  normalizeProjectUrlAssignmentStatus,
 } from "../utils/projectUrlEligibility";
+import { normalizeProjectUrlStatus } from "../utils/projectUrlFormValidation";
 import { dedupeSelectOptions } from "../utils/dedupeSelectOptions";
 import {
   notePartnerUrlTabOpening,
@@ -86,42 +81,22 @@ const REDIRECT_FIELDS = [
   {
     key: "complete",
     label: "Complete",
-    path: "/redirect/complete",
-    example: `${FALLBACK_REDIRECT_ORIGIN}/redirect/complete?pid=PROJECT_URL_CODE&uid=identifier`,
-    copySuccessMessage: "Complete URL copied",
-    copyLabel: "Copy Complete URL",
   },
   {
     key: "terminate",
     label: "Terminate",
-    path: "/redirect/terminate",
-    example: `${FALLBACK_REDIRECT_ORIGIN}/redirect/terminate?pid=PROJECT_URL_CODE&uid=identifier`,
-    copySuccessMessage: "Terminate URL copied",
-    copyLabel: "Copy Terminate URL",
   },
   {
     key: "overQuota",
-    label: "Over Quota",
-    path: "/redirect/overquota",
-    example: `${FALLBACK_REDIRECT_ORIGIN}/redirect/overquota?pid=PROJECT_URL_CODE&uid=identifier`,
-    copySuccessMessage: "Over Quota URL copied",
-    copyLabel: "Copy Over Quota URL",
+    label: "Quota",
   },
   {
     key: "qualityTerm",
     label: "Quality Term",
-    path: "/redirect/qualityterm",
-    example: `${FALLBACK_REDIRECT_ORIGIN}/redirect/qualityterm?pid=PROJECT_URL_CODE&uid=identifier`,
-    copySuccessMessage: "Quality Term URL copied",
-    copyLabel: "Copy Quality Term URL",
   },
   {
     key: "surveyClose",
-    label: "Survey Close",
-    path: "/redirect/surveyclose",
-    example: `${FALLBACK_REDIRECT_ORIGIN}/redirect/surveyclose?pid=PROJECT_URL_CODE&uid=identifier`,
-    copySuccessMessage: "Survey Close URL copied",
-    copyLabel: "Copy Survey Close URL",
+    label: "Survey Closed",
   },
 ];
 
@@ -164,8 +139,8 @@ function pickFirstRedirectUrl(source, keys) {
   return "";
 }
 
-/** Seed partner redirect fields from the selected Project URL only when values exist. */
-function redirectsFromProjectUrl() {
+/** Empty redirect fields — never seeded from Project URL, Grid, or Speed Community defaults. */
+function emptyPartnerRedirects() {
   return {
     complete: "",
     terminate: "",
@@ -176,25 +151,9 @@ function redirectsFromProjectUrl() {
   };
 }
 
-function applyProjectUrlPidToRedirects(redirects, projectUrlCode) {
-  const pid = String(projectUrlCode ?? "").trim();
-  if (!pid || !redirects || typeof redirects !== "object") return redirects;
-
-  return Object.fromEntries(
-    Object.entries(redirects).map(([key, value]) => {
-      if (key === "postbackUrl") return [key, value];
-      const field = REDIRECT_FIELDS.find((item) => item.key === key);
-      return [
-        key,
-        value ? withRedirectUrlPid(value, pid, field?.path ?? "") : "",
-      ];
-    })
-  );
-}
-
 /**
- * Build redirect URLs from Partner API/detail payload.
- * Partner values win when present; empty fields stay empty for Project URL fallback.
+ * Build redirect URLs from the selected Partner API/detail payload only.
+ * Missing values stay blank; no project or community fallbacks.
  */
 function redirectsFromPartnerRecord(partner, mappedRow = null) {
   const sources = [mappedRow, partner].filter(Boolean);
@@ -638,7 +597,7 @@ function PartnerMappingTab({
     }
 
     REDIRECT_FIELDS.forEach((field) => {
-      next[field.key] = getOptionalRedirectUrlPidUidError(
+      next[field.key] = getOptionalUrlError(
         form.redirects[field.key] ?? "",
         field.label
       );
@@ -672,7 +631,7 @@ function PartnerMappingTab({
     setFormMode("add");
     setForm({
       ...createEmptyPartnerForm(),
-      redirects: redirectsFromProjectUrl(selectedProjectUrl),
+      redirects: emptyPartnerRedirects(),
     });
     setIsFormLoading(true);
     await loadPartnerOptions();
@@ -709,11 +668,13 @@ function PartnerMappingTab({
       }
       setForm({
         ...mapped,
-        partnerRedirectUrl: String(row.partnerUrl ?? mapped.partnerRedirectUrl ?? "").trim(),
-        redirects: applyProjectUrlPidToRedirects(
-          mapped.redirects,
-          selectedProjectUrl?.projectUrlCode
-        ),
+        partnerRedirectUrl: String(
+          row.partnerUrl ?? mapped.partnerRedirectUrl ?? ""
+        ).trim(),
+        redirects: {
+          ...emptyPartnerRedirects(),
+          ...(mapped.redirects ?? {}),
+        },
       });
     } catch (error) {
       toastApiError(error);
@@ -728,7 +689,7 @@ function PartnerMappingTab({
       (item) => String(item.partner_id ?? item.id) === String(partnerId)
     );
     const panelSize = partner?.panel_size ?? partner?.panelSize;
-    const emptyRedirects = redirectsFromProjectUrl();
+    const emptyRedirects = emptyPartnerRedirects();
 
     setForm((prev) => ({
       ...prev,
@@ -755,16 +716,11 @@ function PartnerMappingTab({
       setForm((prev) => ({
         ...prev,
         partnerCode: String(mapped.partnerCode || prev.partnerCode || "").trim(),
-        partnerRedirectUrl: normalizeRedirectUrlValue(
-          partnerRedirects.complete ||
-            (mapped.websiteUrl && mapped.websiteUrl !== "—"
-              ? mapped.websiteUrl
-              : "")
-        ),
-        redirects: applyProjectUrlPidToRedirects(
-          partnerRedirects,
-          selectedProjectUrl?.projectUrlCode
-        ),
+        partnerRedirectUrl: "",
+        redirects: {
+          ...emptyPartnerRedirects(),
+          ...partnerRedirects,
+        },
         quota:
           mapped.panelSize && mapped.panelSize !== "—"
             ? capQuotaToAvailable(mapped.panelSize, availableQuota)
@@ -883,7 +839,6 @@ function PartnerMappingTab({
     if (col === "Partner URL") {
       const url = String(row.partnerUrl ?? "").trim();
       if (!url) return "—";
-      const fullUrl = appendIsTestToPartnerUrl(url, row.isTest);
       return (
         <div className="flex max-w-[260px] items-center gap-1">
           <button
@@ -895,13 +850,13 @@ function PartnerMappingTab({
               })
             }
             className="admin-text inline-flex min-w-0 flex-1 items-center gap-1 truncate text-left text-sm font-medium text-[var(--admin-success-text)] hover:underline"
-            title={fullUrl}
+            title={url}
           >
             <ExternalLink size={14} className="shrink-0" aria-hidden />
             <span className="truncate">{url}</span>
           </button>
           <CopyValueButton
-            value={fullUrl}
+            value={url}
             successMessage="Partner URL copied"
             label="Copy Partner URL"
             size="inline"
@@ -1087,9 +1042,7 @@ function PartnerMappingTab({
               <FormField label="URL Status">
                 <input
                   className={inputClass}
-                  value={normalizeProjectUrlAssignmentStatus(
-                    selectedProjectUrl.status
-                  )}
+                  value={normalizeProjectUrlStatus(selectedProjectUrl.status)}
                   readOnly
                   disabled
                 />
@@ -1258,6 +1211,49 @@ function PartnerMappingTab({
                       aria-invalid={Boolean(showError("cpi") && errors.cpi)}
                     />
                   </FormField>
+                </div>
+
+                <div>
+                  <h3 className="admin-text mb-3 text-sm font-bold">
+                    Redirect Links
+                  </h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {REDIRECT_FIELDS.map((field) => (
+                      <FormField
+                        key={field.key}
+                        label={field.label}
+                        error={showError(field.key) ? errors[field.key] : ""}
+                      >
+                        <div className="flex items-stretch gap-2">
+                          <input
+                            className={`${inputClass} min-w-0 flex-1`}
+                            value={form.redirects[field.key] ?? ""}
+                            onChange={(event) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                redirects: {
+                                  ...prev.redirects,
+                                  [field.key]: event.target.value,
+                                },
+                              }))
+                            }
+                            onBlur={() => touch(field.key)}
+                            placeholder=""
+                            disabled={isSubmitting}
+                            aria-label={field.label}
+                            aria-invalid={Boolean(
+                              showError(field.key) && errors[field.key]
+                            )}
+                          />
+                          <CopyValueButton
+                            value={form.redirects[field.key] ?? ""}
+                            successMessage={`${field.label} URL copied`}
+                            label={`Copy ${field.label} URL`}
+                          />
+                        </div>
+                      </FormField>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 pt-2">

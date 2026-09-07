@@ -4,7 +4,6 @@ import { getAdminCancelButtonClass } from "../../shared/utils/formStyles";
 import {
   getSupplierMappingById,
   mapSupplierMappingToDetail,
-  appendIsTestToPartnerUrl,
 } from "../services/supplierMappingApi";
 import { DetailField, DetailGrid, ReadOnlyUrl } from "./surveyDetailsShared";
 import { toastApiError } from "../../../services/toast/apiToast";
@@ -138,7 +137,7 @@ function PartnerMappingViewModal({
               />
               <DetailField
                 label="Partner URL"
-                copyValue={appendIsTestToPartnerUrl(detail.partnerUrl, detail.isTest)}
+                copyValue={String(detail.partnerUrl ?? "").trim()}
                 copySuccessMessage="Partner URL copied"
                 copyLabel="Copy Partner URL"
                 value={
@@ -153,14 +152,12 @@ function PartnerMappingViewModal({
                           isTest: detail.isTest,
                         })
                       }
-                      title={appendIsTestToPartnerUrl(detail.partnerUrl, detail.isTest)}
+                      title={String(detail.partnerUrl ?? "").trim()}
                     >
-                      {appendIsTestToPartnerUrl(detail.partnerUrl, detail.isTest)}
+                      {String(detail.partnerUrl ?? "").trim() || "—"}
                     </button>
                   ) : (
-                    <ReadOnlyUrl
-                      url={appendIsTestToPartnerUrl(detail.partnerUrl, detail.isTest)}
-                    />
+                    <ReadOnlyUrl url={String(detail.partnerUrl ?? "").trim()} />
                   )
                 }
               />

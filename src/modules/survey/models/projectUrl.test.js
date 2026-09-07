@@ -34,6 +34,40 @@ describe("normalizeProjectUrl", () => {
     expect(model.sampleSize).toBe("200");
   });
 
+  it("keeps Closed status from the Project URL record without falling back to Open", () => {
+    const model = normalizeProjectUrl(
+      {
+        url_id: 7,
+        Status: "Closed",
+      },
+      3
+    );
+    expect(model.status).toBe("Closed");
+  });
+
+  it("maps inactive Project URL status to Closed", () => {
+    const model = normalizeProjectUrl(
+      {
+        url_id: 8,
+        url_status: "inactive",
+      },
+      3
+    );
+    expect(model.status).toBe("Closed");
+  });
+
+  it("does not use the parent project status when the URL status is missing", () => {
+    const model = normalizeProjectUrl(
+      {
+        url_id: 9,
+        project_url_code: "XYZ",
+      },
+      3,
+      { Status: "Closed", status: "inactive" }
+    );
+    expect(model.status).toBe("Open");
+  });
+
   it("returns an empty model for missing records", () => {
     expect(normalizeProjectUrl(null, "9")).toEqual(createEmptyProjectUrlForm("9"));
   });
