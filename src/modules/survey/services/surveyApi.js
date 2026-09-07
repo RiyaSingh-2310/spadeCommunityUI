@@ -1,6 +1,11 @@
 import { API_ROUTES } from "../../../config/api";
 import { extractListTotalFromResponse } from "../../shared/utils/listResponse";
-import { appendListQuery } from "../../shared/utils/listQueryParams";
+import { appendListQuery, MAX_API_LIST_LIMIT } from "../../shared/utils/listQueryParams";
+import {
+  nextUniqueCloneProjectCode,
+  nextUniqueCloneProjectName,
+} from "../utils/projectCloneIdentity";
+import { normalizeProjectNameForUniqueness } from "../utils/surveyFormValidation";
 import {
   apiStatusToFormValue,
   formValueToApiStatus,
@@ -729,6 +734,76 @@ export async function getRecords({ page, limit, search, groupProjectId } = {}) {
   };
 }
 
+async function listAllProjectRows() {
+  const limit = MAX_API_LIST_LIMIT;
+  const items = [];
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const response = await getRecords({ page, limit });
+    items.push(...(response?.items ?? []));
+    totalPages = Math.max(1, Number(response?.totalPages) || 1);
+    page += 1;
+  } while (page <= totalPages && page <= 50);
+
+  return items;
+}
+
+/**
+ * True when `projectName` is an exact match of another project
+ * (case-insensitive, surrounding/extra whitespace ignored).
+ * Similar names such as "Test Project 1" are not treated as duplicates.
+ * `excludeId` is the record being edited so its own name remains valid.
+ * @param {unknown} projectName
+ * @param {{ excludeId?: string|number|null }} [options]
+ * @returns {Promise<boolean>}
+ */
+export async function projectNameExists(projectName, { excludeId } = {}) {
+  const normalized = normalizeProjectNameForUniqueness(projectName);
+  if (!normalized) return false;
+
+  const exclude = excludeId != null ? String(excludeId).trim() : "";
+  const items = await listAllProjectRows();
+
+  return items.some((item) => {
+    if (exclude) {
+      const ids = [item?.recordId, item?.id, item?.surveyId, item?.projectCode];
+      if (ids.some((value) => value != null && String(value).trim() === exclude)) {
+        return false;
+      }
+    }
+    return normalizeProjectNameForUniqueness(item?.projectName) === normalized;
+  });
+}
+
+/**
+ * True when `projectCode` matches another project's code (case-insensitive).
+ * @param {unknown} projectCode
+ * @param {{ excludeId?: string|number|null }} [options]
+ * @returns {Promise<boolean>}
+ */
+export async function projectCodeExists(projectCode, { excludeId } = {}) {
+  const normalized = String(projectCode ?? "")
+    .trim()
+    .toLowerCase();
+  if (!normalized) return false;
+
+  const exclude = excludeId != null ? String(excludeId).trim() : "";
+  const items = await listAllProjectRows();
+
+  return items.some((item) => {
+    const itemId = String(item?.recordId ?? item?.id ?? "");
+    if (exclude && (itemId === exclude || String(item?.id ?? "") === exclude)) {
+      return false;
+    }
+    const code = String(item?.projectCode ?? item?.surveyId ?? "")
+      .trim()
+      .toLowerCase();
+    return code === normalized;
+  });
+}
+
 /**
  * POST /api/projects/add
  * @param {object} form
@@ -949,6 +1024,7 @@ function buildCloneProjectPayload(record) {
 
   const payload = {
     Project_Name: pickCloneText(record?.Project_Name, record?.project_name) || "",
+    Project_code: "",
     Clients: pickCloneText(record?.Clients, record?.client_name),
     Project_Manager: pickCloneText(
       record?.Project_Manager,
@@ -990,16 +1066,27 @@ function buildCloneProjectPayload(record) {
 
 /**
  * Clone a project by re-submitting its data to POST /api/projects/add.
- * Backend generates a new project id and Project_code.
+ * Assigns a unique Project Name ("Name - 1") and a new unique Project Code.
  * @param {string|number} surveyId
  */
 export async function cloneSurvey(surveyId) {
-const record = await getRecord(surveyId);
+  const record = await getRecord(surveyId);
   const { payload, urlRows } = buildCloneProjectPayload(record);
 
   if (!payload.Project_Name) {
     throw new ApiError("Project name is required to clone.", null, 400);
   }
+
+  const existing = await listAllProjectRows();
+  const sourceCode = pickCloneText(record?.Project_code, record?.project_code, record?.survey_id);
+  payload.Project_Name = nextUniqueCloneProjectName(
+    payload.Project_Name,
+    existing.map((item) => item.projectName)
+  );
+  payload.Project_code = nextUniqueCloneProjectCode(
+    sourceCode,
+    existing.map((item) => item.projectCode || item.surveyId)
+  );
 
   const data = await apiRequest(API_ROUTES.projects.create, {
     method: "POST",

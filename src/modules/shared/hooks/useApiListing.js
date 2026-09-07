@@ -69,7 +69,11 @@ export function useApiListing({
       const rawItems = Array.isArray(data.items) ? data.items : [];
       const items = preserveRowOrder ? rawItems : sortListingRowsByIdAsc(rawItems);
       const total = data.total ?? data.count ?? items.length;
-      const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
+      const apiTotalPages = Number(data.totalPages);
+      const totalPages =
+        Number.isFinite(apiTotalPages) && apiTotalPages > 0
+          ? apiTotalPages
+          : Math.max(1, Math.ceil(total / pageSize) || 1);
 
       if (items.length === 0 && currentPage > 1 && total > 0) {
         // Keep isLoading true; the currentPage update will re-fetch immediately (M5).

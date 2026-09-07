@@ -13,14 +13,48 @@ export const SURVEY_LINK_PLACEHOLDER_TOKENS = Object.freeze([
 /** Default UID token used in pre-filled Single Link Live/Test URLs. */
 export const DEFAULT_SURVEY_LINK_UID_PLACEHOLDER = "XXXX";
 
-const DEFAULT_SURVEY_LINK_ORIGIN = "https://samplepolls.com";
-const DEFAULT_SURVEY_LINK_PATH = "/survey_simulator.php";
-const LEGACY_SURVEY_LINK_PATHS = Object.freeze(["/survey"]);
-const DEFAULT_REDIRECT_ORIGIN = "https://spade-community.com";
+const LEGACY_SURVEY_LINK_PATHS = Object.freeze(["/survey", "/survey_simulator.php"]);
+
+/** Canonical Admin UI origin used for examples / defaults (never localhost). */
+export const ADMIN_SPADE_COMMUNITY_URL = "https://admin.spadecommunity.com/";
+export const FALLBACK_REDIRECT_ORIGIN = "https://admin.spadecommunity.com";
 const DEFAULT_REDIRECT_UID_PLACEHOLDER = "identifier";
 
+/** Speed Community admin origin used for examples (never localhost). */
+export function getDefaultRedirectOrigin() {
+  return FALLBACK_REDIRECT_ORIGIN;
+}
+
+export function isAdminSpadeCommunityUrl(value) {
+  const parsed = parseAbsoluteUrl(value);
+  if (!parsed) {
+    const trimmed = coerceText(value).replace(/\/+$/, "");
+    return trimmed.toLowerCase() === FALLBACK_REDIRECT_ORIGIN.toLowerCase();
+  }
+  const pathname = parsed.pathname.replace(/\/+$/, "") || "/";
+  return (
+    parsed.origin.replace(/\/+$/, "").toLowerCase() ===
+      FALLBACK_REDIRECT_ORIGIN.toLowerCase() &&
+    pathname === "/" &&
+    !parsed.search &&
+    !parsed.hash
+  );
+}
+
+/** Rewrite an absolute URL onto the Speed Community admin origin, keeping path + query. */
+export function rewriteUrlToAdminOrigin(value) {
+  const parsed = parseAbsoluteUrl(value);
+  if (!parsed) return coerceText(value);
+  try {
+    const rewritten = new URL(parsed.pathname + parsed.search + parsed.hash, FALLBACK_REDIRECT_ORIGIN);
+    return rewritten.toString();
+  } catch {
+    return coerceText(value);
+  }
+}
+
 /** Placeholder shown in Live Link / Test Link inputs. */
-export const DEFAULT_SURVEY_LINK_PLACEHOLDER = `${DEFAULT_SURVEY_LINK_ORIGIN}${DEFAULT_SURVEY_LINK_PATH}?pid=PROJECT_URL_CODE&uid=${DEFAULT_SURVEY_LINK_UID_PLACEHOLDER}`;
+export const DEFAULT_SURVEY_LINK_PLACEHOLDER = `${FALLBACK_REDIRECT_ORIGIN}/?pid=PROJECT_URL_CODE&uid=${DEFAULT_SURVEY_LINK_UID_PLACEHOLDER}`;
 
 const PID_PARAM_NAMES = ["pid"];
 const UID_PARAM_NAMES = ["uid"];
@@ -110,13 +144,14 @@ export function hasSupportedSurveyLinkPlaceholder(value) {
   return readPidUidFromUrl(value).uidIsPlaceholder;
 }
 
-function getSurveyLinkOrigin() {
-  return DEFAULT_SURVEY_LINK_ORIGIN;
-}
-
 function normalizePathname(pathname) {
   const trimmed = String(pathname ?? "").replace(/\/+$/, "");
   return trimmed || "/";
+}
+
+function isLocalDevHost(hostname) {
+  const host = String(hostname ?? "").toLowerCase();
+  return host === "localhost" || host === "127.0.0.1";
 }
 
 function isSamplePollsHost(hostname) {
@@ -126,15 +161,21 @@ function isSamplePollsHost(hostname) {
 }
 
 /**
- * True for empty-equivalent Live/Test defaults: the current simulator path
- * or the previous /survey path on samplepolls.com.
+ * True for empty-equivalent Live/Test defaults: samplepolls simulator URLs
+ * or the bare Speed Community admin origin (no path/query).
  */
 function isLegacyOrDefaultSurveyLink(url) {
+  if (isAdminSpadeCommunityUrl(url)) return true;
   const parsed = parseAbsoluteUrl(url);
   if (!parsed) return false;
   if (!isSamplePollsHost(parsed.hostname)) return false;
   const path = normalizePathname(parsed.pathname);
-  return path === DEFAULT_SURVEY_LINK_PATH || LEGACY_SURVEY_LINK_PATHS.includes(path);
+  return LEGACY_SURVEY_LINK_PATHS.includes(path);
+}
+
+function shouldRewriteLocalOrigin(url) {
+  const parsed = parseAbsoluteUrl(url);
+  return Boolean(parsed && isLocalDevHost(parsed.hostname));
 }
 
 function syncPidUidOnAbsoluteUrl(trimmed, pid, defaultUid) {
@@ -163,28 +204,28 @@ export function buildPrefillSurveyLink(
   uid = DEFAULT_SURVEY_LINK_UID_PLACEHOLDER
 ) {
   const pid = coerceText(projectUrlCode);
-  if (!pid) return "";
+  const safeUid = isSupportedUidPlaceholder(uid)
+    ? coerceText(uid)
+    : DEFAULT_SURVEY_LINK_UID_PLACEHOLDER;
+  if (!pid) {
+    return `${FALLBACK_REDIRECT_ORIGIN}/?pid=PROJECT_URL_CODE&uid=${encodeURIComponent(safeUid)}`;
+  }
 
   try {
-    const url = new URL(DEFAULT_SURVEY_LINK_PATH, getSurveyLinkOrigin());
+    const url = new URL("/", FALLBACK_REDIRECT_ORIGIN);
     url.searchParams.set("pid", pid);
-    url.searchParams.set(
-      "uid",
-      isSupportedUidPlaceholder(uid) ? coerceText(uid) : DEFAULT_SURVEY_LINK_UID_PLACEHOLDER
-    );
+    url.searchParams.set("uid", safeUid);
     return url.toString();
   } catch {
-    const safeUid = isSupportedUidPlaceholder(uid)
-      ? coerceText(uid)
-      : DEFAULT_SURVEY_LINK_UID_PLACEHOLDER;
-    return `${getSurveyLinkOrigin()}${DEFAULT_SURVEY_LINK_PATH}?pid=${encodeURIComponent(pid)}&uid=${encodeURIComponent(safeUid)}`;
+    return `${FALLBACK_REDIRECT_ORIGIN}/?pid=${encodeURIComponent(pid)}&uid=${encodeURIComponent(safeUid)}`;
   }
 }
 
 /**
  * Set pid to the Project URL Code on an existing survey link.
  * Keeps the current UID (or adds the supported placeholder when missing).
- * Empty urls become a full pre-filled Live/Test link.
+ * Empty/legacy sample-pool defaults become the admin-origin live/test URL.
+ * Localhost URLs keep their path and query; only the domain is updated.
  * @param {unknown} url
  * @param {unknown} projectUrlCode
  */
@@ -192,17 +233,15 @@ export function withSurveyLinkPid(url, projectUrlCode) {
   const pid = coerceText(projectUrlCode);
   const trimmed = coerceText(url);
   if (!pid) return trimmed;
-  if (!trimmed) return buildPrefillSurveyLink(pid);
-
-  if (isLegacyOrDefaultSurveyLink(trimmed)) {
-    const parsed = parseAbsoluteUrl(trimmed);
-    const uidParam = parsed
-      ? getQueryParamIgnoreCase(parsed.searchParams, UID_PARAM_NAMES)
-      : { key: "", value: "" };
-    const uid = isSupportedUidPlaceholder(uidParam.value)
-      ? coerceText(uidParam.value)
-      : DEFAULT_SURVEY_LINK_UID_PLACEHOLDER;
-    return buildPrefillSurveyLink(pid, uid);
+  if (!trimmed || isLegacyOrDefaultSurveyLink(trimmed)) {
+    return buildPrefillSurveyLink(pid);
+  }
+  if (shouldRewriteLocalOrigin(trimmed)) {
+    return syncPidUidOnAbsoluteUrl(
+      rewriteUrlToAdminOrigin(trimmed),
+      pid,
+      DEFAULT_SURVEY_LINK_UID_PLACEHOLDER
+    );
   }
 
   return syncPidUidOnAbsoluteUrl(trimmed, pid, DEFAULT_SURVEY_LINK_UID_PLACEHOLDER);
@@ -219,16 +258,16 @@ export function buildPrefillRedirectUrl(
   projectUrlCode,
   uid = DEFAULT_REDIRECT_UID_PLACEHOLDER
 ) {
-  const pid = coerceText(projectUrlCode);
+  const pid = coerceText(projectUrlCode) || "xxxx";
   const redirectPath = String(path ?? "").trim();
-  if (!pid || !redirectPath) return "";
+  if (!redirectPath) return pid ? buildPrefillSurveyLink(pid, uid) : ADMIN_SPADE_COMMUNITY_URL;
 
   const safeUid = isSupportedUidPlaceholder(uid)
     ? coerceText(uid)
     : DEFAULT_REDIRECT_UID_PLACEHOLDER;
 
   try {
-    const url = new URL(redirectPath, DEFAULT_REDIRECT_ORIGIN);
+    const url = new URL(redirectPath, FALLBACK_REDIRECT_ORIGIN);
     url.searchParams.set("pid", pid);
     url.searchParams.set("uid", safeUid);
     return url.toString();
@@ -236,12 +275,13 @@ export function buildPrefillRedirectUrl(
     const normalizedPath = redirectPath.startsWith("/")
       ? redirectPath
       : `/${redirectPath}`;
-    return `${DEFAULT_REDIRECT_ORIGIN}${normalizedPath}?pid=${encodeURIComponent(pid)}&uid=${encodeURIComponent(safeUid)}`;
+    return `${FALLBACK_REDIRECT_ORIGIN}${normalizedPath}?pid=${encodeURIComponent(pid)}&uid=${encodeURIComponent(safeUid)}`;
   }
 }
 
 /**
  * Ensure pid is present on a redirect URL. Empty values become a full pre-filled URL.
+ * Localhost URLs keep path and query; only the domain is updated.
  * @param {unknown} url
  * @param {unknown} projectUrlCode
  * @param {string} [fallbackPath]
@@ -250,15 +290,22 @@ export function withRedirectUrlPid(url, projectUrlCode, fallbackPath = "") {
   const pid = coerceText(projectUrlCode);
   const trimmed = coerceText(url);
   if (!pid) return trimmed;
-  if (!trimmed) {
-    return fallbackPath ? buildPrefillRedirectUrl(fallbackPath, pid) : "";
+  if (!trimmed || isLegacyOrDefaultSurveyLink(trimmed)) {
+    return fallbackPath ? buildPrefillRedirectUrl(fallbackPath, pid) : buildPrefillSurveyLink(pid);
+  }
+  if (shouldRewriteLocalOrigin(trimmed)) {
+    return syncPidUidOnAbsoluteUrl(
+      rewriteUrlToAdminOrigin(trimmed),
+      pid,
+      DEFAULT_REDIRECT_UID_PLACEHOLDER
+    );
   }
   return syncPidUidOnAbsoluteUrl(trimmed, pid, DEFAULT_REDIRECT_UID_PLACEHOLDER);
 }
 
 /**
- * Prefill Single Link live/test fields with pid = Project URL Code.
- * Empty and legacy samplepolls /survey defaults become the simulator URL.
+ * Prefill Single Link live/test fields.
+ * Empty and legacy sample-pool defaults become the admin-origin live/test URL.
  * Custom user-edited URLs keep their host/path; only pid is synced.
  * Does not change Multi Link forms or redirect fields.
  * @param {object} form

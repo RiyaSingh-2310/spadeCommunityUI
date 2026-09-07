@@ -5,6 +5,7 @@ import {
   appendListQuery,
   MAX_API_LIST_LIMIT,
 } from "../../shared/utils/listQueryParams";
+import { FALLBACK_REDIRECT_ORIGIN } from "../utils/surveyLinkPlaceholders";
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -295,17 +296,33 @@ export async function findSupplierMappingByDoSurveyToken(token) {
   );
 }
 
-/** Appends IsTest query flag so the public /dosurvey page can show Test vs Live. */
-export function appendIsTestToPartnerUrl(url, isTest) {
+/** Rewrite stored Partner URLs onto the current app origin for /dosurvey links. */
+export function resolvePartnerUrlForCurrentApp(url) {
   const raw = String(url ?? "").trim();
   if (!raw) return raw;
 
   try {
+    const origin = FALLBACK_REDIRECT_ORIGIN;
+    const parsed = /^https?:\/\//i.test(raw) ? new URL(raw) : new URL(raw, origin);
+    const isLocalHost =
+      parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+    if (/\/dosurvey\//i.test(parsed.pathname) || isLocalHost) {
+      return `${origin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+    }
+    return /^https?:\/\//i.test(raw) ? parsed.toString() : raw;
+  } catch {
+    return raw;
+  }
+}
+
+/** Appends IsTest query flag so the public /dosurvey page can show Test vs Live. */
+export function appendIsTestToPartnerUrl(url, isTest) {
+  const raw = resolvePartnerUrlForCurrentApp(url);
+  if (!raw) return raw;
+
+  try {
     const isAbsolute = /^https?:\/\//i.test(raw);
-    const base =
-      typeof window !== "undefined" && window.location?.origin
-        ? window.location.origin
-        : "https://spade-community.com";
+    const base = FALLBACK_REDIRECT_ORIGIN;
     const parsed = isAbsolute ? new URL(raw) : new URL(raw, base);
     parsed.searchParams.set("IsTest", isTest ? "1" : "0");
     if (isAbsolute) return parsed.toString();

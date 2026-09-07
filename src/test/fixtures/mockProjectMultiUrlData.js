@@ -12,7 +12,7 @@ let nextId = 1;
 let multiUrlRecords = [];
 
 export const PROJECT_MULTI_URL_CSV_TEMPLATE = `Live_Link,VenderURL,Venderid_Userid,UserType,Status
-https://spade.com/startsurvey?projectid=sp1234,www.adsurver.com?projectid=1234,XXXX/XYG,adsurver,active
+https://admin.spadecommunity.com/?pid=PROJECT_URL_CODE&uid=XXXX,https://admin.spadecommunity.com/?pid=PROJECT_URL_CODE&uid=XXXX,XXXX/XYG,adsurver,active
 `;
 
 export const PROJECT_MULTI_URL_COLUMNS = [

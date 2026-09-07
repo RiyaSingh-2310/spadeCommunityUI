@@ -1914,3 +1914,46 @@ input[type="number"],
 ) {
   cursor: not-allowed;
 }
+
+.admin-shell .rich-text-editor {
+  overflow: visible;
+}
+
+.admin-shell .rich-text-editor .tox-tinymce {
+  min-height: 250px !important;
+  border-radius: var(--admin-input-radius);
+  border: 1px solid var(--admin-input-border) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.admin-shell .rich-text-editor:hover:not(:focus-within):not(.rich-text-editor--focused) .tox-tinymce:not(.tox-edit-focus) {
+  border-color: color-mix(in srgb, var(--admin-primary-color) 35%, var(--admin-input-border)) !important;
+}
+
+.admin-shell .rich-text-editor:focus-within .tox-tinymce,
+.admin-shell .rich-text-editor--focused .tox-tinymce,
+.admin-shell .rich-text-editor .tox-tinymce.tox-edit-focus {
+  border-color: var(--admin-primary-color) !important;
+  box-shadow: 0 0 0 3px var(--admin-input-focus-ring) !important;
+  outline: none !important;
+}
+
+.admin-shell .rich-text-editor .tox .tox-edit-area,
+.admin-shell .rich-text-editor .tox .tox-edit-area__iframe,
+.admin-shell .rich-text-editor .tox .tox-sidebar-wrap,
+.admin-shell .rich-text-editor .tox .tox-edit-area iframe {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.admin-shell .rich-text-editor .tox .tox-edit-area::before {
+  display: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  opacity: 0 !important;
+}

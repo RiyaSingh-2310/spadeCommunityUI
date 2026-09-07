@@ -124,7 +124,6 @@ function SurveySettingsPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
-      // Frontend-only: no API call. Ready for surveyPagesApi integration later.
       await new Promise((resolve) => setTimeout(resolve, 250));
       const nextSnapshot = { ...form };
       setInitialSnapshot(nextSnapshot);
@@ -169,6 +168,8 @@ function SurveySettingsPage({ isDarkMode }) {
             {REDIRECT_FIELDS.map(([label, key]) => (
               <FormField key={key} label={label} required error={showError(key)}>
                 <RichTextEditor
+                  id={`survey-settings-${key}`}
+                  contentKey={`survey-settings-${key}`}
                   isDarkMode={isDarkMode}
                   value={form[key]}
                   onChange={(value) => setField(key, value)}

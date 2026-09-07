@@ -586,7 +586,11 @@ function DoSurveyStartPage({ isDarkMode, onToggleTheme }) {
   const statusVariant = startBlocked || showUidError ? "warning" : "error";
 
   return (
-    <PublicQuestionnaireLayout isDarkMode={isDarkMode} onToggleTheme={onToggleTheme}>
+    <PublicQuestionnaireLayout
+      isDarkMode={isDarkMode}
+      onToggleTheme={onToggleTheme}
+      showHeader={false}
+    >
       {isLoading || !isSearchReady || !urlSanitized ? (
         <div className="pq-card pq-state-card pq-loading-card" aria-busy="true" aria-live="polite">
           <Loader2 className="pq-loading-spinner" size={32} aria-hidden />

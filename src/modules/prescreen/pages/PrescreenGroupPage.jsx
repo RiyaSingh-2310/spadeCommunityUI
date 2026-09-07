@@ -16,8 +16,16 @@ import {
   updatePrescreenGroupStatus,
 } from "../../../services/questionnaire-group/questionnaireGroupApi";
 
-const LIST_COLUMNS = ["S.No", "Survey Title", "Language", "Website URL", "Status", "Action"];
-const SORT_COLUMN = "Survey Title";
+const LIST_COLUMNS = [
+  "S.No",
+  "Questionnaire Group",
+  "Language",
+  "Question Count",
+  "Status",
+  "Created At",
+  "Action",
+];
+const SORT_COLUMN = "Questionnaire Group";
 
 function PrescreenGroupPage({ isDarkMode }) {
   const navigate = useNavigate();

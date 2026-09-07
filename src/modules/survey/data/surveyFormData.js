@@ -7,8 +7,8 @@ export const CURRENCY_OPTIONS = ["USD", "INR", "EUR", "GBP", "AUD", "CAD", "SGD"
 export const LANGUAGE_OPTIONS = ["English", "Arabic", "German", "French", "Spanish"];
 
 export const SAMPLE_CSV_CONTENT = `project_name,live_link,test_link
-Brand Tracker Q2,https://speed-community.com/survey/live/sample,https://speed-community.com/survey/test/sample
-CX Pulse Study,https://speed-community.com/survey/live/sample2,https://speed-community.com/survey/test/sample2`;
+Brand Tracker Q2,https://admin.spadecommunity.com/?pid=PROJECT_URL_CODE&uid=XXXX,https://admin.spadecommunity.com/?pid=PROJECT_URL_CODE&uid=XXXX
+CX Pulse Study,https://admin.spadecommunity.com/?pid=PROJECT_URL_CODE&uid=XXXX,https://admin.spadecommunity.com/?pid=PROJECT_URL_CODE&uid=XXXX`;
 
 export function createEmptySurveyForm() {
   return {

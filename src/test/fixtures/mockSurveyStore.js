@@ -4,6 +4,11 @@
  * (USE_SURVEY_MOCK_DATA is currently false; live APIs are primary).
  */
 
+import {
+  nextUniqueCloneProjectCode,
+  nextUniqueCloneProjectName,
+} from "../../modules/survey/utils/projectCloneIdentity";
+
 const MOCK_DELAY_MS = 280;
 
 export const MOCK_SURVEY_CLIENTS = [
@@ -21,8 +26,8 @@ export const MOCK_SURVEY_PARTNERS = [
   { partner_id: 104, code: "P1055", name: "Nordic Sample" },
 ];
 
-const LIVE_BASE = "https://speed-community.com/survey/live";
-const TEST_BASE = "https://speed-community.com/survey/test";
+const LIVE_BASE = "https://admin.spadecommunity.com";
+const TEST_BASE = "https://admin.spadecommunity.com";
 
 const RFQ_SEED = [
   { id: "PRJ-011", name: "PRJ-011" },
@@ -33,12 +38,13 @@ const RFQ_SEED = [
 ];
 
 function buildRedirects(numId) {
+  const origin = "https://admin.spadecommunity.com";
   return {
-    complete_url: `${LIVE_BASE}/redirect/complete?id=${numId}`,
-    terminate_url: `${LIVE_BASE}/redirect/terminate?id=${numId}`,
-    over_quota_url: `${LIVE_BASE}/redirect/over-quota?id=${numId}`,
-    quality_term_url: `${LIVE_BASE}/redirect/quality-term?id=${numId}`,
-    survey_close_url: `${LIVE_BASE}/redirect/survey-close?id=${numId}`,
+    complete_url: `${origin}/redirect/complete?pid=PRJ-${10000 + numId}&uid=identifier`,
+    terminate_url: `${origin}/redirect/terminate?pid=PRJ-${10000 + numId}&uid=identifier`,
+    over_quota_url: `${origin}/redirect/quota-full?pid=PRJ-${10000 + numId}&uid=identifier`,
+    quality_term_url: `${origin}/redirect/qualityterm?pid=PRJ-${10000 + numId}&uid=identifier`,
+    survey_close_url: `${origin}/redirect/surveyclose?pid=PRJ-${10000 + numId}&uid=identifier`,
   };
 }
 
@@ -99,8 +105,8 @@ function createSeedSurvey(index) {
     cpi: Number((1.5 + (index % 5) * 0.35).toFixed(2)),
     start_date: `2026-0${1 + (index % 6)}-01`,
     end_date: `2026-0${2 + (index % 6)}-28`,
-    live_url: `${LIVE_BASE}/${id}`,
-    test_url: `${TEST_BASE}/${id}`,
+    live_url: `${LIVE_BASE}/?pid=PRJ-${10000 + id}&uid=XXXX`,
+    test_url: `${TEST_BASE}/?pid=PRJ-${10000 + id}&uid=XXXX`,
     geo_location: index % 2 === 0,
     url_protection: true,
     unique_ip: index % 3 === 0,
@@ -337,10 +343,19 @@ export function cloneMockSurvey(id) {
   const source = getMockSurveyById(id);
   if (!source) return null;
 
+  const names = mockSurveys.map((survey) => survey.Project_Name || survey.project_name);
+  const codes = mockSurveys.map((survey) => survey.Project_code || survey.survey_id);
+
   return createMockSurvey({
     ...source,
-    Project_Name: `${source.Project_Name || source.project_name} (Clone)`,
-    Project_code: `${source.Project_code || source.survey_id}-CLONE`,
+    Project_Name: nextUniqueCloneProjectName(
+      source.Project_Name || source.project_name,
+      names
+    ),
+    Project_code: nextUniqueCloneProjectCode(
+      source.Project_code || source.survey_id,
+      codes
+    ),
     Status: "active",
   });
 }

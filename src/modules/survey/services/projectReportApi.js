@@ -15,6 +15,7 @@ import {
   normalizeProjectReportType,
   PROJECT_REPORT_TYPES,
 } from "../utils/projectReportNavigation";
+import { getProjectReportColumns } from "../utils/projectReportColumns";
 import {
   downloadPreScreenReportCsv,
   getPreScreenReport,
@@ -149,6 +150,9 @@ export function mapProjectReportRow(record, index = 0) {
         "Is_Test_Link",
         "is_text_link",
         "isTextLink",
+        "is_test",
+        "IsTest",
+        "isTest",
       ])
     ),
   };
@@ -237,7 +241,13 @@ const REPORT_ROW_MAPPERS = {
   [PROJECT_REPORT_TYPES.PROJECT]: mapProjectReportRow,
   [PROJECT_REPORT_TYPES.PRESCREEN]: mapPrescreenReportRow,
   [PROJECT_REPORT_TYPES.SUPPLIER]: mapSupplierReportRow,
+  [PROJECT_REPORT_TYPES.TEST]: mapProjectReportRow,
 };
+
+function isTestLinkValue(value) {
+  const key = String(value ?? "").trim().toLowerCase();
+  return key === "true" || key === "1" || key === "yes";
+}
 
 function extractReportRecords(data) {
   if (!data || typeof data !== "object") return [];
@@ -286,6 +296,27 @@ export async function fetchProjectReportList({
 
     const records = extractReportRecords(data);
     const mapped = mapReportRows(records, mapRow);
+    const filtered = filterRowsBySearch(mapped, search);
+    const items = paginateRows(filtered, page, limit);
+
+    return {
+      success: true,
+      items,
+      total: filtered.length,
+      page,
+      limit,
+      projectName: String(data.project_name ?? data.projectName ?? "").trim(),
+    };
+  }
+
+  if (normalizedType === PROJECT_REPORT_TYPES.TEST) {
+    const data = await apiRequest(API_ROUTES.projectReports.report(resolvedProjectId));
+    assertSuccess(data);
+
+    const records = extractReportRecords(data);
+    const mapped = mapReportRows(records, mapProjectReportRow).filter((row) =>
+      isTestLinkValue(row.isTestLink)
+    );
     const filtered = filterRowsBySearch(mapped, search);
     const items = paginateRows(filtered, page, limit);
 
@@ -358,6 +389,26 @@ export async function fetchProjectReportList({
   };
 }
 
+function csvEscape(value) {
+  const text = String(value ?? "");
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+function downloadCsvText(content, filename) {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function buildReportDownloadFilename(reportType, projectId) {
   return buildDatedExportFilename(
     `${normalizeProjectReportType(reportType)}-report-${projectId}`
@@ -388,6 +439,22 @@ export async function downloadProjectReport({
     return downloadCsvExport(API_ROUTES.projectReports.exportCsv(resolvedProjectId), {
       defaultFilename,
     });
+  }
+
+  if (normalizedType === PROJECT_REPORT_TYPES.TEST) {
+    const result = await fetchProjectReportList({
+      projectId: resolvedProjectId,
+      reportType: PROJECT_REPORT_TYPES.TEST,
+      page: 1,
+      limit: 10000,
+    });
+    const columns = getProjectReportColumns(PROJECT_REPORT_TYPES.TEST);
+    const header = columns.map((column) => csvEscape(column.label)).join(",");
+    const lines = (result.items ?? []).map((row) =>
+      columns.map((column) => csvEscape(row[column.key])).join(",")
+    );
+    downloadCsvText([header, ...lines].join("\n"), defaultFilename);
+    return { success: true };
   }
 
   if (normalizedType === PROJECT_REPORT_TYPES.SUPPLIER) {

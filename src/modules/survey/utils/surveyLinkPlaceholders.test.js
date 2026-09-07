@@ -1,61 +1,44 @@
 import { describe, expect, it } from "vitest";
 import {
+  ADMIN_SPADE_COMMUNITY_URL,
   applyPrefillSingleLinkUrls,
   buildPrefillRedirectUrl,
   buildPrefillSurveyLink,
   DEFAULT_SURVEY_LINK_PLACEHOLDER,
+  getSurveyLinkPlaceholderError,
+  rewriteUrlToAdminOrigin,
   withRedirectUrlPid,
   withSurveyLinkPid,
 } from "./surveyLinkPlaceholders";
 
 describe("buildPrefillSurveyLink", () => {
-  it("builds the survey simulator URL with Project URL Code as pid and XXXX as uid", () => {
+  it("uses the Speed Community admin origin and keeps pid/uid", () => {
     expect(buildPrefillSurveyLink("SFS363")).toBe(
-      "https://samplepolls.com/survey_simulator.php?pid=SFS363&uid=XXXX"
+      "https://admin.spadecommunity.com/?pid=SFS363&uid=XXXX"
     );
   });
 
   it("keeps a supported identifier UID placeholder", () => {
     expect(buildPrefillSurveyLink("SFS363", "identifier")).toBe(
-      "https://samplepolls.com/survey_simulator.php?pid=SFS363&uid=identifier"
+      "https://admin.spadecommunity.com/?pid=SFS363&uid=identifier"
     );
   });
 });
 
 describe("withSurveyLinkPid", () => {
-  it("prefills empty Live/Test links with the simulator URL", () => {
+  it("prefills empty Live/Test links with the admin origin and pid/uid", () => {
     expect(withSurveyLinkPid("", "SFS363")).toBe(
-      "https://samplepolls.com/survey_simulator.php?pid=SFS363&uid=XXXX"
+      "https://admin.spadecommunity.com/?pid=SFS363&uid=XXXX"
     );
   });
 
-  it("upgrades the legacy samplepolls /survey default to survey_simulator.php", () => {
+  it("rewrites localhost while keeping path and query", () => {
     expect(
       withSurveyLinkPid(
-        "https://samplepolls.com/survey?pid=OLD123&uid=XXXX",
+        "http://localhost:5173/?pid=OLD123&uid=XXXX",
         "SFS363"
       )
-    ).toBe("https://samplepolls.com/survey_simulator.php?pid=SFS363&uid=XXXX");
-  });
-
-  it("keeps a supported UID when upgrading the legacy default", () => {
-    expect(
-      withSurveyLinkPid(
-        "https://samplepolls.com/survey?pid=OLD123&uid=identifier",
-        "SFS363"
-      )
-    ).toBe(
-      "https://samplepolls.com/survey_simulator.php?pid=SFS363&uid=identifier"
-    );
-  });
-
-  it("syncs pid on an already-correct simulator URL", () => {
-    expect(
-      withSurveyLinkPid(
-        "https://samplepolls.com/survey_simulator.php?pid=OLD123&uid=XXXX",
-        "SFS363"
-      )
-    ).toBe("https://samplepolls.com/survey_simulator.php?pid=SFS363&uid=XXXX");
+    ).toBe("https://admin.spadecommunity.com/?pid=SFS363&uid=XXXX");
   });
 
   it("does not rewrite a custom user-edited host or path", () => {
@@ -75,53 +58,71 @@ describe("applyPrefillSingleLinkUrls", () => {
       "SFS363"
     );
     expect(next.liveLink).toBe(
-      "https://samplepolls.com/survey_simulator.php?pid=SFS363&uid=XXXX"
+      "https://admin.spadecommunity.com/?pid=SFS363&uid=XXXX"
     );
     expect(next.testLink).toBe(
-      "https://samplepolls.com/survey_simulator.php?pid=SFS363&uid=XXXX"
-    );
-  });
-
-  it("preserves a custom live link while upgrading a legacy test link", () => {
-    const next = applyPrefillSingleLinkUrls(
-      {
-        liveLink: "https://custom.example/s?pid=KEEP&uid=XXXX",
-        testLink: "https://samplepolls.com/survey?pid=OLD&uid=XXXX",
-      },
-      "SFS363"
-    );
-    expect(next.liveLink).toBe("https://custom.example/s?pid=SFS363&uid=XXXX");
-    expect(next.testLink).toBe(
-      "https://samplepolls.com/survey_simulator.php?pid=SFS363&uid=XXXX"
+      "https://admin.spadecommunity.com/?pid=SFS363&uid=XXXX"
     );
   });
 });
 
 describe("redirect URLs", () => {
-  it("does not use the survey simulator path for complete redirects", () => {
-    const url = buildPrefillRedirectUrl("/complete", "SFS363");
+  it("keeps the redirect path and parameters on the admin origin", () => {
+    const url = buildPrefillRedirectUrl("/redirect/complete", "SFS363");
     expect(url).toBe(
-      "https://spade-community.com/complete?pid=SFS363&uid=identifier"
+      "https://admin.spadecommunity.com/redirect/complete?pid=SFS363&uid=identifier"
     );
-    expect(url).not.toContain("survey_simulator.php");
+    expect(url).not.toContain("localhost:5173");
     expect(url).not.toContain("samplepolls.com");
   });
 
-  it("syncs pid on existing redirect URLs without changing the path", () => {
+  it("rewrites localhost redirect URLs without dropping path or params", () => {
     expect(
       withRedirectUrlPid(
-        "https://spade-community.com/terminate?pid=OLD&uid=identifier",
+        "http://localhost:5173/redirect/surveyclose?pid=XTQ523&uid=identifier",
+        "SFS363",
+        "/redirect/surveyclose"
+      )
+    ).toBe(
+      "https://admin.spadecommunity.com/redirect/surveyclose?pid=SFS363&uid=identifier"
+    );
+  });
+
+  it("syncs pid on existing custom redirect URLs without changing the path", () => {
+    expect(
+      withRedirectUrlPid(
+        "https://spadecommunity.com/terminate?pid=OLD&uid=identifier",
         "SFS363",
         "/terminate"
       )
-    ).toBe("https://spade-community.com/terminate?pid=SFS363&uid=identifier");
+    ).toBe("https://spadecommunity.com/terminate?pid=SFS363&uid=identifier");
+  });
+});
+
+describe("rewriteUrlToAdminOrigin", () => {
+  it("changes only the domain", () => {
+    expect(
+      rewriteUrlToAdminOrigin(
+        "http://localhost:5173/redirect/surveyclose?pid=XTQ523&uid=identifier"
+      )
+    ).toBe(
+      "https://admin.spadecommunity.com/redirect/surveyclose?pid=XTQ523&uid=identifier"
+    );
   });
 });
 
 describe("DEFAULT_SURVEY_LINK_PLACEHOLDER", () => {
-  it("documents the survey_simulator.php endpoint", () => {
+  it("uses the admin origin with pid and uid placeholders", () => {
     expect(DEFAULT_SURVEY_LINK_PLACEHOLDER).toBe(
-      "https://samplepolls.com/survey_simulator.php?pid=PROJECT_URL_CODE&uid=XXXX"
+      "https://admin.spadecommunity.com/?pid=PROJECT_URL_CODE&uid=XXXX"
+    );
+  });
+});
+
+describe("getSurveyLinkPlaceholderError", () => {
+  it("does not treat the bare admin origin as a complete live link", () => {
+    expect(getSurveyLinkPlaceholderError(ADMIN_SPADE_COMMUNITY_URL, "Live Link")).toBe(
+      "Live Link must include both PID and a supported UID placeholder (identifier or XXXX)."
     );
   });
 });

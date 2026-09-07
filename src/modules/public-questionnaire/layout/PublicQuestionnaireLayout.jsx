@@ -11,6 +11,7 @@ function PublicQuestionnaireLayout({
   shellClassName = "",
   mainClassName = "",
   helpDescription = "",
+  showHeader = true,
 }) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const helpBody =
@@ -23,43 +24,45 @@ function PublicQuestionnaireLayout({
       data-theme={isDarkMode ? "dark" : "light"}
       style={{ background: "var(--admin-shell-bg)" }}
     >
-      <header
-        className="sticky top-0 z-20 border-b backdrop-blur-sm"
-        style={{
-          background: "color-mix(in srgb, var(--admin-header-surface) 92%, transparent)",
-          borderColor: "var(--admin-header-surface-border)",
-        }}
-      >
-        <div className="pq-page-container flex items-center justify-between gap-6 py-4 sm:py-5">
-          <img
-            src={logo}
-            alt="Spade Community"
-            className="h-9 w-auto max-w-[200px] object-contain sm:h-10 sm:max-w-[240px]"
-          />
+      {showHeader ? (
+        <header
+          className="sticky top-0 z-20 border-b backdrop-blur-sm"
+          style={{
+            background: "color-mix(in srgb, var(--admin-header-surface) 92%, transparent)",
+            borderColor: "var(--admin-header-surface-border)",
+          }}
+        >
+          <div className="pq-page-container flex items-center justify-between gap-6 py-4 sm:py-5">
+            <img
+              src={logo}
+              alt="Spade Community"
+              className="h-9 w-auto max-w-[200px] object-contain sm:h-10 sm:max-w-[240px]"
+            />
 
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={onToggleTheme}
-              className="pq-icon-btn admin-icon-btn admin-text-subtle"
-              aria-label="Toggle theme"
-              title="Toggle theme"
-            >
-              {isDarkMode ? <Moon size={18} /> : <Sun size={18} />}
-            </button>
+            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={onToggleTheme}
+                className="pq-icon-btn admin-icon-btn admin-text-subtle"
+                aria-label="Toggle theme"
+                title="Toggle theme"
+              >
+                {isDarkMode ? <Moon size={18} /> : <Sun size={18} />}
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setIsHelpOpen(true)}
-              className="pq-icon-btn admin-icon-btn admin-text-subtle"
-              aria-label="Help"
-              title="Help"
-            >
-              <CircleHelp size={18} />
-            </button>
+              <button
+                type="button"
+                onClick={() => setIsHelpOpen(true)}
+                className="pq-icon-btn admin-icon-btn admin-text-subtle"
+                aria-label="Help"
+                title="Help"
+              >
+                <CircleHelp size={18} />
+              </button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      ) : null}
 
       <main
         className={`flex flex-1 flex-col ${mainClassName || "py-8 sm:py-10 lg:py-14"}`.trim()}

@@ -23,6 +23,7 @@ import { isFormValid } from "../../shared/utils/validation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { mapPartnersToSelectOptions } from "../services/surveyApi";
 import {
+  FALLBACK_REDIRECT_ORIGIN,
   getOptionalRedirectUrlPidUidError,
   withRedirectUrlPid,
 } from "../utils/surveyLinkPlaceholders";
@@ -86,8 +87,7 @@ const REDIRECT_FIELDS = [
     key: "complete",
     label: "Complete",
     path: "/redirect/complete",
-    example:
-      "https://spade-community.com/redirect/complete?pid=PROJECT_URL_CODE&uid=identifier",
+    example: `${FALLBACK_REDIRECT_ORIGIN}/redirect/complete?pid=PROJECT_URL_CODE&uid=identifier`,
     copySuccessMessage: "Complete URL copied",
     copyLabel: "Copy Complete URL",
   },
@@ -95,8 +95,7 @@ const REDIRECT_FIELDS = [
     key: "terminate",
     label: "Terminate",
     path: "/redirect/terminate",
-    example:
-      "https://spade-community.com/redirect/terminate?pid=PROJECT_URL_CODE&uid=identifier",
+    example: `${FALLBACK_REDIRECT_ORIGIN}/redirect/terminate?pid=PROJECT_URL_CODE&uid=identifier`,
     copySuccessMessage: "Terminate URL copied",
     copyLabel: "Copy Terminate URL",
   },
@@ -104,8 +103,7 @@ const REDIRECT_FIELDS = [
     key: "overQuota",
     label: "Over Quota",
     path: "/redirect/overquota",
-    example:
-      "https://spade-community.com/redirect/overquota?pid=PROJECT_URL_CODE&uid=identifier",
+    example: `${FALLBACK_REDIRECT_ORIGIN}/redirect/overquota?pid=PROJECT_URL_CODE&uid=identifier`,
     copySuccessMessage: "Over Quota URL copied",
     copyLabel: "Copy Over Quota URL",
   },
@@ -113,8 +111,7 @@ const REDIRECT_FIELDS = [
     key: "qualityTerm",
     label: "Quality Term",
     path: "/redirect/qualityterm",
-    example:
-      "https://spade-community.com/redirect/qualityterm?pid=PROJECT_URL_CODE&uid=identifier",
+    example: `${FALLBACK_REDIRECT_ORIGIN}/redirect/qualityterm?pid=PROJECT_URL_CODE&uid=identifier`,
     copySuccessMessage: "Quality Term URL copied",
     copyLabel: "Copy Quality Term URL",
   },
@@ -122,8 +119,7 @@ const REDIRECT_FIELDS = [
     key: "surveyClose",
     label: "Survey Close",
     path: "/redirect/surveyclose",
-    example:
-      "https://spade-community.com/redirect/surveyclose?pid=PROJECT_URL_CODE&uid=identifier",
+    example: `${FALLBACK_REDIRECT_ORIGIN}/redirect/surveyclose?pid=PROJECT_URL_CODE&uid=identifier`,
     copySuccessMessage: "Survey Close URL copied",
     copyLabel: "Copy Survey Close URL",
   },
@@ -168,30 +164,16 @@ function pickFirstRedirectUrl(source, keys) {
   return "";
 }
 
-/** Seed partner redirect fields from the selected Project URL (top selection). */
-function redirectsFromProjectUrl(projectUrl) {
-  if (!projectUrl) {
-    return {
-      complete: "",
-      terminate: "",
-      overQuota: "",
-      qualityTerm: "",
-      surveyClose: "",
-      postbackUrl: "",
-    };
-  }
-
-  const projectUrlCode = String(projectUrl.projectUrlCode ?? "").trim();
-  const redirects = {
-    complete: normalizeRedirectUrlValue(projectUrl.redirectComplete),
-    terminate: normalizeRedirectUrlValue(projectUrl.redirectTerminate),
-    overQuota: normalizeRedirectUrlValue(projectUrl.redirectOverQuota),
-    qualityTerm: normalizeRedirectUrlValue(projectUrl.redirectQualityTerm),
-    surveyClose: normalizeRedirectUrlValue(projectUrl.redirectSurveyClose),
+/** Seed partner redirect fields from the selected Project URL only when values exist. */
+function redirectsFromProjectUrl() {
+  return {
+    complete: "",
+    terminate: "",
+    overQuota: "",
+    qualityTerm: "",
+    surveyClose: "",
     postbackUrl: "",
   };
-
-  return applyProjectUrlPidToRedirects(redirects, projectUrlCode);
 }
 
 function applyProjectUrlPidToRedirects(redirects, projectUrlCode) {
@@ -204,7 +186,7 @@ function applyProjectUrlPidToRedirects(redirects, projectUrlCode) {
       const field = REDIRECT_FIELDS.find((item) => item.key === key);
       return [
         key,
-        withRedirectUrlPid(value, pid, field?.path ?? ""),
+        value ? withRedirectUrlPid(value, pid, field?.path ?? "") : "",
       ];
     })
   );
@@ -272,17 +254,6 @@ function redirectsFromPartnerRecord(partner, mappedRow = null) {
       "apiBaseUrl",
       "api_base_url",
     ]),
-  };
-}
-
-function mergeRedirects(preferred, fallback) {
-  return {
-    complete: preferred.complete || fallback.complete || "",
-    terminate: preferred.terminate || fallback.terminate || "",
-    overQuota: preferred.overQuota || fallback.overQuota || "",
-    qualityTerm: preferred.qualityTerm || fallback.qualityTerm || "",
-    surveyClose: preferred.surveyClose || fallback.surveyClose || "",
-    postbackUrl: preferred.postbackUrl || fallback.postbackUrl || "",
   };
 }
 
@@ -394,13 +365,16 @@ function PartnerMappingTab({
 
   const openPartnerUrl = useCallback(({ partnerUrl, isTest = false }) => {
     const rawPartnerUrl = String(partnerUrl ?? "").trim();
-    if (!rawPartnerUrl) return;
+    if (!rawPartnerUrl) {
+      toastApiError({ message: "Partner URL is not available for this mapping." });
+      return;
+    }
 
     const destinationUrl = appendIsTestToPartnerUrl(rawPartnerUrl, isTest);
     setViewTarget(null);
 
     notePartnerUrlTabOpening(destinationUrl);
-    const partnerTab = window.open(destinationUrl, "_blank");
+    const partnerTab = window.open(destinationUrl, "_blank", "noopener,noreferrer");
     registerPartnerUrlWindow(partnerTab);
   }, []);
 
@@ -754,7 +728,7 @@ function PartnerMappingTab({
       (item) => String(item.partner_id ?? item.id) === String(partnerId)
     );
     const panelSize = partner?.panel_size ?? partner?.panelSize;
-    const projectUrlRedirects = redirectsFromProjectUrl(selectedProjectUrl);
+    const emptyRedirects = redirectsFromProjectUrl();
 
     setForm((prev) => ({
       ...prev,
@@ -765,8 +739,7 @@ function PartnerMappingTab({
         panelSize != null && String(panelSize).trim() !== ""
           ? capQuotaToAvailable(panelSize, availableQuota)
           : prev.quota,
-      // Reset to Project URL defaults; partner detail will overwrite when loaded.
-      redirects: { ...projectUrlRedirects },
+      redirects: { ...emptyRedirects },
     }));
     touch("partnerId");
     touch("quota");
@@ -782,16 +755,14 @@ function PartnerMappingTab({
       setForm((prev) => ({
         ...prev,
         partnerCode: String(mapped.partnerCode || prev.partnerCode || "").trim(),
-        partnerRedirectUrl:
+        partnerRedirectUrl: normalizeRedirectUrlValue(
           partnerRedirects.complete ||
-          normalizeRedirectUrlValue(
-            mapped.websiteUrl && mapped.websiteUrl !== "—"
+            (mapped.websiteUrl && mapped.websiteUrl !== "—"
               ? mapped.websiteUrl
-              : ""
-          ),
-        // Partner API values take priority; Project URL fills any gaps.
+              : "")
+        ),
         redirects: applyProjectUrlPidToRedirects(
-          mergeRedirects(partnerRedirects, projectUrlRedirects),
+          partnerRedirects,
           selectedProjectUrl?.projectUrlCode
         ),
         quota:
@@ -800,22 +771,8 @@ function PartnerMappingTab({
             : prev.quota,
       }));
     } catch {
-      // Keep Project URL / panel-sizes defaults when partner detail is unavailable.
-      setForm((prev) => ({
-        ...prev,
-        redirects: applyProjectUrlPidToRedirects(
-          mergeRedirects(projectUrlRedirects, prev.redirects),
-          selectedProjectUrl?.projectUrlCode
-        ),
-      }));
+      // Keep empty redirect fields when partner detail is unavailable.
     }
-  };
-
-  const setRedirect = (key, value) => {
-    setForm((prev) => ({
-      ...prev,
-      redirects: { ...prev.redirects, [key]: value },
-    }));
   };
 
   const buildPayloadFromForm = () =>
@@ -1301,38 +1258,6 @@ function PartnerMappingTab({
                       aria-invalid={Boolean(showError("cpi") && errors.cpi)}
                     />
                   </FormField>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-1">
-                  {REDIRECT_FIELDS.map(
-                    ({ key, label, example, copySuccessMessage, copyLabel }) => (
-                      <FormField
-                        key={key}
-                        label={label}
-                        hint={`Example: ${example}`}
-                        error={showError(key) ? errors[key] : ""}
-                      >
-                        <div className="flex items-stretch gap-2">
-                          <input
-                            className={`${inputClass} min-w-0 flex-1`}
-                            value={form.redirects[key] ?? ""}
-                            onChange={(event) =>
-                              setRedirect(key, event.target.value)
-                            }
-                            onBlur={() => touch(key)}
-                            placeholder="https://"
-                            disabled={isSubmitting}
-                            aria-invalid={Boolean(showError(key) && errors[key])}
-                          />
-                          <CopyValueButton
-                            value={form.redirects[key]}
-                            successMessage={copySuccessMessage}
-                            label={copyLabel}
-                          />
-                        </div>
-                      </FormField>
-                    )
-                  )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 pt-2">

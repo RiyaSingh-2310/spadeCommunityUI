@@ -2,12 +2,14 @@ export const PROJECT_REPORT_TYPES = {
   PROJECT: "project",
   PRESCREEN: "prescreen",
   SUPPLIER: "supplier",
+  TEST: "test",
 };
 
 export const PROJECT_REPORT_TYPE_LABELS = {
   [PROJECT_REPORT_TYPES.PROJECT]: "Project Report",
   [PROJECT_REPORT_TYPES.PRESCREEN]: "Prescreen Report",
   [PROJECT_REPORT_TYPES.SUPPLIER]: "Supplier Report",
+  [PROJECT_REPORT_TYPES.TEST]: "Test URL Report",
 };
 
 /**
@@ -87,6 +89,7 @@ export function getProjectReportPageTitle({ reportType, projectName }) {
     [PROJECT_REPORT_TYPES.PROJECT]: "Project Report",
     [PROJECT_REPORT_TYPES.PRESCREEN]: "Prescreen Question",
     [PROJECT_REPORT_TYPES.SUPPLIER]: "Supplier",
+    [PROJECT_REPORT_TYPES.TEST]: "Test URL Report",
   }[type];
   const name = String(projectName ?? "").trim();
   return name ? `${titlePrefix} of ${name}` : titlePrefix;

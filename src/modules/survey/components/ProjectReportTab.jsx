@@ -192,6 +192,19 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) 
         }
       />
 
+      <ReportSection
+        title="Test URL Report"
+        isDarkMode={isDarkMode}
+        headerAction={
+          <ReportActions
+            onView={() => handleViewReport(PROJECT_REPORT_TYPES.TEST)}
+            onDownload={() => handleDownloadReport(PROJECT_REPORT_TYPES.TEST)}
+            isDownloading={downloadingType === PROJECT_REPORT_TYPES.TEST}
+            canDownload={canDownload}
+          />
+        }
+      />
+
       <ReportSection title="Supplier Report" isDarkMode={isDarkMode}>
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
           <label className="admin-text flex min-w-0 flex-1 flex-col gap-2 text-sm font-semibold sm:max-w-xs">

@@ -95,7 +95,7 @@ export function appendPartnerVerifyParams(url, { mappingId } = {}) {
     const base =
       typeof window !== "undefined" && window.location?.origin
         ? window.location.origin
-        : "https://spade-community.com";
+        : "https://spadecommunity.com";
     const parsed = isAbsolute ? new URL(raw) : new URL(raw, base);
     parsed.searchParams.set(PARTNER_VERIFY_QUERY_KEY, "1");
     const id = String(mappingId ?? "").trim();

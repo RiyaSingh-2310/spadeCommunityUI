@@ -54,8 +54,8 @@ import {
 import { PROJECT_URL_VIEW_IDS } from "../utils/surveyDetailsNavigation";
 import { dedupeSelectOptions } from "../utils/dedupeSelectOptions";
 import {
-  applyPrefillSingleLinkUrls,
   DEFAULT_SURVEY_LINK_PLACEHOLDER,
+  withSurveyLinkPid,
 } from "../utils/surveyLinkPlaceholders";
 import {
   SectionDivider,
@@ -186,7 +186,13 @@ function withGeneratedProjectUrlCode(form, code) {
   if (!nextCode) return nextForm;
   nextForm = applyPrefillProjectUrlRedirects(nextForm, nextCode);
   if (normalizeProjectLinkType(nextForm.projectLinkType) !== "Multi Link") {
-    nextForm = applyPrefillSingleLinkUrls(nextForm, nextCode);
+    const liveLink = String(nextForm.liveLink ?? "").trim();
+    const testLink = String(nextForm.testLink ?? "").trim();
+    nextForm = {
+      ...nextForm,
+      liveLink: liveLink ? withSurveyLinkPid(liveLink, nextCode) : "",
+      testLink: testLink ? withSurveyLinkPid(testLink, nextCode) : "",
+    };
   }
   return nextForm;
 }
@@ -398,9 +404,6 @@ function ProjectUrlsTab({
           }
         } else {
           formWithCode = applyPrefillProjectUrlRedirects(normalized, existingCode);
-          if (normalizeProjectLinkType(normalized.projectLinkType) !== "Multi Link") {
-            formWithCode = applyPrefillSingleLinkUrls(formWithCode, existingCode);
-          }
         }
 
         if (cancelled) return;
@@ -567,9 +570,6 @@ function ProjectUrlsTab({
       const code = String(next.projectUrlCode ?? "").trim();
       if (code) {
         next = applyPrefillProjectUrlRedirects(next, code);
-        if (nextType !== "Multi Link") {
-          next = applyPrefillSingleLinkUrls(next, code);
-        }
       }
       return next;
     });
@@ -1011,12 +1011,22 @@ function ProjectUrlsTab({
               <input
                 className={`${inputClass} flex-1`}
                 value={
-                  isGeneratingUrlCode
+                  isGeneratingUrlCode && !form.projectUrlCode
                     ? "Generating..."
                     : form.projectUrlCode || ""
                 }
-                readOnly
-                disabled
+                onChange={(event) => {
+                  const nextCode = event.target.value;
+                  setForm((prev) => {
+                    const next = { ...prev, projectUrlCode: nextCode };
+                    const trimmed = String(nextCode ?? "").trim();
+                    if (!trimmed) return next;
+                    return applyPrefillProjectUrlRedirects(next, trimmed);
+                  });
+                }}
+                onBlur={() => touch("projectUrlCode")}
+                placeholder="Enter Project URL Code"
+                disabled={!canWrite || isGeneratingUrlCode}
                 aria-busy={isGeneratingUrlCode}
                 aria-label="Project URL Code"
               />
@@ -1221,7 +1231,7 @@ function ProjectUrlsTab({
               <FormField
                 label="Live Link"
                 required
-                hint="Must include PID and a supported UID placeholder (identifier or XXXX)"
+                hint={`Example: ${DEFAULT_SURVEY_LINK_PLACEHOLDER}`}
                 error={showError("liveLink") ? errors.liveLink : ""}
               >
                 <div className="flex items-stretch gap-2">
@@ -1246,7 +1256,7 @@ function ProjectUrlsTab({
               </FormField>
               <FormField
                 label="Test Link"
-                hint="Must include PID and a supported UID placeholder (identifier or XXXX)"
+                hint={`Example: ${DEFAULT_SURVEY_LINK_PLACEHOLDER}`}
                 error={showError("testLink") ? errors.testLink : ""}
               >
                 <div className="flex items-stretch gap-2">

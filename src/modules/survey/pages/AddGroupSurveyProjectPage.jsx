@@ -13,12 +13,18 @@ import {
   resolveGroupClientNames,
   resolveGroupPrimaryClientId,
 } from "../services/groupSurveyApi";
+import { projectCodeExists, projectNameExists } from "../services/surveyApi";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   getSurveyFormErrors,
+  isProjectCodeDuplicateError,
+  isProjectNameDuplicateError,
   isSurveyFormSubmittable,
+  PROJECT_CODE_DUPLICATE_MESSAGE,
+  PROJECT_NAME_DUPLICATE_MESSAGE,
   SURVEY_FORM_FIELDS,
 } from "../utils/surveyFormValidation";
+import toast from "../../../services/toast/toast";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 
 function AddGroupSurveyProjectPage({ isDarkMode }) {
@@ -30,6 +36,8 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [form, setForm] = useState(createEmptySurveyForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [projectNameTaken, setProjectNameTaken] = useState(false);
+  const [projectCodeTaken, setProjectCodeTaken] = useState(false);
   const {
     clientOptions,
     projectManagerOptions,
@@ -77,16 +85,27 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
     [groupRecord]
   );
 
-  const errors = useMemo(() => getSurveyFormErrors(form), [form]);
+  const errors = useMemo(
+    () => getSurveyFormErrors(form, { projectNameTaken, projectCodeTaken }),
+    [form, projectNameTaken, projectCodeTaken]
+  );
   const { showError, touch, validateSubmit } = useFormValidation({
     errors,
     fields: SURVEY_FORM_FIELDS,
   });
 
+  useEffect(() => {
+    setProjectNameTaken(false);
+  }, [form.projectName]);
+
+  useEffect(() => {
+    setProjectCodeTaken(false);
+  }, [form.projectCode]);
+
   const canSubmit =
     showSubmit &&
     !readOnly &&
-    isSurveyFormSubmittable(form) &&
+    isSurveyFormSubmittable(form, { projectNameTaken, projectCodeTaken }) &&
     !isSubmitting &&
     !isLoadingGroup &&
     !isLoadingOptions &&
@@ -94,10 +113,24 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
 
   const onSubmit = async (event) => {
     event.preventDefault();
-    if (!validateSubmit() || !isSurveyFormSubmittable(form)) return;
+    if (!validateSubmit() || !isSurveyFormSubmittable(form, { projectNameTaken, projectCodeTaken })) return;
 
     setIsSubmitting(true);
     try {
+      const nameTaken = await projectNameExists(form.projectName);
+      if (nameTaken) {
+        setProjectNameTaken(true);
+        toast.error(PROJECT_NAME_DUPLICATE_MESSAGE);
+        return;
+      }
+
+      const codeTaken = await projectCodeExists(form.projectCode);
+      if (codeTaken) {
+        setProjectCodeTaken(true);
+        toast.error(PROJECT_CODE_DUPLICATE_MESSAGE);
+        return;
+      }
+
       const data = await createGroupSurveyProject(groupId, form);
       toastApiSuccess(data);
       navigate(`/survey/group/${encodeURIComponent(groupId)}/projects`, {
@@ -105,7 +138,15 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
         state: { refresh: true },
       });
     } catch (err) {
-      toastApiError(err);
+      if (isProjectNameDuplicateError(err)) {
+        setProjectNameTaken(true);
+        toast.error(PROJECT_NAME_DUPLICATE_MESSAGE);
+      } else if (isProjectCodeDuplicateError(err)) {
+        setProjectCodeTaken(true);
+        toast.error(PROJECT_CODE_DUPLICATE_MESSAGE);
+      } else {
+        toastApiError(err);
+      }
     } finally {
       setIsSubmitting(false);
     }

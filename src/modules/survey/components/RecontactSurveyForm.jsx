@@ -387,7 +387,7 @@ function RecontactSurveyForm({
               label="Live Link"
               required
               error={showError("liveUrl")}
-              hint="Must include PID and a supported UID placeholder (identifier or XXXX)"
+              hint={`Example: ${DEFAULT_SURVEY_LINK_PLACEHOLDER}`}
             >
               <input
                 className={inputClass}
@@ -401,7 +401,7 @@ function RecontactSurveyForm({
             <FormField
               label="Test Link"
               error={showError("testUrl")}
-              hint="Must include PID and a supported UID placeholder (identifier or XXXX)"
+              hint={`Example: ${DEFAULT_SURVEY_LINK_PLACEHOLDER}`}
             >
               <input
                 className={inputClass}

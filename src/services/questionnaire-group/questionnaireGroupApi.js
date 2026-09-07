@@ -361,10 +361,18 @@ export function mapPrescreenGroupToDetail(record) {
   };
 }
 
+/** Listing Question Count comes only from the list API `questionCount` field. */
+function getListQuestionCountFromRecord(record) {
+  const raw = record?.questionCount ?? record?.question_count;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function mapPrescreenGroupToRow(record) {
   const createdRaw = record?.createdAt ?? record?.created_at ?? "";
   const questionLibraryIds = extractQuestionLibraryIdsFromRecord(record);
   const groupTitle = resolveGroupTitleFromRecord(record);
+  const websiteUrlFromApi = String(record?.website_url ?? record?.websiteUrl ?? "").trim();
 
   return {
     id: record?.id,
@@ -373,8 +381,11 @@ export function mapPrescreenGroupToRow(record) {
     language: formatQuestionnaireGroupLanguageForUi(record?.language),
     status: apiStatusToFormValue(record?.status),
     websiteUrl: resolveQuestionnaireGroupWebsiteUrl(record),
+    website_url: websiteUrlFromApi,
+    questionCount: getListQuestionCountFromRecord(record),
     prescreenIds: questionLibraryIds,
-    createdAt: createdRaw,
+    createdAtRaw: createdRaw,
+    createdAt: formatLocaleDateTime(createdRaw),
     createdDate: formatLocaleDateTime(createdRaw),
   };
 }
@@ -411,7 +422,7 @@ export function mapPrescreenGroupToForm(record) {
  * @param {{ excludeId?: string|number|null }} [options]
  * @returns {Promise<boolean>}
  */
-export async function surveyGroupTitleExists(title, { excludeId } = {}) {
+export async function surveyGroupTitleExists(title, { excludeId, language } = {}) {
   const normalized = normalizeSurveyGroupTitle(title);
   if (!normalized) return false;
 
@@ -421,7 +432,7 @@ export async function surveyGroupTitleExists(title, { excludeId } = {}) {
   let totalPages = 1;
 
   do {
-    const response = await getRecords({ page, limit });
+    const response = await getRecords({ page, limit, language });
     const items = response?.items ?? [];
     const conflict = items.some((item) => {
       if (exclude && String(item?.id ?? "") === exclude) return false;
@@ -436,17 +447,24 @@ export async function surveyGroupTitleExists(title, { excludeId } = {}) {
   return false;
 }
 
-/** GET /api/questionnaire-group/list */
-export async function getRecords({ page = 1, limit = 10, search } = {}) {
+/** GET /api/questionnaire-group/list?page=&limit=&language= */
+export async function getRecords({ page = 1, limit = 10, search, language = "english" } = {}) {
+  const listLanguage = normalizeQuestionnaireGroupLanguage(language) || "english";
   const data = await apiRequest(
-    appendListQuery(API_ROUTES.questionnaireGroup.list, { page, limit, search })
+    appendListQuery(API_ROUTES.questionnaireGroup.list, {
+      page,
+      limit,
+      search,
+      extra: { language: listLanguage },
+    })
   );
   assertSuccess(data);
 
   const groups = extractQuestionnaireGroupList(data);
   const total = extractListTotalFromResponse(data, groups.length);
-  const safeLimit = Number(limit) || 10;
+  const safeLimit = Number(data.limit) || Number(limit) || 10;
   const items = safeMapListItems(groups, (record) => mapPrescreenGroupToRow(record));
+  const apiTotalPages = Number(data.totalPages);
 
   return {
     ...data,
@@ -454,9 +472,11 @@ export async function getRecords({ page = 1, limit = 10, search } = {}) {
     total,
     count: total,
     page: Number(data.page) || page,
-    limit: Number(data.limit) || safeLimit,
+    limit: safeLimit,
     totalPages:
-      Number(data.totalPages) || Math.max(1, Math.ceil(total / safeLimit) || 1),
+      Number.isFinite(apiTotalPages) && apiTotalPages > 0
+        ? apiTotalPages
+        : Math.max(1, Math.ceil(total / safeLimit) || 1),
   };
 }
 

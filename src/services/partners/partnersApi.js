@@ -127,6 +127,23 @@ export function mapPartnerToRow(partner) {
 /**
  * @param {object} partner
  */
+function normalizeOptionalUrl(value) {
+  const text = String(value ?? "").trim();
+  if (
+    !text ||
+    text === "—" ||
+    text === "-" ||
+    text.toLowerCase() === "null" ||
+    text.toLowerCase() === "undefined"
+  ) {
+    return "";
+  }
+  return text;
+}
+
+/**
+ * @param {object} partner
+ */
 export function mapPartnerToForm(partner) {
   const country = partner?.country ?? "";
   return {
@@ -138,11 +155,11 @@ export function mapPartnerToForm(partner) {
     contactNumber: formatPartnerContactForForm(partner?.contact_no, country),
     website: partner?.website_url ?? "",
     panelSize: String(partner?.panel_size ?? ""),
-    complete: String(partner?.complete_val ?? partner?.complete ?? ""),
-    terminate: String(partner?.terminate_val ?? partner?.terminate ?? ""),
-    overQuota: String(partner?.over_quota_val ?? partner?.over_quota ?? ""),
-    qualityTerm: String(partner?.quality_term_val ?? partner?.quality_term ?? ""),
-    surveyClose: String(partner?.survey_close_val ?? partner?.survey_close ?? ""),
+    complete: normalizeOptionalUrl(partner?.complete_val ?? partner?.complete),
+    terminate: normalizeOptionalUrl(partner?.terminate_val ?? partner?.terminate),
+    overQuota: normalizeOptionalUrl(partner?.over_quota_val ?? partner?.over_quota),
+    qualityTerm: normalizeOptionalUrl(partner?.quality_term_val ?? partner?.quality_term),
+    surveyClose: normalizeOptionalUrl(partner?.survey_close_val ?? partner?.survey_close),
     aboutPartner: partner?.about_partner ?? "",
     status: apiStatusToFormValue(partner?.status),
     apiBaseUrl: partner?.api_base_url ?? partner?.apiBaseUrl ?? "",

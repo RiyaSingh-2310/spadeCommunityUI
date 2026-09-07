@@ -11,14 +11,15 @@ import { SUPPLIER_OPTIONS, getSupplierEditForm } from "../data/surveyDetailsData
 import { updateSupplierMapping } from "../services/surveyApi";
 import { primaryBtnClass } from "./surveyDetailsShared";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { FALLBACK_REDIRECT_ORIGIN } from "../utils/surveyLinkPlaceholders";
 
 const REDIRECT_FIELDS = [
-  { key: "complete", label: "Complete", placeholder: "https://example.com/complete" },
-  { key: "terminate", label: "Terminate", placeholder: "https://example.com/terminate" },
-  { key: "overQuota", label: "Over Quota", placeholder: "https://example.com/over-quota" },
-  { key: "qualityTerm", label: "Quality Term", placeholder: "https://example.com/quality-term" },
-  { key: "surveyClose", label: "Survey Close", placeholder: "https://example.com/survey-close" },
-  { key: "postbackUrl", label: "Postback URL", placeholder: "https://example.com/postback" },
+  { key: "complete", label: "Complete", placeholder: `${FALLBACK_REDIRECT_ORIGIN}/redirect/complete?pid=PROJECT_URL_CODE&uid=identifier` },
+  { key: "terminate", label: "Terminate", placeholder: `${FALLBACK_REDIRECT_ORIGIN}/redirect/terminate?pid=PROJECT_URL_CODE&uid=identifier` },
+  { key: "overQuota", label: "Over Quota", placeholder: `${FALLBACK_REDIRECT_ORIGIN}/redirect/overquota?pid=PROJECT_URL_CODE&uid=identifier` },
+  { key: "qualityTerm", label: "Quality Term", placeholder: `${FALLBACK_REDIRECT_ORIGIN}/redirect/qualityterm?pid=PROJECT_URL_CODE&uid=identifier` },
+  { key: "surveyClose", label: "Survey Close", placeholder: `${FALLBACK_REDIRECT_ORIGIN}/redirect/surveyclose?pid=PROJECT_URL_CODE&uid=identifier` },
+  { key: "postbackUrl", label: "Postback URL", placeholder: `${FALLBACK_REDIRECT_ORIGIN}/redirect/complete?pid=PROJECT_URL_CODE&uid=identifier` },
 ];
 
 const REDIRECT_FIELD_KEYS = REDIRECT_FIELDS.map((field) => field.key);

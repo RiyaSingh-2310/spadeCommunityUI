@@ -136,15 +136,6 @@ function PartnerMappingViewModal({
                 label="Is Test?"
                 value={detail.isTest ? "Yes" : "No"}
               />
-              <DetailField label="Complete" value={detail.complete} />
-              <DetailField label="Terminate" value={detail.terminate} />
-              <DetailField label="Over Quota" value={detail.overQuota} />
-              <DetailField label="Quality Term" value={detail.qualityTerm} />
-              <DetailField label="Survey Close" value={detail.surveyClose} />
-              <DetailField
-                label="Post Back Url"
-                value={<ReadOnlyUrl url={detail.postbackUrl} />}
-              />
               <DetailField
                 label="Partner URL"
                 copyValue={appendIsTestToPartnerUrl(detail.partnerUrl, detail.isTest)}

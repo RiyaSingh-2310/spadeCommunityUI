@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   createTinyMceInit,
   TINYMCE_API_KEY,
@@ -7,24 +7,23 @@ import {
   TINYMCE_TOOLBAR_FULL_WITH_EXPAND,
 } from "./richTextEditorConfig";
 
+/** Default visible editor height (includes toolbar). */
+export const RICH_TEXT_DEFAULT_HEIGHT = 250;
+/** @deprecated Use RICH_TEXT_DEFAULT_HEIGHT */
+export const RICH_TEXT_COMPACT_HEIGHT = RICH_TEXT_DEFAULT_HEIGHT;
+/** @deprecated Use RICH_TEXT_DEFAULT_HEIGHT */
+export const RICH_TEXT_EXPANDED_HEIGHT = RICH_TEXT_DEFAULT_HEIGHT;
+/** @deprecated Full-viewport expand is no longer used. */
+export const RICH_TEXT_FULL_EXPANDED_MIN_HEIGHT = RICH_TEXT_DEFAULT_HEIGHT;
+
 const TinyMceEditor = lazy(() =>
   import("@tinymce/tinymce-react").then((module) => ({ default: module.Editor }))
 );
 
 /**
- * Collapsed editor total height: one toolbar row + compact writing area.
- * TinyMCE `height` includes the toolbar, so this stays above the prior 42px
- * content-only value now that the compact formatting row is visible.
- */
-export const RICH_TEXT_COMPACT_HEIGHT = 96;
-/** Comfortable expanded writing area without excessive whitespace. */
-export const RICH_TEXT_EXPANDED_HEIGHT = 340;
-
-/**
  * Shared admin rich-text editor.
- * Collapsed by default: compact writing area, first-line formatting toolbar with
- * the expand control right-aligned on that same row.
- * Expanded: full toolbar and a larger typing area; the same toolbar control collapses.
+ * Default height is ~250px. Expanding Tools only reveals extra toolbar items;
+ * it does not stretch the editor to full page height. Users can drag to resize.
  */
 function RichTextEditor({
   value = "",
@@ -33,21 +32,28 @@ function RichTextEditor({
   isDarkMode = false,
   placeholder = "Enter content...",
   disabled = false,
-  height = RICH_TEXT_EXPANDED_HEIGHT,
-  compactHeight = RICH_TEXT_COMPACT_HEIGHT,
+  height = RICH_TEXT_DEFAULT_HEIGHT,
+  compactHeight = RICH_TEXT_DEFAULT_HEIGHT,
   initiallyCollapsed = true,
+  expandMode: _expandMode = "default",
   id,
   contentKey,
 }) {
+  void _expandMode;
+  const generatedId = useId().replace(/:/g, "");
+  const editorId = id || `rich-text-${generatedId}`;
   const onBlurRef = useRef(onBlur);
+  const heightRef = useRef(
+    Math.max(RICH_TEXT_DEFAULT_HEIGHT, Number(height) || RICH_TEXT_DEFAULT_HEIGHT)
+  );
   const [expanded, setExpanded] = useState(!initiallyCollapsed);
+  const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
     onBlurRef.current = onBlur;
   }, [onBlur]);
 
   const isCompact = initiallyCollapsed && !expanded;
-  const editorHeight = isCompact ? compactHeight : height;
   const toolbar = initiallyCollapsed
     ? isCompact
       ? TINYMCE_TOOLBAR_COLLAPSED
@@ -59,40 +65,41 @@ function RichTextEditor({
       createTinyMceInit({
         isDarkMode,
         placeholder,
-        height: editorHeight,
+        height: heightRef.current,
+        minHeight: RICH_TEXT_DEFAULT_HEIGHT,
         toolbar,
         menubar: isCompact ? false : "table",
-        resize: !isCompact,
-        onBlur: () => onBlurRef.current?.(),
+        resize: true,
+        onBlur: () => {
+          setIsFocused(false);
+          onBlurRef.current?.();
+        },
+        onFocus: () => setIsFocused(true),
         onToggleExpand: initiallyCollapsed
           ? () => setExpanded((prev) => !prev)
           : undefined,
         expandActive: initiallyCollapsed && expanded,
         alignExpandEnd: isCompact,
+        onHeightChange: (nextHeight) => {
+          heightRef.current = Math.max(RICH_TEXT_DEFAULT_HEIGHT, nextHeight);
+        },
       }),
-    [
-      isDarkMode,
-      placeholder,
-      editorHeight,
-      toolbar,
-      isCompact,
-      initiallyCollapsed,
-      expanded,
-    ]
+    [isDarkMode, placeholder, toolbar, isCompact, initiallyCollapsed, expanded]
   );
 
-  const fallbackHeight = typeof editorHeight === "number" ? editorHeight : RICH_TEXT_EXPANDED_HEIGHT;
+  const fallbackHeight = Math.max(
+    RICH_TEXT_DEFAULT_HEIGHT,
+    Number(heightRef.current) || Number(compactHeight) || RICH_TEXT_DEFAULT_HEIGHT
+  );
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-[var(--admin-input-border)]${
-        isCompact ? " rich-text-editor--collapsed" : ""
-      }`}
+      className={`rich-text-editor${isCompact ? " rich-text-editor--collapsed" : ""}${isFocused ? " rich-text-editor--focused" : ""}`}
     >
       <Suspense
         fallback={
           <div
-            className="admin-text flex items-center justify-center bg-[var(--admin-input-bg)] text-sm"
+            className="admin-text flex items-center justify-center rounded-xl border border-[var(--admin-input-border)] bg-[var(--admin-input-bg)] text-sm"
             style={{ minHeight: fallbackHeight }}
           >
             Loading editor...
@@ -100,8 +107,8 @@ function RichTextEditor({
         }
       >
         <TinyMceEditor
-          key={`${isDarkMode ? "dark" : "light"}-${contentKey ?? "default"}-${isCompact ? "compact" : "expanded"}`}
-          id={id}
+          key={`${editorId}-${isDarkMode ? "dark" : "light"}-${contentKey ?? "default"}-${isCompact ? "compact" : "expanded"}`}
+          id={editorId}
           apiKey={TINYMCE_API_KEY}
           value={value}
           onEditorChange={(content) => onChange?.(content)}

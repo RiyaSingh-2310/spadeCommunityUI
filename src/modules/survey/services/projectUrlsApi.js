@@ -976,7 +976,7 @@ export async function getPreScreenerOptions({ language } = {}) {
   return getSurveyGroupOptionsForLanguage(language);
 }
 
-async function fetchAllQuestionnaireGroupItems() {
+async function fetchAllQuestionnaireGroupItems(language) {
   const limit = MAX_API_LIST_LIMIT;
   const items = [];
   const seenIds = new Set();
@@ -984,7 +984,7 @@ async function fetchAllQuestionnaireGroupItems() {
   let totalPages = 1;
 
   while (page <= totalPages && page <= 50) {
-    const response = await getQuestionnaireGroups({ page, limit });
+    const response = await getQuestionnaireGroups({ page, limit, language });
     const pageItems = Array.isArray(response?.items) ? response.items : [];
     for (const item of pageItems) {
       const id = String(item?.id ?? "").trim();
@@ -1011,7 +1011,7 @@ export async function getSurveyGroupOptionsForLanguage(language) {
     return { success: true, data: [] };
   }
 
-  const items = await fetchAllQuestionnaireGroupItems();
+  const items = await fetchAllQuestionnaireGroupItems(languageKey);
   const options = dedupeSelectOptions(
     items
       .filter(

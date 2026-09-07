@@ -15,6 +15,8 @@ import {
   createSurvey,
   getRecord,
   mapSurveyToForm,
+  projectCodeExists,
+  projectNameExists,
   updateSurvey,
 } from "../services/surveyApi";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
@@ -22,9 +24,15 @@ import {
   areSurveyFormsEqual,
   cloneSurveyForm,
   getSurveyFormErrors,
+  isProjectCodeDuplicateError,
+  isProjectNameDuplicateError,
+  isSameProjectName,
   isSurveyFormSubmittable,
+  PROJECT_CODE_DUPLICATE_MESSAGE,
+  PROJECT_NAME_DUPLICATE_MESSAGE,
   SURVEY_FORM_FIELDS,
 } from "../utils/surveyFormValidation";
+import toast from "../../../services/toast/toast";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   getSurveyEditBreadcrumbs,
@@ -44,6 +52,8 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEdit);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [projectNameTaken, setProjectNameTaken] = useState(false);
+  const [projectCodeTaken, setProjectCodeTaken] = useState(false);
   const {
     clientOptions,
     projectManagerOptions,
@@ -124,8 +134,12 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
   );
 
   const validationOptions = useMemo(
-    () => ({ excludeId: isEdit ? id : undefined }),
-    [isEdit, id]
+    () => ({
+      excludeId: isEdit ? id : undefined,
+      projectNameTaken,
+      projectCodeTaken,
+    }),
+    [isEdit, id, projectNameTaken, projectCodeTaken]
   );
 
   const errors = useMemo(
@@ -136,6 +150,14 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     errors,
     fields: SURVEY_FORM_FIELDS,
   });
+
+  useEffect(() => {
+    setProjectNameTaken(false);
+  }, [form.projectName]);
+
+  useEffect(() => {
+    setProjectCodeTaken(false);
+  }, [form.projectCode]);
 
   useEffect(() => {
     if (!isEdit || !id || isLoadingOptions) return undefined;
@@ -307,6 +329,28 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
 
     setIsSubmitting(true);
     try {
+      const ownNameUnchanged =
+        isEdit && isSameProjectName(form.projectName, initialSnapshot?.projectName);
+      const nameTaken = ownNameUnchanged
+        ? false
+        : await projectNameExists(form.projectName, {
+            excludeId: isEdit ? id : undefined,
+          });
+      if (nameTaken) {
+        setProjectNameTaken(true);
+        toast.error(PROJECT_NAME_DUPLICATE_MESSAGE);
+        return;
+      }
+
+      const codeTaken = await projectCodeExists(form.projectCode, {
+        excludeId: isEdit ? id : undefined,
+      });
+      if (codeTaken) {
+        setProjectCodeTaken(true);
+        toast.error(PROJECT_CODE_DUPLICATE_MESSAGE);
+        return;
+      }
+
       const data = isEdit
         ? await updateSurvey(id, form, selectOptions)
         : await createSurvey(form, selectOptions);
@@ -317,7 +361,15 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
         state: { refresh: true },
       });
     } catch (err) {
-      toastApiError(err);
+      if (isProjectNameDuplicateError(err)) {
+        setProjectNameTaken(true);
+        toast.error(PROJECT_NAME_DUPLICATE_MESSAGE);
+      } else if (isProjectCodeDuplicateError(err)) {
+        setProjectCodeTaken(true);
+        toast.error(PROJECT_CODE_DUPLICATE_MESSAGE);
+      } else {
+        toastApiError(err);
+      }
     } finally {
       setIsSubmitting(false);
     }

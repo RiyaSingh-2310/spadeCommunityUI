@@ -6,11 +6,16 @@ import {
 } from "../../shared/utils/numericInputUtils";
 import {
   buildPrefillRedirectUrl,
+  getDefaultRedirectOrigin,
   getSurveyLinkPlaceholderError,
   isSupportedUidPlaceholder,
   readPidUidFromUrl,
   withRedirectUrlPid,
 } from "./surveyLinkPlaceholders";
+
+function redirectExample(path) {
+  return `${getDefaultRedirectOrigin()}${path}?pid=xxxx&uid=identifier`;
+}
 
 export const PROJECT_URL_NUMERIC_MAX_DIGITS = 6;
 /** @deprecated Use PROJECT_URL_NUMERIC_MAX_DIGITS */
@@ -42,15 +47,17 @@ export const PROJECT_URL_REDIRECT_FIELDS = [
     key: "redirectComplete",
     label: "Complete URL",
     path: "/redirect/complete",
-    example:
-      "https://spade-community.com/redirect/complete?pid=xxxx&uid=identifier",
+    get example() {
+      return redirectExample("/redirect/complete");
+    },
   },
   {
     key: "redirectTerminate",
     label: "Terminate URL",
     path: "/redirect/terminate",
-    example:
-      "https://spade-community.com/redirect/terminate?pid=xxxx&uid=identifier",
+    get example() {
+      return redirectExample("/redirect/terminate");
+    },
   },
   {
     key: "redirectOverQuota",
@@ -58,24 +65,27 @@ export const PROJECT_URL_REDIRECT_FIELDS = [
     path: "/redirect/quota-full",
     /** Accept legacy `/redirect/overquota` URLs already saved in the API. */
     acceptedPaths: ["/redirect/quota-full", "/redirect/overquota"],
-    example:
-      "https://spade-community.com/redirect/overquota?pid=xxxx&uid=identifier",
+    get example() {
+      return redirectExample("/redirect/quota-full");
+    },
   },
   {
     key: "redirectQualityTerm",
     label: "Quality Term URL",
     path: "/redirect/qualityterm",
     acceptedPaths: ["/redirect/qualityterm", "/redirect/quality-terminate"],
-    example:
-      "https://spade-community.com/redirect/qualityterm?pid=xxxx&uid=identifier",
+    get example() {
+      return redirectExample("/redirect/qualityterm");
+    },
   },
   {
     key: "redirectSurveyClose",
     label: "Survey Closed URL",
     path: "/redirect/surveyclose",
     acceptedPaths: ["/redirect/surveyclose", "/redirect/survey-closed"],
-    example:
-      "https://spade-community.com/redirect/surveyclose?pid=xxxx&uid=identifier",
+    get example() {
+      return redirectExample("/redirect/surveyclose");
+    },
   },
 ];
 

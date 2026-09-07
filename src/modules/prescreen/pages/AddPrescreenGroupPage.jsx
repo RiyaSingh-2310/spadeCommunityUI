@@ -152,6 +152,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [questionnaireOptions, setQuestionnaireOptions] = useState([]);
   const [isLoadingQuestionnaires, setIsLoadingQuestionnaires] = useState(false);
+  const [titleTaken, setTitleTaken] = useState(false);
   const { readOnly, showSubmit, controlDisabled, canSubmitForm } = useAdminFormAccess(isSubmitting);
 
   const inputClass = getAdminInputClass();
@@ -159,11 +160,13 @@ function AddPrescreenGroupPage({ isDarkMode }) {
   const errors = useMemo(
     () => ({
       language: getRequiredError(form.language, "Language"),
-      surveyTitle: getRequiredMaxLengthError(form.surveyTitle, "Survey Group Title"),
+      surveyTitle:
+        getRequiredMaxLengthError(form.surveyTitle, "Survey Group Title") ||
+        (titleTaken ? SURVEY_GROUP_TITLE_DUPLICATE_MESSAGE : ""),
       prescreenIds:
         form.prescreenIds.length > 0 ? "" : "Select at least one questionnaire",
     }),
-    [form]
+    [form, titleTaken]
   );
 
   const { showError, touch, validateSubmit, resetValidation } = useFormValidation({
@@ -278,6 +281,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
     !loadFailed;
 
   const setField = (key, value) => {
+    if (key === "surveyTitle") setTitleTaken(false);
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -304,10 +308,17 @@ function AddPrescreenGroupPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
-      const titleTaken = await surveyGroupTitleExists(form.surveyTitle, {
-        excludeId: isEdit ? id : undefined,
-      });
       if (titleTaken) {
+        toast.error(SURVEY_GROUP_TITLE_DUPLICATE_MESSAGE);
+        return;
+      }
+
+      const exists = await surveyGroupTitleExists(form.surveyTitle, {
+        excludeId: isEdit ? id : undefined,
+        language: form.language,
+      });
+      if (exists) {
+        setTitleTaken(true);
         toast.error(SURVEY_GROUP_TITLE_DUPLICATE_MESSAGE);
         return;
       }
@@ -337,6 +348,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
       });
     } catch (error) {
       if (isSurveyGroupTitleDuplicateError(error)) {
+        setTitleTaken(true);
         toast.error(
           resolveApiToastMessage(error, SURVEY_GROUP_TITLE_DUPLICATE_MESSAGE)
         );

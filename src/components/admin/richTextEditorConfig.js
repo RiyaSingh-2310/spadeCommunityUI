@@ -36,7 +36,7 @@ export const TINYMCE_TOOLBAR_COLLAPSED = `${TINYMCE_TOOLBAR_COMPACT} | ${TINYMCE
 const TINYMCE_TOOLBAR = TINYMCE_TOOLBAR_FULL;
 
 const CONTENT_STYLE =
-  "body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; margin: 8px; }";
+  "html, body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; outline: none !important; box-shadow: none !important; } body { margin: 8px; } body:focus, body:focus-visible { outline: none !important; box-shadow: none !important; }";
 
 /**
  * Pins the expand control to the far right of the first toolbar row while
@@ -106,28 +106,34 @@ function alignCollapsedExpandControl(editor) {
  *   isDarkMode?: boolean,
  *   placeholder?: string,
  *   height?: number,
+ *   minHeight?: number,
  *   toolbar?: string | false,
  *   menubar?: string | false,
  *   resize?: boolean,
  *   contentPaddingRight?: number,
  *   onBlur?: () => void,
+ *   onFocus?: () => void,
  *   onToggleExpand?: () => void,
  *   expandActive?: boolean,
  *   alignExpandEnd?: boolean,
+ *   onHeightChange?: (height: number) => void,
  * }} options
  */
 export function createTinyMceInit({
   isDarkMode = false,
   placeholder = "Enter content...",
-  height = 300,
+  height = 250,
+  minHeight = 250,
   toolbar = TINYMCE_TOOLBAR,
   menubar,
   resize = true,
   contentPaddingRight,
   onBlur,
+  onFocus,
   onToggleExpand,
   expandActive = false,
   alignExpandEnd = false,
+  onHeightChange,
 } = {}) {
   const isCollapsedToolbar = toolbar === TINYMCE_TOOLBAR_COLLAPSED;
   const resolvedMenubar =
@@ -146,13 +152,15 @@ export function createTinyMceInit({
 
   return {
     height,
+    min_height: minHeight,
     menubar: resolvedMenubar,
     branding: false,
     promotion: false,
-    statusbar: false,
-    resize,
-    toolbar_mode: isCollapsedToolbar || alignExpandEnd ? "scrolling" : "wrap",
+    statusbar: Boolean(resize),
+    resize: resize ? true : false,
+    toolbar_mode: isCollapsedToolbar || alignExpandEnd ? "scrolling" : "sliding",
     auto_focus: false,
+    highlight_on_focus: false,
     skin: isDarkMode ? "oxide-dark" : "oxide",
     content_css: isDarkMode ? "dark" : "default",
     plugins: TINYMCE_PLUGINS,
@@ -189,12 +197,21 @@ export function createTinyMceInit({
       if (onToggleExpand) {
         editor.ui.registry.addToggleButton("editorExpand", {
           icon: expandActive ? "chevron-up" : "chevron-down",
-          tooltip: expandActive ? "Collapse editor" : "Expand editor",
+          tooltip: expandActive ? "Collapse tools" : "Expand tools",
           onAction: () => onToggleExpand(),
           onSetup: (api) => {
             api.setActive(Boolean(expandActive));
             return () => {};
           },
+        });
+      }
+
+      if (typeof onHeightChange === "function") {
+        editor.on("ResizeEditor", () => {
+          const nextHeight = editor.getContainer?.()?.offsetHeight;
+          if (Number.isFinite(nextHeight) && nextHeight > 0) {
+            onHeightChange(nextHeight);
+          }
         });
       }
 
@@ -204,6 +221,10 @@ export function createTinyMceInit({
           // TinyMCE can reflow the scrolling toolbar after first paint.
           requestAnimationFrame(() => alignCollapsedExpandControl(editor));
         });
+      }
+
+      if (onFocus) {
+        editor.on("focus", () => onFocus());
       }
 
       if (onBlur) {
