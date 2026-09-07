@@ -76,6 +76,7 @@ describe("buildApiUrl", () => {
   it("uses the pre-screen response and report contracts", () => {
     expect(API_ROUTES.survey.prescreenResponse).toBe("/api/survey/prescreenResponse");
     expect(API_ROUTES.survey.prescreenResponseEnd).toBe("/api/survey/prescreenResponseEnd");
+    expect(API_ROUTES.surveySettings.list).toBe("/api/survey-settings/list");
     expect(API_ROUTES.projectReports.preScreenReport).toBe(
       "/api/project-reports/pre-screen-report"
     );

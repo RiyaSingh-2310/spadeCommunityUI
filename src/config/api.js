@@ -250,6 +250,9 @@ export const API_ROUTES = {
     byId: (id) => `/api/survey-pages/${id}`,
     update: (id) => `/api/survey-pages/${id}`,
   },
+  surveySettings: {
+    list: "/api/survey-settings/list",
+  },
   activity: {
     list: "/api/activity/list",
     delete: (id) => `/api/activity/${id}`,

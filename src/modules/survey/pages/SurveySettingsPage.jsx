@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
@@ -14,10 +14,12 @@ import {
   isFormValidForFields,
 } from "../../shared/utils/validation";
 import toast from "../../../services/toast/toast";
+import { toastApiError } from "../../../services/toast/apiToast";
+import { createSurveySettingsForm } from "../data/surveySettingsMock";
 import {
-  createSurveySettingsForm,
-  SURVEY_SETTINGS_LANGUAGE_OPTIONS,
-} from "../data/surveySettingsMock";
+  listAllSurveySettings,
+  mapSurveySettingsToLanguageOptions,
+} from "../services/surveySettingsApi";
 
 const SURVEY_SETTINGS_FIELDS = [
   "language",
@@ -51,15 +53,18 @@ function getSurveySettingsRedirectEditorHeight() {
 }
 
 /**
- * Survey Settings — frontend-only mock UI.
- * Persist via API in a follow-up; Submit currently updates local state only.
+ * Survey Settings — languages load from GET /api/survey-settings/list.
+ * Redirect content remains local until a settings-by-language content API is added.
  */
 function SurveySettingsPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState(() => createSurveySettingsForm());
+  const [form, setForm] = useState(() => createSurveySettingsForm({ language: "" }));
   const [initialSnapshot, setInitialSnapshot] = useState(() =>
-    createSurveySettingsForm()
+    createSurveySettingsForm({ language: "" })
   );
+  const [languageOptions, setLanguageOptions] = useState([]);
+  const [isLoadingLanguages, setIsLoadingLanguages] = useState(true);
+  const [languagesFailed, setLanguagesFailed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { readOnly, showSubmit } = useFormAccess();
   const inputClass = getAdminInputClass();
@@ -67,6 +72,38 @@ function SurveySettingsPage({ isDarkMode }) {
     () => getSurveySettingsRedirectEditorHeight(),
     []
   );
+
+  const loadLanguages = useCallback(async () => {
+    setIsLoadingLanguages(true);
+    setLanguagesFailed(false);
+    try {
+      const items = await listAllSurveySettings();
+      const options = mapSurveySettingsToLanguageOptions(items);
+      setLanguageOptions(options);
+
+      const pickLanguage = (current) => {
+        const value = String(current ?? "").trim();
+        const stillValid = options.some((option) => option.value === value);
+        return stillValid ? value : options[0]?.value ?? "";
+      };
+
+      setForm((prev) => ({ ...prev, language: pickLanguage(prev.language) }));
+      setInitialSnapshot((prev) => ({
+        ...prev,
+        language: pickLanguage(prev.language),
+      }));
+    } catch (error) {
+      toastApiError(error);
+      setLanguageOptions([]);
+      setLanguagesFailed(true);
+    } finally {
+      setIsLoadingLanguages(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadLanguages();
+  }, [loadLanguages]);
 
   const errors = useMemo(
     () => ({
@@ -164,12 +201,28 @@ function SurveySettingsPage({ isDarkMode }) {
               value={form.language}
               onChange={(language) => setField("language", language)}
               onBlur={() => touch("language")}
-              options={SURVEY_SETTINGS_LANGUAGE_OPTIONS}
+              options={languageOptions}
               placeholder="Select Language"
-              disabled={readOnly}
+              disabled={readOnly || isLoadingLanguages}
+              loading={isLoadingLanguages}
+              loadingLabel="Loading languages..."
+              emptyMessage={
+                languagesFailed
+                  ? "Unable to load languages"
+                  : "No languages found"
+              }
               searchPlaceholder="Search language..."
               aria-label="Select language"
             />
+            {languagesFailed ? (
+              <button
+                type="button"
+                onClick={loadLanguages}
+                className="mt-2 text-sm font-semibold text-[#10a950] hover:underline"
+              >
+                Retry
+              </button>
+            ) : null}
           </FormField>
         </TableCard>
 
