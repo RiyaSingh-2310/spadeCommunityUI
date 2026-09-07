@@ -33,19 +33,27 @@ function RichTextEditor({
   placeholder = "Enter content...",
   disabled = false,
   height = RICH_TEXT_DEFAULT_HEIGHT,
+  minHeight = RICH_TEXT_DEFAULT_HEIGHT,
   compactHeight = RICH_TEXT_DEFAULT_HEIGHT,
   initiallyCollapsed = true,
   expandMode: _expandMode = "default",
   id,
   contentKey,
+  className = "",
 }) {
   void _expandMode;
   const generatedId = useId().replace(/:/g, "");
   const editorId = id || `rich-text-${generatedId}`;
   const onBlurRef = useRef(onBlur);
-  const heightRef = useRef(
-    Math.max(RICH_TEXT_DEFAULT_HEIGHT, Number(height) || RICH_TEXT_DEFAULT_HEIGHT)
+  const resolvedMinHeight = Math.max(
+    RICH_TEXT_DEFAULT_HEIGHT,
+    Number(minHeight) || RICH_TEXT_DEFAULT_HEIGHT
   );
+  const resolvedHeight = Math.max(
+    resolvedMinHeight,
+    Number(height) || RICH_TEXT_DEFAULT_HEIGHT
+  );
+  const heightRef = useRef(resolvedHeight);
   const [expanded, setExpanded] = useState(!initiallyCollapsed);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -66,7 +74,7 @@ function RichTextEditor({
         isDarkMode,
         placeholder,
         height: heightRef.current,
-        minHeight: RICH_TEXT_DEFAULT_HEIGHT,
+        minHeight: resolvedMinHeight,
         toolbar,
         menubar: isCompact ? false : "table",
         resize: true,
@@ -81,20 +89,28 @@ function RichTextEditor({
         expandActive: initiallyCollapsed && expanded,
         alignExpandEnd: isCompact,
         onHeightChange: (nextHeight) => {
-          heightRef.current = Math.max(RICH_TEXT_DEFAULT_HEIGHT, nextHeight);
+          heightRef.current = Math.max(resolvedMinHeight, nextHeight);
         },
       }),
-    [isDarkMode, placeholder, toolbar, isCompact, initiallyCollapsed, expanded]
+    [
+      isDarkMode,
+      placeholder,
+      toolbar,
+      isCompact,
+      initiallyCollapsed,
+      expanded,
+      resolvedMinHeight,
+    ]
   );
 
   const fallbackHeight = Math.max(
-    RICH_TEXT_DEFAULT_HEIGHT,
-    Number(heightRef.current) || Number(compactHeight) || RICH_TEXT_DEFAULT_HEIGHT
+    resolvedMinHeight,
+    Number(heightRef.current) || Number(compactHeight) || resolvedHeight
   );
 
   return (
     <div
-      className={`rich-text-editor${isCompact ? " rich-text-editor--collapsed" : ""}${isFocused ? " rich-text-editor--focused" : ""}`}
+      className={`rich-text-editor${isCompact ? " rich-text-editor--collapsed" : ""}${isFocused ? " rich-text-editor--focused" : ""}${className ? ` ${className}` : ""}`}
     >
       <Suspense
         fallback={

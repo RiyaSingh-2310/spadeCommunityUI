@@ -44,6 +44,12 @@ const REDIRECT_FIELDS = [
   ["Survey Close Redirect Content", "surveyCloseRedirect"],
 ];
 
+/** Half-viewport editor height so large redirect HTML/code is readable. */
+function getSurveySettingsRedirectEditorHeight() {
+  if (typeof window === "undefined") return 480;
+  return Math.max(420, Math.round(window.innerHeight * 0.5));
+}
+
 /**
  * Survey Settings — frontend-only mock UI.
  * Persist via API in a follow-up; Submit currently updates local state only.
@@ -57,6 +63,10 @@ function SurveySettingsPage({ isDarkMode }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { readOnly, showSubmit } = useFormAccess();
   const inputClass = getAdminInputClass();
+  const redirectEditorHeight = useMemo(
+    () => getSurveySettingsRedirectEditorHeight(),
+    []
+  );
 
   const errors = useMemo(
     () => ({
@@ -164,18 +174,27 @@ function SurveySettingsPage({ isDarkMode }) {
         </TableCard>
 
         <TableCard title="Redirect Content" isDarkMode={isDarkMode}>
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-8">
             {REDIRECT_FIELDS.map(([label, key]) => (
-              <FormField key={key} label={label} required error={showError(key)}>
+              <FormField
+                key={key}
+                className="survey-settings-redirect-field"
+                label={label}
+                required
+                error={showError(key)}
+              >
                 <RichTextEditor
                   id={`survey-settings-${key}`}
                   contentKey={`survey-settings-${key}`}
+                  className="survey-settings-redirect-editor"
                   isDarkMode={isDarkMode}
                   value={form[key]}
                   onChange={(value) => setField(key, value)}
                   onBlur={() => touch(key)}
                   placeholder={`Enter ${label.toLowerCase()}...`}
                   disabled={readOnly}
+                  height={redirectEditorHeight}
+                  minHeight={redirectEditorHeight}
                 />
               </FormField>
             ))}

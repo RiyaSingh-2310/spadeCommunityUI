@@ -1957,3 +1957,42 @@ input[type="number"],
   outline: none !important;
   opacity: 0 !important;
 }
+
+/* Survey Settings → Redirect Content only: large visible editing area. */
+.admin-shell .survey-settings-redirect-field {
+  min-height: 50vh;
+}
+
+.admin-shell .survey-settings-redirect-editor {
+  display: flex;
+  min-height: 50vh;
+  max-height: 100vh;
+}
+
+.admin-shell .survey-settings-redirect-editor .tox-tinymce {
+  display: flex !important;
+  flex: 1 1 auto;
+  flex-direction: column !important;
+  width: 100%;
+  min-height: 50vh !important;
+  max-height: 100vh;
+}
+
+.admin-shell .survey-settings-redirect-editor .tox-editor-container,
+.admin-shell .survey-settings-redirect-editor .tox-sidebar-wrap {
+  display: flex !important;
+  flex: 1 1 auto;
+  flex-direction: column !important;
+  min-height: 0;
+}
+
+.admin-shell .survey-settings-redirect-editor .tox-edit-area {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.admin-shell .survey-settings-redirect-editor .tox-edit-area__iframe,
+.admin-shell .survey-settings-redirect-editor .tox-edit-area iframe {
+  height: 100% !important;
+  min-height: 0;
+}
