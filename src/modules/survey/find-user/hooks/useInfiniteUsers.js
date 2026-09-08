@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DEFAULT_PAGE_SIZE } from "../../../shared/utils/pagination";
+import { clampPage, DEFAULT_PAGE_SIZE, getTotalPages } from "../../../shared/utils/pagination";
 import { toastApiError } from "../../../../services/toast/apiToast";
 import { searchFindUsers } from "../services/findUserApi";
 
@@ -37,9 +37,12 @@ export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {
       if (requestId !== requestIdRef.current) return;
 
       const items = Array.isArray(result.items) ? result.items : [];
+      const total = Number(result.total) || 0;
       setUsers(items);
-      setTotalItems(result.total ?? 0);
-      setTotalPages(result.totalPages ?? 0);
+      setTotalItems(total);
+      setTotalPages(
+        Math.max(getTotalPages(total, pageSize), Number(result.totalPages) || 0)
+      );
       setHasSearched(true);
       setLastSearchStatus(items.length > 0 ? "success" : "empty");
     } catch (err) {
@@ -89,8 +92,9 @@ export function useInfiniteUsers(surveyId, activeFilters, searchVersion) {
   }, [searchVersion, loadPage]);
 
   const handlePageChange = useCallback((page) => {
-    setCurrentPage(page);
-  }, []);
+    const pages = Math.max(1, totalPages, getTotalPages(totalItems, pageSize));
+    setCurrentPage(clampPage(page, pages));
+  }, [pageSize, totalItems, totalPages]);
 
   const handlePageSizeChange = useCallback((nextSize) => {
     setPageSize(nextSize);

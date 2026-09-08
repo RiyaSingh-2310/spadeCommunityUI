@@ -42,6 +42,9 @@ function PendingRewardsPage({ isDarkMode }) {
       return {
         items: data.items,
         total: data.total,
+        page: data.page,
+        limit: data.limit,
+        totalPages: data.totalPages,
       };
     },
     [statusFilter, fromDate, toDate]
@@ -50,6 +53,7 @@ function PendingRewardsPage({ isDarkMode }) {
   const {
     rows,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -176,6 +180,7 @@ function PendingRewardsPage({ isDarkMode }) {
         serverPaginated
         serverSearch
         totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         paginationPage={currentPage}
         onPaginationPageChange={handlePageChange}
         paginationPageSize={pageSize}

@@ -22,6 +22,7 @@ function CreateSurveyListPage({ isDarkMode }) {
     rows,
     setRows,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -152,6 +153,7 @@ function CreateSurveyListPage({ isDarkMode }) {
         emptyMessage="No surveys found"
         onSearch={handleSearch}
         totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         serverPaginated
         serverSearch
         paginationPage={currentPage}

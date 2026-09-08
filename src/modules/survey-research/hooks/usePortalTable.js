@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { clampPage, getTotalPages } from "../../shared/utils/pagination";
 
 function compareValues(a, b) {
   if (a == null && b == null) return 0;
@@ -56,8 +57,8 @@ export function usePortalTable({
   }, [filteredRows, sort]);
 
   const total = sortedRows.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
-  const safePage = Math.min(page, totalPages);
+  const totalPages = getTotalPages(total, pageSize);
+  const safePage = clampPage(page, totalPages);
 
   const pageRows = useMemo(() => {
     const start = (safePage - 1) * pageSize;

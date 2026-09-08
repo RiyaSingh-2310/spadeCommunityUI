@@ -69,6 +69,7 @@ function CommunityUserDetailsPage({ isDarkMode }) {
     handleSearch,
     handlePageChange,
     handlePageSizeChange,
+    totalPages,
   } = useApiListing({
     fetchFn: fetchAnswers,
     initialPageSize: DEFAULT_PAGE_SIZE,
@@ -76,7 +77,6 @@ function CommunityUserDetailsPage({ isDarkMode }) {
     preserveRowOrder: true,
   });
 
-  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize) || 1);
   const safePage = Math.min(currentPage, totalPages);
 
   if (!user) {

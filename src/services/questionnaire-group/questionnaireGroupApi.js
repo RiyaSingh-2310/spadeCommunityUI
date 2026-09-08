@@ -1,5 +1,5 @@
 import { API_ROUTES } from "../../config/api";
-import { extractListTotalFromResponse, safeMapListItems } from "../../modules/shared/utils/listResponse";
+import { extractListItemsFromResponse, safeMapListItems, resolveListingPagination } from "../../modules/shared/utils/listResponse";
 import { appendListQuery, MAX_API_LIST_LIMIT } from "../../modules/shared/utils/listQueryParams";
 import { normalizeSurveyGroupTitle } from "../../modules/prescreen/utils/surveyGroupTitle";
 import { toUiSentenceCase } from "../../modules/shared/utils/uiText";
@@ -56,9 +56,7 @@ function formatQuestionnaireGroupLanguageForUi(language) {
 }
 
 function extractQuestionnaireGroupList(data) {
-  if (!data || typeof data !== "object") return [];
-  if (Array.isArray(data.data)) return data.data;
-  return [];
+  return extractListItemsFromResponse(data);
 }
 
 function extractQuestionnaireGroupRecord(data) {
@@ -379,8 +377,9 @@ export function mapPrescreenGroupToRow(record) {
     title: groupTitle,
     surveyTitle: groupTitle,
     language: formatQuestionnaireGroupLanguageForUi(record?.language),
+    languageSlug: normalizeQuestionnaireGroupLanguage(record?.language),
     status: apiStatusToFormValue(record?.status),
-    websiteUrl: resolveQuestionnaireGroupWebsiteUrl(record),
+    websiteUrl: websiteUrlFromApi,
     website_url: websiteUrlFromApi,
     questionCount: getListQuestionCountFromRecord(record),
     prescreenIds: questionLibraryIds,
@@ -432,7 +431,7 @@ export async function surveyGroupTitleExists(title, { excludeId, language } = {}
   let totalPages = 1;
 
   do {
-    const response = await getRecords({ page, limit, language });
+    const response = await getRecords({ page, limit, language, status: "all" });
     const items = response?.items ?? [];
     const conflict = items.some((item) => {
       if (exclude && String(item?.id ?? "") === exclude) return false;
@@ -447,36 +446,49 @@ export async function surveyGroupTitleExists(title, { excludeId, language } = {}
   return false;
 }
 
-/** GET /api/questionnaire-group/list?page=&limit=&language= */
-export async function getRecords({ page = 1, limit = 10, search, language = "english" } = {}) {
-  const listLanguage = normalizeQuestionnaireGroupLanguage(language) || "english";
+/** GET /api/questionnaire-group/list?page=&limit=&status=&language= */
+export async function getRecords({
+  page = 1,
+  limit = 10,
+  search,
+  status,
+  language,
+} = {}) {
+  const extra = {};
+  const normalizedStatus = String(status ?? "").trim().toLowerCase();
+  if (normalizedStatus && normalizedStatus !== "all") {
+    extra.status = formValueToApiStatus(normalizedStatus);
+  }
+  const listLanguage = normalizeQuestionnaireGroupLanguage(language);
+  if (listLanguage && listLanguage !== "all") {
+    extra.language = listLanguage;
+  }
+
   const data = await apiRequest(
     appendListQuery(API_ROUTES.questionnaireGroup.list, {
       page,
       limit,
       search,
-      extra: { language: listLanguage },
+      extra,
     })
   );
   assertSuccess(data);
 
   const groups = extractQuestionnaireGroupList(data);
-  const total = extractListTotalFromResponse(data, groups.length);
-  const safeLimit = Number(data.limit) || Number(limit) || 10;
   const items = safeMapListItems(groups, (record) => mapPrescreenGroupToRow(record));
-  const apiTotalPages = Number(data.totalPages);
+  const resolved = resolveListingPagination({
+    data,
+    itemCount: items.length,
+    requestedPage: page,
+    requestedLimit: limit,
+  });
 
   return {
-    ...data,
     items,
-    total,
-    count: total,
-    page: Number(data.page) || page,
-    limit: safeLimit,
-    totalPages:
-      Number.isFinite(apiTotalPages) && apiTotalPages > 0
-        ? apiTotalPages
-        : Math.max(1, Math.ceil(total / safeLimit) || 1),
+    total: resolved.total,
+    page: resolved.page,
+    limit: resolved.pageSize,
+    totalPages: resolved.totalPages,
   };
 }
 

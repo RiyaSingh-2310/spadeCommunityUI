@@ -11,7 +11,7 @@ import {
   formValueToApiStatus,
   formatStatusLabel,
 } from "../../modules/shared/utils/statusLabels";
-import { extractListTotalFromResponse } from "../../modules/shared/utils/listResponse";
+import { resolveListingPagination, extractListItemsFromResponse } from "../../modules/shared/utils/listResponse";
 import { appendListQuery } from "../../modules/shared/utils/listQueryParams";
 import { resolveProfileImageUrl } from "../../modules/shared/utils/userAvatar";
 import { encryptValue } from "../../modules/shared/utils/encryption";
@@ -74,19 +74,7 @@ export function extractAdminFromResponse(data) {
 }
 
 function extractAdminsList(data) {
-  if (!data || typeof data !== "object") return [];
-
-  const nested = data.data && typeof data.data === "object" ? data.data : null;
-
-  const list =
-    data.admins ??
-    data.users ??
-    nested?.admins ??
-    nested?.users ??
-    (Array.isArray(data.data) ? data.data : null) ??
-    (Array.isArray(data) ? data : null);
-
-  return Array.isArray(list) ? list : [];
+  return extractListItemsFromResponse(data, ["admins", "users", "items", "rows", "records", "list"]);
 }
 
 function splitNameParts(name) {
@@ -164,15 +152,19 @@ export async function getRecords({ page = 1, limit = 10, search } = {}) {
   assertSuccess(data);
 
   const admins = extractAdminsList(data);
-  const total = extractListTotalFromResponse(data, admins.length);
+  const resolved = resolveListingPagination({
+    data,
+    itemCount: admins.length,
+    requestedPage: page,
+    requestedLimit: limit,
+  });
 
   return {
-    ...data,
-    total,
-    count: total,
-    page: Number(data.page) || page,
-    limit: Number(data.limit) || limit,
     items: admins.map((admin) => mapAdminToUserRow(admin)),
+    total: resolved.total,
+    page: resolved.page,
+    limit: resolved.pageSize,
+    totalPages: resolved.totalPages,
   };
 }
 

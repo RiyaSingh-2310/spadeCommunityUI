@@ -33,6 +33,7 @@ function SalesManagerPage({ isDarkMode }) {
   const {
     rows: salesManagers,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -131,6 +132,7 @@ function SalesManagerPage({ isDarkMode }) {
         onStatusToggle={handleStatusToggle}
         onSearch={handleSearch}
         totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         serverPaginated
         serverSearch
         paginationPage={currentPage}

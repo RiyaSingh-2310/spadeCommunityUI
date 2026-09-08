@@ -1,5 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
-import { DEFAULT_PAGE_SIZE, paginateItems } from "../../utils/pagination";
+import {
+  clampPage,
+  DEFAULT_PAGE_SIZE,
+  getTotalPages,
+  paginateItems,
+} from "../../utils/pagination";
 import { normalizeSearchQuery, rowMatchesSearchQuery } from "../../utils/searchQuery";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 
@@ -20,6 +25,7 @@ export function useModuleListingPagination({
   onPaginationPageChange,
   onPaginationPageSizeChange,
   totalRecords,
+  serverTotalPages,
   searchFields,
 }) {
   const [query, setQuery] = useState("");
@@ -90,11 +96,12 @@ export function useModuleListingPagination({
 
   const pagination = useMemo(() => {
     if (usesServerListing) {
-      const totalPages = Math.max(
-        1,
-        Math.ceil(paginationTotalItems / pageSize) || 1
-      );
-      const safePage = Math.min(Math.max(1, currentPage), totalPages);
+      const apiPages = Number(serverTotalPages);
+      const totalPages =
+        Number.isFinite(apiPages) && apiPages > 0
+          ? apiPages
+          : getTotalPages(paginationTotalItems, pageSize);
+      const safePage = clampPage(currentPage, totalPages);
       return {
         items: filtered,
         currentPage: safePage,
@@ -104,14 +111,12 @@ export function useModuleListingPagination({
       };
     }
 
-    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
-    const safePage = Math.min(currentPage, totalPages);
-    const slice = paginateItems(filtered, safePage, pageSize);
+    const slice = paginateItems(filtered, currentPage, pageSize);
     return {
       ...slice,
       totalItems: paginationTotalItems,
     };
-  }, [filtered, currentPage, pageSize, paginationTotalItems, usesServerListing]);
+  }, [filtered, currentPage, pageSize, paginationTotalItems, usesServerListing, serverTotalPages]);
 
   return {
     query,

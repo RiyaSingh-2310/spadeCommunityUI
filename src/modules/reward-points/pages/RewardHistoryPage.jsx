@@ -23,6 +23,9 @@ function RewardHistoryPage({ isDarkMode }) {
       return {
         items: data.rows,
         total: data.total,
+        page: data.page,
+        limit: data.limit,
+        totalPages: data.totalPages,
       };
     },
     [fromDate, toDate]
@@ -31,6 +34,7 @@ function RewardHistoryPage({ isDarkMode }) {
   const {
     rows,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -100,6 +104,7 @@ function RewardHistoryPage({ isDarkMode }) {
         showPagination
         serverPaginated
         totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         paginationPage={currentPage}
         paginationPageSize={pageSize}
         onPaginationPageChange={handlePageChange}

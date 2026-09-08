@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { sortListingRowsByIdAsc } from "../utils/listingSort";
-import { DEFAULT_PAGE_SIZE } from "../utils/pagination";
+import { resolveListingPagination } from "../utils/listResponse";
+import { clampPage, DEFAULT_PAGE_SIZE } from "../utils/pagination";
 import { normalizeSearchQuery } from "../utils/searchQuery";
 
 /**
  * Server-driven listing state: search, pagination, loading, and race-safe fetch.
+ * Page buttons follow API metadata: Previous when page > 1, Next when page < totalPages.
+ *
  * @param {{
- *   fetchFn: (params: { page: number, limit: number, search?: string, signal?: AbortSignal }) => Promise<{ items: unknown[], total?: number, count?: number }>,
+ *   fetchFn: (params: { page: number, limit: number, search?: string, signal?: AbortSignal }) => Promise<{ items: unknown[], total?: number, page?: number, limit?: number, totalPages?: number }>,
  *   initialPageSize?: number,
  *   enabled?: boolean,
  *   preserveRowOrder?: boolean,
  * }} options
- *
- * Default listing order is the API response order (typically newest first).
- * Do not alphabetize or re-sort by id unless preserveRowOrder is false.
  */
 export function useApiListing({
   fetchFn,
@@ -23,6 +23,7 @@ export function useApiListing({
 }) {
   const [rows, setRows] = useState([]);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [search, setSearch] = useState("");
@@ -36,6 +37,7 @@ export function useApiListing({
       setIsLoading(false);
       setRows([]);
       setTotalRecords(0);
+      setTotalPages(1);
       setListError("");
       return;
     }
@@ -46,9 +48,7 @@ export function useApiListing({
 
     const requestId = ++fetchRequestIdRef.current;
     setIsLoading(true);
-    setRows([]);
     setListError("");
-    let keepLoadingForPageCorrection = false;
 
     try {
       const normalizedSearch = normalizeSearchQuery(search);
@@ -68,26 +68,19 @@ export function useApiListing({
 
       const rawItems = Array.isArray(data.items) ? data.items : [];
       const items = preserveRowOrder ? rawItems : sortListingRowsByIdAsc(rawItems);
-      const total = data.total ?? data.count ?? items.length;
-      const apiTotalPages = Number(data.totalPages);
-      const totalPages =
-        Number.isFinite(apiTotalPages) && apiTotalPages > 0
-          ? apiTotalPages
-          : Math.max(1, Math.ceil(total / pageSize) || 1);
-
-      if (items.length === 0 && currentPage > 1 && total > 0) {
-        // Keep isLoading true; the currentPage update will re-fetch immediately (M5).
-        keepLoadingForPageCorrection = true;
-        setCurrentPage((prev) => Math.max(1, Math.min(prev, totalPages) - 1));
-        return;
-      }
+      const resolved = resolveListingPagination({
+        data,
+        itemCount: items.length,
+        requestedPage: currentPage,
+        requestedLimit: pageSize,
+      });
 
       setRows(items);
-      setTotalRecords(total);
+      setTotalRecords(resolved.total);
+      setTotalPages(resolved.totalPages);
 
-      if (currentPage > totalPages) {
-        keepLoadingForPageCorrection = true;
-        setCurrentPage(totalPages);
+      if (currentPage > resolved.totalPages) {
+        setCurrentPage(resolved.totalPages);
       }
     } catch (error) {
       if (
@@ -99,17 +92,16 @@ export function useApiListing({
       ) {
         return;
       }
+
       const message =
         error instanceof Error && error.message
           ? error.message
           : "Unable to load records.";
       setListError(message);
       setRows([]);
-      setTotalRecords(0);
     } finally {
       if (
         requestId === fetchRequestIdRef.current &&
-        !keepLoadingForPageCorrection &&
         !controller.signal.aborted
       ) {
         setIsLoading(false);
@@ -134,13 +126,11 @@ export function useApiListing({
 
   const handlePageChange = useCallback(
     (nextPage) => {
-      const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize) || 1);
-      if (nextPage < 1 || nextPage > totalPages || nextPage === currentPage) {
-        return;
-      }
-      setCurrentPage(nextPage);
+      const safePage = clampPage(nextPage, totalPages);
+      if (safePage === currentPage) return;
+      setCurrentPage(safePage);
     },
-    [currentPage, pageSize, totalRecords]
+    [currentPage, totalPages]
   );
 
   const handlePageSizeChange = useCallback((nextSize) => {
@@ -158,6 +148,7 @@ export function useApiListing({
     rows,
     setRows,
     totalRecords,
+    totalPages,
     isLoading,
     currentPage,
     pageSize,

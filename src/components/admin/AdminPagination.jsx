@@ -1,6 +1,6 @@
 import SearchableSelect from "./SearchableSelect";
 import {
-  getVisibleEntryCount,
+  getEntryRange,
   PAGE_SIZE_OPTIONS,
 } from "../../modules/shared/utils/pagination";
 
@@ -11,21 +11,18 @@ function AdminPagination({
   pageSize = 10,
   onPageChange,
   onPageSizeChange,
-  /** Override visible count in summary (e.g. cumulative records through current page). */
-  visibleItemCount = null,
   /** When true, renders controls even with zero items. */
   showWhenEmpty = false,
   pageSizeOptions = PAGE_SIZE_OPTIONS,
 }) {
   if (totalItems <= 0 && !showWhenEmpty) return null;
 
-  const safeTotalPages = Math.max(1, totalPages);
-  const safeCurrentPage = Math.min(Math.max(1, currentPage), safeTotalPages);
-  const visibleCount =
-    visibleItemCount != null
-      ? visibleItemCount
-      : getVisibleEntryCount(safeCurrentPage, pageSize, totalItems);
+  const safeTotalPages = Math.max(1, Number(totalPages) || 1);
+  const safeCurrentPage = Math.min(Math.max(1, Number(currentPage) || 1), safeTotalPages);
+  const { start, end } = getEntryRange(safeCurrentPage, pageSize, totalItems);
   const showPageSizeSelector = Boolean(onPageSizeChange);
+  const isPrevDisabled = safeCurrentPage <= 1;
+  const isNextDisabled = safeCurrentPage >= safeTotalPages;
 
   const btnBase =
     "inline-flex h-9 min-w-[2.75rem] cursor-pointer items-center justify-center rounded-full px-4 text-sm font-semibold transition-colors duration-150";
@@ -68,17 +65,15 @@ function AdminPagination({
       )}
 
       <p className="admin-text-muted text-center text-sm font-medium whitespace-nowrap">
-        {totalItems > 0
-          ? `Showing ${visibleCount} of ${totalItems} Entries`
-          : "Showing 0 of 0 Entries"}
+        {`Showing ${start} of ${totalItems} entries`}
       </p>
 
       <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
         <button
           type="button"
-          disabled={safeCurrentPage <= 1}
+          disabled={isPrevDisabled}
           onClick={() => onPageChange(safeCurrentPage - 1)}
-          className={`${btnBase} ${safeCurrentPage <= 1 ? disabled : inactive}`}
+          className={`${btnBase} ${isPrevDisabled ? disabled : inactive}`}
         >
           Previous
         </button>
@@ -91,11 +86,9 @@ function AdminPagination({
         </span>
         <button
           type="button"
-          disabled={safeCurrentPage >= safeTotalPages || totalItems <= 0}
+          disabled={isNextDisabled}
           onClick={() => onPageChange(safeCurrentPage + 1)}
-          className={`${btnBase} ${
-            safeCurrentPage >= safeTotalPages || totalItems <= 0 ? disabled : inactive
-          }`}
+          className={`${btnBase} ${isNextDisabled ? disabled : inactive}`}
         >
           Next
         </button>

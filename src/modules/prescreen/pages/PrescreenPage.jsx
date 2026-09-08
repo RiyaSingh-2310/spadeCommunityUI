@@ -27,6 +27,7 @@ function PrescreenPage({ isDarkMode }) {
   const {
     rows,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -138,6 +139,7 @@ function PrescreenPage({ isDarkMode }) {
         emptyMessage="No questions found"
         onSearch={handleSearch}
         totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         serverPaginated
         serverSearch
         paginationPage={currentPage}

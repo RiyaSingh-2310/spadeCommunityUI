@@ -5,7 +5,7 @@ import TableCard from "../../../../components/admin/TableCard";
 import TableLoadingSkeleton from "../../../../components/admin/TableLoadingSkeleton";
 import { getAdminCancelButtonClass } from "../../../shared/utils/formStyles";
 import { ADMIN_TABLE_INNER_CLASS } from "../../../shared/utils/tableHelpers";
-import { DEFAULT_PAGE_SIZE } from "../../../shared/utils/pagination";
+import { DEFAULT_PAGE_SIZE, getTotalPages } from "../../../shared/utils/pagination";
 import { formatStatusLabel } from "../../../shared/utils/statusLabels";
 import { toastApiError } from "../../../../services/toast/apiToast";
 import { getInvitedFindUsers } from "../services/findUserApi";
@@ -57,8 +57,11 @@ function InvitedUsersModal({ isOpen, onClose, isDarkMode, surveyId }) {
         });
         if (cancelled) return;
         setUsers(result.items ?? []);
-        setTotalItems(result.total ?? 0);
-        setTotalPages(result.totalPages ?? 0);
+        const total = Number(result.total) || 0;
+        setTotalItems(total);
+        setTotalPages(
+          Math.max(getTotalPages(total, pageSize), Number(result.totalPages) || 0)
+        );
       } catch (err) {
         if (cancelled) return;
         setUsers([]);

@@ -24,6 +24,7 @@ function ProjectManagersPage({ isDarkMode }) {
   const {
     rows: projectManagers,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -122,6 +123,7 @@ function ProjectManagersPage({ isDarkMode }) {
         onStatusToggle={handleStatusToggle}
         onSearch={handleSearch}
         totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         serverPaginated
         serverSearch
         paginationPage={currentPage}

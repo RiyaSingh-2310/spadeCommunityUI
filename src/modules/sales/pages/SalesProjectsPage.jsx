@@ -25,6 +25,7 @@ function SalesProjectsPage({ isDarkMode }) {
   const {
     rows,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -65,6 +66,7 @@ function SalesProjectsPage({ isDarkMode }) {
       emptyMessage="No projects found"
       onSearch={handleSearch}
       totalRecords={totalRecords}
+      paginationTotalPages={totalPages}
       serverPaginated
       serverSearch
       paginationPage={currentPage}

@@ -6,6 +6,7 @@ import {
   safeMapListItems,
 } from "../../shared/utils/listResponse";
 import { appendListQuery } from "../../shared/utils/listQueryParams";
+import { getTotalPages } from "../../shared/utils/pagination";
 import {
   formatAppDate,
   formatAppDateTime,
@@ -190,9 +191,9 @@ export async function getMessages({ page = 1, limit = 10, search = "" } = {}) {
   const total = extractListTotalFromResponse(data, items.length);
   const safePage = toNumber(data?.page, page);
   const pageSize = toNumber(data?.limit, limit);
-  const totalPages = toNumber(
-    data?.totalPages,
-    Math.max(1, Math.ceil(total / (pageSize || 10)) || 1)
+  const totalPages = Math.max(
+    toNumber(data?.totalPages, 0),
+    getTotalPages(total, pageSize || 10)
   );
   // Unread badge source: list `is_read` (per product requirement).
   const unreadCount = items.filter((item) => !item.isRead).length;

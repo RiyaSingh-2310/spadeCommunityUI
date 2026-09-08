@@ -11,11 +11,9 @@ export function buildListingPaginationFooter({
   totalRecords,
   isDarkMode,
   pagination,
-  normalizedQuery,
   pageSize,
   handlePageChange,
   handlePageSizeChange,
-  visibleItemCountOverride = null,
 }) {
   if (
     !showPagination ||
@@ -31,20 +29,6 @@ export function buildListingPaginationFooter({
       currentPage={pagination.currentPage}
       totalPages={pagination.totalPages}
       totalItems={pagination.totalItems}
-      visibleItemCount={
-        visibleItemCountOverride != null
-          ? visibleItemCountOverride
-          : totalRecords != null && (usesServerListing || !normalizedQuery)
-          ? usesServerListing
-            ? pagination.currentPage >= pagination.totalPages
-              ? pagination.totalItems
-              : Math.min(pagination.currentPage * pageSize, pagination.totalItems)
-            : Math.min(
-                (pagination.currentPage - 1) * pageSize + pagination.items.length,
-                pagination.totalItems
-              )
-          : null
-      }
       pageSize={pageSize}
       onPageChange={handlePageChange}
       onPageSizeChange={handlePageSizeChange}

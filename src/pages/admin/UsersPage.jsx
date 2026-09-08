@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../modules/shared/components/ModuleListingPage";
@@ -7,12 +7,8 @@ import { useCsvExport } from "../../modules/shared/hooks/useCsvExport";
 import { useFlashMessage } from "../../modules/shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../modules/shared/hooks/useListingRefresh";
 import { useNameColumnSort } from "../../modules/shared/hooks/useNameColumnSort";
-import {
-  DEFAULT_PAGE_SIZE,
-  listingTotalAfterExcludingCurrentUser,
-} from "../../modules/shared/utils/pagination";
+import { DEFAULT_PAGE_SIZE } from "../../modules/shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../services/toast/apiToast";
-import { getAdminUser } from "../../services/auth/authStorage";
 import {
   deleteRecord,
   exportAdminUsersCsv,
@@ -32,11 +28,10 @@ const LIST_COLUMNS = [
 function UsersPage({ isDarkMode }) {
   const navigate = useNavigate();
   useFlashMessage();
-  const sessionUser = getAdminUser();
-  const loggedInAdminId = sessionUser?.id ?? sessionUser?.admin_id ?? sessionUser?.user_id ?? null;
   const {
     rows: users,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -47,19 +42,11 @@ function UsersPage({ isDarkMode }) {
     refresh: fetchUsers,
   } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(fetchUsers);
-  const filteredUsers = useMemo(() => {
-    if (!loggedInAdminId) return users;
-    return users.filter((u) => String(u?.id ?? u?.admin_id ?? "") !== String(loggedInAdminId));
-  }, [users, loggedInAdminId]);
 
   const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
-    rows: filteredUsers,
+    rows: users,
     columnLabel: "Name",
   });
-  const listingTotalRecords = listingTotalAfterExcludingCurrentUser(
-    totalRecords,
-    users.length - filteredUsers.length
-  );
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -155,8 +142,8 @@ function UsersPage({ isDarkMode }) {
         onManagePermissions={navigateToUserPermissions}
         onStatusToggle={handleStatusToggle}
         onSearch={handleSearch}
-        totalRecords={listingTotalRecords}
-        visibleItemCount={sortedRows.length}
+        totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         serverPaginated
         serverSearch
         paginationPage={currentPage}

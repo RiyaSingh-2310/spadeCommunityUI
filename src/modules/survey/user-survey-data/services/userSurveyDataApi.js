@@ -3,6 +3,8 @@
  * Replace with real API when available.
  */
 
+import { getTotalPages } from "../../../shared/utils/pagination";
+
 const MOCK_USER_SURVEY_ROWS = [
   {
     id: "U-90021",
@@ -105,6 +107,6 @@ export async function fetchUserSurveyData(surveyId, params = {}) {
     total,
     page,
     pageSize,
-    totalPages: Math.max(1, Math.ceil(total / pageSize) || 1),
+    totalPages: getTotalPages(total, pageSize),
   };
 }

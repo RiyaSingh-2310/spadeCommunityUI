@@ -44,6 +44,7 @@ function PartnersPage({ isDarkMode }) {
   const {
     rows: partners,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -144,6 +145,7 @@ function PartnersPage({ isDarkMode }) {
         onStatusToggle={handleStatusToggle}
         onSearch={handleSearch}
         totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         serverPaginated
         serverSearch
         paginationPage={currentPage}

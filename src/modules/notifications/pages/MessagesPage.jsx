@@ -23,6 +23,7 @@ function MessagesPage({ isDarkMode }) {
   const {
     rows,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -73,6 +74,7 @@ function MessagesPage({ isDarkMode }) {
       }}
       onSearch={handleSearch}
       totalRecords={totalRecords}
+      paginationTotalPages={totalPages}
       serverPaginated
       serverSearch
       paginationPage={currentPage}

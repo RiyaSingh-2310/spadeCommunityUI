@@ -59,6 +59,7 @@ function CommunityUsersPage({ isDarkMode }) {
   const {
     rows: users,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -310,6 +311,7 @@ function CommunityUsersPage({ isDarkMode }) {
         onStatusToggle={handleStatusToggle}
         onSearch={handleSearch}
         totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         serverPaginated
         serverSearch
         paginationPage={currentPage}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { DEFAULT_PAGE_SIZE } from "../../../shared/utils/pagination";
+import { DEFAULT_PAGE_SIZE, getTotalPages } from "../../../shared/utils/pagination";
 import { normalizeSearchQuery } from "../../../shared/utils/searchQuery";
 import { fetchUserSurveyData } from "../services/userSurveyDataApi";
 
@@ -15,7 +15,7 @@ export function useUserSurveyDataList(surveyId) {
   const [totalItems, setTotalItems] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize) || 1);
+  const totalPages = getTotalPages(totalItems, pageSize);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -41,7 +41,7 @@ export function useUserSurveyDataList(surveyId) {
   }, [debouncedQuery]);
 
   useEffect(() => {
-    const pages = Math.max(1, Math.ceil(totalItems / pageSize) || 1);
+    const pages = getTotalPages(totalItems, pageSize);
     if (currentPage > pages) {
       setCurrentPage(pages);
     }

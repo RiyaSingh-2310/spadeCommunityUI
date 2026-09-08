@@ -103,6 +103,7 @@ function ModuleListingPage({
   onPaginationPageChange,
   paginationPageSize,
   onPaginationPageSizeChange,
+  paginationTotalPages = null,
   nameAsText = false,
   renderExpandedContent = null,
   compactStatusColumn = false,
@@ -172,6 +173,7 @@ function ModuleListingPage({
     onPaginationPageChange,
     onPaginationPageSizeChange,
     totalRecords,
+    serverTotalPages: paginationTotalPages,
     searchFields,
   });
 

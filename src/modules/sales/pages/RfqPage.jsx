@@ -33,6 +33,7 @@ function RfqPage({ isDarkMode }) {
   const {
     rows: projects,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -101,6 +102,7 @@ function RfqPage({ isDarkMode }) {
         emptyMessage="No RFQ projects found"
         onSearch={handleSearch}
         totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         serverPaginated
         serverSearch
         paginationPage={currentPage}

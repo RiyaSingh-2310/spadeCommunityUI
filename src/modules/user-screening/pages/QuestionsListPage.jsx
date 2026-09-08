@@ -22,6 +22,7 @@ function QuestionsListPage({ isDarkMode }) {
     rows,
     setRows,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -153,6 +154,7 @@ function QuestionsListPage({ isDarkMode }) {
         emptyMessage="No questions found"
         onSearch={handleSearch}
         totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         serverPaginated
         serverSearch
         paginationPage={currentPage}

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { fetchProjectReportList } from "../services/projectReportApi";
 
@@ -40,13 +40,5 @@ export function useProjectReportList({
     preserveRowOrder: true,
   });
 
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(listing.totalRecords / listing.pageSize) || 1),
-    [listing.totalRecords, listing.pageSize]
-  );
-
-  return {
-    ...listing,
-    totalPages,
-  };
+  return listing;
 }

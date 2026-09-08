@@ -24,6 +24,7 @@ function SurveyPage({ isDarkMode }) {
     rows,
     setRows,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -167,6 +168,7 @@ function SurveyPage({ isDarkMode }) {
         emptyMessage="No Data Available"
         onSearch={handleSearch}
         totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         serverPaginated
         serverSearch
         paginationPage={currentPage}

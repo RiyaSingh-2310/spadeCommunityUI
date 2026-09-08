@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
@@ -15,11 +15,13 @@ import {
   getRecords,
   updatePrescreenGroupStatus,
 } from "../../../services/questionnaire-group/questionnaireGroupApi";
+import QuestionnaireGroupListFilters from "../components/QuestionnaireGroupListFilters";
 
 const LIST_COLUMNS = [
   "S.No",
   "Questionnaire Group",
   "Language",
+  "Website URL",
   "Question Count",
   "Status",
   "Created At",
@@ -30,9 +32,23 @@ const SORT_COLUMN = "Questionnaire Group";
 function PrescreenGroupPage({ isDarkMode }) {
   const navigate = useNavigate();
   useFlashMessage();
+  const [statusFilter, setStatusFilter] = useState("active");
+  const [languageFilter, setLanguageFilter] = useState("all");
+
+  const fetchGroups = useCallback(
+    async (params) =>
+      getRecords({
+        ...params,
+        status: statusFilter,
+        language: languageFilter,
+      }),
+    [statusFilter, languageFilter]
+  );
+
   const {
     rows,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -42,7 +58,7 @@ function PrescreenGroupPage({ isDarkMode }) {
     handlePageSizeChange,
     refresh: fetchPrescreenGroups,
   } = useApiListing({
-    fetchFn: getRecords,
+    fetchFn: fetchGroups,
     initialPageSize: DEFAULT_PAGE_SIZE,
     preserveRowOrder: true,
   });
@@ -53,9 +69,25 @@ function PrescreenGroupPage({ isDarkMode }) {
     columnLabel: SORT_COLUMN,
   });
 
+  const extraLanguages = useMemo(
+    () =>
+      [...new Set(rows.map((row) => String(row.languageSlug ?? "").trim().toLowerCase()).filter(Boolean))],
+    [rows]
+  );
+
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+
+  const handleStatusFilterChange = (value) => {
+    setStatusFilter(value);
+    handlePageChange(1);
+  };
+
+  const handleLanguageFilterChange = (value) => {
+    setLanguageFilter(value);
+    handlePageChange(1);
+  };
 
   const handleDeleteRequest = (row) => {
     if (!row?.id) return;
@@ -108,6 +140,16 @@ function PrescreenGroupPage({ isDarkMode }) {
   const exportCsv = useCallback(() => exportQuestionnaireGroupCsv(), []);
   const { isExporting, downloadCsv } = useCsvExport(exportCsv);
 
+  const toolbarFilters = (
+    <QuestionnaireGroupListFilters
+      status={statusFilter}
+      language={languageFilter}
+      extraLanguages={extraLanguages}
+      onStatusChange={handleStatusFilterChange}
+      onLanguageChange={handleLanguageFilterChange}
+    />
+  );
+
   return (
     <div className="space-y-4">
       <ModuleListingPage
@@ -120,6 +162,7 @@ function PrescreenGroupPage({ isDarkMode }) {
         csvExportLabel="Download CSV"
         onCsvExportClick={downloadCsv}
         isCsvExporting={isExporting}
+        toolbarFilters={toolbarFilters}
         columns={LIST_COLUMNS}
         rows={sortedRows}
         sortableColumns={sortableColumns}
@@ -136,6 +179,7 @@ function PrescreenGroupPage({ isDarkMode }) {
         emptyMessage="No questionnaire groups found"
         onSearch={handleSearch}
         totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         serverPaginated
         serverSearch
         paginationPage={currentPage}

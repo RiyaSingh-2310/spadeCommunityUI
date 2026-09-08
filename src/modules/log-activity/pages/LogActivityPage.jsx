@@ -28,6 +28,7 @@ function LogActivityPage({ isDarkMode }) {
     handlePageChange,
     handlePageSizeChange,
     refresh,
+    totalPages,
   } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
 
   const handleDeleteRequest = useCallback((row) => {
@@ -55,7 +56,6 @@ function LogActivityPage({ isDarkMode }) {
     }
   }, [deleteTarget, refresh]);
 
-  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize) || 1);
   const safePage = Math.min(currentPage, totalPages);
 
   return (

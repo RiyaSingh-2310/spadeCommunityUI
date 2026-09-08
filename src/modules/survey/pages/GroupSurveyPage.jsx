@@ -15,6 +15,7 @@ function GroupSurveyPage({ isDarkMode }) {
   const {
     rows,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -107,6 +108,7 @@ function GroupSurveyPage({ isDarkMode }) {
       permissionModule="group_survey"
       onSearch={handleSearch}
       totalRecords={totalRecords}
+      paginationTotalPages={totalPages}
       serverPaginated
       serverSearch
       paginationPage={currentPage}

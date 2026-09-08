@@ -58,6 +58,7 @@ function CommunityUserRewardLogPage({ isDarkMode }) {
   const {
     rows,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -141,6 +142,7 @@ function CommunityUserRewardLogPage({ isDarkMode }) {
         emptyMessage="No reward log entries found."
         onSearch={handleSearch}
         totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         serverPaginated
         serverSearch
         paginationPage={currentPage}

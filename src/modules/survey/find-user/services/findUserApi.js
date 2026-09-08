@@ -1,6 +1,6 @@
 import { API_ROUTES } from "../../../../config/api";
 import {
-  extractListTotalFromResponse,
+  resolveListingPagination,
   safeMapListItems,
 } from "../../../shared/utils/listResponse";
 import { appendListQuery } from "../../../shared/utils/listQueryParams";
@@ -545,30 +545,21 @@ export async function searchFindUsers({
 
   const records = extractSearchList(data);
   const items = safeMapListItems(records, mapFindUserSearchRecord);
-  const total = extractListTotalFromResponse(data, items.length);
-  const responsePage = Number(data.page);
-  const responseLimit = Number(data.limit ?? data.pageSize);
-  const responseTotalPages = Number(data.totalPages ?? data.total_pages);
-  const resolvedPageSize =
-    Number.isFinite(responseLimit) && responseLimit > 0
-      ? responseLimit
-      : safeLimit;
-  const resolvedPage =
-    Number.isFinite(responsePage) && responsePage > 0 ? responsePage : safePage;
-  const resolvedTotalPages = Number.isFinite(responseTotalPages)
-    ? Math.max(0, responseTotalPages)
-    : resolvedPageSize > 0
-      ? Math.ceil(total / resolvedPageSize)
-      : 0;
+  const resolved = resolveListingPagination({
+    data,
+    itemCount: items.length,
+    requestedPage: safePage,
+    requestedLimit: safeLimit,
+  });
 
   return {
     success: true,
     items,
-    total,
-    page: resolvedPage,
-    pageSize: resolvedPageSize,
-    totalPages: resolvedTotalPages,
-    hasMore: resolvedPage * resolvedPageSize < total,
+    total: resolved.total,
+    page: resolved.page,
+    pageSize: resolved.pageSize,
+    totalPages: resolved.totalPages,
+    hasMore: resolved.page * resolved.pageSize < resolved.total,
   };
 }
 
@@ -651,28 +642,19 @@ export async function getInvitedFindUsers({
 
   const records = extractSearchList(data);
   const items = safeMapListItems(records, mapFindUserSearchRecord);
-  const total = extractListTotalFromResponse(data, items.length);
-  const responsePage = Number(data.page);
-  const responseLimit = Number(data.limit ?? data.pageSize);
-  const responseTotalPages = Number(data.totalPages ?? data.total_pages);
-  const resolvedPageSize =
-    Number.isFinite(responseLimit) && responseLimit > 0
-      ? responseLimit
-      : safeLimit;
-  const resolvedPage =
-    Number.isFinite(responsePage) && responsePage > 0 ? responsePage : safePage;
-  const resolvedTotalPages = Number.isFinite(responseTotalPages)
-    ? Math.max(0, responseTotalPages)
-    : resolvedPageSize > 0
-      ? Math.ceil(total / resolvedPageSize)
-      : 0;
+  const resolved = resolveListingPagination({
+    data,
+    itemCount: items.length,
+    requestedPage: safePage,
+    requestedLimit: safeLimit,
+  });
 
   return {
     success: true,
     items,
-    total,
-    page: resolvedPage,
-    pageSize: resolvedPageSize,
-    totalPages: resolvedTotalPages,
+    total: resolved.total,
+    page: resolved.page,
+    pageSize: resolved.pageSize,
+    totalPages: resolved.totalPages,
   };
 }

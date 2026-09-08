@@ -34,6 +34,7 @@ function ClientsPage({ isDarkMode }) {
   const {
     rows: clients,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -136,6 +137,7 @@ function ClientsPage({ isDarkMode }) {
         nameAsText
         onSearch={handleSearch}
         totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         serverPaginated
         serverSearch
         paginationPage={currentPage}

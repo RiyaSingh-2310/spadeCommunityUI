@@ -51,6 +51,7 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
     rows,
     setRows,
     totalRecords,
+    totalPages,
     isLoading,
     listError,
     currentPage,
@@ -253,6 +254,7 @@ function GroupSurveyProjectsListPage({ isDarkMode }) {
         emptyMessage="No projects found"
         onSearch={handleSearch}
         totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
         serverPaginated
         serverSearch
         paginationPage={currentPage}
