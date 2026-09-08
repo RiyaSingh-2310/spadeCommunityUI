@@ -50,6 +50,47 @@ export function mapSurveySettingsToLanguageOptions(items) {
   return options;
 }
 
+export function resolveSurveySettingsId(language, items) {
+  const wanted = String(language ?? "").trim().toLowerCase();
+  if (!wanted || !Array.isArray(items)) return "";
+
+  const match = items.find(
+    (item) => String(item?.language ?? "").trim().toLowerCase() === wanted
+  );
+  const id = match?.id;
+  if (id == null || String(id).trim() === "") return "";
+  return String(id).trim();
+}
+
+function normalizeRedirectContent(value) {
+  return String(value ?? "").trim();
+}
+
+/**
+ * PUT /api/survey-settings/:id body.
+ * Matches:
+ * complete_redirect_content, terminate_redirect_content,
+ * quality_term_redirect_content, survey_close_redirect_content
+ * (plus over_quota_redirect_content from the Survey Settings form).
+ */
+export function buildSurveySettingsUpdatePayload(form = {}) {
+  return {
+    complete_redirect_content: normalizeRedirectContent(form.completeRedirect),
+    terminate_redirect_content: normalizeRedirectContent(form.terminateRedirect),
+    over_quota_redirect_content: normalizeRedirectContent(form.overQuotaRedirect),
+    quality_term_redirect_content: normalizeRedirectContent(form.qualityTermRedirect),
+    survey_close_redirect_content: normalizeRedirectContent(form.surveyCloseRedirect),
+  };
+}
+
+function normalizeSurveySettingsId(id) {
+  const normalizedId = String(id ?? "").trim();
+  if (!normalizedId || normalizedId === "undefined" || normalizedId === "null") {
+    throw new ApiError("Survey setting id is required.", null);
+  }
+  return encodeURIComponent(normalizedId);
+}
+
 /** GET /api/survey-settings/list?page=&limit= */
 export async function listSurveySettings({ page = 1, limit = 10 } = {}) {
   const data = await apiRequest(
@@ -98,4 +139,15 @@ export async function listAllSurveySettings() {
   } while (page <= totalPages && page <= 50);
 
   return items;
+}
+
+/** PUT /api/survey-settings/:id */
+export async function updateSurveySettings(id, form) {
+  const normalizedId = normalizeSurveySettingsId(id);
+  const data = await apiRequest(API_ROUTES.surveySettings.update(normalizedId), {
+    method: "PUT",
+    body: buildSurveySettingsUpdatePayload(form),
+  });
+
+  return assertSuccess(data);
 }

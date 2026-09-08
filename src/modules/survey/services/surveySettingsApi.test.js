@@ -9,6 +9,9 @@ import {
   listSurveySettings,
   mapSurveySettingsListItem,
   mapSurveySettingsToLanguageOptions,
+  buildSurveySettingsUpdatePayload,
+  resolveSurveySettingsId,
+  updateSurveySettings,
 } from "./surveySettingsApi";
 
 const LIST_RESPONSE = {
@@ -71,3 +74,65 @@ describe("listSurveySettings", () => {
     ]);
   });
 });
+
+describe("buildSurveySettingsUpdatePayload", () => {
+  it("maps redirect editors to the PUT contract", () => {
+    expect(
+      buildSurveySettingsUpdatePayload({
+        completeRedirect: "<p>Complete</p>",
+        terminateRedirect: "<p>Terminate</p>",
+        overQuotaRedirect: "<p>Quota</p>",
+        qualityTermRedirect: "<p>Quality</p>",
+        surveyCloseRedirect: "<p>Closed</p>",
+      })
+    ).toEqual({
+      complete_redirect_content: "<p>Complete</p>",
+      terminate_redirect_content: "<p>Terminate</p>",
+      over_quota_redirect_content: "<p>Quota</p>",
+      quality_term_redirect_content: "<p>Quality</p>",
+      survey_close_redirect_content: "<p>Closed</p>",
+    });
+  });
+});
+
+describe("resolveSurveySettingsId", () => {
+  it("resolves the list row id for the selected language", () => {
+    const items = LIST_RESPONSE.data.map((row) => mapSurveySettingsListItem(row));
+    expect(resolveSurveySettingsId("English", items)).toBe("1");
+    expect(resolveSurveySettingsId("korean", items)).toBe("5");
+  });
+});
+
+describe("updateSurveySettings", () => {
+  beforeEach(() => {
+    vi.mocked(apiRequest).mockReset();
+  });
+
+  it("PUTs redirect content to /api/survey-settings/:id", async () => {
+    vi.mocked(apiRequest).mockResolvedValue({
+      success: true,
+      message: "Survey setting updated successfully!",
+    });
+
+    await updateSurveySettings(1, {
+      completeRedirect: "<p>Complete</p>",
+      terminateRedirect: "<p>Terminate</p>",
+      overQuotaRedirect: "<p>Quota</p>",
+      qualityTermRedirect: "<p>Quality</p>",
+      surveyCloseRedirect: "<p>Closed</p>",
+    });
+
+    expect(apiRequest).toHaveBeenCalledTimes(1);
+    const [path, options] = vi.mocked(apiRequest).mock.calls[0];
+    expect(path).toBe("/api/survey-settings/1");
+    expect(options.method).toBe("PUT");
+    expect(options.body).toEqual({
+      complete_redirect_content: "<p>Complete</p>",
+      terminate_redirect_content: "<p>Terminate</p>",
+      over_quota_redirect_content: "<p>Quota</p>",
+      quality_term_redirect_content: "<p>Quality</p>",
+      survey_close_redirect_content: "<p>Closed</p>",
+    });
+  });
+});
+

@@ -252,6 +252,7 @@ export const API_ROUTES = {
   },
   surveySettings: {
     list: "/api/survey-settings/list",
+    update: (id) => `/api/survey-settings/${id}`,
   },
   activity: {
     list: "/api/activity/list",

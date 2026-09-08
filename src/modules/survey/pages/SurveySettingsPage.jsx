@@ -13,12 +13,14 @@ import {
   getRichTextError,
   isFormValidForFields,
 } from "../../shared/utils/validation";
-import toast from "../../../services/toast/toast";
-import { toastApiError } from "../../../services/toast/apiToast";
+import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { createSurveySettingsForm } from "../data/surveySettingsMock";
+import { resetSurveySettingsViewAfterSave } from "../utils/resetSurveySettingsView";
 import {
   listAllSurveySettings,
   mapSurveySettingsToLanguageOptions,
+  resolveSurveySettingsId,
+  updateSurveySettings,
 } from "../services/surveySettingsApi";
 
 const SURVEY_SETTINGS_FIELDS = [
@@ -53,8 +55,8 @@ function getSurveySettingsRedirectEditorHeight() {
 }
 
 /**
- * Survey Settings — languages load from GET /api/survey-settings/list.
- * Redirect content remains local until a settings-by-language content API is added.
+ * Survey Settings — languages from GET /api/survey-settings/list,
+ * save via PUT /api/survey-settings/:id.
  */
 function SurveySettingsPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -62,6 +64,7 @@ function SurveySettingsPage({ isDarkMode }) {
   const [initialSnapshot, setInitialSnapshot] = useState(() =>
     createSurveySettingsForm({ language: "" })
   );
+  const [settingsItems, setSettingsItems] = useState([]);
   const [languageOptions, setLanguageOptions] = useState([]);
   const [isLoadingLanguages, setIsLoadingLanguages] = useState(true);
   const [languagesFailed, setLanguagesFailed] = useState(false);
@@ -79,6 +82,7 @@ function SurveySettingsPage({ isDarkMode }) {
     try {
       const items = await listAllSurveySettings();
       const options = mapSurveySettingsToLanguageOptions(items);
+      setSettingsItems(items);
       setLanguageOptions(options);
 
       const pickLanguage = (current) => {
@@ -94,6 +98,7 @@ function SurveySettingsPage({ isDarkMode }) {
       }));
     } catch (error) {
       toastApiError(error);
+      setSettingsItems([]);
       setLanguageOptions([]);
       setLanguagesFailed(true);
     } finally {
@@ -148,9 +153,15 @@ function SurveySettingsPage({ isDarkMode }) {
     );
   }, [form, initialSnapshot]);
 
+  const selectedSettingsId = useMemo(
+    () => resolveSurveySettingsId(form.language, settingsItems),
+    [form.language, settingsItems]
+  );
+
   const canSubmit =
     showSubmit &&
     !readOnly &&
+    Boolean(selectedSettingsId) &&
     isFormValidForFields(errors, SURVEY_SETTINGS_FIELDS) &&
     !isSubmitting &&
     isDirty;
@@ -169,12 +180,21 @@ function SurveySettingsPage({ isDarkMode }) {
       return;
     }
 
+    if (!selectedSettingsId) {
+      toastApiError({ message: "Select a language before saving survey settings." });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 250));
-      const nextSnapshot = { ...form };
-      setInitialSnapshot(nextSnapshot);
-      toast.success("Survey settings saved locally (mock). API integration pending.");
+      const data = await updateSurveySettings(selectedSettingsId, form);
+      setInitialSnapshot({ ...form });
+      toastApiSuccess(data, "Survey setting updated successfully!");
+      window.requestAnimationFrame(() => {
+        resetSurveySettingsViewAfterSave();
+      });
+    } catch (error) {
+      toastApiError(error);
     } finally {
       setIsSubmitting(false);
     }
