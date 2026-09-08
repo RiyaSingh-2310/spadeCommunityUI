@@ -149,6 +149,149 @@ export function apiToUiQuestionType(value) {
   return API_TO_UI_QUESTION_TYPE[key] ?? value ?? "";
 }
 
+const RIGHT_ANSWER_UI_QUESTION_TYPES = new Set([
+  "Dropdown",
+  "Radio Button",
+  "Checkbox",
+]);
+
+/** Right Answer is only shown/saved for Dropdown, Radio Button, and Checkbox. */
+export function questionTypeShowsRightAnswer(questionType) {
+  const uiType = apiToUiQuestionType(questionType);
+  return RIGHT_ANSWER_UI_QUESTION_TYPES.has(uiType);
+}
+
+function parseMaybeJson(value) {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
+    (trimmed.startsWith("{") && trimmed.endsWith("}"))
+  ) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}
+
+function optionDisplayText(option) {
+  if (option == null) return "";
+  if (typeof option === "string" || typeof option === "number") {
+    return String(option).trim();
+  }
+  if (typeof option === "object") {
+    return String(
+      option.option_text ??
+        option.optionText ??
+        option.label ??
+        option.value ??
+        option.text ??
+        ""
+    ).trim();
+  }
+  return String(option).trim();
+}
+
+function isCorrectOptionFlag(option) {
+  if (!option || typeof option !== "object") return false;
+  const flag =
+    option.is_correct ??
+    option.isCorrect ??
+    option.is_right ??
+    option.isRight ??
+    option.correct;
+  return flag === true || flag === 1 || flag === "1" || flag === "true";
+}
+
+function extractRightAnswerRaw(record) {
+  const candidates = [
+    record?.right_answer,
+    record?.rightAnswer,
+    record?.correct_answer,
+    record?.correctAnswer,
+    record?.right_answers,
+    record?.correct_answers,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate === undefined || candidate === null || candidate === "") continue;
+    if (Array.isArray(candidate) && candidate.length === 0) continue;
+    return parseMaybeJson(candidate);
+  }
+
+  const options = Array.isArray(record?.options) ? record.options : [];
+  const flagged = options.filter((option) => isCorrectOptionFlag(option));
+  if (flagged.length > 0) return flagged;
+
+  return "";
+}
+
+function resolveRightAnswerToken(token, optionItems) {
+  const text = optionDisplayText(token);
+  if (!text) {
+    if (token && typeof token === "object") {
+      const id = token.id ?? token.option_id ?? token.optionId;
+      if (id != null && String(id).trim()) {
+        const byId = optionItems.find(
+          (item) => String(item.value) === String(id) || String(item.label) === String(id)
+        );
+        if (byId) return byId.label;
+      }
+    }
+    return "";
+  }
+
+  const matched = optionItems.find(
+    (item) =>
+      item.label === text ||
+      item.value === text ||
+      String(item.value).toLowerCase() === text.toLowerCase() ||
+      String(item.label).toLowerCase() === text.toLowerCase()
+  );
+  return matched ? matched.label : text;
+}
+
+/**
+ * Formats the Question Library Right Answer for list/edit display.
+ * Returns "" for question types other than Dropdown, Radio Button, and Checkbox.
+ */
+export function formatQuestionLibraryRightAnswer(record) {
+  const questionType = record?.question_type ?? record?.questionType;
+  if (!questionTypeShowsRightAnswer(questionType)) return "";
+
+  const raw = extractRightAnswerRaw(record);
+  if (raw === "" || raw == null) return "";
+
+  const optionItems = mapOptionsToFormItems(record?.options);
+
+  if (Array.isArray(raw)) {
+    return raw
+      .map((item) => resolveRightAnswerToken(item, optionItems))
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  if (typeof raw === "object") {
+    return resolveRightAnswerToken(raw, optionItems);
+  }
+
+  const text = String(raw).trim();
+  if (!text) return "";
+
+  if (text.includes(",") && optionItems.length > 0) {
+    return text
+      .split(",")
+      .map((part) => resolveRightAnswerToken(part.trim(), optionItems))
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  return resolveRightAnswerToken(text, optionItems);
+}
+
 function buildQuestionLibraryCreateBody(payload) {
   const rightAnswerRaw = payload.rightAnswer ?? payload.right_answer ?? "";
   const rightAnswerTrimmed = String(rightAnswerRaw ?? "").trim();
@@ -173,7 +316,7 @@ function buildQuestionLibraryCreateBody(payload) {
     body.options = options;
   }
 
-  if (rightAnswerTrimmed) {
+  if (questionTypeShowsRightAnswer(questionType) && rightAnswerTrimmed) {
     body.right_answer = rightAnswerTrimmed;
   }
 
@@ -194,8 +337,10 @@ function buildQuestionLibraryUpdateBody(payload) {
     status: formValueToApiStatus(payload.status ?? "Active"),
   };
 
+  const apiQuestionType = questionType ? uiToApiQuestionType(questionType) : "";
+
   if (questionType) {
-    body.question_type = uiToApiQuestionType(questionType);
+    body.question_type = apiQuestionType;
   }
 
   // Same rule as create: never send options: [] (fails min:1 validation).
@@ -203,8 +348,14 @@ function buildQuestionLibraryUpdateBody(payload) {
     body.options = options;
   }
 
-  if (rightAnswerTrimmed) {
+  const showsRightAnswer = questionType
+    ? questionTypeShowsRightAnswer(apiQuestionType || questionType)
+    : true;
+
+  if (showsRightAnswer && rightAnswerTrimmed) {
     body.right_answer = rightAnswerTrimmed;
+  } else if (!showsRightAnswer) {
+    body.right_answer = null;
   } else if (
     payload.rightAnswer === null ||
     payload.right_answer === null ||
@@ -247,12 +398,7 @@ export function mapQuestionToForm(record) {
     mappedOptions: mappedLines.join("\n"),
     options: optionItems,
     optionItems,
-    rightAnswer:
-      record?.right_answer != null
-        ? String(record.right_answer)
-        : record?.rightAnswer != null
-          ? String(record.rightAnswer)
-          : "",
+    rightAnswer: formatQuestionLibraryRightAnswer(record),
     sortOrder: String(record?.sort_order ?? record?.sortOrder ?? 0),
     required,
     status: apiStatusToFormValue(record?.status),
@@ -272,12 +418,7 @@ export function mapQuestionToRow(record) {
     language: record?.language ?? "",
     questionType: apiToUiQuestionType(record?.question_type ?? record?.questionType),
     sortOrder: String(sortOrder),
-    rightAnswer:
-      record?.right_answer != null
-        ? String(record.right_answer)
-        : record?.rightAnswer != null
-          ? String(record.rightAnswer)
-          : "",
+    rightAnswer: formatQuestionLibraryRightAnswer(record),
     status: apiStatusToFormValue(record?.status),
     options: Array.isArray(record?.options) ? record.options : [],
     createdAt: createdRaw,
@@ -293,12 +434,7 @@ function mapLanguageQuestion(record) {
   return {
     id: record?.id,
     questionTitle: record?.question_title ?? record?.questionnaireTitle ?? record?.title ?? "",
-    rightAnswer:
-      record?.right_answer != null
-        ? String(record.right_answer)
-        : record?.rightAnswer != null
-          ? String(record.rightAnswer)
-          : "",
+    rightAnswer: formatQuestionLibraryRightAnswer(record),
     options,
   };
 }
