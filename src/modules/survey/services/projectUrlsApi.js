@@ -82,6 +82,15 @@ function toFormNumberValue(value) {
   return String(value);
 }
 
+function pickFormNumber(record, keys) {
+  return toFormNumberValue(pickUrlInfoField(record, keys));
+}
+
+function pickFormText(record, keys, fallback = "") {
+  const value = pickUrlInfoField(record, keys);
+  return value == null ? fallback : String(value);
+}
+
 /**
  * Resolves the Project URL record id used by PUT /api/projects/url/:urlId.
  * Prefer url-specific keys over generic `id`, which may be the project id.
@@ -241,14 +250,30 @@ export function mapProjectUrlToForm(record) {
       record.projectUrlCode ?? record.project_url_code ?? record.urlCode ?? ""
     ).trim(),
     clientProjectId: record.clientProjectId ?? "",
-    clientUrl: record.clientUrl ?? "",
-    discussion: record.discussion ?? "",
-    loi: record.loi != null ? String(record.loi) : "",
-    ir: record.ir != null ? String(record.ir) : "",
+    clientUrl: pickFormText(record, [
+      "clientUrl",
+      "client_url",
+      "Client_URL",
+      "projectUrl",
+      "ProjectURL",
+    ]),
+    discussion: pickFormText(record, ["discussion", "description", "Description"]),
+    loi: pickFormNumber(record, [
+      "loi",
+      "LOI",
+      "LOI(Minute)",
+      "loi_minute",
+      "LOI_Minute",
+    ]),
+    ir: pickFormNumber(record, ["ir", "IR", "IR(%)", "ir_percent", "IR_Percent"]),
     country: record.country ?? "",
     language: record.language ?? "",
-    cpiRate: record.cpiRate != null ? String(record.cpiRate) : "",
-    sampleSize: record.sampleSize != null ? String(record.sampleSize) : "",
+    cpiRate: pickFormNumber(record, ["cpiRate", "cpi", "CPI", "cpi_rate"]),
+    sampleSize: pickFormNumber(record, [
+      "sampleSize",
+      "SampleSize",
+      "sample_size",
+    ]),
     multiLinkCount:
       record.multiLinkCount != null ? String(record.multiLinkCount) : "",
     startDate: record.startDate ?? "",
@@ -260,8 +285,8 @@ export function mapProjectUrlToForm(record) {
         record.project_link_type
     ),
     linkMode: normalizeLinkMode(record.linkMode ?? record.link_mode),
-    testLink: record.testLink ?? "",
-    liveLink: record.liveLink ?? "",
+    testLink: pickFormText(record, ["testLink", "Test_Link", "test_link"]),
+    liveLink: pickFormText(record, ["liveLink", "Live_Link", "live_link"]),
     geoLocation: Boolean(record.geoLocation),
     urlProtection: Boolean(record.urlProtection),
     uniqueIp: Boolean(record.uniqueIp),
@@ -276,12 +301,20 @@ export function mapProjectUrlToForm(record) {
         record.pre_screen_name ??
         ""
     ).trim(),
-    completeRewardPoints:
-      record.completeRewardPoints != null ? String(record.completeRewardPoints) : "",
-    terminationRewardPoints:
-      record.terminationRewardPoints != null
-        ? String(record.terminationRewardPoints)
-        : "",
+    completeRewardPoints: pickFormNumber(record, [
+      "completeRewardPoints",
+      "CompletionPoint",
+      "completion_point",
+      "comp_point",
+      "compPoint",
+    ]),
+    terminationRewardPoints: pickFormNumber(record, [
+      "terminationRewardPoints",
+      "TerminationPoint",
+      "termination_point",
+      "term_point",
+      "termPoint",
+    ]),
     redirectComplete: record.redirectComplete ?? "",
     redirectTerminate: record.redirectTerminate ?? "",
     redirectOverQuota: record.redirectOverQuota ?? "",
@@ -611,6 +644,9 @@ export function normalizeProjectUrl(source, projectId = "", projectRecord = null
     source.project_url_code != null ||
     source.Project_URL_Code != null ||
     source["LOI(Minute)"] != null ||
+    source["IR(%)"] != null ||
+    source.CompletionPoint != null ||
+    source.TerminationPoint != null ||
     source.url_id != null ||
     source.Url_Id != null ||
     source.Live_Link != null ||
@@ -637,33 +673,52 @@ export async function getProjectUrlFormForEdit(projectId, urlId, fallbackForm = 
   const normalizedUrlId = String(urlId ?? "").trim();
   if (!normalizedUrlId) return null;
 
-try {
+  let mapped = fallbackForm
+    ? normalizeProjectUrl(
+        {
+          ...createEmptyProjectUrlForm(projectId),
+          ...fallbackForm,
+          id: fallbackForm.id || normalizedUrlId,
+        },
+        projectId
+      )
+    : null;
+
+  try {
     const listResponse = await listProjectUrlsByProject(projectId);
     const rows = Array.isArray(listResponse?.data) ? listResponse.data : [];
-    const matched = rows.find(
-      (row) => String(row?.id ?? "") === normalizedUrlId
+    const records = Array.isArray(listResponse?.records) ? listResponse.records : [];
+    const matchedRow = rows.find((row) => String(row?.id ?? "") === normalizedUrlId);
+    const matchedRaw = records.find(
+      (row) => resolveUrlRecordId(row) === normalizedUrlId
     );
-    if (matched) {
-      const mapped = normalizeProjectUrl(matched, projectId);
-      return mergeProjectUrlForms(mapped, fallbackForm);
+    const fromList = matchedRaw
+      ? normalizeProjectUrl(matchedRaw, projectId)
+      : matchedRow
+        ? normalizeProjectUrl(matchedRow, projectId)
+        : null;
+    if (fromList) {
+      mapped = mergeProjectUrlForms(fromList, mapped);
     }
   } catch {
     // Fall through to project details urlInfo.
   }
 
-  const record = await getRecord(projectId);
-  const urlInfo = normalizeUrlInfoList(record);
-  const raw = urlInfo.find((row) => resolveUrlRecordId(row) === normalizedUrlId);
-  if (!raw && !fallbackForm) return null;
+  try {
+    const record = await getRecord(projectId);
+    const urlInfo = normalizeUrlInfoList(record);
+    const raw = urlInfo.find((row) => resolveUrlRecordId(row) === normalizedUrlId);
+    if (raw) {
+      mapped = mergeProjectUrlForms(
+        normalizeProjectUrl(raw, projectId, record),
+        mapped
+      );
+    }
+  } catch {
+    // Keep list/fallback mapping when project details are unavailable.
+  }
 
-  const mapped = raw
-    ? normalizeProjectUrl(raw, projectId, record)
-    : normalizeProjectUrl({
-        ...createEmptyProjectUrlForm(projectId),
-        ...fallbackForm,
-        id: normalizedUrlId,
-      }, projectId);
-
+  if (!mapped) return null;
   return mergeProjectUrlForms(mapped, fallbackForm);
 }
 

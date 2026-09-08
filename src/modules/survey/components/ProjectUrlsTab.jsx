@@ -43,6 +43,7 @@ import {
   isProjectUrlFormValid,
   normalizeProjectUrlFormForState,
   applyPrefillProjectUrlRedirects,
+  applyPrefillEmptyProjectUrlRedirects,
   PROJECT_URL_CPI_MAX_DECIMALS,
   PROJECT_URL_FORM_FIELDS,
   PROJECT_URL_NUMERIC_MAX_DIGITS,
@@ -57,12 +58,15 @@ import {
   DEFAULT_SURVEY_LINK_PLACEHOLDER,
   withSurveyLinkPid,
 } from "../utils/surveyLinkPlaceholders";
+import { jumpToSectionAfterRender } from "../../shared/utils/jumpToSection";
 import {
   SectionDivider,
   primaryBtnClass,
   secondaryBtnClass,
   StatusBadge,
 } from "./surveyDetailsShared";
+
+const PROJECT_URL_FORM_SECTION_ID = "project-url-form";
 
 const PROJECT_URL_LIST_COLUMNS = [
   "ID",
@@ -265,6 +269,15 @@ function ProjectUrlsTab({
   const isEdit = urlView === PROJECT_URL_VIEW_IDS.EDIT;
   const isLoadingEditForm = isEdit && Boolean(urlId) && !editFormReady;
 
+  useEffect(() => {
+    if (view !== "form") return;
+    jumpToSectionAfterRender(PROJECT_URL_FORM_SECTION_ID, {
+      behavior: "auto",
+      block: "start",
+      delayMs: 0,
+    });
+  }, [view, isLoadingEditForm, urlView, urlId]);
+
   const errors = useMemo(
     () =>
       getProjectUrlFormErrors(form, {
@@ -389,28 +402,14 @@ function ProjectUrlsTab({
         }
         const normalized = normalizeProjectUrlFormForState(nextForm);
         const existingCode = String(normalized.projectUrlCode ?? "").trim();
-        let formWithCode = normalized;
-
-        if (!existingCode) {
-          setIsGeneratingUrlCode(true);
-          try {
-            const code = await generateProjectUrlCode(projectFk);
-            if (cancelled) return;
-            formWithCode = withGeneratedProjectUrlCode(normalized, code);
-          } catch (error) {
-            if (!cancelled) toastApiError(error);
-          } finally {
-            if (!cancelled) setIsGeneratingUrlCode(false);
-          }
-        } else {
-          formWithCode = applyPrefillProjectUrlRedirects(normalized, existingCode);
-        }
+        const formWithCode = existingCode
+          ? applyPrefillEmptyProjectUrlRedirects(normalized, existingCode)
+          : normalized;
 
         if (cancelled) return;
 
         setSelectedUrlId(formWithCode.id ? String(formWithCode.id) : String(urlId));
         setForm(formWithCode);
-        // Keep Save enabled when a code was generated or Live/Test pid was synced.
         setInitialSnapshot(
           cloneProjectUrlForm(
             areProjectUrlFormsEqual(formWithCode, normalized)
@@ -894,7 +893,10 @@ function ProjectUrlsTab({
 
   if (view === "form" && isEdit && isLoadingEditForm) {
     return (
-      <div className="admin-text flex items-center gap-2 py-8 text-sm">
+      <div
+        id={PROJECT_URL_FORM_SECTION_ID}
+        className="admin-text flex items-center gap-2 py-8 text-sm"
+      >
         <Loader2 size={16} className="animate-spin" />
         Loading Project URL...
       </div>
@@ -961,7 +963,12 @@ function ProjectUrlsTab({
   }
 
   return (
-    <form className="space-y-0" onSubmit={handleSave} noValidate>
+    <form
+      id={PROJECT_URL_FORM_SECTION_ID}
+      className="space-y-0"
+      onSubmit={handleSave}
+      noValidate
+    >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h3 className="admin-text text-base font-semibold">
           {isEdit ? "Edit Project URL" : "Add Project URL"}

@@ -105,7 +105,7 @@ export function mapSupplierMappingToDetail(record) {
     mappingCode: pickField(record, ["mapping_code"]),
     partnerName: pickField(record, ["partner_name", "name", "partnerName"]),
     quota: pickField(record, ["quota", "Quota"]),
-    cpi: pickField(record, ["CPI", "cpi"]),
+    cpi: pickField(record, ["CPI", "cpi", "cpi_rate"]),
     linksToAssign: pickField(record, [
       "LinksToAssign",
       "links_to_assign",

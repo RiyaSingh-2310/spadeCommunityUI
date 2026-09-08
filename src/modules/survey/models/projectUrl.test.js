@@ -71,4 +71,47 @@ describe("normalizeProjectUrl", () => {
   it("returns an empty model for missing records", () => {
     expect(normalizeProjectUrl(null, "9")).toEqual(createEmptyProjectUrlForm("9"));
   });
+
+  it("maps IR, CPI, LOI, and reward points from mixed field aliases", () => {
+    const model = normalizeProjectUrl(
+      {
+        id: 5,
+        projectUrlCode: "CODE1",
+        CPI: 3.1,
+        IR: 45,
+        LOI: 12,
+        CompletionPoint: 20,
+        TerminationPoint: 5,
+      },
+      17
+    );
+
+    expect(model.cpiRate).toBe("3.1");
+    expect(model.ir).toBe("45");
+    expect(model.loi).toBe("12");
+    expect(model.completeRewardPoints).toBe("20");
+    expect(model.terminationRewardPoints).toBe("5");
+    expect(model.projectUrlCode).toBe("CODE1");
+  });
+
+  it("maps CPI and IR aliases on already-normalized list rows", () => {
+    const model = normalizeProjectUrl(
+      {
+        id: "11",
+        projectUrlCode: "LISTROW",
+        CPI: 2,
+        IR: 30,
+        loi: 8,
+        completeRewardPoints: 15,
+        terminationRewardPoints: 3,
+      },
+      "9"
+    );
+
+    expect(model.cpiRate).toBe("2");
+    expect(model.ir).toBe("30");
+    expect(model.loi).toBe("8");
+    expect(model.completeRewardPoints).toBe("15");
+    expect(model.terminationRewardPoints).toBe("3");
+  });
 });

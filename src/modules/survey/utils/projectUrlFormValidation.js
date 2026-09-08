@@ -126,6 +126,24 @@ export function applyPrefillProjectUrlRedirects(form, projectUrlCode) {
   return next;
 }
 
+/** Fill only empty redirect fields; keep previously saved redirect URLs. */
+export function applyPrefillEmptyProjectUrlRedirects(form, projectUrlCode) {
+  if (!form || typeof form !== "object") return form;
+  const code = String(projectUrlCode ?? form.projectUrlCode ?? "").trim();
+  if (!code) return form;
+
+  const next = { ...form };
+  PROJECT_URL_REDIRECT_FIELDS.forEach(({ key, path, acceptedPaths }) => {
+    if (String(form[key] ?? "").trim()) return;
+    const redirectPath =
+      Array.isArray(acceptedPaths) && acceptedPaths.length > 0
+        ? acceptedPaths[0]
+        : path;
+    next[key] = buildPrefillRedirectUrl(redirectPath, code);
+  });
+  return next;
+}
+
 const DIRTY_COMPARE_KEYS = [
   "projectUrlCode",
   "discussion",

@@ -24,6 +24,7 @@ import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast
 import { mapPartnersToSelectOptions } from "../services/surveyApi";
 import {
   createSupplierMapping,
+  getSupplierMappingById,
   listSupplierMappings,
   mapSupplierMappingToForm,
   mapSupplierMappingToRow,
@@ -284,7 +285,7 @@ function PartnerMappingTab({
   const [togglingRowId, setTogglingRowId] = useState("");
   const scrollToMappingIdRef = useRef("");
   const mappingTableRef = useRef(null);
-  const pendingJumpToAddFormRef = useRef(false);
+  const pendingJumpToFormRef = useRef(false);
   const pendingJumpToMappingRef = useRef(false);
   const statsRequestIdRef = useRef(0);
 
@@ -626,7 +627,7 @@ function PartnerMappingTab({
   const openAddForm = async () => {
     if (!allowWrite || !resolvedProjectUrlId || !selectedUrlEligible) return;
     if (!multiLinkStats?.addPartner) return;
-    pendingJumpToAddFormRef.current = true;
+    pendingJumpToFormRef.current = true;
     setShowForm(true);
     setFormMode("add");
     setForm({
@@ -638,14 +639,10 @@ function PartnerMappingTab({
     setIsFormLoading(false);
   };
 
-  // After Add Partner form is rendered (fields visible), jump to #add-partner.
+  // After Add/Edit Partner form is rendered, jump to the form section.
   useEffect(() => {
-    if (!showForm || isFormLoading || !pendingJumpToAddFormRef.current) return;
-    if (formMode !== "add") {
-      pendingJumpToAddFormRef.current = false;
-      return;
-    }
-    pendingJumpToAddFormRef.current = false;
+    if (!showForm || isFormLoading || !pendingJumpToFormRef.current) return;
+    pendingJumpToFormRef.current = false;
     jumpToSectionAfterRender(ADD_PARTNER_SECTION_ID, {
       behavior: "auto",
       block: "start",
@@ -656,13 +653,25 @@ function PartnerMappingTab({
   const openEditForm = async (row) => {
     if (!row?.id) return;
 
+    pendingJumpToFormRef.current = true;
     setShowForm(true);
     setFormMode("edit");
     setIsFormLoading(true);
 
     try {
       await loadPartnerOptions();
-      const mapped = mapSupplierMappingToForm(row.record ?? row);
+      const listRecord = row.record ?? row;
+      let record = listRecord;
+      try {
+        const fetched = await getSupplierMappingById(row.id);
+        const fetchedRecord = Array.isArray(fetched) ? fetched[0] : fetched;
+        if (fetchedRecord && typeof fetchedRecord === "object") {
+          record = { ...listRecord, ...fetchedRecord };
+        }
+      } catch {
+        // Use the list row when the mapping detail request is unavailable.
+      }
+      const mapped = mapSupplierMappingToForm(record);
       if (!mapped) {
         throw new Error("Partner mapping not found.");
       }
