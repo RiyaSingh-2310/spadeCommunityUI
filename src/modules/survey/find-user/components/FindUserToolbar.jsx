@@ -16,6 +16,7 @@ function FindUserToolbar({
   visibleCount = 0,
   selectedCount = 0,
   inviteBlockedReason = "",
+  
 }) {
   const inputClass = getAdminInputClass();
   const canInvite = !inviteDisabled && !disabled && !isInviting;
