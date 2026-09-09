@@ -4,6 +4,7 @@ import { useModulePermission } from "../../permissions/useModulePermission";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
+import { useCsvExport } from "../../shared/hooks/useCsvExport";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
@@ -14,7 +15,7 @@ import CommunityUsersToolbar from "../components/CommunityUsersToolbar";
 import {
   bulkResendInvite,
   deleteRecord,
-  downloadPanelists,
+  exportPanelistsCsv,
   getRecords,
   resendEmail,
   updateStatus,
@@ -207,7 +208,7 @@ function CommunityUsersPage({ isDarkMode }) {
     setIsDownloading(true);
     try {
       // Server export returns the full dataset until backend supports `ids` filter.
-      const data = await downloadPanelists();
+      const data = await exportPanelistsCsv();
       setBulkDownloadOpen(false);
       toastApiSuccess(data);
     } catch (error) {
@@ -224,7 +225,7 @@ function CommunityUsersPage({ isDarkMode }) {
       setIsDownloading(true);
       try {
         // Server export returns the full dataset until backend supports `ids` filter.
-        const data = await downloadPanelists();
+        const data = await exportPanelistsCsv();
         toastApiSuccess(data);
       } catch (error) {
         toastApiError(error);
@@ -258,6 +259,9 @@ function CommunityUsersPage({ isDarkMode }) {
     [isResending, refresh]
   );
 
+  const exportCsv = useCallback(() => exportPanelistsCsv(), []);
+  const { isExporting, downloadCsv } = useCsvExport(exportCsv);
+
   const handleStatusToggle = async (row) => {
     if (!row?.id || statusUpdatingId != null) return;
 
@@ -286,6 +290,9 @@ function CommunityUsersPage({ isDarkMode }) {
         isDarkMode={isDarkMode}
         title="Panelists"
         searchPlaceholder="Search User"
+        csvExportLabel="Download CSV"
+        onCsvExportClick={downloadCsv}
+        isCsvExporting={isExporting}
         columns={LIST_COLUMNS}
         rows={sortedRows}
         sortableColumns={sortableColumns}

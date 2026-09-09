@@ -64,6 +64,7 @@ describe("CRUD API contracts", () => {
   it("community users", () => {
     expect(API_ROUTES.panelist.list).toBe("/api/panelist/list");
     expect(API_ROUTES.panelist.byId(10)).toBe("/api/panelist/10");
+    expect(API_ROUTES.panelist.exportCsv).toBe("/api/panelist/export");
     expect(API_ROUTES.rewardHistory.list).toBe("/api/reward-history/list");
   });
 

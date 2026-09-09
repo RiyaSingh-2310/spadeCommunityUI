@@ -265,9 +265,7 @@ export const API_ROUTES = {
     updateStatus: (id) => `/api/panelist/${id}/status`,
     resendInvite: (id) => `/api/panelist/${id}/resend-invite`,
     bulkInvite: "/api/panelist/bulk-invite",
-    // TODO(backend): Implement GET /api/panelist/export/csv (CSV download with
-    // Content-Disposition filename + UTF-8 BOM recommended for Excel).
-    exportCsv: "/api/panelist/export/csv",
+    exportCsv: "/api/panelist/export",
   },
   emailTemplates: {
     list: "/api/email-templates/list",

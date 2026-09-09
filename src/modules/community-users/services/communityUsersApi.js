@@ -665,13 +665,10 @@ export async function bulkResendInvite(ids) {
 }
 
 /**
- * GET /api/panelist/export/csv — full dataset export (server-backed).
- * Selection/row args from the listing UI are ignored; the backend owns the export set.
- *
- * TODO(backend): Implement GET /api/panelist/export/csv.
- * Optional: accept `ids` query for selected-row export when the UI passes them.
+ * GET /api/panelist/export — panelist CSV as returned by the backend
+ * (ID, Name, Email address, Created at, Status).
  */
-export async function downloadPanelists() {
+export async function exportPanelistsCsv() {
   return downloadCsvExport(API_ROUTES.panelist.exportCsv, {
     defaultFilename: buildDatedExportFilename("panelists-export"),
   });
