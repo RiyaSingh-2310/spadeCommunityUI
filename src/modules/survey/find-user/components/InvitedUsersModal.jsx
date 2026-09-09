@@ -4,7 +4,13 @@ import AdminPagination from "../../../../components/admin/AdminPagination";
 import TableCard from "../../../../components/admin/TableCard";
 import TableLoadingSkeleton from "../../../../components/admin/TableLoadingSkeleton";
 import { getAdminCancelButtonClass } from "../../../shared/utils/formStyles";
-import { ADMIN_TABLE_INNER_CLASS } from "../../../shared/utils/tableHelpers";
+import {
+  ADMIN_TABLE_INNER_CLASS,
+  getEllipsisCellClassName,
+  getEllipsisCellStyle,
+  TABLE_ELLIPSIS_PX,
+} from "../../../shared/utils/tableHelpers";
+import TableEllipsisText from "../../../../components/admin/TableEllipsisText";
 import { DEFAULT_PAGE_SIZE, getTotalPages } from "../../../shared/utils/pagination";
 import { formatStatusLabel } from "../../../shared/utils/statusLabels";
 import { toastApiError } from "../../../../services/toast/apiToast";
@@ -165,16 +171,32 @@ function InvitedUsersModal({ isOpen, onClose, isDarkMode, surveyId }) {
                         <td className="admin-text whitespace-nowrap">
                           {globalIdx + 1}
                         </td>
-                        <td className="admin-text whitespace-nowrap">{row.name}</td>
-                        <td className="admin-text whitespace-nowrap">{row.email}</td>
+                        <td
+                          className={getEllipsisCellClassName(
+                            TABLE_ELLIPSIS_PX.name,
+                            "align-middle"
+                          )}
+                          style={getEllipsisCellStyle(TABLE_ELLIPSIS_PX.name)}
+                        >
+                          <TableEllipsisText>{row.name}</TableEllipsisText>
+                        </td>
+                        <td
+                          className={getEllipsisCellClassName(
+                            TABLE_ELLIPSIS_PX.email,
+                            "align-middle"
+                          )}
+                          style={getEllipsisCellStyle(TABLE_ELLIPSIS_PX.email)}
+                        >
+                          <TableEllipsisText>{row.email}</TableEllipsisText>
+                        </td>
                         <td className="admin-text whitespace-nowrap">
                           {row.inviteStatus}
                         </td>
                         <td
-                          className="admin-text-muted max-w-[200px] truncate"
-                          title={row.message || undefined}
+                          className={getEllipsisCellClassName(200, "align-middle")}
+                          style={getEllipsisCellStyle(200)}
                         >
-                          {row.message || "—"}
+                          <TableEllipsisText>{row.message || "—"}</TableEllipsisText>
                         </td>
                         <td className="admin-text whitespace-nowrap">
                           {row.invitedAt || "—"}

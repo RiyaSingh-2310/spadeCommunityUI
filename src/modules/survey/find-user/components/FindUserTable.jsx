@@ -1,7 +1,13 @@
 import AdminPagination from "../../../../components/admin/AdminPagination";
 import TableCard from "../../../../components/admin/TableCard";
 import TableLoadingSkeleton from "../../../../components/admin/TableLoadingSkeleton";
-import { ADMIN_TABLE_INNER_CLASS } from "../../../shared/utils/tableHelpers";
+import TableEllipsisText from "../../../../components/admin/TableEllipsisText";
+import {
+  ADMIN_TABLE_INNER_CLASS,
+  getEllipsisCellClassName,
+  getEllipsisCellStyle,
+  TABLE_ELLIPSIS_PX,
+} from "../../../shared/utils/tableHelpers";
 import { formatStatusLabel } from "../../../shared/utils/statusLabels";
 import { toUiSentenceCase } from "../../../shared/utils/uiText";
 
@@ -115,17 +121,27 @@ function FindUserTable({
                       aria-label={`Select ${user.name}`}
                     />
                   </td>
-                  <td className="admin-text whitespace-nowrap">{user.name}</td>
-                  <td className="admin-text whitespace-nowrap">{user.email}</td>
+                  <td
+                    className={getEllipsisCellClassName(TABLE_ELLIPSIS_PX.name, "align-middle")}
+                    style={getEllipsisCellStyle(TABLE_ELLIPSIS_PX.name)}
+                  >
+                    <TableEllipsisText>{user.name}</TableEllipsisText>
+                  </td>
+                  <td
+                    className={getEllipsisCellClassName(TABLE_ELLIPSIS_PX.email, "align-middle")}
+                    style={getEllipsisCellStyle(TABLE_ELLIPSIS_PX.email)}
+                  >
+                    <TableEllipsisText>{user.email}</TableEllipsisText>
+                  </td>
                   <td className="admin-text whitespace-nowrap">{user.balance}</td>
                   <td className="admin-text whitespace-nowrap">{user.inviteStatus}</td>
                   <td className="admin-text whitespace-nowrap">{user.earnedPoints}</td>
                   <td className="admin-text whitespace-nowrap">{user.joiningDate}</td>
                   <td
-                    className="admin-text max-w-[240px] truncate"
-                    title={user.matchedAnswers}
+                    className={getEllipsisCellClassName(240, "admin-text align-middle")}
+                    style={getEllipsisCellStyle(240)}
                   >
-                    {user.matchedAnswers || "—"}
+                    <TableEllipsisText>{user.matchedAnswers || "—"}</TableEllipsisText>
                   </td>
                   <td className="admin-text whitespace-nowrap">
                     <span

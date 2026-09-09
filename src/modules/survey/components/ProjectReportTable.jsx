@@ -1,6 +1,12 @@
 import TableCard from "../../../components/admin/TableCard";
 import TableLoadingSkeleton from "../../../components/admin/TableLoadingSkeleton";
-import { ADMIN_TABLE_INNER_CLASS } from "../../shared/utils/tableHelpers";
+import TableEllipsisText from "../../../components/admin/TableEllipsisText";
+import {
+  ADMIN_TABLE_INNER_CLASS,
+  getEllipsisCellClassName,
+  getEllipsisCellStyle,
+  TABLE_ELLIPSIS_PX,
+} from "../../shared/utils/tableHelpers";
 import StatusToggle from "../../../components/admin/StatusToggle";
 import { getProjectReportColumns } from "../utils/projectReportColumns";
 import { PROJECT_REPORT_TYPES } from "../utils/projectReportNavigation";
@@ -56,33 +62,40 @@ function ProjectReportTable({
             ) : (
               rows.map((row, index) => (
                 <tr key={`${row.id}-${index}`} className="align-middle">
-                  {columns.map((column) => (
-                    <td
-                      key={column.key}
-                      className={`admin-text text-sm ${
-                        column.key === "question" ||
-                        column.key === "multilinkUrl" ||
-                        column.key === "multiLinkUrl"
-                          ? "max-w-xs whitespace-normal wrap-break-word"
-                          : "whitespace-nowrap"
-                      }`}
-                    >
-                      {column.key === "isTestLink" ? (
-                        <StatusToggle
-                          checked={
-                            row[column.key] === true ||
-                            String(row[column.key] ?? "").toLowerCase() === "true"
-                          }
-                          readOnly
-                          labelOn="Test"
-                          labelOff="Live"
-                          compact
-                        />
-                      ) : (
-                        row[column.key]
-                      )}
-                    </td>
-                  ))}
+                  {columns.map((column) => {
+                    const isLongText =
+                      column.key === "question" ||
+                      column.key === "multilinkUrl" ||
+                      column.key === "multiLinkUrl";
+                    const ellipsisMax = isLongText ? TABLE_ELLIPSIS_PX.title : null;
+                    return (
+                      <td
+                        key={column.key}
+                        className={getEllipsisCellClassName(
+                          ellipsisMax,
+                          `admin-text text-sm ${ellipsisMax ? "" : "whitespace-nowrap"}`
+                        )}
+                        style={getEllipsisCellStyle(ellipsisMax)}
+                      >
+                        {column.key === "isTestLink" ? (
+                          <StatusToggle
+                            checked={
+                              row[column.key] === true ||
+                              String(row[column.key] ?? "").toLowerCase() === "true"
+                            }
+                            readOnly
+                            labelOn="Test"
+                            labelOff="Live"
+                            compact
+                          />
+                        ) : ellipsisMax ? (
+                          <TableEllipsisText>{row[column.key] ?? "—"}</TableEllipsisText>
+                        ) : (
+                          row[column.key]
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))
             )}

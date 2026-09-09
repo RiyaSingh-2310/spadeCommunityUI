@@ -19,7 +19,7 @@ import QuestionnaireGroupListFilters from "../components/QuestionnaireGroupListF
 
 const LIST_COLUMNS = [
   "S.No",
-  "Questionnaire Group",
+  "Group Title",
   "Language",
   // "Website URL",
   "Question Count",
@@ -27,7 +27,7 @@ const LIST_COLUMNS = [
   "Created At",
   "Action",
 ];
-const SORT_COLUMN = "Questionnaire Group";
+const SORT_COLUMN = "Group Title";
 
 function PrescreenGroupPage({ isDarkMode }) {
   const navigate = useNavigate();

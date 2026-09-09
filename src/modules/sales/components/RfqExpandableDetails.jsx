@@ -9,7 +9,10 @@ function DetailField({ label, value, ellipsis = false }) {
         {toUiSentenceCase(label)}
       </p>
       <p
-        className={`admin-text mt-1 text-sm ${ellipsis ? "max-w-[280px] truncate" : "break-words"}`}
+      <p
+        className={`admin-text mt-1 text-sm ${ellipsis ? "max-w-[250px] truncate" : "break-words"}`}
+        title={ellipsis && display !== "—" ? display : undefined}
+      >
         title={ellipsis && display !== "—" ? display : undefined}
       >
         {display}

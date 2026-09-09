@@ -421,6 +421,25 @@ body {
   vertical-align: middle;
 }
 
+.admin-table-ellipsis-cell {
+  max-width: var(--admin-ellipsis-max, 250px);
+  overflow: hidden;
+}
+
+.admin-table-ellipsis-text {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.admin-table-ellipsis-text {
+  width: 100%;
+  text-align: left;
+}
+
 .admin-table thead tr {
   background-color: var(--admin-table-head-bg);
 }

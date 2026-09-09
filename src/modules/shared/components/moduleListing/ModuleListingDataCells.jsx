@@ -9,6 +9,9 @@ import TableStatusSelect from "../../../../components/admin/TableStatusSelect";
 import RfqStatusBadge from "../../../sales/components/RfqStatusBadge";
 import {
   getColumnKey,
+  getColumnEllipsisMaxWidthPx,
+  getEllipsisCellClassName,
+  getEllipsisCellStyle,
   getRowValue,
   isActionColumn,
   isDetailsColumn,
@@ -21,6 +24,7 @@ import {
 } from "../../utils/tableHelpers";
 import { formatDescriptionForLineClamp } from "./moduleListingUtils";
 import ModuleListingActionCell from "./ModuleListingActionCell";
+import TableEllipsisText from "../../../../components/admin/TableEllipsisText";
 
 /**
  * Renders all data cells for one listing row (excluding expand control).
@@ -283,13 +287,18 @@ function ModuleListingDataCells({
       );
     }
     if (key === "name") {
+      const ellipsisMax = getColumnEllipsisMaxWidthPx(col);
       return (
         <td
           key={col}
-          className={`px-4 py-3 align-middle ${nowrapAllCells ? "whitespace-nowrap" : ""}`}
+          className={getEllipsisCellClassName(
+            ellipsisMax,
+            `px-4 py-3 align-middle ${nowrapAllCells && !ellipsisMax ? "whitespace-nowrap" : ""}`
+          )}
+          style={getEllipsisCellStyle(ellipsisMax)}
         >
           {hasProfileImageColumn || nameAsText ? (
-            <span className="admin-text min-w-0 truncate">{row.name || "-"}</span>
+            <TableEllipsisText>{row.name || "-"}</TableEllipsisText>
           ) : (
             <AvatarNameCell record={row} size="table" />
           )}
@@ -301,17 +310,18 @@ function ModuleListingDataCells({
       value === "" || value === "-" ? (key === "projectid" ? "—" : value) : value;
     if (key === "questionTitle" && onView && allowRead) {
       const titleText = displayValue === "-" ? "—" : String(displayValue);
+      const ellipsisMax = getColumnEllipsisMaxWidthPx(col);
       return (
         <td
           key={col}
-          className={`px-4 py-3 align-middle ${
-            nowrapAllCells || isNowrapDataColumn(col) ? "whitespace-nowrap" : ""
-          }`}
+          className={getEllipsisCellClassName(ellipsisMax, "px-4 py-3 align-middle")}
+          style={getEllipsisCellStyle(ellipsisMax)}
         >
           <button
             type="button"
             onClick={() => onView(row, globalIdx)}
-            className="admin-text text-left hover:opacity-80"
+            className="admin-table-ellipsis-text admin-text hover:opacity-80"
+            title={titleText !== "—" ? titleText : undefined}
           >
             {titleText}
           </button>
@@ -320,21 +330,28 @@ function ModuleListingDataCells({
     }
     if (key === "emailSubject") {
       const subjectText = displayValue === "-" ? "—" : String(displayValue);
+      const ellipsisMax = getColumnEllipsisMaxWidthPx(col);
       return (
-        <td key={col} className="max-w-[220px] px-4 py-3 align-middle">
-          <span
-            className="admin-text block truncate"
-            title={subjectText !== "—" ? subjectText : undefined}
-          >
+        <td
+          key={col}
+          className={getEllipsisCellClassName(ellipsisMax, "px-4 py-3 align-middle")}
+          style={getEllipsisCellStyle(ellipsisMax)}
+        >
+          <TableEllipsisText title={subjectText !== "—" ? subjectText : undefined}>
             {subjectText}
-          </span>
+          </TableEllipsisText>
         </td>
       );
     }
     if (key === "websiteUrl" || key === "url") {
       const urlText = displayValue === "-" ? "" : String(displayValue).trim();
+      const ellipsisMax = getColumnEllipsisMaxWidthPx(col);
       return (
-        <td key={col} className="max-w-[min(320px,42vw)] px-4 py-3 align-middle">
+        <td
+          key={col}
+          className={getEllipsisCellClassName(ellipsisMax, "px-4 py-3 align-middle")}
+          style={getEllipsisCellStyle(ellipsisMax)}
+        >
           {urlText && /^https?:\/\//i.test(urlText) ? (
             <a
               href={urlText}
@@ -343,13 +360,11 @@ function ModuleListingDataCells({
               className="admin-text inline-flex max-w-full items-center gap-1.5 text-[var(--admin-primary-color)] hover:underline"
               title={urlText}
             >
-              <span className="min-w-0 truncate">{urlText}</span>
+              <span className="admin-table-ellipsis-text min-w-0">{urlText}</span>
               <ExternalLink size={14} className="shrink-0 opacity-70" aria-hidden />
             </a>
           ) : (
-            <span className="admin-text block truncate" title={urlText || undefined}>
-              {urlText || "—"}
-            </span>
+            <TableEllipsisText title={urlText || undefined}>{urlText || "—"}</TableEllipsisText>
           )}
         </td>
       );
@@ -388,14 +403,25 @@ function ModuleListingDataCells({
         </td>
       );
     }
+    const ellipsisMax = getColumnEllipsisMaxWidthPx(col);
     return (
       <td
         key={col}
-        className={`px-4 py-3 align-middle ${
-          nowrapAllCells || isNowrapDataColumn(col) ? "whitespace-nowrap" : ""
-        }`}
+        className={getEllipsisCellClassName(
+          ellipsisMax,
+          `px-4 py-3 align-middle ${
+            !ellipsisMax && (nowrapAllCells || isNowrapDataColumn(col))
+              ? "whitespace-nowrap"
+              : ""
+          }`
+        )}
+        style={getEllipsisCellStyle(ellipsisMax)}
       >
-        <span className="admin-text">{displayValue}</span>
+        {ellipsisMax ? (
+          <TableEllipsisText>{displayValue}</TableEllipsisText>
+        ) : (
+          <span className="admin-text">{displayValue}</span>
+        )}
       </td>
     );
   });

@@ -1,7 +1,13 @@
 import { Eye, Pencil } from "lucide-react";
 import TableCard from "../../../../components/admin/TableCard";
 import TableLoadingSkeleton from "../../../../components/admin/TableLoadingSkeleton";
-import { ADMIN_TABLE_INNER_CLASS } from "../../../shared/utils/tableHelpers";
+import TableEllipsisText from "../../../../components/admin/TableEllipsisText";
+import {
+  ADMIN_TABLE_INNER_CLASS,
+  getEllipsisCellClassName,
+  getEllipsisCellStyle,
+  TABLE_ELLIPSIS_PX,
+} from "../../../shared/utils/tableHelpers";
 import { formatStatusLabel } from "../../../shared/utils/statusLabels";
 import { EMPTY_TABLE_MESSAGE } from "../utils/constants";
 
@@ -61,7 +67,15 @@ function UserSurveyDataTable({ rows, isLoading, isDarkMode, footer }) {
                 return (
                   <tr key={row.id} className="align-middle">
                     <td className="admin-text whitespace-nowrap">{row.id}</td>
-                    <td className="admin-text whitespace-nowrap">{row.userName}</td>
+                    <td
+                      className={getEllipsisCellClassName(
+                        TABLE_ELLIPSIS_PX.name,
+                        "align-middle"
+                      )}
+                      style={getEllipsisCellStyle(TABLE_ELLIPSIS_PX.name)}
+                    >
+                      <TableEllipsisText>{row.userName}</TableEllipsisText>
+                    </td>
                     <td className="admin-text whitespace-nowrap">{row.startTime}</td>
                     <td className="admin-text whitespace-nowrap">{row.endTime}</td>
                     <td className="admin-text whitespace-nowrap">{row.points}</td>

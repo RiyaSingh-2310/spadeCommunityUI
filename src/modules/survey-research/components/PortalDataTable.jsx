@@ -70,11 +70,43 @@ function PortalDataTable({
             ) : (
               rows.map((row) => (
                 <tr key={row.id}>
-                  {columns.map((column) => (
-                    <td key={column.key}>
-                      {column.render ? column.render(row) : row[column.key] ?? "—"}
-                    </td>
-                  ))}
+                  {columns.map((column) => {
+                    const maxWidth =
+                      column.key === "groupName" || column.key === "questionnaireTitle"
+                        ? 250
+                        : column.maxWidth;
+                    return (
+                      <td
+                        key={column.key}
+                        className={maxWidth ? "admin-table-ellipsis-cell" : undefined}
+                        style={
+                          maxWidth
+                            ? {
+                                maxWidth: `${maxWidth}px`,
+                                "--admin-ellipsis-max": `${maxWidth}px`,
+                              }
+                            : undefined
+                        }
+                      >
+                        {column.render ? (
+                          column.render(row)
+                        ) : maxWidth ? (
+                          <span
+                            className="admin-table-ellipsis-text"
+                            title={
+                              row[column.key] != null && String(row[column.key]).trim() !== ""
+                                ? String(row[column.key])
+                                : undefined
+                            }
+                          >
+                            {row[column.key] ?? "—"}
+                          </span>
+                        ) : (
+                          row[column.key] ?? "—"
+                        )}
+                      </td>
+                    );
+                  })}
                   {renderActions ? (
                     <td className="text-right whitespace-nowrap">{renderActions(row)}</td>
                   ) : null}

@@ -19,7 +19,7 @@ function DetailField({
       <div className="mt-1 flex min-w-0 items-center gap-2">
         <p
           className={`admin-text min-w-0 flex-1 text-sm ${
-            ellipsis ? "truncate" : "break-words"
+            ellipsis ? "max-w-[250px] truncate" : "break-words"
           }`}
           title={showTitle ? display : undefined}
         >

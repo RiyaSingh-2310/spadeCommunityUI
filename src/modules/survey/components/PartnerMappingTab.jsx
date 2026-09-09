@@ -849,7 +849,7 @@ function PartnerMappingTab({
       const url = String(row.partnerUrl ?? "").trim();
       if (!url) return "—";
       return (
-        <div className="flex max-w-[260px] items-center gap-1">
+        <div className="flex max-w-[260px] min-w-0 items-center gap-1 overflow-hidden">
           <button
             type="button"
             onClick={() =>

@@ -37,19 +37,31 @@ function DetailValue({ value, isUrl }) {
         href={formatUrlForHref(display)}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-start gap-1.5 break-all text-[#138842] hover:underline"
+        className="inline-flex max-w-[280px] items-center gap-1.5 overflow-hidden text-[#138842] hover:underline"
+        title={display}
       >
-        <span className="min-w-0 break-all">{display}</span>
-        <ExternalLink size={13} className="mt-0.5 shrink-0" aria-hidden />
+        <span className="admin-table-ellipsis-text min-w-0">{display}</span>
+        <ExternalLink size={13} className="shrink-0" aria-hidden />
       </a>
     );
   }
 
   if (isUrl && display !== "—") {
-    return <span className="break-all text-[var(--admin-danger-text)]">{display}</span>;
+    return (
+      <span className="admin-table-ellipsis-text max-w-[280px] text-[var(--admin-danger-text)]" title={display}>
+        {display}
+      </span>
+    );
   }
 
-  return <span className="admin-text break-words">{display}</span>;
+  return (
+    <span
+      className="admin-table-ellipsis-text admin-text max-w-[200px]"
+      title={display !== "—" ? display : undefined}
+    >
+      {display}
+    </span>
+  );
 }
 
 function ExpandableSectionTable({ title, fields }) {
@@ -74,7 +86,14 @@ function ExpandableSectionTable({ title, fields }) {
           <tbody>
             <tr className="align-middle">
               {fields.map((field) => (
-                <td key={field.label} className="align-middle">
+                <td
+                  key={field.label}
+                  className="admin-table-ellipsis-cell align-middle"
+                  style={{
+                    maxWidth: field.isUrl ? "280px" : "200px",
+                    "--admin-ellipsis-max": field.isUrl ? "280px" : "200px",
+                  }}
+                >
                   <DetailValue value={field.value} isUrl={field.isUrl} />
                 </td>
               ))}

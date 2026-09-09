@@ -5,8 +5,14 @@ import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import AdminPagination from "../../../components/admin/AdminPagination";
 import TableCard from "../../../components/admin/TableCard";
+import TableEllipsisText from "../../../components/admin/TableEllipsisText";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import { useApiListing } from "../../shared/hooks/useApiListing";
+import {
+  getEllipsisCellClassName,
+  getEllipsisCellStyle,
+  TABLE_ELLIPSIS_PX,
+} from "../../shared/utils/tableHelpers";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { deleteRecord, getRecords } from "../../../services/activity/activityApi";
@@ -149,18 +155,15 @@ function LogActivityPage({ isDarkMode }) {
                       className={`border-t ${isDarkMode ? "border-[#263850]" : "border-[#e6edf5]"}`}
                     >
                       <td className="admin-text whitespace-nowrap px-4 py-3">{globalIdx + 1}</td>
-                      <td className="max-w-[280px] px-4 py-3 align-middle">
-                        <span
-                          className="admin-text block truncate"
-                          title={
-                            row.nameDisplay && row.nameDisplay !== "—"
-                              ? row.nameDisplay
-                              : undefined
-                          }
-                        >
-                          {row.nameDisplay ?? row.name}
-                        </span>
-                      </td>
+                    <td
+                      className={getEllipsisCellClassName(
+                        TABLE_ELLIPSIS_PX.name,
+                        "max-w-[250px] px-4 py-3 align-middle"
+                      )}
+                      style={getEllipsisCellStyle(TABLE_ELLIPSIS_PX.title)}
+                    >
+                      <TableEllipsisText>{row.nameDisplay ?? row.name}</TableEllipsisText>
+                    </td>
                       <td className="admin-text whitespace-nowrap px-4 py-3">{row.logDate}</td>
                       {canWrite && (
                         <td className="whitespace-nowrap px-4 py-3">

@@ -1,6 +1,7 @@
 const COLUMN_KEY_MAP = {
   "S.No": "sno",
   "S. No.": "sno",
+  "#": "sno",
   Name: "name",
   "Sender Name": "name",
   "Sender Email": "email",
@@ -31,6 +32,7 @@ const COLUMN_KEY_MAP = {
   "Gross Amount": "grossAmount",
   "Partner Code": "partnerCode",
   "Partner Name": "partnerName",
+  "Partner URL": "partnerUrl",
   "Allocated Size": "allocatedSize",
   "Email Address": "emailAddress",
   "Email Title": "emailTitle",
@@ -50,6 +52,7 @@ const COLUMN_KEY_MAP = {
   "Project ID": "projectId",
   "Project ID (if won)": "projectId",
   "Survey Title": "surveyTitle",
+  "Group Title": "surveyTitle",
   "Questionnaire Group": "surveyTitle",
   Title: "title",
   "Template Title": "title",
@@ -277,6 +280,134 @@ export function isDescriptionColumn(columnLabel) {
 
 export function isProfileImageColumn(columnLabel) {
   return getColumnKey(columnLabel) === "profileimage";
+}
+
+/** Shared max-widths (px) for long text that must not expand table columns. */
+export const TABLE_ELLIPSIS_PX = Object.freeze({
+  title: 250,
+  email: 200,
+  rightAnswer: 200,
+  name: 200,
+  url: 280,
+  default: 200,
+});
+
+const ELLIPSIS_MAX_WIDTH_BY_KEY = {
+  surveyTitle: TABLE_ELLIPSIS_PX.title,
+  title: TABLE_ELLIPSIS_PX.title,
+  questionTitle: TABLE_ELLIPSIS_PX.title,
+  emailSubject: TABLE_ELLIPSIS_PX.title,
+  subject: TABLE_ELLIPSIS_PX.title,
+  projectName: TABLE_ELLIPSIS_PX.title,
+  question: TABLE_ELLIPSIS_PX.title,
+  reason: TABLE_ELLIPSIS_PX.title,
+  emailTitle: TABLE_ELLIPSIS_PX.title,
+  clientName: TABLE_ELLIPSIS_PX.title,
+  rightAnswer: TABLE_ELLIPSIS_PX.rightAnswer,
+  emailAddress: TABLE_ELLIPSIS_PX.email,
+  email: TABLE_ELLIPSIS_PX.email,
+  name: TABLE_ELLIPSIS_PX.name,
+  partnerName: TABLE_ELLIPSIS_PX.name,
+  username: TABLE_ELLIPSIS_PX.name,
+  userName: TABLE_ELLIPSIS_PX.name,
+  panelistName: TABLE_ELLIPSIS_PX.name,
+  adminName: TABLE_ELLIPSIS_PX.name,
+  adminEmail: TABLE_ELLIPSIS_PX.email,
+  slug: TABLE_ELLIPSIS_PX.email,
+  answerOpted: TABLE_ELLIPSIS_PX.email,
+  client: TABLE_ELLIPSIS_PX.name,
+  salesManager: TABLE_ELLIPSIS_PX.name,
+  websiteUrl: TABLE_ELLIPSIS_PX.url,
+  url: TABLE_ELLIPSIS_PX.url,
+  partnerUrl: 260,
+  ipAddress: 160,
+  partnerCode: 140,
+  clientCode: 140,
+  projectUrlCode: 160,
+};
+
+const ELLIPSIS_SKIP_KEYS = new Set([
+  "sno",
+  "id",
+  "status",
+  "action",
+  "actions",
+  "details",
+  "profileimage",
+  "description",
+  "questionCount",
+  "loi",
+  "ir",
+  "cpiRate",
+  "panelSize",
+  "allocatedSize",
+  "grossAmount",
+  "multiLinkCount",
+  "sortOrder",
+  "sampleSize",
+  "rewardPoints",
+  "redeemPoints",
+  "totalRewardCredit",
+  "totalRewardDebit",
+  "totalRewardBalance",
+  "readStatus",
+  "language",
+]);
+
+const DATE_LIKE_KEYS = new Set([
+  "createdAt",
+  "createdDate",
+  "updatedDate",
+  "startDate",
+  "endDate",
+  "invoiceDate",
+  "dueDate",
+  "requestedDate",
+  "actionTakenOn",
+  "completedDate",
+  "logDate",
+  "date",
+  "dateTime",
+  "urlMinStartDate",
+  "urlMaxStartDate",
+]);
+
+/**
+ * Max width in px for a listing column, or null when the cell should not ellipsize.
+ * @param {string} columnLabel
+ * @returns {number|null}
+ */
+export function getColumnEllipsisMaxWidthPx(columnLabel) {
+  if (
+    !columnLabel ||
+    isCheckboxColumn(columnLabel) ||
+    isActionColumn(columnLabel) ||
+    isStatusColumn(columnLabel) ||
+    isSnoColumn(columnLabel) ||
+    isDetailsColumn(columnLabel) ||
+    isProfileImageColumn(columnLabel) ||
+    isDescriptionColumn(columnLabel)
+  ) {
+    return null;
+  }
+
+  const key = getColumnKey(columnLabel);
+  if (ELLIPSIS_SKIP_KEYS.has(key) || DATE_LIKE_KEYS.has(key)) return null;
+  if (ELLIPSIS_MAX_WIDTH_BY_KEY[key] != null) return ELLIPSIS_MAX_WIDTH_BY_KEY[key];
+  return TABLE_ELLIPSIS_PX.default;
+}
+
+export function getEllipsisCellStyle(maxWidthPx) {
+  if (!maxWidthPx) return undefined;
+  return {
+    maxWidth: `${maxWidthPx}px`,
+    "--admin-ellipsis-max": `${maxWidthPx}px`,
+  };
+}
+
+export function getEllipsisCellClassName(maxWidthPx, extra = "") {
+  if (!maxWidthPx) return extra;
+  return extra ? `admin-table-ellipsis-cell ${extra}` : "admin-table-ellipsis-cell";
 }
 
 export const TABLE_HEAD_BASE =

@@ -49,14 +49,15 @@ describe("mapPrescreenGroupToRow", () => {
 });
 
 describe("Questionnaire Group listing columns", () => {
-  it("maps Questionnaire Group, Website URL, and Question Count", () => {
+  it("maps Group Title, Website URL, and Question Count", () => {
+    expect(getColumnKey("Group Title")).toBe("surveyTitle");
     expect(getColumnKey("Questionnaire Group")).toBe("surveyTitle");
     expect(getColumnKey("Question Count")).toBe("questionCount");
     expect(getColumnKey("Created At")).toBe("createdAt");
     expect(getColumnKey("Website URL")).toBe("websiteUrl");
 
     const row = mapPrescreenGroupToRow(LIST_RECORD);
-    expect(getRowValue(row, "Questionnaire Group")).toBe(LIST_RECORD.surveyTitle);
+    expect(getRowValue(row, "Group Title")).toBe(LIST_RECORD.surveyTitle);
     expect(getRowValue(row, "Question Count")).toBe(2);
     expect(getRowValue(row, "Language")).toBe("Dutch");
     expect(getRowValue(row, "Website URL")).toBe(LIST_RECORD.website_url);

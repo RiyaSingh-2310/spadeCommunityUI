@@ -153,6 +153,11 @@
   vertical-align: middle;
 }
 
+.srp-table .admin-table-ellipsis-cell {
+  max-width: var(--admin-ellipsis-max, 250px);
+  overflow: hidden;
+}
+
 .srp-table tbody tr:hover {
   background: var(--srp-primary-soft);
 }

@@ -1,7 +1,13 @@
 import { isValidElement } from "react";
 import TableCard from "../../../components/admin/TableCard";
+import TableEllipsisText from "../../../components/admin/TableEllipsisText";
 import { ExternalLink } from "lucide-react";
-import { ADMIN_TABLE_INNER_CLASS } from "../../shared/utils/tableHelpers";
+import {
+  ADMIN_TABLE_INNER_CLASS,
+  getColumnEllipsisMaxWidthPx,
+  getEllipsisCellClassName,
+  getEllipsisCellStyle,
+} from "../../shared/utils/tableHelpers";
 import { formatStatusLabel } from "../../shared/utils/statusLabels";
 import { toUiSentenceCase } from "../../shared/utils/uiText";
 import CopyValueButton from "./CopyValueButton";
@@ -212,11 +218,28 @@ export function SurveyDataTable({
                 data-partner-mapping-id={row.id != null ? String(row.id) : undefined}
                 {...(typeof getRowProps === "function" ? getRowProps(row, rowIdx) : {})}
               >
-                {columns.map((col) => (
-                  <td key={col} className="admin-text align-middle text-sm">
-                    {renderCell(row, col)}
-                  </td>
-                ))}
+                {columns.map((col) => {
+                  const ellipsisMax = getColumnEllipsisMaxWidthPx(col);
+                  const content = renderCell(row, col);
+                  const isPlainText =
+                    typeof content === "string" || typeof content === "number";
+                  return (
+                    <td
+                      key={col}
+                      className={getEllipsisCellClassName(
+                        ellipsisMax,
+                        "admin-text align-middle text-sm"
+                      )}
+                      style={getEllipsisCellStyle(ellipsisMax)}
+                    >
+                      {ellipsisMax && isPlainText ? (
+                        <TableEllipsisText>{content}</TableEllipsisText>
+                      ) : (
+                        content
+                      )}
+                    </td>
+                  );
+                })}
               </tr>
             ))
           ) : emptyMessage ? (

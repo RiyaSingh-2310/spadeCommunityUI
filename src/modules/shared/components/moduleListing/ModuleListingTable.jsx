@@ -2,6 +2,9 @@ import { Fragment } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import TableCard from "../../../../components/admin/TableCard";
 import {
+  getColumnEllipsisMaxWidthPx,
+  getEllipsisCellClassName,
+  getEllipsisCellStyle,
   isActionColumn,
   isCheckboxColumn,
   isStatusColumn,
@@ -73,12 +76,17 @@ function ModuleListingTable({
               if (isCheckboxColumn(h)) {
                 return <Fragment key="select-all">{renderCheckboxHeader()}</Fragment>;
               }
+              const ellipsisMax = getColumnEllipsisMaxWidthPx(h);
               return (
                 <th
                   key={h}
-                  className={`${TABLE_HEAD_BASE} ${
-                    isStatusColumn(h) ? `admin-table-status-col ${statusColumnClass}` : ""
-                  } ${isActionColumn(h) ? "admin-table-actions-col text-right" : "text-left"}`}
+                  className={getEllipsisCellClassName(
+                    ellipsisMax,
+                    `${TABLE_HEAD_BASE} ${
+                      isStatusColumn(h) ? `admin-table-status-col ${statusColumnClass}` : ""
+                    } ${isActionColumn(h) ? "admin-table-actions-col text-right" : "text-left"}`
+                  )}
+                  style={getEllipsisCellStyle(ellipsisMax)}
                 >
                   {sortableColumnSet.has(h) && onColumnSort ? (
                     <SortableHeader
