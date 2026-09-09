@@ -1,3 +1,9 @@
+/**
+ * Do Survey start page — Community Client owns the respondent experience.
+ * Admin does not mount /dosurvey/:token (see AppRoutes). Keep this module as the
+ * shared source of survey start/prescreen contracts so Client can reuse it.
+ * Restore: uncomment the AppRoutes route and lazyPages.DoSurveyStartPage export.
+ */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";

@@ -17,7 +17,13 @@ const ACRONYM_TOKENS = new Set([
   "ip",
   "sno",
   "s.no",
+  "loi",
+  "ir",
+  "cpi",
 ]);
+
+/** Multi-word display names that must keep exact title capitalization. */
+const TITLE_CASE_PHRASES = [{ pattern: "\\bpartner quota\\b", value: "Partner Quota" }];
 
 /**
  * Values that must keep original casing (URLs, emails, codes, etc.).
@@ -61,6 +67,10 @@ export function toUiSentenceCase(value) {
     if (key === "s.no") return "S.No";
     if (ACRONYM_TOKENS.has(key)) return token.toUpperCase();
     return token;
+  });
+
+  TITLE_CASE_PHRASES.forEach(({ pattern, value }) => {
+    result = result.replace(new RegExp(pattern, "gi"), value);
   });
 
   return result;

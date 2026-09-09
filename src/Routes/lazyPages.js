@@ -171,10 +171,11 @@ export const PublicQuestionnairePage = lazy(
   () => import("../modules/public-questionnaire/pages/PublicQuestionnairePage")
 );
 
-/** Public partner survey start page (no admin layout) */
-export const DoSurveyStartPage = lazy(
-  () => import("../modules/public-survey/pages/DoSurveyStartPage")
-);
+// Do Survey start page — Community Client owns this experience.
+// Restore: uncomment the following export and the /dosurvey/:token route in AppRoutes.
+// export const DoSurveyStartPage = lazy(
+//   () => import("../modules/public-survey/pages/DoSurveyStartPage")
+// );
 
 /** Public survey redirect outcome pages (supplier/vendor callbacks) */
 export const SurveyRedirectPage = lazy(

@@ -96,10 +96,15 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
         path="/public/questionnaire/:id"
         element={withSuspense(Pages.PublicQuestionnairePage, themeProps)}
       />
+      {/*
+        Do Survey lives in the Community Client. Keep this Admin route commented
+        so Admin does not render or execute the respondent survey experience.
+        Restore by uncommenting this Route and the DoSurveyStartPage lazy export.
       <Route
         path="/dosurvey/:token"
         element={withSuspense(Pages.DoSurveyStartPage, themeProps)}
       />
+      */}
       <Route
         path="/redirect/:outcome"
         element={withSuspense(Pages.SurveyRedirectPage, themeProps)}

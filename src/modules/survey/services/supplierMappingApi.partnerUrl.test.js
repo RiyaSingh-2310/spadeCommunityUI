@@ -7,9 +7,9 @@ import {
 } from "./supplierMappingApi";
 
 describe("Partner URL display", () => {
-  it("keeps the API Partner URL host instead of rewriting it", () => {
+  it("keeps the API Partner URL instead of rewriting the host", () => {
     const apiUrl =
-      "https://admin.speedcommunity.com/dosurvey/abc123?pid=SFS363&uid=identifier";
+      "https://partner-host.example/dosurvey/abc123?pid=SFS363&uid=identifier";
 
     expect(resolvePartnerUrlForCurrentApp(apiUrl)).toBe(apiUrl);
     expect(mapSupplierMappingToRow({ dynamic_url: apiUrl }).partnerUrl).toBe(
@@ -18,7 +18,7 @@ describe("Partner URL display", () => {
   });
 
   it("appends IsTest without changing the API host", () => {
-    const apiUrl = "https://admin.speedcommunity.com/dosurvey/abc123";
+    const apiUrl = "https://partner-host.example/dosurvey/abc123";
     expect(appendIsTestToPartnerUrl(apiUrl, true)).toBe(
       `${apiUrl}?IsTest=1`
     );

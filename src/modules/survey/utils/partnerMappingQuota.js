@@ -4,10 +4,10 @@
  */
 
 export const PARTNER_QUOTA_EXCEEDS_REMAINING_MESSAGE =
-  "Partner quota cannot exceed the remaining available sample size.";
+  "Partner Quota cannot exceed the remaining available sample size.";
 
 export const PARTNER_QUOTA_SAMPLE_SIZE_UNAVAILABLE_MESSAGE =
-  "Sample size is unavailable for this Project URL. Partner quota cannot be submitted.";
+  "Sample size is unavailable for this Project URL. Partner Quota cannot be submitted.";
 
 function coerceText(value) {
   return String(value ?? "").trim();
@@ -106,14 +106,14 @@ export function getPartnerQuotaFieldError(
   }
 
   const trimmed = coerceText(quota);
-  if (!trimmed) return "Partner quota is required";
+  if (!trimmed) return "Partner Quota is required";
   if (!/^\d+$/.test(trimmed)) {
-    return "Partner quota must be a valid number.";
+    return "Partner Quota must be a valid number.";
   }
 
   const value = Number(trimmed);
   if (!Number.isFinite(value) || value <= 0) {
-    return "Partner quota must be a valid number.";
+    return "Partner Quota must be a valid number.";
   }
   if (availableQuota <= 0 || value > availableQuota) {
     return PARTNER_QUOTA_EXCEEDS_REMAINING_MESSAGE;

@@ -15,6 +15,21 @@ describe("toUiSentenceCase", () => {
   it("preserves acronyms in labels", () => {
     expect(toUiSentenceCase("Website URL")).toBe("Website URL");
     expect(toUiSentenceCase("S.No")).toBe("S.No");
+    expect(toUiSentenceCase("LOI")).toBe("LOI");
+    expect(toUiSentenceCase("IR")).toBe("IR");
+    expect(toUiSentenceCase("CPI")).toBe("CPI");
+    expect(toUiSentenceCase("LOI (Minutes)")).toBe("LOI (minutes)");
+    expect(toUiSentenceCase("IR (%)")).toBe("IR (%)");
+    expect(toUiSentenceCase("loi")).toBe("LOI");
+    expect(toUiSentenceCase("cpi")).toBe("CPI");
+    expect(toUiSentenceCase("ir")).toBe("IR");
+  });
+
+  it("keeps Partner Quota title capitalization", () => {
+    expect(toUiSentenceCase("Partner Quota")).toBe("Partner Quota");
+    expect(toUiSentenceCase("partner quota")).toBe("Partner Quota");
+    expect(toUiSentenceCase("PARTNER QUOTA")).toBe("Partner Quota");
+    expect(toUiSentenceCase("Partner quota")).toBe("Partner Quota");
   });
 
   it("preserves URLs, emails, and technical identifiers", () => {

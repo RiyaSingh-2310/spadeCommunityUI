@@ -70,7 +70,7 @@ const PARTNER_MAPPING_CPI_MAX_LENGTH = 6;
 const TABLE_COLUMNS = [
   "#",
   "Partner Code",
-  "Quota",
+  "Partner Quota",
   "CPI",
   "Partner URL",
   "Status",
@@ -931,7 +931,7 @@ function PartnerMappingTab({
 
     const map = {
       "Partner Code": row.partnerCode,
-      Quota: row.quota,
+      "Partner Quota": row.quota,
       CPI: row.cpi,
       "Links Assigned": row.linksToAssign ?? "—",
     };

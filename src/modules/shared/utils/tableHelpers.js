@@ -33,6 +33,7 @@ const COLUMN_KEY_MAP = {
   "Partner Code": "partnerCode",
   "Partner Name": "partnerName",
   "Partner URL": "partnerUrl",
+  "Partner Quota": "quota",
   "Allocated Size": "allocatedSize",
   "Email Address": "emailAddress",
   "Email Title": "emailTitle",

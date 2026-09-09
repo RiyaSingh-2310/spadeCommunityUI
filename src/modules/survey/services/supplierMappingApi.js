@@ -119,7 +119,9 @@ export function mapSupplierMappingToDetail(record) {
     qualityTerm: pickField(record, ["QualityTermURL", "quality_term_url", "qualityTerm"]),
     surveyClose: pickField(record, ["SurveyCloseURL", "survey_close_url", "surveyClose"]),
     postbackUrl: pickField(record, ["VenderURL", "postback_url", "postbackUrl"]),
-    partnerUrl: pickField(record, ["dynamic_url", "vendor_url", "partner_url"]),
+    partnerUrl: String(
+      pickField(record, ["dynamic_url", "Dynamic_URL", "vendor_url", "partner_url"]) ?? ""
+    ).trim(),
     statusActive:
       toBoolean(pickField(record, ["status", "Status"]), true) ||
       String(pickField(record, ["status", "Status"]) ?? "")
@@ -295,7 +297,7 @@ export async function findSupplierMappingByDoSurveyToken(token) {
   );
 }
 
-/** Return the Partner URL exactly as provided by the API (no frontend host rewrite). */
+/** Returns the backend Partner URL unchanged (trim only). */
 export function resolvePartnerUrlForCurrentApp(url) {
   return String(url ?? "").trim();
 }

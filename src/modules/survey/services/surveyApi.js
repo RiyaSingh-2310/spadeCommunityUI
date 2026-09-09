@@ -1180,7 +1180,9 @@ export function mapPartnerToMappingRow(partner, index = 0) {
     partner?.code ?? partner?.partner_code ?? partner?.supplierCode ?? ""
   ).trim();
   const partnerUrl = String(
-    partner?.vendor_url ??
+    partner?.dynamic_url ??
+      partner?.Dynamic_URL ??
+      partner?.vendor_url ??
       partner?.partner_url ??
       partner?.supplier_url ??
       partner?.url ??

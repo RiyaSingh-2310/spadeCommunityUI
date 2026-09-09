@@ -1,6 +1,7 @@
 /**
- * Public do-survey API layer.
+ * Public do-survey API layer (shared contract for Community Client).
  * Partner URL start flow: activity → pre-screen check → survey link redirect.
+ * Admin does not mount this flow; Client should reuse these functions as-is.
  */
 
 import { API_ROUTES } from "../../../config/api";
