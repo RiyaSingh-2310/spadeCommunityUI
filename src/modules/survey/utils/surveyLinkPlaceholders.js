@@ -15,12 +15,14 @@ export const DEFAULT_SURVEY_LINK_UID_PLACEHOLDER = "XXXX";
 
 const LEGACY_SURVEY_LINK_PATHS = Object.freeze(["/survey", "/survey_simulator.php"]);
 
-/** Canonical Admin UI origin used for examples / defaults (never localhost). */
-export const ADMIN_SPADE_COMMUNITY_URL = "https://admin.spadecommunity.com/";
-export const FALLBACK_REDIRECT_ORIGIN = "https://admin.spadecommunity.com";
+/** Canonical Admin origin for Live/Test survey-link examples / defaults (never localhost). */
+export const ADMIN_SPADE_COMMUNITY_ORIGIN = "https://spadecommunity.com";
+export const ADMIN_SPADE_COMMUNITY_URL = `${ADMIN_SPADE_COMMUNITY_ORIGIN}/`;
+/** Canonical client origin for generated redirect URLs (never localhost). */
+export const FALLBACK_REDIRECT_ORIGIN = "https://spadecommunity.com";
 const DEFAULT_REDIRECT_UID_PLACEHOLDER = "identifier";
 
-/** Speed Community admin origin used for examples (never localhost). */
+/** Client-side origin used for redirect URL examples and defaults. */
 export function getDefaultRedirectOrigin() {
   return FALLBACK_REDIRECT_ORIGIN;
 }
@@ -29,32 +31,41 @@ export function isAdminSpadeCommunityUrl(value) {
   const parsed = parseAbsoluteUrl(value);
   if (!parsed) {
     const trimmed = coerceText(value).replace(/\/+$/, "");
-    return trimmed.toLowerCase() === FALLBACK_REDIRECT_ORIGIN.toLowerCase();
+    return trimmed.toLowerCase() === ADMIN_SPADE_COMMUNITY_ORIGIN.toLowerCase();
   }
   const pathname = parsed.pathname.replace(/\/+$/, "") || "/";
   return (
     parsed.origin.replace(/\/+$/, "").toLowerCase() ===
-      FALLBACK_REDIRECT_ORIGIN.toLowerCase() &&
+      ADMIN_SPADE_COMMUNITY_ORIGIN.toLowerCase() &&
     pathname === "/" &&
     !parsed.search &&
     !parsed.hash
   );
 }
 
-/** Rewrite an absolute URL onto the Speed Community admin origin, keeping path + query. */
-export function rewriteUrlToAdminOrigin(value) {
+function rewriteUrlToOrigin(value, origin) {
   const parsed = parseAbsoluteUrl(value);
   if (!parsed) return coerceText(value);
   try {
-    const rewritten = new URL(parsed.pathname + parsed.search + parsed.hash, FALLBACK_REDIRECT_ORIGIN);
+    const rewritten = new URL(parsed.pathname + parsed.search + parsed.hash, origin);
     return rewritten.toString();
   } catch {
     return coerceText(value);
   }
 }
 
+/** Rewrite an absolute URL onto the Speed Community admin origin, keeping path + query. */
+export function rewriteUrlToAdminOrigin(value) {
+  return rewriteUrlToOrigin(value, ADMIN_SPADE_COMMUNITY_ORIGIN);
+}
+
+/** Rewrite an absolute URL onto the client redirect origin, keeping path + query. */
+export function rewriteUrlToRedirectOrigin(value) {
+  return rewriteUrlToOrigin(value, FALLBACK_REDIRECT_ORIGIN);
+}
+
 /** Placeholder shown in Live Link / Test Link inputs. */
-export const DEFAULT_SURVEY_LINK_PLACEHOLDER = `${FALLBACK_REDIRECT_ORIGIN}/?pid=PROJECT_URL_CODE&uid=${DEFAULT_SURVEY_LINK_UID_PLACEHOLDER}`;
+export const DEFAULT_SURVEY_LINK_PLACEHOLDER = `${ADMIN_SPADE_COMMUNITY_ORIGIN}/?pid=PROJECT_URL_CODE&uid=${DEFAULT_SURVEY_LINK_UID_PLACEHOLDER}`;
 
 const PID_PARAM_NAMES = ["pid"];
 const UID_PARAM_NAMES = ["uid"];
@@ -178,6 +189,19 @@ function shouldRewriteLocalOrigin(url) {
   return Boolean(parsed && isLocalDevHost(parsed.hostname));
 }
 
+function isAdminRedirectUrl(url) {
+  const parsed = parseAbsoluteUrl(url);
+  if (!parsed) return false;
+  const host = String(parsed.hostname ?? "").toLowerCase();
+  if (host !== "admin.spadecommunity.com") return false;
+  const path = normalizePathname(parsed.pathname);
+  return path === "/redirect" || path.startsWith("/redirect/");
+}
+
+function shouldRewriteRedirectOrigin(url) {
+  return shouldRewriteLocalOrigin(url) || isAdminRedirectUrl(url);
+}
+
 function syncPidUidOnAbsoluteUrl(trimmed, pid, defaultUid) {
   const parsed = parseAbsoluteUrl(trimmed);
   if (!parsed) return trimmed;
@@ -208,16 +232,16 @@ export function buildPrefillSurveyLink(
     ? coerceText(uid)
     : DEFAULT_SURVEY_LINK_UID_PLACEHOLDER;
   if (!pid) {
-    return `${FALLBACK_REDIRECT_ORIGIN}/?pid=PROJECT_URL_CODE&uid=${encodeURIComponent(safeUid)}`;
+    return `${ADMIN_SPADE_COMMUNITY_ORIGIN}/?pid=PROJECT_URL_CODE&uid=${encodeURIComponent(safeUid)}`;
   }
 
   try {
-    const url = new URL("/", FALLBACK_REDIRECT_ORIGIN);
+    const url = new URL("/", ADMIN_SPADE_COMMUNITY_ORIGIN);
     url.searchParams.set("pid", pid);
     url.searchParams.set("uid", safeUid);
     return url.toString();
   } catch {
-    return `${FALLBACK_REDIRECT_ORIGIN}/?pid=${encodeURIComponent(pid)}&uid=${encodeURIComponent(safeUid)}`;
+    return `${ADMIN_SPADE_COMMUNITY_ORIGIN}/?pid=${encodeURIComponent(pid)}&uid=${encodeURIComponent(safeUid)}`;
   }
 }
 
@@ -281,7 +305,8 @@ export function buildPrefillRedirectUrl(
 
 /**
  * Ensure pid is present on a redirect URL. Empty values become a full pre-filled URL.
- * Localhost URLs keep path and query; only the domain is updated.
+ * Localhost and admin-domain redirect URLs keep path and query; only the domain is
+ * updated to the client redirect origin.
  * @param {unknown} url
  * @param {unknown} projectUrlCode
  * @param {string} [fallbackPath]
@@ -293,9 +318,9 @@ export function withRedirectUrlPid(url, projectUrlCode, fallbackPath = "") {
   if (!trimmed || isLegacyOrDefaultSurveyLink(trimmed)) {
     return fallbackPath ? buildPrefillRedirectUrl(fallbackPath, pid) : buildPrefillSurveyLink(pid);
   }
-  if (shouldRewriteLocalOrigin(trimmed)) {
+  if (shouldRewriteRedirectOrigin(trimmed)) {
     return syncPidUidOnAbsoluteUrl(
-      rewriteUrlToAdminOrigin(trimmed),
+      rewriteUrlToRedirectOrigin(trimmed),
       pid,
       DEFAULT_REDIRECT_UID_PLACEHOLDER
     );

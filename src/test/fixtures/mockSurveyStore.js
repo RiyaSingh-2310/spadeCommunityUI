@@ -38,13 +38,13 @@ const RFQ_SEED = [
 ];
 
 function buildRedirects(numId) {
-  const origin = "https://admin.spadecommunity.com";
+  const origin = "https://spadecommunity.com";
   return {
     complete_url: `${origin}/redirect/complete?pid=PRJ-${10000 + numId}&uid=identifier`,
     terminate_url: `${origin}/redirect/terminate?pid=PRJ-${10000 + numId}&uid=identifier`,
-    over_quota_url: `${origin}/redirect/quota-full?pid=PRJ-${10000 + numId}&uid=identifier`,
-    quality_term_url: `${origin}/redirect/qualityterm?pid=PRJ-${10000 + numId}&uid=identifier`,
-    survey_close_url: `${origin}/redirect/surveyclose?pid=PRJ-${10000 + numId}&uid=identifier`,
+    over_quota_url: `${origin}/redirect/over-quota?pid=PRJ-${10000 + numId}&uid=identifier`,
+    quality_term_url: `${origin}/redirect/quality-term?pid=PRJ-${10000 + numId}&uid=identifier`,
+    survey_close_url: `${origin}/redirect/survey-closed?pid=PRJ-${10000 + numId}&uid=identifier`,
   };
 }
 

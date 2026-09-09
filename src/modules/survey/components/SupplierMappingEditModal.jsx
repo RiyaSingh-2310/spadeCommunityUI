@@ -16,9 +16,9 @@ import { FALLBACK_REDIRECT_ORIGIN } from "../utils/surveyLinkPlaceholders";
 const REDIRECT_FIELDS = [
   { key: "complete", label: "Complete", placeholder: `${FALLBACK_REDIRECT_ORIGIN}/redirect/complete?pid=PROJECT_URL_CODE&uid=identifier` },
   { key: "terminate", label: "Terminate", placeholder: `${FALLBACK_REDIRECT_ORIGIN}/redirect/terminate?pid=PROJECT_URL_CODE&uid=identifier` },
-  { key: "overQuota", label: "Over Quota", placeholder: `${FALLBACK_REDIRECT_ORIGIN}/redirect/overquota?pid=PROJECT_URL_CODE&uid=identifier` },
-  { key: "qualityTerm", label: "Quality Term", placeholder: `${FALLBACK_REDIRECT_ORIGIN}/redirect/qualityterm?pid=PROJECT_URL_CODE&uid=identifier` },
-  { key: "surveyClose", label: "Survey Close", placeholder: `${FALLBACK_REDIRECT_ORIGIN}/redirect/surveyclose?pid=PROJECT_URL_CODE&uid=identifier` },
+  { key: "overQuota", label: "Over Quota", placeholder: `${FALLBACK_REDIRECT_ORIGIN}/redirect/over-quota?pid=PROJECT_URL_CODE&uid=identifier` },
+  { key: "qualityTerm", label: "Quality Term", placeholder: `${FALLBACK_REDIRECT_ORIGIN}/redirect/quality-term?pid=PROJECT_URL_CODE&uid=identifier` },
+  { key: "surveyClose", label: "Survey Close", placeholder: `${FALLBACK_REDIRECT_ORIGIN}/redirect/survey-closed?pid=PROJECT_URL_CODE&uid=identifier` },
   { key: "postbackUrl", label: "Postback URL", placeholder: `${FALLBACK_REDIRECT_ORIGIN}/redirect/complete?pid=PROJECT_URL_CODE&uid=identifier` },
 ];
 

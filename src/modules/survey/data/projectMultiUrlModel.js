@@ -1,5 +1,5 @@
 export const PROJECT_MULTI_URL_CSV_TEMPLATE = `Live_Link,VenderURL,Venderid_Userid,UserType,Status
-https://admin.spadecommunity.com/?pid=PROJECT_URL_CODE&uid=XXXX,https://admin.spadecommunity.com/?pid=PROJECT_URL_CODE&uid=XXXX,XXXX/XYG,adsurver,active
+https://spadecommunity.com/?pid=PROJECT_URL_CODE&uid=XXXX,https://spadecommunity.com/?pid=PROJECT_URL_CODE&uid=XXXX,XXXX/XYG,adsurver,active
 `;
 
 export const PROJECT_MULTI_URL_COLUMNS = [

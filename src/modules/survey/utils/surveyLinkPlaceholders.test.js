@@ -7,6 +7,7 @@ import {
   DEFAULT_SURVEY_LINK_PLACEHOLDER,
   getSurveyLinkPlaceholderError,
   rewriteUrlToAdminOrigin,
+  rewriteUrlToRedirectOrigin,
   withRedirectUrlPid,
   withSurveyLinkPid,
 } from "./surveyLinkPlaceholders";
@@ -67,24 +68,37 @@ describe("applyPrefillSingleLinkUrls", () => {
 });
 
 describe("redirect URLs", () => {
-  it("keeps the redirect path and parameters on the admin origin", () => {
+  it("keeps the redirect path and parameters on the client origin", () => {
     const url = buildPrefillRedirectUrl("/redirect/complete", "SFS363");
     expect(url).toBe(
-      "https://admin.spadecommunity.com/redirect/complete?pid=SFS363&uid=identifier"
+      "https://spadecommunity.com/redirect/complete?pid=SFS363&uid=identifier"
     );
     expect(url).not.toContain("localhost:5173");
     expect(url).not.toContain("samplepolls.com");
+    expect(url).not.toContain("admin.spadecommunity.com");
   });
 
   it("rewrites localhost redirect URLs without dropping path or params", () => {
     expect(
       withRedirectUrlPid(
-        "http://localhost:5173/redirect/surveyclose?pid=XTQ523&uid=identifier",
+        "http://localhost:5173/redirect/survey-closed?pid=XTQ523&uid=identifier",
         "SFS363",
-        "/redirect/surveyclose"
+        "/redirect/survey-closed"
       )
     ).toBe(
-      "https://admin.spadecommunity.com/redirect/surveyclose?pid=SFS363&uid=identifier"
+      "https://spadecommunity.com/redirect/survey-closed?pid=SFS363&uid=identifier"
+    );
+  });
+
+  it("rewrites admin-domain redirect URLs onto the client origin", () => {
+    expect(
+      withRedirectUrlPid(
+        "https://admin.spadecommunity.com/redirect/complete?pid=OLD&uid=identifier",
+        "SFS363",
+        "/redirect/complete"
+      )
+    ).toBe(
+      "https://spadecommunity.com/redirect/complete?pid=SFS363&uid=identifier"
     );
   });
 
@@ -100,13 +114,23 @@ describe("redirect URLs", () => {
 });
 
 describe("rewriteUrlToAdminOrigin", () => {
-  it("changes only the domain", () => {
+  it("changes only the domain for Live/Test links", () => {
     expect(
       rewriteUrlToAdminOrigin(
-        "http://localhost:5173/redirect/surveyclose?pid=XTQ523&uid=identifier"
+        "http://localhost:5173/?pid=XTQ523&uid=XXXX"
+      )
+    ).toBe("https://admin.spadecommunity.com/?pid=XTQ523&uid=XXXX");
+  });
+});
+
+describe("rewriteUrlToRedirectOrigin", () => {
+  it("changes only the domain for redirect URLs", () => {
+    expect(
+      rewriteUrlToRedirectOrigin(
+        "http://localhost:5173/redirect/survey-closed?pid=XTQ523&uid=identifier"
       )
     ).toBe(
-      "https://admin.spadecommunity.com/redirect/surveyclose?pid=XTQ523&uid=identifier"
+      "https://spadecommunity.com/redirect/survey-closed?pid=XTQ523&uid=identifier"
     );
   });
 });
@@ -114,7 +138,7 @@ describe("rewriteUrlToAdminOrigin", () => {
 describe("DEFAULT_SURVEY_LINK_PLACEHOLDER", () => {
   it("uses the admin origin with pid and uid placeholders", () => {
     expect(DEFAULT_SURVEY_LINK_PLACEHOLDER).toBe(
-      "https://admin.spadecommunity.com/?pid=PROJECT_URL_CODE&uid=XXXX"
+      "https://spadecommunity.com/?pid=PROJECT_URL_CODE&uid=XXXX"
     );
   });
 });

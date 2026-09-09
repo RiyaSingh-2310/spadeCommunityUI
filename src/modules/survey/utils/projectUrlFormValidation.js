@@ -62,29 +62,37 @@ export const PROJECT_URL_REDIRECT_FIELDS = [
   {
     key: "redirectOverQuota",
     label: "Quota Full URL",
-    path: "/redirect/quota-full",
-    /** Accept legacy `/redirect/overquota` URLs already saved in the API. */
-    acceptedPaths: ["/redirect/quota-full", "/redirect/overquota"],
+    path: "/redirect/over-quota",
+    /** Accept legacy quota paths already saved in the API. */
+    acceptedPaths: [
+      "/redirect/over-quota",
+      "/redirect/quota-full",
+      "/redirect/overquota",
+    ],
     get example() {
-      return redirectExample("/redirect/quota-full");
+      return redirectExample("/redirect/over-quota");
     },
   },
   {
     key: "redirectQualityTerm",
     label: "Quality Term URL",
-    path: "/redirect/qualityterm",
-    acceptedPaths: ["/redirect/qualityterm", "/redirect/quality-terminate"],
+    path: "/redirect/quality-term",
+    acceptedPaths: [
+      "/redirect/quality-term",
+      "/redirect/qualityterm",
+      "/redirect/quality-terminate",
+    ],
     get example() {
-      return redirectExample("/redirect/qualityterm");
+      return redirectExample("/redirect/quality-term");
     },
   },
   {
     key: "redirectSurveyClose",
     label: "Survey Closed URL",
-    path: "/redirect/surveyclose",
-    acceptedPaths: ["/redirect/surveyclose", "/redirect/survey-closed"],
+    path: "/redirect/survey-closed",
+    acceptedPaths: ["/redirect/survey-closed", "/redirect/surveyclose"],
     get example() {
-      return redirectExample("/redirect/surveyclose");
+      return redirectExample("/redirect/survey-closed");
     },
   },
 ];
@@ -99,13 +107,10 @@ export function getDefaultProjectUrlRedirects(projectUrlCode = "") {
   }
 
   return Object.fromEntries(
-    PROJECT_URL_REDIRECT_FIELDS.map(({ key, path, acceptedPaths }) => {
-      const redirectPath =
-        Array.isArray(acceptedPaths) && acceptedPaths.length > 0
-          ? acceptedPaths[0]
-          : path;
-      return [key, buildPrefillRedirectUrl(redirectPath, code)];
-    })
+    PROJECT_URL_REDIRECT_FIELDS.map(({ key, path }) => [
+      key,
+      buildPrefillRedirectUrl(path, code),
+    ])
   );
 }
 
@@ -116,12 +121,8 @@ export function applyPrefillProjectUrlRedirects(form, projectUrlCode) {
   if (!code) return form;
 
   const next = { ...form };
-  PROJECT_URL_REDIRECT_FIELDS.forEach(({ key, path, acceptedPaths }) => {
-    const redirectPath =
-      Array.isArray(acceptedPaths) && acceptedPaths.length > 0
-        ? acceptedPaths[0]
-        : path;
-    next[key] = withRedirectUrlPid(form[key], code, redirectPath);
+  PROJECT_URL_REDIRECT_FIELDS.forEach(({ key, path }) => {
+    next[key] = withRedirectUrlPid(form[key], code, path);
   });
   return next;
 }
@@ -133,13 +134,9 @@ export function applyPrefillEmptyProjectUrlRedirects(form, projectUrlCode) {
   if (!code) return form;
 
   const next = { ...form };
-  PROJECT_URL_REDIRECT_FIELDS.forEach(({ key, path, acceptedPaths }) => {
+  PROJECT_URL_REDIRECT_FIELDS.forEach(({ key, path }) => {
     if (String(form[key] ?? "").trim()) return;
-    const redirectPath =
-      Array.isArray(acceptedPaths) && acceptedPaths.length > 0
-        ? acceptedPaths[0]
-        : path;
-    next[key] = buildPrefillRedirectUrl(redirectPath, code);
+    next[key] = buildPrefillRedirectUrl(path, code);
   });
   return next;
 }
