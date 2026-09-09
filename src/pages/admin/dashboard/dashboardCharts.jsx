@@ -18,16 +18,42 @@ export function PolylineChart({ data }) {
     .join(" ");
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="h-36 w-full">
-      <polyline fill="none" stroke="var(--admin-primary-color)" strokeWidth="2.5" points={points} />
-      {series.map((item, idx) => {
-        const x = (idx / Math.max(series.length - 1, 1)) * width;
-        const y = height - (item.value / max) * (height - 4) - 2;
-        return (
-          <circle key={`${item.label}-${idx}`} cx={x} cy={y} r="1.6" fill="var(--admin-primary-color)" />
-        );
-      })}
-    </svg>
+    <div className="space-y-2">
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-36 w-full">
+        <polyline fill="none" stroke="var(--admin-primary-color)" strokeWidth="2.5" points={points} />
+        {series.map((item, idx) => {
+          const x = (idx / Math.max(series.length - 1, 1)) * width;
+          const y = height - (item.value / max) * (height - 4) - 2;
+          const title = item.fullLabel
+            ? `${item.fullLabel}: ${numberFmt(item.value)}`
+            : `${item.label}: ${numberFmt(item.value)}`;
+          return (
+            <circle
+              key={`${item.label}-${idx}`}
+              cx={x}
+              cy={y}
+              r="1.6"
+              fill="var(--admin-primary-color)"
+            >
+              <title>{title}</title>
+            </circle>
+          );
+        })}
+      </svg>
+      {series.length > 0 ? (
+        <div className="flex justify-between gap-0.5 overflow-hidden">
+          {series.map((item, idx) => (
+            <span
+              key={`${item.fullLabel ?? item.label}-${idx}`}
+              className="admin-text-muted min-w-0 flex-1 truncate text-center text-[10px] leading-tight"
+              title={item.fullLabel ?? item.label}
+            >
+              {item.label}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

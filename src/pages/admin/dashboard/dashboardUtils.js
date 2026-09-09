@@ -40,7 +40,15 @@ export function buildMonthlySeries(rows, dateKey) {
 }
 
 export function numberFmt(value) {
-  return new Intl.NumberFormat().format(Number(value) || 0);
+  const n = Number(value);
+  return new Intl.NumberFormat().format(Number.isFinite(n) ? n : 0);
+}
+
+/** Coerce dashboard metric values so API `0` stays visible. */
+export function dashboardCount(value) {
+  if (value == null || value === "") return 0;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
 }
 
 export async function fetchWithFallback(paths, fallback = { items: [], total: 0 }) {

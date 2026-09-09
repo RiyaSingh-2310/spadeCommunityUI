@@ -9,7 +9,7 @@ import { canAccessRewardManagement } from "../../modules/permissions/permissions
 import { formatDashboardDate } from "../../modules/shared/utils/dateTime";
 import { formatStatusLabel } from "../../modules/shared/utils/statusLabels";
 import { BarsChart, DonutChart, PolylineChart, SummaryCard } from "./dashboard/dashboardCharts";
-import { TABLE_HEAD } from "./dashboard/dashboardUtils";
+import { TABLE_HEAD, dashboardCount } from "./dashboard/dashboardUtils";
 import DashboardLoadError from "./dashboard/DashboardLoadError";
 import { useDashboardData } from "./dashboard/useDashboardData";
 
@@ -186,10 +186,10 @@ function DashboardPage({ isDarkMode }) {
             <TableCard title="Survey Status Distribution" isDarkMode={isDarkMode}>
               <DonutChart
                 data={[
-                  { label: "Active", value: surveyStatus.active, color: "#10a950" },
-                  { label: "Closed", value: surveyStatus.closed, color: "#0e7f3f" },
-                  { label: "Draft", value: surveyStatus.draft, color: "#50cf8a" },
-                  { label: "Paused", value: surveyStatus.paused, color: "#8ce9b6" },
+                  { label: "Active", value: dashboardCount(surveyStatus.active), color: "#10a950" },
+                  { label: "Closed", value: dashboardCount(surveyStatus.closed), color: "#0e7f3f" },
+                  { label: "Draft", value: dashboardCount(surveyStatus.draft), color: "#50cf8a" },
+                  { label: "Paused", value: dashboardCount(surveyStatus.paused), color: "#8ce9b6" },
                 ]}
               />
             </TableCard>
@@ -334,10 +334,10 @@ function DashboardPage({ isDarkMode }) {
             <TableCard title="Survey Status Distribution" isDarkMode={isDarkMode}>
               <DonutChart
                 data={[
-                  { label: "Active", value: surveyStatus.active, color: "#10a950" },
-                  { label: "Closed", value: surveyStatus.closed, color: "#0e7f3f" },
-                  { label: "Draft", value: surveyStatus.draft, color: "#50cf8a" },
-                  { label: "Paused", value: surveyStatus.paused, color: "#8ce9b6" },
+                  { label: "Active", value: dashboardCount(surveyStatus.active), color: "#10a950" },
+                  { label: "Closed", value: dashboardCount(surveyStatus.closed), color: "#0e7f3f" },
+                  { label: "Draft", value: dashboardCount(surveyStatus.draft), color: "#50cf8a" },
+                  { label: "Paused", value: dashboardCount(surveyStatus.paused), color: "#8ce9b6" },
                 ]}
               />
             </TableCard>
@@ -350,9 +350,9 @@ function DashboardPage({ isDarkMode }) {
             <TableCard title="RFQ Status Overview" isDarkMode={isDarkMode}>
               <BarsChart
                 data={[
-                  { label: "Won", value: rfqStatus.won },
-                  { label: "Lost", value: rfqStatus.lost },
-                  { label: "Pending", value: rfqStatus.pending },
+                  { label: "Won", value: dashboardCount(rfqStatus?.won) },
+                  { label: "Lost", value: dashboardCount(rfqStatus?.lost) },
+                  { label: "Pending", value: dashboardCount(rfqStatus?.pending) },
                 ]}
               />
             </TableCard>
@@ -390,9 +390,9 @@ function DashboardPage({ isDarkMode }) {
             <TableCard title="Invoice Status Distribution" isDarkMode={isDarkMode}>
               <DonutChart
                 data={[
-                  { label: "Paid", value: invoiceStats.paid, color: "#10a950" },
-                  { label: "Pending", value: invoiceStats.pending, color: "#3ecf7f" },
-                  { label: "Overdue", value: invoiceStats.overdue, color: "#0f6a34" },
+                  { label: "Paid", value: dashboardCount(invoiceStats.paid), color: "#10a950" },
+                  { label: "Pending", value: dashboardCount(invoiceStats.pending), color: "#3ecf7f" },
+                  { label: "Overdue", value: dashboardCount(invoiceStats.overdue), color: "#0f6a34" },
                 ]}
               />
             </TableCard>

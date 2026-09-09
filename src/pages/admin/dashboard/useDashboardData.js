@@ -9,7 +9,7 @@ import { getRecords as getRfqRecords } from "../../../services/sales/salesProjec
 import { getRecords as getSurveyRecords } from "../../../modules/survey/services/surveyApi";
 import { getRecords as getGroupSurveyRecords } from "../../../modules/survey/services/groupSurveyApi";
 import { MAX_API_LIST_LIMIT } from "../../../modules/shared/utils/listQueryParams";
-import { buildMonthlySeries, normalizeStatus } from "./dashboardUtils";
+import { buildMonthlySeries, dashboardCount, normalizeStatus } from "./dashboardUtils";
 
 const DASHBOARD_LIST_LIMIT = MAX_API_LIST_LIMIT;
 
@@ -175,14 +175,22 @@ export function useDashboardData({ enabled = true } = {}) {
   }, [dashboard.surveys, isManager, isSales, summary.surveyStatus]);
 
   const rfqStatus = useMemo(() => {
-    if (!isSales && !isManager) return summary.rfqStatus;
+    if (!isSales && !isManager) {
+      return {
+        won: dashboardCount(summary.rfqStatus?.won),
+        lost: dashboardCount(summary.rfqStatus?.lost),
+        pending: dashboardCount(summary.rfqStatus?.pending),
+      };
+    }
 
     const result = { won: 0, lost: 0, pending: 0 };
     asArray(dashboard.rfqs).forEach((rfq) => {
       const st = normalizeStatus(rfq.status);
       if (st === "won") result.won += 1;
       else if (st === "lost") result.lost += 1;
-      else result.pending += 1;
+      else if (st === "wip" || st === "pending" || st.includes("progress")) {
+        result.pending += 1;
+      }
     });
     return result;
   }, [dashboard.rfqs, isManager, isSales, summary.rfqStatus]);
