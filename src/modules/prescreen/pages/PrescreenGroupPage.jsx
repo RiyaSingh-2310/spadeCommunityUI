@@ -21,7 +21,7 @@ const LIST_COLUMNS = [
   "S.No",
   "Questionnaire Group",
   "Language",
-  "Website URL",
+  // "Website URL",
   "Question Count",
   "Status",
   "Created At",
