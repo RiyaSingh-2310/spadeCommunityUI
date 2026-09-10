@@ -5,6 +5,7 @@ export const USER_EMAIL_TEMPLATE_TAGS = [
   "{user_id}",
   "{user_name}",
   "{user_termination_point}",
+  "{otp}",
 ];
 
 export const USER_EMAIL_TEMPLATE_TAGS_LABEL = USER_EMAIL_TEMPLATE_TAGS.join(", ");
