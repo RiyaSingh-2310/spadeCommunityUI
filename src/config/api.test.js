@@ -84,6 +84,7 @@ describe("buildApiUrl", () => {
     expect(API_ROUTES.projectReports.preScreenReportExportCsv).toBe(
       "/api/project-reports/pre-screen-report/export/csv"
     );
+    expect(API_ROUTES.projectReports.fraud("12")).toBe("/api/project-reports/12/fraud");
   });
 });
 

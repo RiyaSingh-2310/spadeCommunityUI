@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import AdminPagination from "../../../components/admin/AdminPagination";
 import DebouncedSearchInput from "../../../components/admin/DebouncedSearchInput";
@@ -7,7 +7,12 @@ import PageErrorBoundary from "../../../components/shared/PageErrorBoundary";
 import { PermissionsProvider } from "../../permissions/PermissionsContext";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import ProjectReportTable from "../components/ProjectReportTable";
+import ReportModeFilters, { REPORT_MODE } from "../components/ReportModeFilters";
 import { useProjectReportList } from "../hooks/useProjectReportList";
+import {
+  listSupplierMappings,
+  mapSupplierMappingToRow,
+} from "../services/supplierMappingApi";
 import {
   getProjectReportPageTitle,
   parseProjectReportSearch,
@@ -15,11 +20,13 @@ import {
 
 function ProjectReportViewPageContent({ isDarkMode }) {
   const { projectId } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
+  const [supplierOptions, setSupplierOptions] = useState([]);
+  const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
   const { canRead: canReadSurvey } = useModulePermission("survey");
 
-  const { reportType, supplierId, projectName } = useMemo(
+  const { reportType, supplierId, mode, projectName } = useMemo(
     () => parseProjectReportSearch(searchParams),
     [searchParams]
   );
@@ -44,8 +51,50 @@ function ProjectReportViewPageContent({ isDarkMode }) {
     projectId,
     reportType,
     supplierId,
+    mode,
     enabled: canReadSurvey,
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    const resolvedProjectId = String(projectId ?? "").trim();
+    if (!resolvedProjectId) {
+      setSupplierOptions([]);
+      return undefined;
+    }
+
+    setIsLoadingSuppliers(true);
+    listSupplierMappings({ projectId: resolvedProjectId })
+      .then((records) => {
+        if (cancelled) return;
+        const seen = new Set();
+        const options = [];
+        (Array.isArray(records) ? records : [])
+          .map((record, index) => mapSupplierMappingToRow(record, index))
+          .forEach((row) => {
+            const value = String(row.partnerId || row.partnerCode || "").trim();
+            if (!value || seen.has(value)) return;
+            seen.add(value);
+            options.push({
+              value,
+              label:
+                [row.partnerName, row.partnerCode].filter(Boolean).join(" — ") ||
+                value,
+            });
+          });
+        setSupplierOptions(options);
+      })
+      .catch(() => {
+        if (!cancelled) setSupplierOptions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingSuppliers(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
 
   const paginationFooter = (
     <AdminPagination
@@ -64,6 +113,14 @@ function ProjectReportViewPageContent({ isDarkMode }) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
   }
 
+  function updateFilters({ nextMode = mode, nextSupplierId = supplierId }) {
+    const next = new URLSearchParams(searchParams);
+    next.set("mode", nextMode === REPORT_MODE.TEST ? "test" : "live");
+    if (nextSupplierId) next.set("supplierId", nextSupplierId);
+    else next.delete("supplierId");
+    setSearchParams(next);
+  }
+
   return (
     <div className="admin-page min-h-screen px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-[1600px] space-y-6">
@@ -71,14 +128,27 @@ function ProjectReportViewPageContent({ isDarkMode }) {
           <h1 className="admin-text text-xl font-bold sm:text-2xl">{pageTitle}</h1>
         </header>
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-start">
+        <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3">
           <DebouncedSearchInput
             value={searchQuery}
             onChange={setSearchQuery}
             onDebouncedChange={handleSearch}
             placeholder="Search..."
             aria-label="Search report"
+            className="min-w-0 w-full shrink-0 sm:min-w-[12rem]"
             maxWidthClass="w-full sm:max-w-xs"
+          />
+          <ReportModeFilters
+            mode={mode}
+            onModeChange={(nextMode) =>
+              updateFilters({ nextMode, nextSupplierId: supplierId })
+            }
+            supplierId={supplierId}
+            onSupplierChange={(nextSupplierId) =>
+              updateFilters({ nextMode: mode, nextSupplierId })
+            }
+            supplierOptions={supplierOptions}
+            isLoadingSuppliers={isLoadingSuppliers}
           />
         </div>
 

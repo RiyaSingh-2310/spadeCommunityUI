@@ -1,13 +1,15 @@
 export const PROJECT_REPORT_TYPES = {
   PROJECT: "project",
   PRESCREEN: "prescreen",
+  FRAUD: "fraud",
   SUPPLIER: "supplier",
   TEST: "test",
 };
 
 export const PROJECT_REPORT_TYPE_LABELS = {
   [PROJECT_REPORT_TYPES.PROJECT]: "Project Report",
-  [PROJECT_REPORT_TYPES.PRESCREEN]: "Prescreen Report",
+  [PROJECT_REPORT_TYPES.PRESCREEN]: "Pre-Screen Report",
+  [PROJECT_REPORT_TYPES.FRAUD]: "Fraud / Security Report",
   [PROJECT_REPORT_TYPES.SUPPLIER]: "Supplier Report",
   [PROJECT_REPORT_TYPES.TEST]: "Test URL Report",
 };
@@ -38,6 +40,7 @@ export function getProjectReportViewPath({
   reportType = PROJECT_REPORT_TYPES.PROJECT,
   supplierId,
   projectName,
+  mode,
 } = {}) {
   const encodedId = encodeURIComponent(String(projectId ?? "").trim());
   const params = new URLSearchParams();
@@ -46,6 +49,11 @@ export function getProjectReportViewPath({
   const resolvedSupplierId = String(supplierId ?? "").trim();
   if (resolvedSupplierId) {
     params.set("supplierId", resolvedSupplierId);
+  }
+
+  const resolvedMode = String(mode ?? "").trim().toLowerCase();
+  if (resolvedMode === "test" || resolvedMode === "live") {
+    params.set("mode", resolvedMode);
   }
 
   const resolvedTitle = String(projectName ?? "").trim();
@@ -76,6 +84,9 @@ export function parseProjectReportSearch(searchParams) {
   return {
     reportType: normalizeProjectReportType(searchParams.get("type")),
     supplierId: String(searchParams.get("supplierId") ?? "").trim(),
+    mode: String(searchParams.get("mode") ?? "live").trim().toLowerCase() === "test"
+      ? "test"
+      : "live",
     projectName: String(searchParams.get("title") ?? "").trim(),
   };
 }
@@ -87,7 +98,8 @@ export function getProjectReportPageTitle({ reportType, projectName }) {
   const type = normalizeProjectReportType(reportType);
   const titlePrefix = {
     [PROJECT_REPORT_TYPES.PROJECT]: "Project Report",
-    [PROJECT_REPORT_TYPES.PRESCREEN]: "Prescreen Question",
+    [PROJECT_REPORT_TYPES.PRESCREEN]: "Pre-Screen Report",
+    [PROJECT_REPORT_TYPES.FRAUD]: "Fraud / Security Report",
     [PROJECT_REPORT_TYPES.SUPPLIER]: "Supplier",
     [PROJECT_REPORT_TYPES.TEST]: "Test URL Report",
   }[type];

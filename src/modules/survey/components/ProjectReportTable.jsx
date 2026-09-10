@@ -7,12 +7,27 @@ import {
   getEllipsisCellStyle,
   TABLE_ELLIPSIS_PX,
 } from "../../shared/utils/tableHelpers";
-import StatusToggle from "../../../components/admin/StatusToggle";
 import { getProjectReportColumns } from "../utils/projectReportColumns";
 import { PROJECT_REPORT_TYPES } from "../utils/projectReportNavigation";
+import { isReportTestModeValue } from "./ReportModeFilters";
 
 const TABLE_HEAD =
   "admin-text-muted text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap";
+
+function ReportModeBadge({ value }) {
+  const isTest = isReportTestModeValue(value);
+  const toneClass = isTest
+    ? "bg-[var(--admin-warning-text)]/15 text-[var(--admin-warning-text)]"
+    : "bg-[var(--admin-success-text)]/15 text-[var(--admin-success-text)]";
+
+  return (
+    <span
+      className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-semibold ${toneClass}`}
+    >
+      {isTest ? "Test" : "Live"}
+    </span>
+  );
+}
 
 function ProjectReportTable({
   rows,
@@ -64,7 +79,9 @@ function ProjectReportTable({
                 <tr key={`${row.id}-${index}`} className="align-middle">
                   {columns.map((column) => {
                     const isLongText =
+                      column.key === "uid" ||
                       column.key === "question" ||
+                      column.key === "blockReason" ||
                       column.key === "multilinkUrl" ||
                       column.key === "multiLinkUrl";
                     const ellipsisMax = isLongText ? TABLE_ELLIPSIS_PX.title : null;
@@ -78,20 +95,11 @@ function ProjectReportTable({
                         style={getEllipsisCellStyle(ellipsisMax)}
                       >
                         {column.key === "isTestLink" ? (
-                          <StatusToggle
-                            checked={
-                              row[column.key] === true ||
-                              String(row[column.key] ?? "").toLowerCase() === "true"
-                            }
-                            readOnly
-                            labelOn="Test"
-                            labelOff="Live"
-                            compact
-                          />
+                          <ReportModeBadge value={row[column.key]} />
                         ) : ellipsisMax ? (
                           <TableEllipsisText>{row[column.key] ?? "—"}</TableEllipsisText>
                         ) : (
-                          row[column.key]
+                          row[column.key] ?? "—"
                         )}
                       </td>
                     );

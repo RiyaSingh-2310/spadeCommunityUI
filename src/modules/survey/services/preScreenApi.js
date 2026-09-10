@@ -86,7 +86,7 @@ function answerSignature(questionId, answer) {
 
 const inFlightSaves = new Map();
 
-function buildSavePayload({ token, question, answer }) {
+function buildSavePayload({ token, question, answer, uid }) {
   const surveyToken = coerceText(token);
   if (!surveyToken) {
     throw new ApiError("Missing survey token.", null);
@@ -100,7 +100,7 @@ function buildSavePayload({ token, question, answer }) {
     throw new ApiError("Please answer this question to continue.", null);
   }
 
-  return {
+  const payload = {
     token: surveyToken,
     question_id: toQuestionId(question.id),
     question_text: coerceText(
@@ -109,14 +109,17 @@ function buildSavePayload({ token, question, answer }) {
     question_type: coerceText(question.questionType ?? question.question_type),
     answer: answerArray,
   };
+  const respondentUid = coerceText(uid);
+  if (respondentUid) payload.uid = respondentUid;
+  return payload;
 }
 
 /**
  * POST /api/survey/prescreenResponse
  * One request per intended answer submission. Duplicate in-flight posts are ignored.
  */
-export async function savePreScreenResponse({ token, question, answer } = {}) {
-  const payload = buildSavePayload({ token, question, answer });
+export async function savePreScreenResponse({ token, question, answer, uid } = {}) {
+  const payload = buildSavePayload({ token, question, answer, uid });
   const signature = answerSignature(payload.question_id, payload.answer);
 
   const existing = inFlightSaves.get(signature);
@@ -141,7 +144,7 @@ export async function savePreScreenResponse({ token, question, answer } = {}) {
   }
 }
 
-function buildEndPath(token, status) {
+function buildEndPath(token, status, uid) {
   const surveyToken = coerceText(token);
   if (!surveyToken) {
     throw new ApiError("Missing survey token.", null);
@@ -151,6 +154,8 @@ function buildEndPath(token, status) {
     token: surveyToken,
     status: normalizedStatus,
   });
+  const respondentUid = coerceText(uid);
+  if (respondentUid) params.set("uid", respondentUid);
   return `${API_ROUTES.survey.prescreenResponseEnd}?${params.toString()}`;
 }
 
@@ -160,10 +165,10 @@ const inFlightEnds = new Map();
  * GET /api/survey/prescreenResponseEnd?token=&status=
  */
 export async function endPreScreenResponse(
-  { token, status } = {},
+  { token, status, uid } = {},
   { keepalive = false } = {}
 ) {
-  const path = buildEndPath(token, status);
+  const path = buildEndPath(token, status, uid);
   const key = path;
 
   if (keepalive && typeof fetch === "function") {
@@ -223,11 +228,43 @@ function mapPrescreenReportRow(record, index = 0) {
     slNo: formatCellValue(
       pickField(record, ["sl_no", "slNo", "sno", "serial_no", "serialNo"]) ?? index + 1
     ),
+    uid: formatCellValue(
+      pickField(record, [
+        "uid",
+        "UID",
+        "uuid",
+        "user_id",
+        "userId",
+        "respondent_uid",
+        "respondentUid",
+      ])
+    ),
+    supplierId: formatCellValue(
+      pickField(record, ["supplier_id", "supplierId", "vendor_id", "vendorId", "partner_id"])
+    ),
+    supplierName: formatCellValue(
+      pickField(record, [
+        "supplier_name",
+        "supplierName",
+        "supplier",
+        "vendor_name",
+        "partner_name",
+      ])
+    ),
     vendorId: formatCellValue(
       pickField(record, ["vendor_id", "vendorId", "Vendor_ID", "supplier_id", "supplierId"])
     ),
     clientId: formatCellValue(
       pickField(record, ["client_id", "clientId", "Client_ID", "ClientId"])
+    ),
+    projectName: formatCellValue(
+      pickField(record, ["project_name", "projectName", "survey_title", "surveyTitle"])
+    ),
+    isTestLink: formatCellValue(
+      pickField(record, ["is_test", "IsTest", "isTest", "is_test_link", "isTestLink"])
+    ),
+    occurredAt: formatCellValue(
+      pickField(record, ["created_at", "createdAt", "occurred_at", "date_time", "dateTime"])
     ),
     ip: formatCellValue(
       pickField(record, ["ip", "ip_address", "ipAddress", "IP", "IP_Address"])
@@ -238,7 +275,7 @@ function mapPrescreenReportRow(record, index = 0) {
     answer: formatCellValue(
       pickField(record, ["answer", "Answer", "response", "Response"])
     ),
-    status: formatCellValue(pickField(record, ["status", "Status"])),
+    status: formatCellValue(pickField(record, ["status", "Status", "prescreen_status"])),
   };
 }
 
@@ -272,6 +309,8 @@ export async function getPreScreenReport({
   page = 1,
   limit = 10,
   search = "",
+  mode = "live",
+  supplierId = "",
 } = {}) {
   const resolvedProjectId = coerceText(projectId);
   if (!resolvedProjectId) {
@@ -279,6 +318,11 @@ export async function getPreScreenReport({
   }
 
   const params = new URLSearchParams({ projectid: resolvedProjectId });
+  const isTest = String(mode ?? "").trim().toLowerCase() === "test";
+  params.set("is_test", isTest ? "1" : "0");
+  const resolvedSupplierId = coerceText(supplierId);
+  if (resolvedSupplierId) params.set("supplierId", resolvedSupplierId);
+
   const path = `${API_ROUTES.projectReports.preScreenReport}?${params.toString()}`;
   const data = await apiRequest(path);
   if (data && typeof data === "object" && "success" in data) {
@@ -297,11 +341,23 @@ export async function getPreScreenReport({
     .filter(Boolean);
 
   const query = normalizeSearchQuery(search).toLowerCase();
-  const filtered = query
-    ? mapped.filter((row) =>
-        Object.values(row).some((value) => String(value ?? "").toLowerCase().includes(query))
-      )
-    : mapped;
+  const filtered = mapped.filter((row) => {
+    const rowIsTest = ["true", "1", "yes", "test"].includes(
+      String(row.isTestLink ?? "").trim().toLowerCase()
+    );
+    if (isTest && !rowIsTest) return false;
+    if (!isTest && rowIsTest) return false;
+    if (resolvedSupplierId) {
+      const ids = [row.supplierId, row.vendorId]
+        .map((value) => String(value ?? "").trim())
+        .filter((value) => value && value !== "—");
+      if (!ids.includes(resolvedSupplierId)) return false;
+    }
+    if (!query) return true;
+    return Object.values(row).some((value) =>
+      String(value ?? "").toLowerCase().includes(query)
+    );
+  });
   const items = paginateRows(filtered, page, limit);
 
   return {
@@ -316,13 +372,24 @@ export async function getPreScreenReport({
 /**
  * GET /api/project-reports/pre-screen-report/export/csv?projectid=<PROJECT_ID>
  */
-export async function downloadPreScreenReportCsv({ projectId } = {}) {
+export async function downloadPreScreenReportCsv({
+  projectId,
+  mode = "live",
+  supplierId = "",
+} = {}) {
   const resolvedProjectId = coerceText(projectId);
   if (!resolvedProjectId) {
     throw new ApiError("Project id is required.", null);
   }
 
   const params = new URLSearchParams({ projectid: resolvedProjectId });
+  params.set(
+    "is_test",
+    String(mode ?? "").trim().toLowerCase() === "test" ? "1" : "0"
+  );
+  const resolvedSupplierId = coerceText(supplierId);
+  if (resolvedSupplierId) params.set("supplierId", resolvedSupplierId);
+
   const path = `${API_ROUTES.projectReports.preScreenReportExportCsv}?${params.toString()}`;
   return downloadCsvExport(path, {
     defaultFilename: `pre-screen-report-${resolvedProjectId}.csv`,

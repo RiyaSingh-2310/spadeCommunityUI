@@ -1,13 +1,7 @@
-import { useEffect, useState } from "react";
-import SearchableSelect from "../../../components/admin/SearchableSelect";
+import { useState } from "react";
 import TableCard from "../../../components/admin/TableCard";
 import { useModulePermission } from "../../permissions/useModulePermission";
-import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { toastApiError, toastApiInfo } from "../../../services/toast/apiToast";
-import {
-  listSupplierMappings,
-  mapSupplierMappingToRow,
-} from "../services/supplierMappingApi";
 import { downloadProjectReport } from "../services/projectReportApi";
 import { primaryBtnClass, secondaryBtnClass } from "./surveyDetailsShared";
 import {
@@ -27,24 +21,18 @@ function ReportActions({
   onView,
   onDownload,
   isDownloading,
-  disabled = false,
   canDownload = false,
 }) {
   return (
     <div className="flex flex-wrap items-center justify-end gap-3">
-      <button
-        type="button"
-        className={secondaryBtnClass}
-        disabled={disabled}
-        onClick={onView}
-      >
+      <button type="button" className={secondaryBtnClass} onClick={onView}>
         View
       </button>
       {canDownload ? (
         <button
           type="button"
           className={primaryBtnClass}
-          disabled={disabled || isDownloading}
+          disabled={isDownloading}
           onClick={onDownload}
         >
           {isDownloading ? "Downloading..." : "Download"}
@@ -54,87 +42,25 @@ function ReportActions({
   );
 }
 
-function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) {
+function ProjectReportTab({ isDarkMode, projectId, projectName }) {
   const { canDownload } = useModulePermission("survey");
-  const [supplierOptions, setSupplierOptions] = useState([]);
-  const [selectedSupplier, setSelectedSupplier] = useState("");
-  const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
   const [downloadingType, setDownloadingType] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
-    const resolvedProjectId = String(projectId ?? "").trim();
-    const resolvedProjectUrlId = String(projectUrlId ?? "").trim();
-
-    async function loadSuppliers() {
-      if (!resolvedProjectId || !resolvedProjectUrlId) {
-        setSupplierOptions([]);
-        setSelectedSupplier("");
-        return;
-      }
-
-      setIsLoadingSuppliers(true);
-      try {
-        const records = await listSupplierMappings({
-          projectId: resolvedProjectId,
-          projectUrlId: resolvedProjectUrlId,
-        });
-        if (cancelled) return;
-
-        const options = (Array.isArray(records) ? records : [])
-          .map((record, index) => mapSupplierMappingToRow(record, index))
-          .filter((row) => row?.partnerId || row?.partnerCode)
-          .map((row) => ({
-            value: String(row.partnerId || row.partnerCode),
-            label: [row.partnerName, row.partnerCode]
-              .filter(Boolean)
-              .join(" — ") || String(row.partnerId),
-          }));
-
-        setSupplierOptions(options);
-        setSelectedSupplier((prev) => {
-          if (prev && options.some((option) => option.value === prev)) {
-            return prev;
-          }
-          return "";
-        });
-      } catch (error) {
-        if (cancelled) return;
-        setSupplierOptions([]);
-        setSelectedSupplier("");
-        toastApiError(error);
-      } finally {
-        if (!cancelled) setIsLoadingSuppliers(false);
-      }
-    }
-
-    loadSuppliers();
-    return () => {
-      cancelled = true;
-    };
-  }, [projectId, projectUrlId]);
-
-  const handleViewReport = (reportType, { supplierId } = {}) => {
+  const handleViewReport = (reportType) => {
     const resolvedProjectId = String(projectId ?? "").trim();
     if (!resolvedProjectId) {
       toastApiInfo({ message: "Project id is missing. Unable to open report." });
       return;
     }
 
-    if (reportType === PROJECT_REPORT_TYPES.SUPPLIER && !String(supplierId ?? "").trim()) {
-      toastApiInfo({ message: "Select a supplier before viewing the report." });
-      return;
-    }
-
     openProjectReportView({
       projectId: resolvedProjectId,
       reportType,
-      supplierId,
       projectName,
     });
   };
 
-  const handleDownloadReport = async (reportType, { supplierId } = {}) => {
+  const handleDownloadReport = async (reportType) => {
     if (!canDownload) return;
 
     const resolvedProjectId = String(projectId ?? "").trim();
@@ -143,17 +69,11 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) 
       return;
     }
 
-    if (reportType === PROJECT_REPORT_TYPES.SUPPLIER && !String(supplierId ?? "").trim()) {
-      toastApiInfo({ message: "Select a supplier before downloading the report." });
-      return;
-    }
-
     setDownloadingType(reportType);
     try {
       await downloadProjectReport({
         projectId: resolvedProjectId,
         reportType,
-        supplierId,
       });
     } catch (error) {
       toastApiError(error);
@@ -161,8 +81,6 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) 
       setDownloadingType("");
     }
   };
-
-  const hasSupplier = Boolean(String(selectedSupplier ?? "").trim());
 
   return (
     <div className="space-y-6">
@@ -180,7 +98,7 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) 
       />
 
       <ReportSection
-        title="Prescreen Report"
+        title="Pre-Screen Report"
         isDarkMode={isDarkMode}
         headerAction={
           <ReportActions
@@ -191,56 +109,6 @@ function ProjectReportTab({ isDarkMode, projectId, projectUrlId, projectName }) 
           />
         }
       />
-
-      <ReportSection
-        title="Test URL Report"
-        isDarkMode={isDarkMode}
-        headerAction={
-          <ReportActions
-            onView={() => handleViewReport(PROJECT_REPORT_TYPES.TEST)}
-            onDownload={() => handleDownloadReport(PROJECT_REPORT_TYPES.TEST)}
-            isDownloading={downloadingType === PROJECT_REPORT_TYPES.TEST}
-            canDownload={canDownload}
-          />
-        }
-      />
-
-      <ReportSection title="Supplier Report" isDarkMode={isDarkMode}>
-        <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-          <label className="admin-text flex min-w-0 flex-1 flex-col gap-2 text-sm font-semibold sm:max-w-xs">
-            <span>Select Supplier</span>
-            <SearchableSelect
-              inputClass={getAdminInputClass()}
-              value={selectedSupplier}
-              onChange={setSelectedSupplier}
-              options={supplierOptions}
-              placeholder={
-                isLoadingSuppliers ? "Loading suppliers..." : "Select supplier"
-              }
-              loading={isLoadingSuppliers}
-              loadingLabel="Loading suppliers..."
-              emptyMessage="No suppliers mapped"
-              searchPlaceholder="Search supplier..."
-              aria-label="Select supplier"
-            />
-          </label>
-          <ReportActions
-            disabled={!hasSupplier}
-            onView={() =>
-              handleViewReport(PROJECT_REPORT_TYPES.SUPPLIER, {
-                supplierId: selectedSupplier,
-              })
-            }
-            onDownload={() =>
-              handleDownloadReport(PROJECT_REPORT_TYPES.SUPPLIER, {
-                supplierId: selectedSupplier,
-              })
-            }
-            isDownloading={downloadingType === PROJECT_REPORT_TYPES.SUPPLIER}
-            canDownload={canDownload}
-          />
-        </div>
-      </ReportSection>
     </div>
   );
 }

@@ -220,6 +220,10 @@ export const API_ROUTES = {
       `/api/project-reports/${encodeURIComponent(String(projectId ?? "").trim())}/supplier/${encodeURIComponent(String(supplierId ?? "").trim())}/export/csv`,
     preScreenReport: "/api/project-reports/pre-screen-report",
     preScreenReportExportCsv: "/api/project-reports/pre-screen-report/export/csv",
+    fraud: (id) =>
+      `/api/project-reports/${encodeURIComponent(String(id ?? "").trim())}/fraud`,
+    fraudExportCsv: (id) =>
+      `/api/project-reports/${encodeURIComponent(String(id ?? "").trim())}/fraud/export/csv`,
   },
   supplierMapping: {
     list: "/api/supplier-mapping/list",

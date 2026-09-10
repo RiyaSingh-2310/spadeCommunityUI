@@ -43,8 +43,8 @@ function formatCellValue(value) {
 }
 
 function formatBooleanCell(value) {
-  if (value === true || value === "true") return "true";
-  if (value === false || value === "false") return "false";
+  if (value === true || value === "true" || value === 1 || value === "1") return "true";
+  if (value === false || value === "false" || value === 0 || value === "0") return "false";
   return formatCellValue(value);
 }
 
@@ -84,6 +84,21 @@ function paginateRows(items, page = 1, limit = 10) {
   return items.slice(start, start + safeLimit);
 }
 
+function pickUid(record) {
+  return pickField(record, [
+    "uid",
+    "UID",
+    "uuid",
+    "UUID",
+    "user_id",
+    "userId",
+    "respondent_uid",
+    "respondentUid",
+    "respondent_id",
+    "respondentId",
+  ]);
+}
+
 function mapSharedSurveyRow(record, index = 0) {
   return {
     id: String(pickField(record, ["id", "record_id"]) ?? `row-${index + 1}`),
@@ -96,14 +111,7 @@ function mapSharedSurveyRow(record, index = 0) {
     clientId: formatCellValue(
       pickField(record, ["client_id", "clientId", "Client_ID", "ClientId"])
     ),
-    supplierIdentifier: formatCellValue(
-      pickField(record, [
-        "supplier_identifier",
-        "supplierIdentifier",
-        "Supplier_Identifier",
-        "identifier",
-      ])
-    ),
+    uid: formatCellValue(pickUid(record)),
     status: formatCellValue(pickField(record, ["status", "Status"])),
     surveyStartDate: formatReportDateTime(
       pickField(record, [
@@ -163,16 +171,60 @@ export function mapProjectReportRow(record, index = 0) {
  * @param {number} index
  */
 export function mapPrescreenReportRow(record, index = 0) {
+  const isTestRaw = pickField(record, [
+    "is_test_link",
+    "isTestLink",
+    "is_test",
+    "IsTest",
+    "isTest",
+  ]);
   return {
     id: String(pickField(record, ["id", "record_id", "client_id", "clientId"]) ?? index + 1),
     slNo: formatCellValue(
       pickField(record, ["sl_no", "slNo", "sno", "serial_no", "serialNo"]) ?? index + 1
+    ),
+    uid: formatCellValue(
+      pickField(record, [
+        "uid",
+        "UID",
+        "uuid",
+        "user_id",
+        "userId",
+        "respondent_uid",
+        "respondentUid",
+      ])
+    ),
+    supplierId: formatCellValue(
+      pickField(record, ["supplier_id", "supplierId", "vendor_id", "vendorId", "partner_id"])
+    ),
+    supplierName: formatCellValue(
+      pickField(record, [
+        "supplier_name",
+        "supplierName",
+        "supplier",
+        "vendor_name",
+        "partner_name",
+      ])
     ),
     vendorId: formatCellValue(
       pickField(record, ["vendor_id", "vendorId", "Vendor_ID", "supplier_id", "supplierId"])
     ),
     clientId: formatCellValue(
       pickField(record, ["client_id", "clientId", "Client_ID", "ClientId"])
+    ),
+    projectName: formatCellValue(
+      pickField(record, ["project_name", "projectName", "survey_title", "surveyTitle"])
+    ),
+    isTestLink: formatBooleanCell(isTestRaw),
+    occurredAt: formatReportDateTime(
+      pickField(record, [
+        "created_at",
+        "createdAt",
+        "occurred_at",
+        "date_time",
+        "dateTime",
+        "answered_at",
+      ])
     ),
     ip: formatCellValue(
       pickField(record, ["ip", "ip_address", "ipAddress", "IP", "IP_Address"])
@@ -183,7 +235,7 @@ export function mapPrescreenReportRow(record, index = 0) {
     answer: formatCellValue(
       pickField(record, ["answer", "Answer", "response", "Response"])
     ),
-    status: formatCellValue(pickField(record, ["status", "Status"])),
+    status: formatCellValue(pickField(record, ["status", "Status", "prescreen_status"])),
   };
 }
 
@@ -213,6 +265,10 @@ export function mapSupplierReportRow(record, index = 0) {
       pickField(record, ["clientName", "client_name"])
     ),
     partnersIdentifier: formatCellValue(partnersIdentifier),
+    uid: formatCellValue(
+      pickField(record, ["uid", "UID", "uuid", "user_id", "userId", "respondent_uid"]) ??
+        partnersIdentifier
+    ),
     status: formatCellValue(pickField(record, ["status", "Status"])),
     surveyStartDate: formatReportDateTime(
       pickField(record, ["surveyStartDate", "survey_start_date"])
@@ -237,16 +293,143 @@ export function mapSupplierReportRow(record, index = 0) {
   };
 }
 
+export function mapFraudReportRow(record, index = 0) {
+  return {
+    id: String(pickField(record, ["id", "record_id"]) ?? `fraud-${index + 1}`),
+    uid: formatCellValue(
+      pickField(record, ["uid", "UID", "uuid", "user_id", "userId", "respondent_uid"])
+    ),
+    projectName: formatCellValue(
+      pickField(record, ["project_name", "projectName", "survey_title", "surveyTitle"])
+    ),
+    supplierId: formatCellValue(
+      pickField(record, ["supplier_id", "supplierId", "partner_id"])
+    ),
+    supplierName: formatCellValue(
+      pickField(record, ["supplier_name", "supplierName", "supplier", "partner_name"])
+    ),
+    isTestLink: formatBooleanCell(
+      pickField(record, ["is_test", "IsTest", "isTest", "is_test_link", "isTestLink"])
+    ),
+    ipAddress: formatCellValue(
+      pickField(record, ["ip_address", "ipAddress", "ip"])
+    ),
+    fraudScore: formatCellValue(
+      pickField(record, ["fraud_score", "fraudScore", "score"])
+    ),
+    proxyDetected: formatBooleanCell(
+      pickField(record, ["proxy", "proxy_detected", "proxyDetected", "is_proxy"])
+    ),
+    vpnVps: formatCellValue(
+      pickField(record, ["vpn", "vpn_vps", "vpnVps", "vps", "vpn_detected"])
+    ),
+    isp: formatCellValue(pickField(record, ["isp", "ISP", "isp_name"])),
+    blockReason: formatCellValue(
+      pickField(record, [
+        "block_reason",
+        "blockReason",
+        "reason",
+        "security_reason",
+      ])
+    ),
+    occurredAt: formatReportDateTime(
+      pickField(record, ["created_at", "createdAt", "occurred_at", "date_time"])
+    ),
+    status: formatCellValue(
+      pickField(record, ["status", "Status", "action", "final_status"])
+    ),
+  };
+}
+
+export function summarizeFraudReport(rows = []) {
+  const items = Array.isArray(rows) ? rows : [];
+  const total = items.length;
+  const blocked = items.filter((row) => {
+    const reason = String(row.blockReason ?? "").trim();
+    const status = String(row.status ?? "").toLowerCase();
+    return reason && reason !== "—"
+      || status.includes("block")
+      || status.includes("terminat")
+      || status.includes("denied");
+  }).length;
+  const geo = items.filter((row) =>
+    String(row.blockReason ?? "").toLowerCase().includes("geo")
+    || String(row.blockReason ?? "").toLowerCase().includes("location")
+    || String(row.blockReason ?? "").toLowerCase().includes("country")
+  ).length;
+  const uniqueIp = items.filter((row) =>
+    String(row.blockReason ?? "").toLowerCase().includes("ip")
+  ).length;
+  const fraud = items.filter((row) =>
+    String(row.blockReason ?? "").toLowerCase().includes("fraud")
+    || String(row.blockReason ?? "").toLowerCase().includes("proxy")
+    || String(row.blockReason ?? "").toLowerCase().includes("vpn")
+  ).length;
+  const prescreen = items.filter((row) =>
+    String(row.blockReason ?? "").toLowerCase().includes("pre-screen")
+    || String(row.blockReason ?? "").toLowerCase().includes("prescreen")
+  ).length;
+  const allowed = Math.max(0, total - blocked);
+
+  return {
+    totalChecks: total,
+    totalAllowed: allowed,
+    totalBlocked: blocked,
+    fraudBlocks: fraud,
+    geolocationBlocks: geo,
+    uniqueIpBlocks: uniqueIp,
+    prescreenTerminations: prescreen,
+    blockPercentage: total ? Math.round((blocked / total) * 100) : 0,
+  };
+}
+
 const REPORT_ROW_MAPPERS = {
   [PROJECT_REPORT_TYPES.PROJECT]: mapProjectReportRow,
   [PROJECT_REPORT_TYPES.PRESCREEN]: mapPrescreenReportRow,
+  [PROJECT_REPORT_TYPES.FRAUD]: mapFraudReportRow,
   [PROJECT_REPORT_TYPES.SUPPLIER]: mapSupplierReportRow,
   [PROJECT_REPORT_TYPES.TEST]: mapProjectReportRow,
 };
 
 function isTestLinkValue(value) {
   const key = String(value ?? "").trim().toLowerCase();
-  return key === "true" || key === "1" || key === "yes";
+  return key === "true" || key === "1" || key === "yes" || key === "test";
+}
+
+function normalizeReportMode(mode) {
+  return String(mode ?? "").trim().toLowerCase() === "test" ? "test" : "live";
+}
+
+function rowMatchesReportFilters(row, { mode, supplierId } = {}) {
+  const normalizedMode = normalizeReportMode(mode);
+  const isTest = isTestLinkValue(row.isTestLink);
+  if (normalizedMode === "test" && !isTest) return false;
+  if (normalizedMode === "live" && isTest) return false;
+
+  const resolvedSupplierId = String(supplierId ?? "").trim();
+  if (!resolvedSupplierId) return true;
+  const ids = [
+    row.supplierId,
+    row.vendorId,
+    row.partnerId,
+  ].map((value) => String(value ?? "").trim()).filter((value) => value && value !== "—");
+  return ids.includes(resolvedSupplierId);
+}
+
+function applyReportFilters(mapped, { search, mode, supplierId } = {}) {
+  return filterRowsBySearch(
+    mapped.filter((row) => rowMatchesReportFilters(row, { mode, supplierId })),
+    search
+  );
+}
+
+function reportFilterQuery({ mode, supplierId } = {}) {
+  return {
+    is_test: normalizeReportMode(mode) === "test" ? "1" : "0",
+    ...(String(supplierId ?? "").trim()
+      ? { supplierId: String(supplierId).trim() }
+      : {}),
+  };
 }
 
 function extractReportRecords(data) {
@@ -277,6 +460,7 @@ export async function fetchProjectReportList({
   projectId,
   reportType,
   supplierId,
+  mode = "live",
   page = 1,
   limit = 10,
   search = "",
@@ -289,14 +473,21 @@ export async function fetchProjectReportList({
   const normalizedType = normalizeProjectReportType(reportType);
   const mapRow =
     REPORT_ROW_MAPPERS[normalizedType] ?? REPORT_ROW_MAPPERS[PROJECT_REPORT_TYPES.PROJECT];
+  const extra = reportFilterQuery({ mode, supplierId });
 
-  if (normalizedType === PROJECT_REPORT_TYPES.PROJECT) {
-    const data = await apiRequest(API_ROUTES.projectReports.report(resolvedProjectId));
+  if (
+    normalizedType === PROJECT_REPORT_TYPES.PROJECT ||
+    normalizedType === PROJECT_REPORT_TYPES.TEST
+  ) {
+    const path = appendListQuery(API_ROUTES.projectReports.report(resolvedProjectId), {
+      extra,
+    });
+    const data = await apiRequest(path);
     assertSuccess(data);
 
     const records = extractReportRecords(data);
-    const mapped = mapReportRows(records, mapRow);
-    const filtered = filterRowsBySearch(mapped, search);
+    const mapped = mapReportRows(records, mapProjectReportRow);
+    const filtered = applyReportFilters(mapped, { search, mode, supplierId });
     const items = paginateRows(filtered, page, limit);
 
     return {
@@ -309,16 +500,30 @@ export async function fetchProjectReportList({
     };
   }
 
-  if (normalizedType === PROJECT_REPORT_TYPES.TEST) {
-    const data = await apiRequest(API_ROUTES.projectReports.report(resolvedProjectId));
-    assertSuccess(data);
+  if (normalizedType === PROJECT_REPORT_TYPES.PRESCREEN) {
+    return getPreScreenReport({
+      projectId: resolvedProjectId,
+      page,
+      limit,
+      search,
+      mode,
+      supplierId,
+    });
+  }
 
+  if (normalizedType === PROJECT_REPORT_TYPES.FRAUD) {
+    const path = appendListQuery(API_ROUTES.projectReports.fraud(resolvedProjectId), {
+      extra,
+    });
+    const data = await apiRequest(path);
+    assertSuccess(data);
     const records = extractReportRecords(data);
-    const mapped = mapReportRows(records, mapProjectReportRow).filter((row) =>
-      isTestLinkValue(row.isTestLink)
-    );
-    const filtered = filterRowsBySearch(mapped, search);
+    const mapped = mapReportRows(records, mapFraudReportRow);
+    const filtered = applyReportFilters(mapped, { search, mode, supplierId });
     const items = paginateRows(filtered, page, limit);
+    const summary = data?.summary && typeof data.summary === "object"
+      ? data.summary
+      : summarizeFraudReport(filtered);
 
     return {
       success: true,
@@ -326,6 +531,7 @@ export async function fetchProjectReportList({
       total: filtered.length,
       page,
       limit,
+      summary,
       projectName: String(data.project_name ?? data.projectName ?? "").trim(),
     };
   }
@@ -338,13 +544,17 @@ export async function fetchProjectReportList({
 
     const url = appendListQuery(
       API_ROUTES.projectReports.supplierReport(resolvedProjectId, resolvedSupplierId),
-      { page, limit, search }
+      { page, limit, search, extra: { is_test: extra.is_test } }
     );
     const data = await apiRequest(url);
     assertSuccess(data);
 
     const records = extractReportRecords(data);
-    const items = mapReportRows(records, mapRow);
+    const items = applyReportFilters(mapReportRows(records, mapRow), {
+      search: "",
+      mode,
+      supplierId: resolvedSupplierId,
+    });
     const total = extractListTotalFromResponse(data, items.length);
 
     return {
@@ -356,28 +566,23 @@ export async function fetchProjectReportList({
     };
   }
 
-  if (normalizedType === PROJECT_REPORT_TYPES.PRESCREEN) {
-    return getPreScreenReport({
-      projectId: resolvedProjectId,
-      page,
-      limit,
-      search,
-    });
-  }
-
   const basePath = API_ROUTES.projects.reportList(resolvedProjectId, normalizedType);
   const url = appendListQuery(basePath, {
     page,
     limit,
     search,
-    extra: supplierId ? { supplierId: String(supplierId).trim() } : {},
+    extra,
   });
 
   const data = await apiRequest(url);
   assertSuccess(data);
 
   const records = extractReportRecords(data);
-  const items = mapReportRows(records, mapRow);
+  const items = applyReportFilters(mapReportRows(records, mapRow), {
+    search: "",
+    mode,
+    supplierId,
+  });
   const total = extractListTotalFromResponse(data, items.length);
 
   return {
@@ -426,6 +631,7 @@ export async function downloadProjectReport({
   projectId,
   reportType,
   supplierId,
+  mode = "live",
 } = {}) {
   const resolvedProjectId = String(projectId ?? "").trim();
   if (!resolvedProjectId) {
@@ -434,21 +640,40 @@ export async function downloadProjectReport({
 
   const normalizedType = normalizeProjectReportType(reportType);
   const defaultFilename = buildReportDownloadFilename(normalizedType, resolvedProjectId);
+  const extra = reportFilterQuery({ mode, supplierId });
 
   if (normalizedType === PROJECT_REPORT_TYPES.PROJECT) {
-    return downloadCsvExport(API_ROUTES.projectReports.exportCsv(resolvedProjectId), {
-      defaultFilename,
+    return downloadCsvExport(
+      appendListQuery(API_ROUTES.projectReports.exportCsv(resolvedProjectId), { extra }),
+      { defaultFilename }
+    );
+  }
+
+  if (normalizedType === PROJECT_REPORT_TYPES.FRAUD) {
+    return downloadCsvExport(
+      appendListQuery(API_ROUTES.projectReports.fraudExportCsv(resolvedProjectId), { extra }),
+      { defaultFilename }
+    );
+  }
+
+  if (normalizedType === PROJECT_REPORT_TYPES.PRESCREEN) {
+    return downloadPreScreenReportCsv({
+      projectId: resolvedProjectId,
+      mode,
+      supplierId,
     });
   }
 
   if (normalizedType === PROJECT_REPORT_TYPES.TEST) {
     const result = await fetchProjectReportList({
       projectId: resolvedProjectId,
-      reportType: PROJECT_REPORT_TYPES.TEST,
+      reportType: PROJECT_REPORT_TYPES.PROJECT,
+      mode: "test",
+      supplierId,
       page: 1,
       limit: 10000,
     });
-    const columns = getProjectReportColumns(PROJECT_REPORT_TYPES.TEST);
+    const columns = getProjectReportColumns(PROJECT_REPORT_TYPES.PROJECT);
     const header = columns.map((column) => csvEscape(column.label)).join(",");
     const lines = (result.items ?? []).map((row) =>
       columns.map((column) => csvEscape(row[column.key])).join(",")
@@ -464,7 +689,10 @@ export async function downloadProjectReport({
     }
 
     return downloadCsvExport(
-      API_ROUTES.projectReports.supplierExportCsv(resolvedProjectId, resolvedSupplierId),
+      appendListQuery(
+        API_ROUTES.projectReports.supplierExportCsv(resolvedProjectId, resolvedSupplierId),
+        { extra: { is_test: extra.is_test } }
+      ),
       {
         defaultFilename: buildDatedExportFilename(
           `supplier-report-${resolvedProjectId}-${resolvedSupplierId}`
@@ -473,14 +701,8 @@ export async function downloadProjectReport({
     );
   }
 
-  if (normalizedType === PROJECT_REPORT_TYPES.PRESCREEN) {
-    return downloadPreScreenReportCsv({ projectId: resolvedProjectId });
-  }
-
   const basePath = API_ROUTES.projects.reportDownload(resolvedProjectId, normalizedType);
-  const url = appendListQuery(basePath, {
-    extra: supplierId ? { supplierId: String(supplierId).trim() } : {},
-  });
+  const url = appendListQuery(basePath, { extra });
 
   return downloadCsvExport(url, { defaultFilename });
 }
