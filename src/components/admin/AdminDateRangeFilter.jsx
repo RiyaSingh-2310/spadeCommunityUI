@@ -293,7 +293,7 @@ function AdminDateRangeFilter({
 
   return (
     <div
-      className={`admin-date-range-root w-full min-w-[min(100%,20.5rem)] shrink-0 sm:w-[20.5rem] ${className}`.trim()}
+      className={`admin-date-range-root w-full max-w-full min-w-0 shrink-0 sm:w-[20.5rem] sm:max-w-full ${className}`.trim()}
     >
       <button
         ref={triggerRef}

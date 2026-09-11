@@ -16,6 +16,7 @@ import {
   PROJECT_REPORT_TYPES,
 } from "../utils/projectReportNavigation";
 import { getProjectReportColumns } from "../utils/projectReportColumns";
+import { toProjectReportApiStatus } from "../utils/reportFilterConstants";
 import {
   downloadPreScreenReportCsv,
   getPreScreenReport,
@@ -144,7 +145,13 @@ function mapSharedSurveyRow(record, index = 0) {
       ])
     ),
     loiMinutes: formatCellValue(
-      pickField(record, ["loi", "loi_minutes", "loiMinutes", "LOI", "LOI_mins"])
+      pickField(record, [
+        "loi_minutes",
+        "loi",
+        "loiMinutes",
+        "LOI",
+        "LOI_mins",
+      ])
     ),
     ipAddress: formatCellValue(
       pickField(record, ["ip_address", "ipAddress", "IP_Address", "ip"])
@@ -449,7 +456,7 @@ function applyReportFilters(mapped, { search, mode, supplierId, status } = {}) {
   );
 }
 
-function reportFilterQuery({
+export function reportFilterQuery({
   mode,
   supplierId,
   status = "",
@@ -458,26 +465,18 @@ function reportFilterQuery({
 } = {}) {
   const resolvedStart = String(startDate ?? "").trim();
   const resolvedEnd = String(endDate ?? "").trim();
-  const resolvedStatus = String(status ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-  const statusValue =
-    resolvedStatus === "completed" || resolvedStatus === "complete"
-      ? "completed"
-      : resolvedStatus === "initiated" ||
-          resolvedStatus === "initiate" ||
-          resolvedStatus === "in_progress"
-        ? "initiated"
-        : "";
+  const statusValue = toProjectReportApiStatus(status);
+  const resolvedSupplierId = String(supplierId ?? "").trim();
+  const isTest = normalizeReportMode(mode) === "test";
+
   return {
-    is_test: normalizeReportMode(mode) === "test" ? "1" : "0",
-    ...(String(supplierId ?? "").trim()
-      ? { supplierId: String(supplierId).trim() }
+    is_test: isTest ? "1" : "0",
+    ...(resolvedSupplierId
+      ? { supplier_id: resolvedSupplierId, supplierId: resolvedSupplierId }
       : {}),
     ...(statusValue ? { status: statusValue } : {}),
-    ...(resolvedStart ? { start_date: resolvedStart, from_date: resolvedStart } : {}),
-    ...(resolvedEnd ? { end_date: resolvedEnd, to_date: resolvedEnd } : {}),
+    ...(resolvedStart ? { start_date: resolvedStart } : {}),
+    ...(resolvedEnd ? { end_date: resolvedEnd } : {}),
   };
 }
 
@@ -540,7 +539,7 @@ export async function fetchProjectReportList({
 
     const records = extractReportRecords(data);
     const mapped = mapReportRows(records, mapProjectReportRow);
-    const filtered = applyReportFilters(mapped, { search, mode, supplierId, status });
+    const filtered = filterRowsBySearch(mapped, search);
     const items = paginateRows(filtered, page, limit);
 
     return {

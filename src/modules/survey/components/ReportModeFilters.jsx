@@ -61,8 +61,8 @@ function ReportModeFilters({
   };
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-3 lg:flex-row lg:flex-nowrap lg:items-end lg:justify-between lg:gap-4">
-      <div className={`${FILTER_FIELD_CLASS} w-full min-w-0 lg:min-w-[16rem] lg:flex-1`}>
+    <div className="flex w-full min-w-0 flex-col gap-3 xl:flex-row xl:items-end xl:justify-between xl:gap-6">
+      <div className={`${FILTER_FIELD_CLASS} w-full max-w-[20rem] shrink-0 overflow-hidden`}>
         <span className={FILTER_LABEL_CLASS}>Search</span>
         <DebouncedSearchInput
           value={searchQuery}
@@ -71,12 +71,12 @@ function ReportModeFilters({
           placeholder="Search..."
           aria-label="Search report"
           className="min-w-0 w-full"
-          maxWidthClass="w-full sm:max-w-none"
+          maxWidthClass="w-full max-w-[20rem]"
         />
       </div>
 
-      <div className="flex w-full min-w-0 flex-wrap items-end gap-3 sm:flex-nowrap lg:w-auto lg:shrink-0 lg:justify-end">
-        <div className={`${FILTER_FIELD_CLASS} w-[8.75rem] shrink-0`}>
+      <div className="grid w-full min-w-0 grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:w-auto xl:shrink-0 xl:grid-cols-[9.5rem_20.5rem_11.25rem_7.5rem]">
+        <div className={`${FILTER_FIELD_CLASS} w-full overflow-hidden`}>
           <label htmlFor="project-report-status-filter" className={FILTER_LABEL_CLASS}>
             Status
           </label>
@@ -95,20 +95,21 @@ function ReportModeFilters({
           </select>
         </div>
 
-        <div className={`${FILTER_FIELD_CLASS} w-[15.5rem] shrink-0`}>
+        <div className={`${FILTER_FIELD_CLASS} w-full overflow-hidden`}>
           <span className={FILTER_LABEL_CLASS}>Date Range</span>
           <AdminDateRangeFilter
             fromDate={startDate}
             toDate={endDate}
             onFromChange={(value) => commitDateRange({ startDate: value })}
             onToChange={(value) => commitDateRange({ endDate: value })}
+            className="w-full min-w-0 sm:w-full"
           />
         </div>
 
-        <div className={`${FILTER_FIELD_CLASS} w-[12rem] shrink-0`}>
+        <div className={`${FILTER_FIELD_CLASS} w-full overflow-hidden`}>
           <span className={FILTER_LABEL_CLASS}>Supplier</span>
           <SearchableSelect
-            inputClass={getAdminInputClass()}
+            inputClass={`${getAdminInputClass()} max-w-full`}
             value={supplierId || "__all__"}
             onChange={(next) => onSupplierChange?.(next === "__all__" ? "" : next)}
             options={[{ value: "__all__", label: "All Suppliers" }, ...supplierOptions]}
@@ -121,7 +122,7 @@ function ReportModeFilters({
           />
         </div>
 
-        <div className={`${FILTER_FIELD_CLASS} w-[7.5rem] shrink-0`}>
+        <div className={`${FILTER_FIELD_CLASS} w-full overflow-hidden`}>
           <label htmlFor="project-report-mode-filter" className={FILTER_LABEL_CLASS}>
             Mode
           </label>

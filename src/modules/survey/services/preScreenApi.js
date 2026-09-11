@@ -10,6 +10,7 @@ import { getAuthToken } from "../../../services/auth/authStorage";
 import { downloadCsvExport } from "../../../services/api/csvExport";
 import { clampApiListLimit } from "../../shared/utils/listQueryParams";
 import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
+import { toProjectReportApiStatus } from "../utils/reportFilterConstants";
 
 export const PRESCREEN_RESPONSE_STATUSES = {
   COMPLETED: "COMPLETED",
@@ -330,17 +331,12 @@ export async function getPreScreenReport({
   const isTest = String(mode ?? "").trim().toLowerCase() === "test";
   params.set("is_test", isTest ? "1" : "0");
   const resolvedSupplierId = coerceText(supplierId);
-  if (resolvedSupplierId) params.set("supplierId", resolvedSupplierId);
-  const resolvedStatus = coerceText(status).toLowerCase().replace(/[\s-]+/g, "_");
-  if (resolvedStatus === "completed" || resolvedStatus === "complete") {
-    params.set("status", "completed");
-  } else if (
-    resolvedStatus === "initiated" ||
-    resolvedStatus === "initiate" ||
-    resolvedStatus === "in_progress"
-  ) {
-    params.set("status", "initiated");
+  if (resolvedSupplierId) {
+    params.set("supplier_id", resolvedSupplierId);
+    params.set("supplierId", resolvedSupplierId);
   }
+  const apiStatus = toProjectReportApiStatus(status);
+  if (apiStatus) params.set("status", apiStatus);
   const query = normalizeSearchQuery(search);
   if (query) params.set("search", query);
   const resolvedStart = coerceText(startDate);
@@ -384,30 +380,6 @@ export async function getPreScreenReport({
         .filter((value) => value && value !== "—");
       if (!ids.includes(resolvedSupplierId)) return false;
     }
-    if (resolvedStatus === "completed" || resolvedStatus === "complete") {
-      const rowStatus = String(row.status ?? "")
-        .trim()
-        .toLowerCase()
-        .replace(/[\s-]+/g, "_");
-      if (rowStatus !== "completed" && rowStatus !== "complete") return false;
-    } else if (
-      resolvedStatus === "initiated" ||
-      resolvedStatus === "initiate" ||
-      resolvedStatus === "in_progress"
-    ) {
-      const rowStatus = String(row.status ?? "")
-        .trim()
-        .toLowerCase()
-        .replace(/[\s-]+/g, "_");
-      const isInitiated =
-        rowStatus === "initiated" ||
-        rowStatus === "initiate" ||
-        rowStatus === "in_progress" ||
-        rowStatus === "inprogress" ||
-        rowStatus === "started" ||
-        rowStatus === "start";
-      if (!isInitiated) return false;
-    }
     if (!searchQuery) return true;
     return Object.values(row).some((value) =>
       String(value ?? "").toLowerCase().includes(searchQuery)
@@ -446,17 +418,12 @@ export async function downloadPreScreenReportCsv({
     String(mode ?? "").trim().toLowerCase() === "test" ? "1" : "0"
   );
   const resolvedSupplierId = coerceText(supplierId);
-  if (resolvedSupplierId) params.set("supplierId", resolvedSupplierId);
-  const resolvedStatus = coerceText(status).toLowerCase().replace(/[\s-]+/g, "_");
-  if (resolvedStatus === "completed" || resolvedStatus === "complete") {
-    params.set("status", "completed");
-  } else if (
-    resolvedStatus === "initiated" ||
-    resolvedStatus === "initiate" ||
-    resolvedStatus === "in_progress"
-  ) {
-    params.set("status", "initiated");
+  if (resolvedSupplierId) {
+    params.set("supplier_id", resolvedSupplierId);
+    params.set("supplierId", resolvedSupplierId);
   }
+  const apiStatus = toProjectReportApiStatus(status);
+  if (apiStatus) params.set("status", apiStatus);
   const resolvedStart = coerceText(startDate);
   const resolvedEnd = coerceText(endDate);
   if (resolvedStart) {
