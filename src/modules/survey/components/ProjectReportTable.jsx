@@ -10,9 +10,34 @@ import {
 import { getProjectReportColumns } from "../utils/projectReportColumns";
 import { PROJECT_REPORT_TYPES } from "../utils/projectReportNavigation";
 import { isReportTestModeValue } from "./ReportModeFilters";
+import { formatStatusLabel } from "../../shared/utils/statusLabels";
 
 const TABLE_HEAD =
   "admin-text-muted text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap";
+
+function ReportStatusBadge({ value }) {
+  const label = formatStatusLabel(value);
+  const key = String(label).trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const isCompleted = key === "completed" || key === "complete";
+  const isInitiated =
+    key === "initiated" ||
+    key === "initiate" ||
+    key === "in_progress" ||
+    key === "started";
+  const toneClass = isCompleted
+    ? "bg-[var(--admin-success-text)]/15 text-[var(--admin-success-text)]"
+    : isInitiated
+      ? "bg-[var(--admin-warning-text)]/15 text-[var(--admin-warning-text)]"
+      : "bg-[var(--admin-warning-text)]/15 text-[var(--admin-warning-text)]";
+
+  return (
+    <span
+      className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-semibold ${toneClass}`}
+    >
+      {label === "-" ? "—" : label}
+    </span>
+  );
+}
 
 function ReportModeBadge({ value }) {
   const isTest = isReportTestModeValue(value);
@@ -79,7 +104,6 @@ function ProjectReportTable({
                 <tr key={`${row.id}-${index}`} className="align-middle">
                   {columns.map((column) => {
                     const isLongText =
-                      column.key === "uid" ||
                       column.key === "question" ||
                       column.key === "blockReason" ||
                       column.key === "multilinkUrl" ||
@@ -96,6 +120,8 @@ function ProjectReportTable({
                       >
                         {column.key === "isTestLink" ? (
                           <ReportModeBadge value={row[column.key]} />
+                        ) : column.key === "status" ? (
+                          <ReportStatusBadge value={row[column.key]} />
                         ) : ellipsisMax ? (
                           <TableEllipsisText>{row[column.key] ?? "—"}</TableEllipsisText>
                         ) : (

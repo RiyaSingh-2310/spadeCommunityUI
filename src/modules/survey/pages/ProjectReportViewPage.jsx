@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import AdminPagination from "../../../components/admin/AdminPagination";
-import DebouncedSearchInput from "../../../components/admin/DebouncedSearchInput";
 import PermissionDenied from "../../../components/admin/PermissionDenied";
 import PageErrorBoundary from "../../../components/shared/PageErrorBoundary";
 import { PermissionsProvider } from "../../permissions/PermissionsContext";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import ProjectReportTable from "../components/ProjectReportTable";
-import ReportModeFilters, { REPORT_MODE } from "../components/ReportModeFilters";
+import ReportModeFilters, {
+  REPORT_MODE,
+  REPORT_STATUS,
+} from "../components/ReportModeFilters";
 import { useProjectReportList } from "../hooks/useProjectReportList";
 import {
   listSupplierMappings,
@@ -26,7 +28,7 @@ function ProjectReportViewPageContent({ isDarkMode }) {
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
   const { canRead: canReadSurvey } = useModulePermission("survey");
 
-  const { reportType, supplierId, mode, projectName } = useMemo(
+  const { reportType, supplierId, mode, status, startDate, endDate, projectName } = useMemo(
     () => parseProjectReportSearch(searchParams),
     [searchParams]
   );
@@ -52,6 +54,9 @@ function ProjectReportViewPageContent({ isDarkMode }) {
     reportType,
     supplierId,
     mode,
+    status,
+    startDate,
+    endDate,
     enabled: canReadSurvey,
   });
 
@@ -113,12 +118,31 @@ function ProjectReportViewPageContent({ isDarkMode }) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
   }
 
-  function updateFilters({ nextMode = mode, nextSupplierId = supplierId }) {
+  function updateFilters({
+    nextMode = mode,
+    nextStatus = status,
+    nextSupplierId = supplierId,
+    nextStartDate = startDate,
+    nextEndDate = endDate,
+  } = {}) {
     const next = new URLSearchParams(searchParams);
     next.set("mode", nextMode === REPORT_MODE.TEST ? "test" : "live");
+    const resolvedStatus = String(nextStatus ?? "").trim().toLowerCase();
+    if (resolvedStatus && resolvedStatus !== REPORT_STATUS.ALL) {
+      next.set("status", resolvedStatus);
+    } else {
+      next.delete("status");
+    }
     if (nextSupplierId) next.set("supplierId", nextSupplierId);
     else next.delete("supplierId");
+    if (nextStartDate) next.set("start_date", nextStartDate);
+    else next.delete("start_date");
+    if (nextEndDate) next.set("end_date", nextEndDate);
+    else next.delete("end_date");
+    next.delete("from_date");
+    next.delete("to_date");
     setSearchParams(next);
+    handlePageChange(1);
   }
 
   return (
@@ -128,29 +152,23 @@ function ProjectReportViewPageContent({ isDarkMode }) {
           <h1 className="admin-text text-xl font-bold sm:text-2xl">{pageTitle}</h1>
         </header>
 
-        <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3">
-          <DebouncedSearchInput
-            value={searchQuery}
-            onChange={setSearchQuery}
-            onDebouncedChange={handleSearch}
-            placeholder="Search..."
-            aria-label="Search report"
-            className="min-w-0 w-full shrink-0 sm:min-w-[12rem]"
-            maxWidthClass="w-full sm:max-w-xs"
-          />
-          <ReportModeFilters
-            mode={mode}
-            onModeChange={(nextMode) =>
-              updateFilters({ nextMode, nextSupplierId: supplierId })
-            }
-            supplierId={supplierId}
-            onSupplierChange={(nextSupplierId) =>
-              updateFilters({ nextMode: mode, nextSupplierId })
-            }
-            supplierOptions={supplierOptions}
-            isLoadingSuppliers={isLoadingSuppliers}
-          />
-        </div>
+        <ReportModeFilters
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onDebouncedSearch={handleSearch}
+          status={status}
+          onStatusChange={(nextStatus) => updateFilters({ nextStatus })}
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={(nextStartDate) => updateFilters({ nextStartDate })}
+          onEndDateChange={(nextEndDate) => updateFilters({ nextEndDate })}
+          supplierId={supplierId}
+          onSupplierChange={(nextSupplierId) => updateFilters({ nextSupplierId })}
+          supplierOptions={supplierOptions}
+          isLoadingSuppliers={isLoadingSuppliers}
+          mode={mode}
+          onModeChange={(nextMode) => updateFilters({ nextMode })}
+        />
 
         <ProjectReportTable
           rows={rows}

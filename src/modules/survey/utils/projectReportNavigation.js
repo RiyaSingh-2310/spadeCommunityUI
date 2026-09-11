@@ -87,6 +87,13 @@ export function parseProjectReportSearch(searchParams) {
     mode: String(searchParams.get("mode") ?? "live").trim().toLowerCase() === "test"
       ? "test"
       : "live",
+    status: String(searchParams.get("status") ?? "").trim().toLowerCase(),
+    startDate: String(
+      searchParams.get("start_date") ?? searchParams.get("from_date") ?? ""
+    ).trim(),
+    endDate: String(
+      searchParams.get("end_date") ?? searchParams.get("to_date") ?? ""
+    ).trim(),
     projectName: String(searchParams.get("title") ?? "").trim(),
   };
 }

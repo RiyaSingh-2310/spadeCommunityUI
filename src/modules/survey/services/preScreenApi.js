@@ -230,6 +230,12 @@ function mapPrescreenReportRow(record, index = 0) {
     ),
     uid: formatCellValue(
       pickField(record, [
+        "Supplier Identifier",
+        "supplier identifier",
+        "supplier_identifier",
+        "supplierIdentifier",
+        "Supplier_Identifier",
+        "identifier",
         "uid",
         "UID",
         "uuid",
@@ -311,6 +317,9 @@ export async function getPreScreenReport({
   search = "",
   mode = "live",
   supplierId = "",
+  status = "",
+  startDate = "",
+  endDate = "",
 } = {}) {
   const resolvedProjectId = coerceText(projectId);
   if (!resolvedProjectId) {
@@ -322,6 +331,28 @@ export async function getPreScreenReport({
   params.set("is_test", isTest ? "1" : "0");
   const resolvedSupplierId = coerceText(supplierId);
   if (resolvedSupplierId) params.set("supplierId", resolvedSupplierId);
+  const resolvedStatus = coerceText(status).toLowerCase().replace(/[\s-]+/g, "_");
+  if (resolvedStatus === "completed" || resolvedStatus === "complete") {
+    params.set("status", "completed");
+  } else if (
+    resolvedStatus === "initiated" ||
+    resolvedStatus === "initiate" ||
+    resolvedStatus === "in_progress"
+  ) {
+    params.set("status", "initiated");
+  }
+  const query = normalizeSearchQuery(search);
+  if (query) params.set("search", query);
+  const resolvedStart = coerceText(startDate);
+  const resolvedEnd = coerceText(endDate);
+  if (resolvedStart) {
+    params.set("start_date", resolvedStart);
+    params.set("from_date", resolvedStart);
+  }
+  if (resolvedEnd) {
+    params.set("end_date", resolvedEnd);
+    params.set("to_date", resolvedEnd);
+  }
 
   const path = `${API_ROUTES.projectReports.preScreenReport}?${params.toString()}`;
   const data = await apiRequest(path);
@@ -340,7 +371,7 @@ export async function getPreScreenReport({
     })
     .filter(Boolean);
 
-  const query = normalizeSearchQuery(search).toLowerCase();
+  const searchQuery = query.toLowerCase();
   const filtered = mapped.filter((row) => {
     const rowIsTest = ["true", "1", "yes", "test"].includes(
       String(row.isTestLink ?? "").trim().toLowerCase()
@@ -353,9 +384,33 @@ export async function getPreScreenReport({
         .filter((value) => value && value !== "—");
       if (!ids.includes(resolvedSupplierId)) return false;
     }
-    if (!query) return true;
+    if (resolvedStatus === "completed" || resolvedStatus === "complete") {
+      const rowStatus = String(row.status ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, "_");
+      if (rowStatus !== "completed" && rowStatus !== "complete") return false;
+    } else if (
+      resolvedStatus === "initiated" ||
+      resolvedStatus === "initiate" ||
+      resolvedStatus === "in_progress"
+    ) {
+      const rowStatus = String(row.status ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, "_");
+      const isInitiated =
+        rowStatus === "initiated" ||
+        rowStatus === "initiate" ||
+        rowStatus === "in_progress" ||
+        rowStatus === "inprogress" ||
+        rowStatus === "started" ||
+        rowStatus === "start";
+      if (!isInitiated) return false;
+    }
+    if (!searchQuery) return true;
     return Object.values(row).some((value) =>
-      String(value ?? "").toLowerCase().includes(query)
+      String(value ?? "").toLowerCase().includes(searchQuery)
     );
   });
   const items = paginateRows(filtered, page, limit);
@@ -376,6 +431,9 @@ export async function downloadPreScreenReportCsv({
   projectId,
   mode = "live",
   supplierId = "",
+  status = "",
+  startDate = "",
+  endDate = "",
 } = {}) {
   const resolvedProjectId = coerceText(projectId);
   if (!resolvedProjectId) {
@@ -389,6 +447,26 @@ export async function downloadPreScreenReportCsv({
   );
   const resolvedSupplierId = coerceText(supplierId);
   if (resolvedSupplierId) params.set("supplierId", resolvedSupplierId);
+  const resolvedStatus = coerceText(status).toLowerCase().replace(/[\s-]+/g, "_");
+  if (resolvedStatus === "completed" || resolvedStatus === "complete") {
+    params.set("status", "completed");
+  } else if (
+    resolvedStatus === "initiated" ||
+    resolvedStatus === "initiate" ||
+    resolvedStatus === "in_progress"
+  ) {
+    params.set("status", "initiated");
+  }
+  const resolvedStart = coerceText(startDate);
+  const resolvedEnd = coerceText(endDate);
+  if (resolvedStart) {
+    params.set("start_date", resolvedStart);
+    params.set("from_date", resolvedStart);
+  }
+  if (resolvedEnd) {
+    params.set("end_date", resolvedEnd);
+    params.set("to_date", resolvedEnd);
+  }
 
   const path = `${API_ROUTES.projectReports.preScreenReportExportCsv}?${params.toString()}`;
   return downloadCsvExport(path, {

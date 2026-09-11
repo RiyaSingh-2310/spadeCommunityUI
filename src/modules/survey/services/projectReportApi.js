@@ -84,19 +84,31 @@ function paginateRows(items, page = 1, limit = 10) {
   return items.slice(start, start + safeLimit);
 }
 
+const SUPPLIER_IDENTIFIER_KEYS = [
+  "Supplier Identifier",
+  "supplier identifier",
+  "supplier_identifier",
+  "supplierIdentifier",
+  "Supplier_Identifier",
+  "SupplierIdentifier",
+  "identifier",
+];
+
+const UID_KEYS = [
+  "uid",
+  "UID",
+  "uuid",
+  "UUID",
+  "user_id",
+  "userId",
+  "respondent_uid",
+  "respondentUid",
+  "respondent_id",
+  "respondentId",
+];
+
 function pickUid(record) {
-  return pickField(record, [
-    "uid",
-    "UID",
-    "uuid",
-    "UUID",
-    "user_id",
-    "userId",
-    "respondent_uid",
-    "respondentUid",
-    "respondent_id",
-    "respondentId",
-  ]);
+  return pickField(record, [...SUPPLIER_IDENTIFIER_KEYS, ...UID_KEYS]);
 }
 
 function mapSharedSurveyRow(record, index = 0) {
@@ -183,17 +195,7 @@ export function mapPrescreenReportRow(record, index = 0) {
     slNo: formatCellValue(
       pickField(record, ["sl_no", "slNo", "sno", "serial_no", "serialNo"]) ?? index + 1
     ),
-    uid: formatCellValue(
-      pickField(record, [
-        "uid",
-        "UID",
-        "uuid",
-        "user_id",
-        "userId",
-        "respondent_uid",
-        "respondentUid",
-      ])
-    ),
+    uid: formatCellValue(pickUid(record)),
     supplierId: formatCellValue(
       pickField(record, ["supplier_id", "supplierId", "vendor_id", "vendorId", "partner_id"])
     ),
@@ -265,10 +267,7 @@ export function mapSupplierReportRow(record, index = 0) {
       pickField(record, ["clientName", "client_name"])
     ),
     partnersIdentifier: formatCellValue(partnersIdentifier),
-    uid: formatCellValue(
-      pickField(record, ["uid", "UID", "uuid", "user_id", "userId", "respondent_uid"]) ??
-        partnersIdentifier
-    ),
+    uid: formatCellValue(pickUid(record) ?? partnersIdentifier),
     status: formatCellValue(pickField(record, ["status", "Status"])),
     surveyStartDate: formatReportDateTime(
       pickField(record, ["surveyStartDate", "survey_start_date"])
@@ -296,9 +295,7 @@ export function mapSupplierReportRow(record, index = 0) {
 export function mapFraudReportRow(record, index = 0) {
   return {
     id: String(pickField(record, ["id", "record_id"]) ?? `fraud-${index + 1}`),
-    uid: formatCellValue(
-      pickField(record, ["uid", "UID", "uuid", "user_id", "userId", "respondent_uid"])
-    ),
+    uid: formatCellValue(pickUid(record)),
     projectName: formatCellValue(
       pickField(record, ["project_name", "projectName", "survey_title", "surveyTitle"])
     ),
@@ -400,11 +397,40 @@ function normalizeReportMode(mode) {
   return String(mode ?? "").trim().toLowerCase() === "test" ? "test" : "live";
 }
 
-function rowMatchesReportFilters(row, { mode, supplierId } = {}) {
+function rowMatchesReportFilters(row, { mode, supplierId, status } = {}) {
   const normalizedMode = normalizeReportMode(mode);
   const isTest = isTestLinkValue(row.isTestLink);
   if (normalizedMode === "test" && !isTest) return false;
   if (normalizedMode === "live" && isTest) return false;
+
+  const resolvedStatus = String(status ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  if (resolvedStatus === "completed" || resolvedStatus === "complete") {
+    const rowStatus = String(row.status ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, "_");
+    if (rowStatus !== "completed" && rowStatus !== "complete") return false;
+  } else if (
+    resolvedStatus === "initiated" ||
+    resolvedStatus === "initiate" ||
+    resolvedStatus === "in_progress"
+  ) {
+    const rowStatus = String(row.status ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, "_");
+    const isInitiated =
+      rowStatus === "initiated" ||
+      rowStatus === "initiate" ||
+      rowStatus === "in_progress" ||
+      rowStatus === "inprogress" ||
+      rowStatus === "started" ||
+      rowStatus === "start";
+    if (!isInitiated) return false;
+  }
 
   const resolvedSupplierId = String(supplierId ?? "").trim();
   if (!resolvedSupplierId) return true;
@@ -416,19 +442,42 @@ function rowMatchesReportFilters(row, { mode, supplierId } = {}) {
   return ids.includes(resolvedSupplierId);
 }
 
-function applyReportFilters(mapped, { search, mode, supplierId } = {}) {
+function applyReportFilters(mapped, { search, mode, supplierId, status } = {}) {
   return filterRowsBySearch(
-    mapped.filter((row) => rowMatchesReportFilters(row, { mode, supplierId })),
+    mapped.filter((row) => rowMatchesReportFilters(row, { mode, supplierId, status })),
     search
   );
 }
 
-function reportFilterQuery({ mode, supplierId } = {}) {
+function reportFilterQuery({
+  mode,
+  supplierId,
+  status = "",
+  startDate = "",
+  endDate = "",
+} = {}) {
+  const resolvedStart = String(startDate ?? "").trim();
+  const resolvedEnd = String(endDate ?? "").trim();
+  const resolvedStatus = String(status ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  const statusValue =
+    resolvedStatus === "completed" || resolvedStatus === "complete"
+      ? "completed"
+      : resolvedStatus === "initiated" ||
+          resolvedStatus === "initiate" ||
+          resolvedStatus === "in_progress"
+        ? "initiated"
+        : "";
   return {
     is_test: normalizeReportMode(mode) === "test" ? "1" : "0",
     ...(String(supplierId ?? "").trim()
       ? { supplierId: String(supplierId).trim() }
       : {}),
+    ...(statusValue ? { status: statusValue } : {}),
+    ...(resolvedStart ? { start_date: resolvedStart, from_date: resolvedStart } : {}),
+    ...(resolvedEnd ? { end_date: resolvedEnd, to_date: resolvedEnd } : {}),
   };
 }
 
@@ -461,6 +510,9 @@ export async function fetchProjectReportList({
   reportType,
   supplierId,
   mode = "live",
+  startDate = "",
+  endDate = "",
+  status = "",
   page = 1,
   limit = 10,
   search = "",
@@ -473,13 +525,14 @@ export async function fetchProjectReportList({
   const normalizedType = normalizeProjectReportType(reportType);
   const mapRow =
     REPORT_ROW_MAPPERS[normalizedType] ?? REPORT_ROW_MAPPERS[PROJECT_REPORT_TYPES.PROJECT];
-  const extra = reportFilterQuery({ mode, supplierId });
+  const extra = reportFilterQuery({ mode, supplierId, status, startDate, endDate });
 
   if (
     normalizedType === PROJECT_REPORT_TYPES.PROJECT ||
     normalizedType === PROJECT_REPORT_TYPES.TEST
   ) {
     const path = appendListQuery(API_ROUTES.projectReports.report(resolvedProjectId), {
+      search,
       extra,
     });
     const data = await apiRequest(path);
@@ -487,7 +540,7 @@ export async function fetchProjectReportList({
 
     const records = extractReportRecords(data);
     const mapped = mapReportRows(records, mapProjectReportRow);
-    const filtered = applyReportFilters(mapped, { search, mode, supplierId });
+    const filtered = applyReportFilters(mapped, { search, mode, supplierId, status });
     const items = paginateRows(filtered, page, limit);
 
     return {
@@ -508,6 +561,9 @@ export async function fetchProjectReportList({
       search,
       mode,
       supplierId,
+      status,
+      startDate,
+      endDate,
     });
   }
 
@@ -519,7 +575,7 @@ export async function fetchProjectReportList({
     assertSuccess(data);
     const records = extractReportRecords(data);
     const mapped = mapReportRows(records, mapFraudReportRow);
-    const filtered = applyReportFilters(mapped, { search, mode, supplierId });
+    const filtered = applyReportFilters(mapped, { search, mode, supplierId, status });
     const items = paginateRows(filtered, page, limit);
     const summary = data?.summary && typeof data.summary === "object"
       ? data.summary
@@ -554,6 +610,7 @@ export async function fetchProjectReportList({
       search: "",
       mode,
       supplierId: resolvedSupplierId,
+      status,
     });
     const total = extractListTotalFromResponse(data, items.length);
 
@@ -582,6 +639,7 @@ export async function fetchProjectReportList({
     search: "",
     mode,
     supplierId,
+    status,
   });
   const total = extractListTotalFromResponse(data, items.length);
 
@@ -632,6 +690,9 @@ export async function downloadProjectReport({
   reportType,
   supplierId,
   mode = "live",
+  startDate = "",
+  endDate = "",
+  status = "",
 } = {}) {
   const resolvedProjectId = String(projectId ?? "").trim();
   if (!resolvedProjectId) {
@@ -640,7 +701,7 @@ export async function downloadProjectReport({
 
   const normalizedType = normalizeProjectReportType(reportType);
   const defaultFilename = buildReportDownloadFilename(normalizedType, resolvedProjectId);
-  const extra = reportFilterQuery({ mode, supplierId });
+  const extra = reportFilterQuery({ mode, supplierId, status, startDate, endDate });
 
   if (normalizedType === PROJECT_REPORT_TYPES.PROJECT) {
     return downloadCsvExport(
@@ -661,6 +722,9 @@ export async function downloadProjectReport({
       projectId: resolvedProjectId,
       mode,
       supplierId,
+      status,
+      startDate,
+      endDate,
     });
   }
 
