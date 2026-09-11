@@ -104,7 +104,11 @@ export function rowMatchesReportFilters(
   const resolvedEnd = String(endDate ?? "").trim();
   if (resolvedStart || resolvedEnd) {
     const rowDate = String(row?._filterDate ?? "").trim() || toFilterDate(
-      row?.surveyStartDate ?? row?.surveyEndDate ?? row?.occurredAt
+      row?.surveyDate ??
+        row?.surveyStartDate ??
+        row?.surveyEndDate ??
+        row?.answerAt ??
+        row?.occurredAt
     );
     if (!rowDate) return false;
     if (resolvedStart && rowDate < resolvedStart) return false;

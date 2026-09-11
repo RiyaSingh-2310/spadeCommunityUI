@@ -242,16 +242,20 @@ describe("mapPrescreenReportRow", () => {
     const row = mapPrescreenReportRow({
       supplier_identifier: "ps-uid-1",
       supplier_name: "Partner A",
-      vendor_id: "V-2",
-      client_id: "C-3",
+      partner_name: "Acme Partner",
+      client_name: "Demo Client",
+      survey_date: "2026-08-31T03:22:53.000Z",
+      answer_at: "2026-08-31T03:24:38.000Z",
       ip: "1.2.3.4",
       question: "Age?",
       answer: "18+",
     });
     expect(row.uid).toBe("ps-uid-1");
     expect(row.supplierName).toBe("Partner A");
-    expect(row.vendorId).toBe("V-2");
-    expect(row.clientId).toBe("C-3");
+    expect(row.partnerName).toBe("Acme Partner");
+    expect(row.clientName).toBe("Demo Client");
+    expect(row.surveyDate).not.toBe("—");
+    expect(row.answerAt).not.toBe("—");
     expect(row.ip).toBe("1.2.3.4");
     expect(row.question).toBe("Age?");
     expect(row.answer).toBe("18+");

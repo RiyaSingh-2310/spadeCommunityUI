@@ -224,21 +224,36 @@ export function mapPrescreenReportRow(record, index = 0) {
     vendorId: formatCellValue(
       pickField(record, ["vendor_id", "vendorId", "Vendor_ID", "supplier_id", "supplierId"])
     ),
+    partnerName: formatCellValue(
+      pickField(record, ["partner_name", "partnerName", "Partner_Name", "PartnerName"])
+    ),
     clientId: formatCellValue(
       pickField(record, ["client_id", "clientId", "Client_ID", "ClientId"])
+    ),
+    clientName: formatCellValue(
+      pickField(record, ["client_name", "clientName", "Client_Name", "ClientName", "Clients"])
     ),
     projectName: formatCellValue(
       pickField(record, ["project_name", "projectName", "survey_title", "surveyTitle"])
     ),
     isTestLink: formatBooleanCell(isTestRaw),
-    occurredAt: formatReportDateTime(
+    surveyDate: formatReportDateTime(
       pickField(record, [
-        "created_at",
-        "createdAt",
-        "occurred_at",
-        "date_time",
-        "dateTime",
+        "survey_date",
+        "surveyDate",
+        "Survey_Date",
+        "survey_start_date",
+        "surveyStartDate",
+      ])
+    ),
+    answerAt: formatReportDateTime(
+      pickField(record, [
+        "answer_at",
         "answered_at",
+        "answerAt",
+        "answeredAt",
+        "Answer_At",
+        "AnswerAt",
       ])
     ),
     ip: formatCellValue(
@@ -253,14 +268,17 @@ export function mapPrescreenReportRow(record, index = 0) {
     status: formatCellValue(pickField(record, ["status", "Status", "prescreen_status"])),
     _filterDate: toFilterDate(
       pickField(record, [
+        "survey_date",
+        "surveyDate",
+        "survey_start_date",
+        "surveyStartDate",
+        "answer_at",
+        "answered_at",
         "created_at",
         "createdAt",
         "occurred_at",
         "date_time",
         "dateTime",
-        "answered_at",
-        "survey_start_date",
-        "surveyStartDate",
       ])
     ),
   };

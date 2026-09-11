@@ -227,6 +227,13 @@ function formatCellValue(value) {
   return String(value);
 }
 
+function formatReportDateTime(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString();
+}
+
 function mapPrescreenReportRow(record, index = 0) {
   return {
     id: String(pickField(record, ["id", "record_id", "client_id", "clientId"]) ?? index + 1),
@@ -265,8 +272,14 @@ function mapPrescreenReportRow(record, index = 0) {
     vendorId: formatCellValue(
       pickField(record, ["vendor_id", "vendorId", "Vendor_ID", "supplier_id", "supplierId"])
     ),
+    partnerName: formatCellValue(
+      pickField(record, ["partner_name", "partnerName", "Partner_Name", "PartnerName"])
+    ),
     clientId: formatCellValue(
       pickField(record, ["client_id", "clientId", "Client_ID", "ClientId"])
+    ),
+    clientName: formatCellValue(
+      pickField(record, ["client_name", "clientName", "Client_Name", "ClientName", "Clients"])
     ),
     projectName: formatCellValue(
       pickField(record, ["project_name", "projectName", "survey_title", "surveyTitle"])
@@ -274,8 +287,24 @@ function mapPrescreenReportRow(record, index = 0) {
     isTestLink: formatCellValue(
       pickField(record, ["is_test", "IsTest", "isTest", "is_test_link", "isTestLink"])
     ),
-    occurredAt: formatCellValue(
-      pickField(record, ["created_at", "createdAt", "occurred_at", "date_time", "dateTime"])
+    surveyDate: formatReportDateTime(
+      pickField(record, [
+        "survey_date",
+        "surveyDate",
+        "Survey_Date",
+        "survey_start_date",
+        "surveyStartDate",
+      ])
+    ),
+    answerAt: formatReportDateTime(
+      pickField(record, [
+        "answer_at",
+        "answered_at",
+        "answerAt",
+        "answeredAt",
+        "Answer_At",
+        "AnswerAt",
+      ])
     ),
     ip: formatCellValue(
       pickField(record, ["ip", "ip_address", "ipAddress", "IP", "IP_Address"])
@@ -289,14 +318,17 @@ function mapPrescreenReportRow(record, index = 0) {
     status: formatCellValue(pickField(record, ["status", "Status", "prescreen_status"])),
     _filterDate: toFilterDate(
       pickField(record, [
+        "survey_date",
+        "surveyDate",
+        "survey_start_date",
+        "surveyStartDate",
+        "answer_at",
+        "answered_at",
         "created_at",
         "createdAt",
         "occurred_at",
         "date_time",
         "dateTime",
-        "answered_at",
-        "survey_start_date",
-        "surveyStartDate",
       ])
     ),
   };
