@@ -13,6 +13,7 @@ import { normalizeSearchQuery } from "../utils/searchQuery";
  *   initialPageSize?: number,
  *   enabled?: boolean,
  *   preserveRowOrder?: boolean,
+ *   resetPageKey?: string,
  * }} options
  */
 export function useApiListing({
@@ -20,6 +21,7 @@ export function useApiListing({
   initialPageSize = DEFAULT_PAGE_SIZE,
   enabled = true,
   preserveRowOrder = true,
+  resetPageKey = "",
 }) {
   const [rows, setRows] = useState([]);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -31,6 +33,7 @@ export function useApiListing({
   const [listError, setListError] = useState("");
   const fetchRequestIdRef = useRef(0);
   const abortControllerRef = useRef(null);
+  const previousResetPageKeyRef = useRef(resetPageKey);
 
   const fetchList = useCallback(async () => {
     if (!enabled) {
@@ -108,6 +111,12 @@ export function useApiListing({
       }
     }
   }, [enabled, fetchFn, currentPage, pageSize, search, preserveRowOrder]);
+
+  useEffect(() => {
+    if (previousResetPageKeyRef.current === resetPageKey) return;
+    previousResetPageKeyRef.current = resetPageKey;
+    setCurrentPage(1);
+  }, [resetPageKey]);
 
   useEffect(() => {
     // Data-fetching effect: sync loading/error state with server responses.

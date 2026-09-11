@@ -10,13 +10,16 @@ import {
   appendListQuery,
   clampApiListLimit,
 } from "../../shared/utils/listQueryParams";
-import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
 import {
   normalizeProjectReportType,
   PROJECT_REPORT_TYPES,
 } from "../utils/projectReportNavigation";
 import { getProjectReportColumns } from "../utils/projectReportColumns";
-import { toProjectReportApiStatus } from "../utils/reportFilterConstants";
+import {
+  filterReportRows,
+  toFilterDate,
+  toProjectReportApiStatus,
+} from "../utils/reportFilterConstants";
 import {
   downloadPreScreenReportCsv,
   getPreScreenReport,
@@ -67,14 +70,6 @@ function mapReportRows(records, mapRow) {
       }
     })
     .filter(Boolean);
-}
-
-function filterRowsBySearch(items, search) {
-  const query = normalizeSearchQuery(search).toLowerCase();
-  if (!query) return items;
-  return items.filter((row) =>
-    Object.values(row).some((value) => String(value ?? "").toLowerCase().includes(query))
-  );
 }
 
 function paginateRows(items, page = 1, limit = 10) {
@@ -160,6 +155,17 @@ function mapSharedSurveyRow(record, index = 0) {
     city: formatCellValue(pickField(record, ["city", "City"])),
     device: formatCellValue(pickField(record, ["device", "Device"])),
     reason: formatCellValue(pickField(record, ["reason", "Reason"])),
+    _filterDate: toFilterDate(
+      pickField(record, [
+        "survey_start_date",
+        "surveyStartDate",
+        "Survey_Start_Date",
+        "start_date",
+        "startDate",
+        "created_at",
+        "createdAt",
+      ])
+    ),
   };
 }
 
@@ -245,6 +251,18 @@ export function mapPrescreenReportRow(record, index = 0) {
       pickField(record, ["answer", "Answer", "response", "Response"])
     ),
     status: formatCellValue(pickField(record, ["status", "Status", "prescreen_status"])),
+    _filterDate: toFilterDate(
+      pickField(record, [
+        "created_at",
+        "createdAt",
+        "occurred_at",
+        "date_time",
+        "dateTime",
+        "answered_at",
+        "survey_start_date",
+        "surveyStartDate",
+      ])
+    ),
   };
 }
 
@@ -395,65 +413,12 @@ const REPORT_ROW_MAPPERS = {
   [PROJECT_REPORT_TYPES.TEST]: mapProjectReportRow,
 };
 
-function isTestLinkValue(value) {
-  const key = String(value ?? "").trim().toLowerCase();
-  return key === "true" || key === "1" || key === "yes" || key === "test";
-}
-
 function normalizeReportMode(mode) {
   return String(mode ?? "").trim().toLowerCase() === "test" ? "test" : "live";
 }
 
-function rowMatchesReportFilters(row, { mode, supplierId, status } = {}) {
-  const normalizedMode = normalizeReportMode(mode);
-  const isTest = isTestLinkValue(row.isTestLink);
-  if (normalizedMode === "test" && !isTest) return false;
-  if (normalizedMode === "live" && isTest) return false;
-
-  const resolvedStatus = String(status ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-  if (resolvedStatus === "completed" || resolvedStatus === "complete") {
-    const rowStatus = String(row.status ?? "")
-      .trim()
-      .toLowerCase()
-      .replace(/[\s-]+/g, "_");
-    if (rowStatus !== "completed" && rowStatus !== "complete") return false;
-  } else if (
-    resolvedStatus === "initiated" ||
-    resolvedStatus === "initiate" ||
-    resolvedStatus === "in_progress"
-  ) {
-    const rowStatus = String(row.status ?? "")
-      .trim()
-      .toLowerCase()
-      .replace(/[\s-]+/g, "_");
-    const isInitiated =
-      rowStatus === "initiated" ||
-      rowStatus === "initiate" ||
-      rowStatus === "in_progress" ||
-      rowStatus === "inprogress" ||
-      rowStatus === "started" ||
-      rowStatus === "start";
-    if (!isInitiated) return false;
-  }
-
-  const resolvedSupplierId = String(supplierId ?? "").trim();
-  if (!resolvedSupplierId) return true;
-  const ids = [
-    row.supplierId,
-    row.vendorId,
-    row.partnerId,
-  ].map((value) => String(value ?? "").trim()).filter((value) => value && value !== "—");
-  return ids.includes(resolvedSupplierId);
-}
-
-function applyReportFilters(mapped, { search, mode, supplierId, status } = {}) {
-  return filterRowsBySearch(
-    mapped.filter((row) => rowMatchesReportFilters(row, { mode, supplierId, status })),
-    search
-  );
+function applyReportFilters(mapped, filters = {}) {
+  return filterReportRows(mapped, filters);
 }
 
 export function reportFilterQuery({
@@ -539,7 +504,14 @@ export async function fetchProjectReportList({
 
     const records = extractReportRecords(data);
     const mapped = mapReportRows(records, mapProjectReportRow);
-    const filtered = filterRowsBySearch(mapped, search);
+    const filtered = filterReportRows(mapped, {
+      search,
+      mode,
+      supplierId,
+      status,
+      startDate,
+      endDate,
+    });
     const items = paginateRows(filtered, page, limit);
 
     return {

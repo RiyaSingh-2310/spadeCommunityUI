@@ -10,7 +10,11 @@ import { getAuthToken } from "../../../services/auth/authStorage";
 import { downloadCsvExport } from "../../../services/api/csvExport";
 import { clampApiListLimit } from "../../shared/utils/listQueryParams";
 import { normalizeSearchQuery } from "../../shared/utils/searchQuery";
-import { toProjectReportApiStatus } from "../utils/reportFilterConstants";
+import {
+  filterReportRows,
+  toFilterDate,
+  toProjectReportApiStatus,
+} from "../utils/reportFilterConstants";
 
 export const PRESCREEN_RESPONSE_STATUSES = {
   COMPLETED: "COMPLETED",
@@ -283,6 +287,18 @@ function mapPrescreenReportRow(record, index = 0) {
       pickField(record, ["answer", "Answer", "response", "Response"])
     ),
     status: formatCellValue(pickField(record, ["status", "Status", "prescreen_status"])),
+    _filterDate: toFilterDate(
+      pickField(record, [
+        "created_at",
+        "createdAt",
+        "occurred_at",
+        "date_time",
+        "dateTime",
+        "answered_at",
+        "survey_start_date",
+        "surveyStartDate",
+      ])
+    ),
   };
 }
 
@@ -367,23 +383,13 @@ export async function getPreScreenReport({
     })
     .filter(Boolean);
 
-  const searchQuery = query.toLowerCase();
-  const filtered = mapped.filter((row) => {
-    const rowIsTest = ["true", "1", "yes", "test"].includes(
-      String(row.isTestLink ?? "").trim().toLowerCase()
-    );
-    if (isTest && !rowIsTest) return false;
-    if (!isTest && rowIsTest) return false;
-    if (resolvedSupplierId) {
-      const ids = [row.supplierId, row.vendorId]
-        .map((value) => String(value ?? "").trim())
-        .filter((value) => value && value !== "—");
-      if (!ids.includes(resolvedSupplierId)) return false;
-    }
-    if (!searchQuery) return true;
-    return Object.values(row).some((value) =>
-      String(value ?? "").toLowerCase().includes(searchQuery)
-    );
+  const filtered = filterReportRows(mapped, {
+    search: query,
+    mode,
+    supplierId: resolvedSupplierId,
+    status,
+    startDate: resolvedStart,
+    endDate: resolvedEnd,
   });
   const items = paginateRows(filtered, page, limit);
 

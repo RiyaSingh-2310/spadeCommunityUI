@@ -166,6 +166,75 @@ describe("fetchProjectReportList", () => {
     expect(result.items).toEqual([]);
     expect(result.total).toBe(0);
   });
+
+  it("hides rows that do not match the selected status", async () => {
+    apiRequest.mockResolvedValue({
+      success: true,
+      project_name: "Demo Project",
+      data: [
+        {
+          supplier_identifier: "Riya",
+          status: "completed",
+          is_test_link: false,
+          supplier_id: 3,
+        },
+        {
+          supplier_identifier: "akshat",
+          status: "initiated",
+          is_test_link: false,
+          supplier_id: 1,
+        },
+      ],
+    });
+
+    const result = await fetchProjectReportList({
+      projectId: 2,
+      status: "completed",
+      mode: "live",
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].uid).toBe("Riya");
+    expect(result.total).toBe(1);
+  });
+
+  it("applies the same combined filters on the pre-screen report", async () => {
+    apiRequest.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          supplier_identifier: "A",
+          status: "completed",
+          is_test: 0,
+          supplier_id: 3,
+        },
+        {
+          supplier_identifier: "B",
+          status: "initiated",
+          is_test: 0,
+          supplier_id: 3,
+        },
+        {
+          supplier_identifier: "C",
+          status: "initiated",
+          is_test: 1,
+          supplier_id: 3,
+        },
+      ],
+    });
+
+    const result = await fetchProjectReportList({
+      projectId: 2,
+      reportType: "prescreen",
+      status: "initiated",
+      mode: "live",
+      supplierId: "3",
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].uid).toBe("B");
+    expect(result.total).toBe(1);
+  });
 });
 
 describe("mapPrescreenReportRow", () => {

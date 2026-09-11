@@ -65,6 +65,15 @@ export function useProjectReportList({
     fetchFn,
     enabled: canLoad,
     preserveRowOrder: true,
+    resetPageKey: [
+      resolvedProjectId,
+      reportType,
+      resolvedSupplierId,
+      resolvedMode,
+      resolvedStatus,
+      resolvedStartDate,
+      resolvedEndDate,
+    ].join("|"),
   });
 
   return { ...listing, summary };
