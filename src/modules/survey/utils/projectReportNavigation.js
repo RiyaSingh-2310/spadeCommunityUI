@@ -1,3 +1,5 @@
+import { normalizeReportStatus } from "./reportFilterConstants";
+
 export const PROJECT_REPORT_TYPES = {
   PROJECT: "project",
   PRESCREEN: "prescreen",
@@ -87,7 +89,7 @@ export function parseProjectReportSearch(searchParams) {
     mode: String(searchParams.get("mode") ?? "live").trim().toLowerCase() === "test"
       ? "test"
       : "live",
-    status: String(searchParams.get("status") ?? "").trim().toLowerCase(),
+    status: normalizeReportStatus(searchParams.get("status")),
     startDate: String(
       searchParams.get("start_date") ?? searchParams.get("from_date") ?? ""
     ).trim(),

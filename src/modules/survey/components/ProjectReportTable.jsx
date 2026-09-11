@@ -9,7 +9,7 @@ import {
 } from "../../shared/utils/tableHelpers";
 import { getProjectReportColumns } from "../utils/projectReportColumns";
 import { PROJECT_REPORT_TYPES } from "../utils/projectReportNavigation";
-import { isReportTestModeValue } from "./ReportModeFilters";
+import { isReportTestModeValue } from "../utils/reportFilterConstants";
 import { formatStatusLabel } from "../../shared/utils/statusLabels";
 
 const TABLE_HEAD =

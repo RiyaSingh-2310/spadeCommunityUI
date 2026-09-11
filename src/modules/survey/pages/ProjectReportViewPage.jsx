@@ -6,10 +6,8 @@ import PageErrorBoundary from "../../../components/shared/PageErrorBoundary";
 import { PermissionsProvider } from "../../permissions/PermissionsContext";
 import { useModulePermission } from "../../permissions/useModulePermission";
 import ProjectReportTable from "../components/ProjectReportTable";
-import ReportModeFilters, {
-  REPORT_MODE,
-  REPORT_STATUS,
-} from "../components/ReportModeFilters";
+import ReportModeFilters from "../components/ReportModeFilters";
+import { REPORT_MODE, REPORT_STATUS } from "../utils/reportFilterConstants";
 import { useProjectReportList } from "../hooks/useProjectReportList";
 import {
   listSupplierMappings,
@@ -160,8 +158,9 @@ function ProjectReportViewPageContent({ isDarkMode }) {
           onStatusChange={(nextStatus) => updateFilters({ nextStatus })}
           startDate={startDate}
           endDate={endDate}
-          onStartDateChange={(nextStartDate) => updateFilters({ nextStartDate })}
-          onEndDateChange={(nextEndDate) => updateFilters({ nextEndDate })}
+          onDateRangeChange={({ startDate: nextStartDate, endDate: nextEndDate }) =>
+            updateFilters({ nextStartDate, nextEndDate })
+          }
           supplierId={supplierId}
           onSupplierChange={(nextSupplierId) => updateFilters({ nextSupplierId })}
           supplierOptions={supplierOptions}

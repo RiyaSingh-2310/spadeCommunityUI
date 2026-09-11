@@ -3,6 +3,7 @@ import { Loader2, Upload, X } from "lucide-react";
 import Avatar from "../../../components/shared/Avatar";
 import FormField from "../../../components/admin/FormField";
 import TableCard from "../../../components/admin/TableCard";
+import { scrollPageToTop } from "../../../components/shared/ScrollToTopOnNavigate";
 import { getAdminUser, isAuthenticated } from "../../../services/auth/authStorage";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
@@ -32,6 +33,11 @@ import PasswordField from "./PasswordField";
 
 const PROFILE_FIELDS = ["name"];
 const PASSWORD_FIELDS = ["currentPassword", "newPassword", "confirmPassword"];
+const EMPTY_PASSWORD_FORM = {
+  currentPassword: "",
+  newPassword: "",
+  confirmPassword: "",
+};
 
 function ProfileSettingsTab({ isDarkMode }) {
   const sessionUser = getAdminUser();
@@ -61,6 +67,7 @@ function ProfileSettingsTab({ isDarkMode }) {
     newPassword: "",
     confirmPassword: "",
   });
+  const [passwordFormKey, setPasswordFormKey] = useState(0);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   const avatarInputRef = useRef(null);
@@ -166,6 +173,7 @@ function ProfileSettingsTab({ isDarkMode }) {
     showError: showProfileError,
     touch: touchProfile,
     validateSubmit: validateProfileSubmit,
+    resetValidation: resetProfileValidation,
   } = useFormValidation({
     errors: profileErrors,
     fields: PROFILE_FIELDS,
@@ -175,6 +183,7 @@ function ProfileSettingsTab({ isDarkMode }) {
     showError: showPasswordError,
     touch: touchPassword,
     validateSubmit: validatePasswordSubmit,
+    resetValidation: resetPasswordValidation,
   } = useFormValidation({
     errors: passwordErrors,
     fields: PASSWORD_FIELDS,
@@ -246,6 +255,7 @@ function ProfileSettingsTab({ isDarkMode }) {
         imageFile,
       });
       toastApiSuccess(data);
+      resetProfileValidation();
       const refreshed = await fetchProfile(activeUserId);
       const snapshot = {
         name: refreshed.form.name.trim(),
@@ -269,6 +279,12 @@ function ProfileSettingsTab({ isDarkMode }) {
     }
   };
 
+  const resetPasswordSection = () => {
+    setPasswordForm(EMPTY_PASSWORD_FORM);
+    resetPasswordValidation();
+    setPasswordFormKey((key) => key + 1);
+  };
+
   const handleUpdatePassword = async (event) => {
     event.preventDefault();
     if (!validatePasswordSubmit() || !canUpdatePassword) return;
@@ -281,12 +297,9 @@ function ProfileSettingsTab({ isDarkMode }) {
         newPassword: passwordForm.newPassword,
         confirmPassword: passwordForm.confirmPassword,
       });
-      toastApiSuccess(data);
-      setPasswordForm({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
+      toastApiSuccess(data, "Password updated successfully.");
+      resetPasswordSection();
+      scrollPageToTop("smooth");
     } catch (error) {
       toastApiError(error);
     } finally {
@@ -295,11 +308,7 @@ function ProfileSettingsTab({ isDarkMode }) {
   };
 
   const resetPasswordForm = () => {
-    setPasswordForm({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    });
+    resetPasswordSection();
   };
 
   if (isLoading) {
@@ -432,7 +441,7 @@ function ProfileSettingsTab({ isDarkMode }) {
           Change your password to keep your account secure.
         </p>
 
-        <form onSubmit={handleUpdatePassword} className="space-y-5">
+        <form key={passwordFormKey} onSubmit={handleUpdatePassword} className="space-y-5">
           <div className="flex w-full flex-col gap-5">
             <PasswordField
               label="Current Password"

@@ -15,13 +15,13 @@ import {
 describe("buildPrefillSurveyLink", () => {
   it("uses the Speed Community admin origin and keeps pid/uid", () => {
     expect(buildPrefillSurveyLink("SFS363")).toBe(
-      "https://admin.spadecommunity.com/?pid=SFS363&uid=XXXX"
+      "https://spadecommunity.com/?pid=SFS363&uid=XXXX"
     );
   });
 
   it("keeps a supported identifier UID placeholder", () => {
     expect(buildPrefillSurveyLink("SFS363", "identifier")).toBe(
-      "https://admin.spadecommunity.com/?pid=SFS363&uid=identifier"
+      "https://spadecommunity.com/?pid=SFS363&uid=identifier"
     );
   });
 });
@@ -29,7 +29,7 @@ describe("buildPrefillSurveyLink", () => {
 describe("withSurveyLinkPid", () => {
   it("prefills empty Live/Test links with the admin origin and pid/uid", () => {
     expect(withSurveyLinkPid("", "SFS363")).toBe(
-      "https://admin.spadecommunity.com/?pid=SFS363&uid=XXXX"
+      "https://spadecommunity.com/?pid=SFS363&uid=XXXX"
     );
   });
 
@@ -39,7 +39,7 @@ describe("withSurveyLinkPid", () => {
         "http://localhost:5173/?pid=OLD123&uid=XXXX",
         "SFS363"
       )
-    ).toBe("https://admin.spadecommunity.com/?pid=SFS363&uid=XXXX");
+    ).toBe("https://spadecommunity.com/?pid=SFS363&uid=XXXX");
   });
 
   it("does not rewrite a custom user-edited host or path", () => {
@@ -59,10 +59,10 @@ describe("applyPrefillSingleLinkUrls", () => {
       "SFS363"
     );
     expect(next.liveLink).toBe(
-      "https://admin.spadecommunity.com/?pid=SFS363&uid=XXXX"
+      "https://spadecommunity.com/?pid=SFS363&uid=XXXX"
     );
     expect(next.testLink).toBe(
-      "https://admin.spadecommunity.com/?pid=SFS363&uid=XXXX"
+      "https://spadecommunity.com/?pid=SFS363&uid=XXXX"
     );
   });
 });
@@ -119,7 +119,7 @@ describe("rewriteUrlToAdminOrigin", () => {
       rewriteUrlToAdminOrigin(
         "http://localhost:5173/?pid=XTQ523&uid=XXXX"
       )
-    ).toBe("https://admin.spadecommunity.com/?pid=XTQ523&uid=XXXX");
+    ).toBe("https://spadecommunity.com/?pid=XTQ523&uid=XXXX");
   });
 });
 
