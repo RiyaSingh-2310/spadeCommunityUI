@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { toProjectReportApiStatus } from "../utils/reportFilterConstants";
+
+vi.mock("../../../services/api/client", () => ({
+  apiRequest: vi.fn(),
+}));
+
+import { apiRequest } from "../../../services/api/client";
 import {
+  fetchProjectReportList,
   mapProjectReportRow,
   mapPrescreenReportRow,
   reportFilterQuery,
@@ -62,9 +69,11 @@ describe("mapProjectReportRow", () => {
 });
 
 describe("toProjectReportApiStatus", () => {
-  it("sends PascalCase status query values", () => {
-    expect(toProjectReportApiStatus("initiated")).toBe("Initiated");
-    expect(toProjectReportApiStatus("completed")).toBe("Completed");
+  it("sends lowercase status query values matching the report API", () => {
+    expect(toProjectReportApiStatus("initiated")).toBe("initiated");
+    expect(toProjectReportApiStatus("Initiated")).toBe("initiated");
+    expect(toProjectReportApiStatus("completed")).toBe("completed");
+    expect(toProjectReportApiStatus("Completed")).toBe("completed");
     expect(toProjectReportApiStatus("")).toBe("");
   });
 });
@@ -79,7 +88,7 @@ describe("reportFilterQuery", () => {
       reportFilterQuery({
         mode: "live",
         supplierId: "3",
-        status: "initiated",
+        status: "completed",
         startDate: "2026-01-01",
         endDate: "2026-01-31",
       })
@@ -87,10 +96,75 @@ describe("reportFilterQuery", () => {
       is_test: "0",
       supplier_id: "3",
       supplierId: "3",
-      status: "Initiated",
+      status: "completed",
       start_date: "2026-01-01",
       end_date: "2026-01-31",
     });
+  });
+});
+
+describe("fetchProjectReportList", () => {
+  beforeEach(() => {
+    apiRequest.mockReset();
+  });
+
+  it("requests GET /api/project-reports/:id/report?status=completed", async () => {
+    apiRequest.mockResolvedValue({
+      success: true,
+      project_name: "Demo Project",
+      data: [
+        {
+          supplier_id: 3,
+          supplier_name: "Demo Partner (P003)",
+          client_id: "Demo Client",
+          supplier_identifier: "Riya",
+          status: "completed",
+          survey_start_date: "2026-08-31T03:22:53.000Z",
+          survey_end_date: "2026-08-31T03:24:38.000Z",
+          loi_minutes: 1,
+          ip_address: "::1",
+          country: null,
+          city: null,
+          is_test_link: false,
+        },
+      ],
+    });
+
+    const result = await fetchProjectReportList({
+      projectId: 2,
+      status: "completed",
+      mode: "live",
+    });
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/api\/project-reports\/2\/report\?/)
+    );
+    const path = apiRequest.mock.calls[0][0];
+    expect(path).toContain("status=completed");
+    expect(path).not.toContain("status=Completed");
+    expect(result.items[0].uid).toBe("Riya");
+    expect(result.items[0].status).toBe("completed");
+    expect(result.projectName).toBe("Demo Project");
+  });
+
+  it("requests status=initiated and keeps an empty API payload empty", async () => {
+    apiRequest.mockResolvedValue({
+      success: true,
+      project_name: "Demo Project",
+      data: [],
+    });
+
+    const result = await fetchProjectReportList({
+      projectId: 2,
+      status: "initiated",
+      mode: "live",
+    });
+
+    const path = apiRequest.mock.calls[0][0];
+    expect(path).toContain("status=initiated");
+    expect(path).not.toContain("status=Initiated");
+    expect(result.items).toEqual([]);
+    expect(result.total).toBe(0);
   });
 });
 

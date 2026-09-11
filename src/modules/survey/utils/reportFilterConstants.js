@@ -40,11 +40,11 @@ export function normalizeReportStatus(status) {
   return REPORT_STATUS.ALL;
 }
 
-/** Query value for GET /api/project-reports/:id/report?status=Initiated */
+/** Query value for GET /api/project-reports/:id/report?status=completed */
 export function toProjectReportApiStatus(status) {
   const normalized = normalizeReportStatus(status);
-  if (normalized === REPORT_STATUS.COMPLETED) return "Completed";
-  if (normalized === REPORT_STATUS.INITIATED) return "Initiated";
+  if (normalized === REPORT_STATUS.COMPLETED) return "completed";
+  if (normalized === REPORT_STATUS.INITIATED) return "initiated";
   return "";
 }
 
