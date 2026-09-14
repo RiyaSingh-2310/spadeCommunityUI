@@ -82,8 +82,15 @@ export function mapSupplierMappingToRow(record, index = 0) {
     projectName: String(
       pickField(record, ["project_name", "projectName", "Project_Name", "survey_title"]) ?? ""
     ).trim(),
+    projectCode: String(
+      pickField(record, ["project_code", "Project_code", "survey_id", "projectCode"]) ?? ""
+    ).trim(),
     projectId: String(
       pickField(record, ["projectid", "project_id", "projectId"]) ?? ""
+    ).trim(),
+    projectUrlId: String(
+      pickField(record, ["projectUrlId", "project_url_id", "projecturlid", "ProjectUrlId"]) ??
+        ""
     ).trim(),
     quota: pickField(record, ["quota", "Quota"]) ?? "—",
     usedQuota: pickField(record, [
@@ -350,6 +357,49 @@ export async function listSupplierMappings({
   assertSuccess(data);
 
   return filterMappingsByProject(extractMappingList(data), projectId, projectUrlId);
+}
+
+function mappingMatchesProject(row, projectId) {
+  const normalizedProjectId = String(projectId ?? "").trim();
+  if (!normalizedProjectId) return false;
+  const mapped = mapSupplierMappingToRow(row);
+  return String(mapped.projectId) === normalizedProjectId;
+}
+
+/**
+ * Token-scoped Partner mappings for a project (GET /api/supplier-mapping/my-mappings).
+ */
+export async function listPartnerMappingsForProject(projectId) {
+  const normalizedProjectId = String(projectId ?? "").trim();
+  if (!normalizedProjectId) return [];
+  const rows = await listMySupplierMappings({ projectId: normalizedProjectId });
+  return rows.filter((row) => mappingMatchesProject(row, normalizedProjectId));
+}
+
+/** Project details fallback when GET /api/projects/:id is not allowed for Partner JWT. */
+export function mapPartnerMappingToProjectDetails(record, projectId) {
+  const row = mapSupplierMappingToRow(record);
+  const resolvedId = String(row.projectId || projectId || "").trim();
+  if (!resolvedId) return null;
+  const status = row.statusActive ? "Active" : "Inactive";
+  return {
+    id: row.projectCode || resolvedId,
+    recordId: resolvedId,
+    projectStatus: status,
+    clientName: "",
+    projectName: row.projectName || resolvedId,
+    projectCode: row.projectCode || resolvedId,
+    projectManager: "",
+    projectCountry: "",
+    description: "",
+    surveyId: row.projectCode || resolvedId,
+    salesManager: "",
+    salesProject: "",
+    rfq: "",
+    note: "",
+    urlInfo: [],
+    projectLinkType: "Single Link",
+  };
 }
 
 function dynamicUrlMatchesDoSurveyToken(dynamicUrl, token) {

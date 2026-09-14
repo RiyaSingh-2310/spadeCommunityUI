@@ -10,7 +10,7 @@ vi.mock("../../../services/auth/loginRole", () => ({
 
 import { apiRequest } from "../../../services/api/client";
 import { isPartnerLoginRole } from "../../../services/auth/loginRole";
-import { listMySupplierMappings, listSupplierMappings } from "./supplierMappingApi";
+import { listMySupplierMappings, listPartnerMappingsForProject, listSupplierMappings } from "./supplierMappingApi";
 
 describe("listSupplierMappings", () => {
   beforeEach(() => {
@@ -67,6 +67,21 @@ describe("listSupplierMappings", () => {
     expect(url).not.toContain("projectid");
     expect(rows).toHaveLength(1);
     expect(rows[0].id).toBe(1);
+  });
+
+  it("does not require partnerid on my-mappings rows to keep a project", async () => {
+    vi.mocked(isPartnerLoginRole).mockReturnValue(true);
+    vi.mocked(apiRequest).mockResolvedValue({
+      success: true,
+      data: [{ id: 7, projectid: "55", project_name: "Demo" }],
+      total: 1,
+    });
+
+    const rows = await listPartnerMappingsForProject("55");
+    expect(rows).toHaveLength(1);
+    const url = vi.mocked(apiRequest).mock.calls[0][0];
+    expect(url).toContain("/api/supplier-mapping/my-mappings?");
+    expect(url).not.toContain("partnerid");
   });
 });
 

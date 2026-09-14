@@ -21,7 +21,8 @@ import { ApiError } from "../../../services/api/ApiError";
 import { isPartnerLoginRole } from "../../../services/auth/loginRole";
 import { getSessionPartnerId } from "../../../services/auth/sessionIdentity";
 import {
-  listSupplierMappings,
+  listPartnerMappingsForProject,
+  mapPartnerMappingToProjectDetails,
 } from "../services/supplierMappingApi";
 import {
   getGroupProjectEditPath,
@@ -152,39 +153,37 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
       setLoadErrorMessage("");
 
       try {
-        const record = await getRecord(id);
-        const mapped = mapSurveyToProjectDetails(record);
-        if (!mapped) {
-          setProject(null);
-          setLoadFailed(true);
-          setLoadErrorMessage("Project not found.");
-          return null;
-        }
+        let mapped = null;
 
         if (isPartnerLoginRole()) {
-          const assignedPartnerId = getSessionPartnerId();
-          if (!assignedPartnerId) {
-            setProject(null);
-            setLoadFailed(true);
-            setLoadErrorMessage("Partner session is missing.");
-            return null;
-          }
-          const mappings = await listSupplierMappings({
-            projectId: mapped.recordId ?? id,
-            partnerId: assignedPartnerId,
-          });
-          const allowed = (Array.isArray(mappings) ? mappings : []).some((row) => {
-            const mappingPartnerId = String(
-              row.partnerId ?? row.partnerid ?? row.partner_id ?? ""
-            );
-            return mappingPartnerId === String(assignedPartnerId);
-          });
-          if (!allowed) {
+          const mappings = await listPartnerMappingsForProject(id);
+          if (!Array.isArray(mappings) || mappings.length === 0) {
             setProject(null);
             setLoadFailed(true);
             setLoadErrorMessage("This project is not assigned to your partner account.");
             return null;
           }
+
+          try {
+            const record = await getRecord(id);
+            mapped = mapSurveyToProjectDetails(record);
+          } catch (error) {
+            const status = error instanceof ApiError ? Number(error.status) : 0;
+            if (status !== 401 && status !== 403 && status !== 404) {
+              throw error;
+            }
+            mapped = mapPartnerMappingToProjectDetails(mappings[0], id);
+          }
+        } else {
+          const record = await getRecord(id);
+          mapped = mapSurveyToProjectDetails(record);
+        }
+
+        if (!mapped) {
+          setProject(null);
+          setLoadFailed(true);
+          setLoadErrorMessage("Project not found.");
+          return null;
         }
 
         setProject(mapped);

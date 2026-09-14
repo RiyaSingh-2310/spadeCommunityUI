@@ -413,7 +413,7 @@ function PartnerMappingTab({
   }, [projectId, resolvedProjectUrlId]);
 
   const loadMappings = useCallback(async () => {
-    if (!projectId || !resolvedProjectUrlId) {
+    if (!projectId || (!readOnly && !resolvedProjectUrlId)) {
       setRows([]);
       setMultiLinkStats(null);
       setIsLoadingStats(false);
@@ -423,22 +423,22 @@ function PartnerMappingTab({
     setIsLoading(true);
     setMultiLinkStats(null);
     try {
-      const [records] = await Promise.all([
-        listSupplierMappings({
-          projectId,
-          projectUrlId: resolvedProjectUrlId,
-          partnerId: scopedPartnerId,
-        }),
-        loadMultiLinkStats(),
-      ]);
+      const records = await listSupplierMappings({
+        projectId,
+        projectUrlId: resolvedProjectUrlId || undefined,
+        partnerId: scopedPartnerId,
+      });
+      if (!readOnly) {
+        await loadMultiLinkStats();
+      }
       const nextRows = Array.isArray(records)
         ? records
             .map((record, index) => mapSupplierMappingToRow(record, index))
-            .filter((row) =>
-              scopedPartnerId
-                ? String(row.partnerId) === String(scopedPartnerId)
-                : true
-            )
+            .filter((row) => {
+              if (!scopedPartnerId) return true;
+              if (!row.partnerId) return true;
+              return String(row.partnerId) === String(scopedPartnerId);
+            })
         : [];
       setRows(nextRows);
     } catch (error) {
@@ -448,7 +448,7 @@ function PartnerMappingTab({
     } finally {
       setIsLoading(false);
     }
-  }, [projectId, resolvedProjectUrlId, loadMultiLinkStats, scopedPartnerId]);
+  }, [projectId, resolvedProjectUrlId, loadMultiLinkStats, scopedPartnerId, readOnly]);
 
   useEffect(() => {
     loadMappings();
