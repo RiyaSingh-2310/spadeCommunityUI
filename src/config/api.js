@@ -75,6 +75,7 @@ export const API_ROUTES = {
     exportCsv: "/api/partner/export/csv",
     login: "/api/partner/login",
     me: "/api/partner/me",
+    changePassword: "/api/partner/change-password",
   },
   projectManagers: {
     list: "/api/projectmanager/list",
@@ -229,6 +230,7 @@ export const API_ROUTES = {
   },
   supplierMapping: {
     list: "/api/supplier-mapping/list",
+    myMappings: "/api/supplier-mapping/my-mappings",
     create: "/api/supplier-mapping",
     byId: (id) => `/api/supplier-mapping/${id}`,
     update: (id) => `/api/supplier-mapping/${id}`,

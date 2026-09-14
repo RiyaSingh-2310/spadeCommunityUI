@@ -21,7 +21,7 @@ function PartnerProjectsPage({ isDarkMode }) {
 
   useEffect(() => {
     let cancelled = false;
-    if (!partnerId) {
+    if (!isPartnerLoginRole()) {
       setRows([]);
       setIsLoading(false);
       return undefined;
@@ -29,13 +29,16 @@ function PartnerProjectsPage({ isDarkMode }) {
 
     setIsLoading(true);
     setErrorMessage("");
-    listSupplierMappings({ partnerId })
+    listSupplierMappings()
       .then((records) => {
         if (cancelled) return;
-        const mapped = (Array.isArray(records) ? records : [])
-          .map((record, index) => mapSupplierMappingToRow(record, index))
-          .filter((row) => String(row.partnerId) === String(partnerId));
-        setRows(mapped);
+        const mapped = (Array.isArray(records) ? records : []).map((record, index) =>
+          mapSupplierMappingToRow(record, index)
+        );
+        const scoped = partnerId
+          ? mapped.filter((row) => !row.partnerId || String(row.partnerId) === String(partnerId))
+          : mapped;
+        setRows(scoped);
       })
       .catch((error) => {
         if (cancelled) return;
@@ -54,17 +57,6 @@ function PartnerProjectsPage({ isDarkMode }) {
 
   if (!isPartnerLoginRole()) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
-  }
-
-  if (!partnerId) {
-    return (
-      <div className="space-y-6">
-        <AdminPageHeader title="Projects" isDarkMode={isDarkMode} />
-        <p className="admin-text-muted text-sm">
-          Unable to identify the authenticated partner account. Please sign in again.
-        </p>
-      </div>
-    );
   }
 
   return (

@@ -12,10 +12,7 @@ import {
   isPartnerLoginRole,
   isSalesLoginRole,
 } from "../../../services/auth/loginRole";
-import {
-  getSessionPartnerId,
-} from "../../../services/auth/sessionIdentity";
-import { getRecord as getPartnerRecord } from "../../../services/partners/partnersApi";
+import { getAuthenticatedPartnerProfile } from "../../../services/partners/partnersApi";
 import {
   buildPermissionsPayload,
   extractPermissionsRawFromRecord,
@@ -114,22 +111,7 @@ export function mapAdminToProfileForm(admin) {
 }
 
 async function fetchPartnerProfileRecord() {
-  const partnerId = getSessionPartnerId();
-  if (partnerId) {
-    try {
-      return await getPartnerRecord(partnerId);
-    } catch {
-      // Fall through to /api/partner/me when the id-based record is unavailable.
-    }
-  }
-
-  const data = await apiRequest(resolveMeRoute());
-  assertSuccess(data);
-  const record = extractSelfRecord(data);
-  if (!record) {
-    throw new ApiError(data?.message ?? "Partner not found.", data);
-  }
-  return record;
+  return getAuthenticatedPartnerProfile();
 }
 
 /**
@@ -275,7 +257,19 @@ export async function changePassword(payload) {
   const encryptedConfirm =
     plainConfirm === plainNew ? encryptedNew : encryptValue(plainConfirm);
 
-  if (isManagerLoginRole() || isSalesLoginRole() || isPartnerLoginRole()) {
+  if (isPartnerLoginRole()) {
+    const data = await apiRequest(API_ROUTES.partners.changePassword, {
+      method: "PUT",
+      body: {
+        currentPassword: encryptedCurrent,
+        newPassword: encryptedNew,
+        confirmPassword: encryptedConfirm,
+      },
+    });
+    return assertSuccess(data);
+  }
+
+  if (isManagerLoginRole() || isSalesLoginRole()) {
     const sessionUser = getAdminUser();
     const userId = String(sessionUser?.id ?? "").trim();
     const email = String(sessionUser?.email ?? "").trim();
@@ -287,18 +281,11 @@ export async function changePassword(payload) {
 
     const data = await apiRequest(resolveSelfUpdateRoute(userId), {
       method: "PUT",
-      body: isPartnerLoginRole()
-        ? {
-            name,
-            email,
-            password: encryptedNew,
-            confirm_password: encryptedConfirm,
-          }
-        : {
-            name,
-            email,
-            new_password: encryptedNew,
-          },
+      body: {
+        name,
+        email,
+        new_password: encryptedNew,
+      },
     });
 
     return assertSuccess(data);

@@ -51,14 +51,50 @@ function extractPartnersList(data) {
 
 function extractPartnerRecord(data) {
   if (!data || typeof data !== "object") return null;
-  if (data.data && typeof data.data === "object" && !Array.isArray(data.data)) {
-    return data.data;
+
+  const nested =
+    data.data && typeof data.data === "object" && !Array.isArray(data.data)
+      ? data.data
+      : null;
+
+  if (nested?.partner && typeof nested.partner === "object") {
+    return nested.partner;
   }
   if (data.partner && typeof data.partner === "object") {
     return data.partner;
   }
-  if (data.id != null) return data;
+
+  const source = nested ?? (data.id != null || data.email != null ? data : null);
+  if (!source || typeof source !== "object") return null;
+
+  if ("token" in source || "accessToken" in source || "access_token" in source) {
+    const {
+      token,
+      refreshToken,
+      refresh_token,
+      accessToken,
+      access_token,
+      jwt,
+      ...profile
+    } = source;
+    if (profile.partner && typeof profile.partner === "object") {
+      return profile.partner;
+    }
+    if (profile.id != null || profile.email != null || profile.name != null) {
+      return profile;
+    }
+  }
+
+  if (source.id != null || source.email != null || source.name != null || source.code != null) {
+    return source;
+  }
+
   return null;
+}
+
+/** GET /api/partner/me response → partner record. */
+export function extractPartnerProfileRecord(data) {
+  return extractPartnerRecord(data);
 }
 
 function isPartnerFormPayload(payload) {
@@ -363,6 +399,30 @@ export async function getRecord(id) {
   const partner = extractPartnerRecord(data);
   if (!partner) {
     throw new ApiError(data?.message ?? "", data);
+  }
+
+  return partner;
+}
+
+/**
+ * GET /api/partner/me — authenticated Partner profile (Bearer token).
+ * Pass `token` before the session is saved (partner login). Otherwise uses the stored JWT.
+ */
+export async function getAuthenticatedPartnerProfile({ token } = {}) {
+  const data = await apiRequest(API_ROUTES.partners.me, {
+    method: "GET",
+    ...(token
+      ? {
+          auth: false,
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      : {}),
+  });
+  assertSuccess(data);
+
+  const partner = extractPartnerRecord(data);
+  if (!partner) {
+    throw new ApiError(data?.message ?? "Partner not found.", data);
   }
 
   return partner;

@@ -22,6 +22,8 @@ describe("CRUD API contracts", () => {
     expect(API_ROUTES.partners.update(3)).toBe("/api/partner/3");
     expect(API_ROUTES.partners.delete(3)).toBe("/api/partner/3");
     expect(API_ROUTES.partners.login).toBe("/api/partner/login");
+    expect(API_ROUTES.partners.me).toBe("/api/partner/me");
+    expect(API_ROUTES.partners.changePassword).toBe("/api/partner/change-password");
   });
 
   it("project managers", () => {
@@ -45,6 +47,13 @@ describe("CRUD API contracts", () => {
     expect(API_ROUTES.projects.createUrl(6)).toBe("/api/projects/6/url");
     expect(API_ROUTES.projects.updateUrl(7)).toBe("/api/projects/url/7");
     expect(API_ROUTES.projects.deleteUrl(7)).toBe("/api/projects/url/7");
+  });
+
+  it("supplier mapping", () => {
+    expect(API_ROUTES.supplierMapping.list).toBe("/api/supplier-mapping/list");
+    expect(API_ROUTES.supplierMapping.myMappings).toBe(
+      "/api/supplier-mapping/my-mappings"
+    );
   });
 
   it("surveys", () => {

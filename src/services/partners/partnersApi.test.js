@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { isEncryptedValue } from "../../modules/shared/utils/encryption";
-import { buildCreatePartnerPayload, buildUpdatePartnerPayload } from "./partnersApi";
+import {
+  buildCreatePartnerPayload,
+  buildUpdatePartnerPayload,
+  extractPartnerProfileRecord,
+} from "./partnersApi";
 
 const baseForm = {
   name: "Partner A",
@@ -37,5 +41,46 @@ describe("partner credentials payload", () => {
     });
     expect(payload.password).toBeUndefined();
     expect(payload.confirm_password).toBeUndefined();
+  });
+});
+
+describe("GET /api/partner/me mapping", () => {
+  it("reads the partner record from data", () => {
+    const partner = extractPartnerProfileRecord({
+      success: true,
+      data: {
+        id: 105,
+        email: "partner@example.com",
+        name: "Acme Panel",
+        code: "P-105",
+        status: "active",
+      },
+    });
+
+    expect(partner).toMatchObject({
+      id: 105,
+      email: "partner@example.com",
+      name: "Acme Panel",
+      code: "P-105",
+    });
+  });
+
+  it("reads nested partner objects and ignores login tokens", () => {
+    const partner = extractPartnerProfileRecord({
+      success: true,
+      data: {
+        token: "jwt",
+        partner: {
+          id: 9,
+          email: "me@example.com",
+          name: "Nine",
+        },
+      },
+    });
+
+    expect(partner).toMatchObject({
+      id: 9,
+      email: "me@example.com",
+    });
   });
 });

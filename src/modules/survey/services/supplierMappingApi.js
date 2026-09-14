@@ -1,8 +1,10 @@
 import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
+import { isPartnerLoginRole } from "../../../services/auth/loginRole";
 import {
   appendListQuery,
+  clampApiListLimit,
   MAX_API_LIST_LIMIT,
 } from "../../shared/utils/listQueryParams";
 
@@ -235,8 +237,91 @@ export function buildSupplierMappingApiPayload({
   return payload;
 }
 
+function extractMappingList(data) {
+  if (!data || typeof data !== "object") return [];
+  const payload = data.data;
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.mappings)) return payload.mappings;
+  if (Array.isArray(payload?.records)) return payload.records;
+  if (Array.isArray(data.items)) return data.items;
+  if (Array.isArray(data.mappings)) return data.mappings;
+  return [];
+}
+
+function extractMappingListTotal(data, rowCount) {
+  const total = Number(
+    data?.total ?? data?.count ?? data?.data?.total ?? data?.pagination?.total
+  );
+  return Number.isFinite(total) && total >= 0 ? total : rowCount;
+}
+
+function filterMappingsByProject(rows, projectId, projectUrlId) {
+  const normalizedProjectId = String(projectId ?? "").trim();
+  const normalizedUrlId = String(projectUrlId ?? "").trim();
+  let next = Array.isArray(rows) ? rows : [];
+
+  if (normalizedProjectId) {
+    next = next.filter((row) => {
+      const rowProjectId = String(
+        pickField(row, ["projectid", "project_id", "projectId"]) ?? ""
+      ).trim();
+      return rowProjectId === normalizedProjectId;
+    });
+  }
+
+  if (!normalizedUrlId) return next;
+
+  return next.filter((row) => {
+    const rowUrlId = String(
+      pickField(row, ["projectUrlId", "project_url_id", "projecturlid", "ProjectUrlId"]) ??
+        ""
+    ).trim();
+    return rowUrlId === normalizedUrlId;
+  });
+}
+
+/**
+ * GET /api/supplier-mapping/my-mappings?page&limit
+ * Partner-authenticated mappings for the Bearer token (no partnerid query).
+ */
+export async function listMySupplierMappings({
+  projectId,
+  projectUrlId,
+  page = 1,
+  limit = MAX_API_LIST_LIMIT,
+} = {}) {
+  const pageSize = clampApiListLimit(limit, MAX_API_LIST_LIMIT);
+  const firstUrl = appendListQuery(API_ROUTES.supplierMapping.myMappings, {
+    page: Number(page) > 0 ? Number(page) : 1,
+    limit: pageSize,
+  });
+  const first = await apiRequest(firstUrl, { method: "GET" });
+  assertSuccess(first);
+
+  let rows = extractMappingList(first);
+  const total = extractMappingListTotal(first, rows.length);
+  let currentPage = Number(page) > 0 ? Number(page) : 1;
+
+  while (rows.length < total && currentPage < 50) {
+    currentPage += 1;
+    const nextUrl = appendListQuery(API_ROUTES.supplierMapping.myMappings, {
+      page: currentPage,
+      limit: pageSize,
+    });
+    const nextData = await apiRequest(nextUrl, { method: "GET" });
+    assertSuccess(nextData);
+    const nextRows = extractMappingList(nextData);
+    if (nextRows.length === 0) break;
+    rows = rows.concat(nextRows);
+  }
+
+  return filterMappingsByProject(rows, projectId, projectUrlId);
+}
+
 /**
  * GET /api/supplier-mapping/list
+ * Partner login uses GET /api/supplier-mapping/my-mappings instead.
  * Response: { success, data: [...], total, page, limit, totalPages }
  */
 export async function listSupplierMappings({
@@ -244,10 +329,13 @@ export async function listSupplierMappings({
   projectUrlId,
   partnerId,
 } = {}) {
+  if (isPartnerLoginRole()) {
+    return listMySupplierMappings({ projectId, projectUrlId });
+  }
+
   // Matches backend list contract:
   // GET /api/supplier-mapping/list?page&limit&projectid&partnerid&status&search
   const normalizedProjectId = String(projectId ?? "").trim();
-  const normalizedUrlId = String(projectUrlId ?? "").trim();
   const normalizedPartnerId = String(partnerId ?? "").trim();
   const url = appendListQuery(API_ROUTES.supplierMapping.list, {
     page: 1,
@@ -261,18 +349,7 @@ export async function listSupplierMappings({
   const data = await apiRequest(url, { method: "GET" });
   assertSuccess(data);
 
-  const rows = Array.isArray(data?.data) ? data.data : [];
-  if (!normalizedUrlId) return rows;
-
-  // Backend has no projectUrlId query filter — narrow client-side after projectid filter.
-  // Require an exact match so mappings without projectUrlId do not leak across URL tabs.
-  return rows.filter((row) => {
-    const rowUrlId = String(
-      pickField(row, ["projectUrlId", "project_url_id", "projecturlid", "ProjectUrlId"]) ??
-        ""
-    ).trim();
-    return rowUrlId === normalizedUrlId;
-  });
+  return filterMappingsByProject(extractMappingList(data), projectId, projectUrlId);
 }
 
 function dynamicUrlMatchesDoSurveyToken(dynamicUrl, token) {

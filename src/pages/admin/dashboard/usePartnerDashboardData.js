@@ -85,26 +85,18 @@ export function usePartnerDashboardData({ enabled = true } = {}) {
       setState((prev) => ({ ...prev, loading: false }));
       return undefined;
     }
-    if (!partnerId) {
-      setState((prev) => ({
-        ...prev,
-        loading: false,
-        error: "",
-        rows: [],
-        recentRows: [],
-        projectCount: 0,
-      }));
-      return undefined;
-    }
     let cancelled = false;
     setState((prev) => ({ ...prev, loading: true, error: "" }));
 
-    listSupplierMappings({ partnerId })
+    listSupplierMappings()
       .then((records) => {
         if (cancelled) return;
-        const rows = (Array.isArray(records) ? records : [])
-          .map((record, index) => mapSupplierMappingToRow(record, index))
-          .filter((row) => String(row.partnerId) === String(partnerId));
+        const mapped = (Array.isArray(records) ? records : []).map((record, index) =>
+          mapSupplierMappingToRow(record, index)
+        );
+        const rows = partnerId
+          ? mapped.filter((row) => !row.partnerId || String(row.partnerId) === String(partnerId))
+          : mapped;
         setState({
           loading: false,
           error: "",

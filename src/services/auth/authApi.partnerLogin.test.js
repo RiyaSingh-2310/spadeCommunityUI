@@ -66,6 +66,11 @@ describe("partner login API", () => {
         password: "enc:plain-password",
       },
     });
+    expect(apiRequest).toHaveBeenCalledWith("/api/partner/me", {
+      method: "GET",
+      auth: false,
+      headers: { Authorization: "Bearer partner-jwt" },
+    });
     expect(result.token).toBe("partner-jwt");
     expect(String(result.admin?.id)).toBe("12");
   });

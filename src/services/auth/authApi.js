@@ -14,6 +14,7 @@ import { clearAuthSession, getAuthToken } from "./authStorage";
 import { mapAuthFlowResponse } from "./mapAuthFlowResponse";
 import { mapLoginResponse } from "./mapLoginResponse";
 import { decodeJwtPayload } from "./jwtUtils";
+import { getAuthenticatedPartnerProfile } from "../partners/partnersApi";
 import {
   beginIntentionalLogout,
   endIntentionalLogout,
@@ -188,33 +189,17 @@ async function enrichPartnerLoginSession(mapped, loginRole, email) {
     ...(partnerEmail ? { email: partnerEmail } : {}),
   };
 
-  if (partnerId) {
+  if (partnerId || partnerEmail || mapped.token) {
     try {
-      const detailData = await apiRequest(API_ROUTES.partners.byId(partnerId), {
-        method: "GET",
-        auth: false,
-        headers: { Authorization: `Bearer ${mapped.token}` },
-      });
-      const detailMapped = mapLoginResponse(detailData);
-      if (detailMapped.admin) {
-        admin = { ...admin, ...detailMapped.admin, id: partnerId };
-      } else if (detailData?.data && typeof detailData.data === "object") {
-        admin = { ...admin, ...detailData.data, id: partnerId };
-      }
+      const me = await getAuthenticatedPartnerProfile({ token: mapped.token });
+      admin = {
+        ...admin,
+        ...me,
+        id: me.id ?? me.partner_id ?? me.partnerId ?? partnerId,
+        email: me.email ?? partnerEmail,
+      };
     } catch {
-      try {
-        const meData = await apiRequest(API_ROUTES.partners.me, {
-          method: "GET",
-          auth: false,
-          headers: { Authorization: `Bearer ${mapped.token}` },
-        });
-        const meMapped = mapLoginResponse(meData);
-        if (meMapped.admin) {
-          admin = { ...admin, ...meMapped.admin, id: admin.id || partnerId };
-        }
-      } catch {
-        // JWT identity is enough for Partner portal authorization.
-      }
+      // JWT identity is enough for Partner portal authorization if /me is unavailable.
     }
   }
 
