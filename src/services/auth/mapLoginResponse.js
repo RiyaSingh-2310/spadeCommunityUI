@@ -7,7 +7,7 @@ import { normalizeAdminUser } from "../../modules/shared/utils/userAvatar";
  */
 function looksLikeSessionUser(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  if ("token" in value && ("admin" in value || "salesManager" in value || "projectManager" in value)) {
+  if ("token" in value && ("admin" in value || "salesManager" in value || "projectManager" in value || "partner" in value)) {
     return false;
   }
   return (
@@ -55,10 +55,12 @@ export function mapLoginResponse(raw) {
     nested?.salesManager ??
     nested?.projectManager ??
     nested?.manager ??
+    nested?.partner ??
     nested?.user ??
     raw.admin ??
     raw.salesManager ??
     raw.projectManager ??
+    raw.partner ??
     raw.user ??
     (looksLikeSessionUser(nested) ? nested : null) ??
     null;

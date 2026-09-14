@@ -72,6 +72,30 @@ const MANAGER_SIDEBAR_NAV_ITEMS = [
   },
 ];
 
+const PARTNER_SIDEBAR_NAV_ITEMS = [
+  {
+    type: "link",
+    label: "Dashboard",
+    root: "/",
+    matcher: /^\/($|dashboard)/,
+    permissionKeys: ["dashboard"],
+  },
+  {
+    type: "link",
+    label: "Projects",
+    root: "/survey",
+    matcher: /^\/survey(\/|$)/,
+    permissionKeys: ["survey"],
+  },
+  {
+    type: "link",
+    label: "Settings",
+    root: "/settings",
+    matcher: /^\/settings(\/|$)/,
+    permissionKeys: [],
+  },
+];
+
 /**
  * @param {string} loginRole
  */
@@ -81,6 +105,9 @@ export function getSidebarNavItemsForRole(loginRole) {
   }
   if (loginRole === LOGIN_ROLES.MANAGER) {
     return MANAGER_SIDEBAR_NAV_ITEMS;
+  }
+  if (loginRole === LOGIN_ROLES.PARTNER) {
+    return PARTNER_SIDEBAR_NAV_ITEMS;
   }
   return SIDEBAR_NAV_ITEMS;
 }

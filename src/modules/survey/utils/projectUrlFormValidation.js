@@ -14,7 +14,7 @@ import {
 } from "./surveyLinkPlaceholders";
 
 function redirectExample(path) {
-  return `${getDefaultRedirectOrigin()}${path}?pid=xxxx&uid=identifier`;
+  return `${getDefaultRedirectOrigin()}${path}?pid=XXX&uid=XXX`;
 }
 
 export const PROJECT_URL_NUMERIC_MAX_DIGITS = 6;
@@ -236,7 +236,7 @@ export function getProjectNumericDecimalError(value, label, options) {
 
 /**
  * Validates redirect URLs: domain may vary, but path + pid + uid placeholder must match.
- * pid may be any non-empty value. uid must be identifier or XXXX (case-insensitive).
+ * pid may be any non-empty value. uid must be XXX, XXXX, or identifier.
  * All redirect URL fields are required.
  * @param {string} value
  * @param {{ path: string, label: string, example: string, acceptedPaths?: string[] }} options
@@ -265,7 +265,7 @@ export function getProjectRedirectUrlError(
   }
 
   if (!hasPid && !uidIsPlaceholder) {
-    return `${label} must include both PID and a supported UID placeholder (identifier or XXXX).`;
+    return `${label} must include both PID and a supported UID placeholder (XXX, XXXX, or identifier).`;
   }
   if (!hasPid) {
     return `${label} must include a PID query parameter.`;
@@ -274,10 +274,20 @@ export function getProjectRedirectUrlError(
     return `${label} must include a UID query parameter.`;
   }
   if (!isSupportedUidPlaceholder(uid)) {
-    return `${label} must include a supported UID placeholder (identifier or XXXX).`;
+    return `${label} must include a supported UID placeholder (XXX, XXXX, or identifier).`;
   }
 
   return "";
+}
+
+/**
+ * Same Project URL redirect rules when a value is present; empty values pass.
+ * @param {string} value
+ * @param {{ path: string, label: string, example: string, acceptedPaths?: string[] }} options
+ */
+export function getOptionalProjectRedirectUrlError(value, options) {
+  if (!String(value ?? "").trim()) return "";
+  return getProjectRedirectUrlError(value, options);
 }
 
 /**

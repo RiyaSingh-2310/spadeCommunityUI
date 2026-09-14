@@ -1,6 +1,5 @@
-import SearchableSelect from "../../../components/admin/SearchableSelect";
 import FormField from "../../../components/admin/FormField";
-import RichTextEditor from "../../../components/admin/RichTextEditor";
+import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { NAME_FIELD_MAX_LENGTH, limitTextInput } from "../../shared/utils/validation";
@@ -160,15 +159,6 @@ function SurveyForm({
         </div>
 
         <div className="mt-4 space-y-4">
-          <FormField label="Description">
-            <RichTextEditor
-              isDarkMode={isDarkMode}
-              value={form.description}
-              onChange={(value) => setField("description", value)}
-              placeholder="Enter Description"
-              disabled={disabled}
-            />
-          </FormField>
           <FormField label="Notes">
             <textarea
               className={`${inputClass} min-h-[120px] resize-y py-3`}

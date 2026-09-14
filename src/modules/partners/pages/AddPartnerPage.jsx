@@ -7,6 +7,7 @@ import NumericInput from "../../../components/admin/NumericInput";
 import CountrySelect from "../../../components/admin/CountrySelect";
 import PhoneInput from "../../../components/admin/PhoneInput";
 import TableCard from "../../../components/admin/TableCard";
+import CopyValueButton from "../../survey/components/CopyValueButton";
 import { getDefaultPhoneCountryCode } from "../../shared/data/phoneCountries";
 import { sanitizePositiveInteger } from "../../shared/utils/numericInputUtils";
 import { useAdminFormAccess } from "../../permissions/FormAccessContext";
@@ -36,8 +37,39 @@ import {
   isFormValid,
   isFormValidForFields,
   limitTextInput,
+  getPasswordError,
+  getConfirmPasswordError,
+  getOptionalPasswordError,
+  getOptionalConfirmPasswordError,
 } from "../../shared/utils/validation";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
+import { PROJECT_URL_REDIRECT_FIELDS } from "../../survey/utils/projectUrlFormValidation";
+
+const PARTNER_REDIRECT_FIELDS = [
+  { key: "complete", field: PROJECT_URL_REDIRECT_FIELDS[0], label: "Complete URL" },
+  { key: "terminate", field: PROJECT_URL_REDIRECT_FIELDS[1], label: "Terminate URL" },
+  {
+    key: "overQuota",
+    field: PROJECT_URL_REDIRECT_FIELDS[2],
+    label: "Quota Full / Over Quota URL",
+  },
+  { key: "qualityTerm", field: PROJECT_URL_REDIRECT_FIELDS[3], label: "Quality Term URL" },
+  { key: "surveyClose", field: PROJECT_URL_REDIRECT_FIELDS[4], label: "Survey Closed URL" },
+];
+
+function getPartnerRedirectUrlErrorMessage(value, field) {
+  if (!getOptionalUrlError(value, field.label)) return "";
+  return `Please enter a valid URL.\nExample: ${field.example}`;
+}
+
+function getPartnerRedirectFieldErrors(form) {
+  return Object.fromEntries(
+    PARTNER_REDIRECT_FIELDS.map(({ key, field }) => [
+      key,
+      getPartnerRedirectUrlErrorMessage(form[key], field),
+    ])
+  );
+}
 
 const PARTNER_ADD_REQUIRED_FIELDS = [
   "name",
@@ -45,6 +77,8 @@ const PARTNER_ADD_REQUIRED_FIELDS = [
   "country",
   "contactNumber",
   "panelSize",
+  "password",
+  "confirmPassword",
 ];
 
 const PARTNER_EDIT_REQUIRED_FIELDS = [
@@ -73,6 +107,8 @@ const PARTNER_FORM_FIELDS = [
   "apiBaseUrl",
   "apiSecretKey",
   "apiBody",
+  "password",
+  "confirmPassword",
 ];
 
 const EMPTY_FORM = {
@@ -93,6 +129,8 @@ const EMPTY_FORM = {
   apiBaseUrl: "",
   apiSecretKey: "",
   apiBody: "",
+  password: "",
+  confirmPassword: "",
   status: "Active",
 };
 
@@ -136,13 +174,11 @@ function AddPartnerPage({ isDarkMode }) {
           ? getUrlError(form.website, { required: false })
           : "",
         panelSize: panelSizeError,
-        complete: getOptionalUrlError(form.complete, "Complete URL"),
-        terminate: getOptionalUrlError(form.terminate, "Terminate URL"),
-        overQuota: getOptionalUrlError(form.overQuota, "Over Quota URL"),
-        qualityTerm: getOptionalUrlError(form.qualityTerm, "Quality Term URL"),
-        surveyClose: getOptionalUrlError(form.surveyClose, "Survey Closed URL"),
+        ...getPartnerRedirectFieldErrors(form),
         aboutPartner: "",
         apiBaseUrl: apiBaseUrlError,
+        password: getPasswordError(form.password),
+        confirmPassword: getConfirmPasswordError(form.password, form.confirmPassword),
       };
     }
 
@@ -154,15 +190,16 @@ function AddPartnerPage({ isDarkMode }) {
         ? getUrlError(form.website, { required: false })
         : "",
       panelSize: panelSizeError,
-      complete: getOptionalUrlError(form.complete, "Complete URL"),
-      terminate: getOptionalUrlError(form.terminate, "Terminate URL"),
-      overQuota: getOptionalUrlError(form.overQuota, "Over Quota URL"),
-      qualityTerm: getOptionalUrlError(form.qualityTerm, "Quality Term URL"),
-      surveyClose: getOptionalUrlError(form.surveyClose, "Survey Closed URL"),
+      ...getPartnerRedirectFieldErrors(form),
       aboutPartner: form.aboutPartner.trim()
         ? getRichTextError(form.aboutPartner, "About Partner")
         : "",
       apiBaseUrl: apiBaseUrlError,
+      password: getOptionalPasswordError(form.password),
+      confirmPassword: getOptionalConfirmPasswordError(
+        form.password,
+        form.confirmPassword
+      ),
     };
   }, [form, isEdit]);
 
@@ -307,15 +344,10 @@ function AddPartnerPage({ isDarkMode }) {
             {[
               ...(isEdit ? [["Partner Code", "code", "Enter Partner Code", "text", false]] : []),
               ["Name", "name", "Enter Name", "text", true],
-              ["Email Address", "email", "Enter Email Address", "email", true],
+              ["Email Address / Login ID", "email", "Enter Email Address / Login ID", "email", true],
               ["Contact Person", "contactPerson", "Enter Contact Person", "text", false],
               ["Website URL", "website", "Enter Website URL", "url", false],
               ["Panel Size", "panelSize", "Enter Panel Size", "positiveNumeric", true],
-              ["Complete URL", "complete", "Enter Complete URL", "text", false],
-              ["Terminate URL", "terminate", "Enter Terminate URL", "text", false],
-              ["Over Quota URL", "overQuota", "Enter Over Quota URL", "text", false],
-              ["Quality Term URL", "qualityTerm", "Enter Quality Term URL", "text", false],
-              ["Survey Closed URL", "surveyClose", "Enter Survey Closed URL", "text", false],
             ].map(([label, key, placeholder, fieldType, required]) => {
               const readOnlyField = readOnly || (isEdit && (key === "code" || key === "email"));
               return (
@@ -426,6 +458,86 @@ function AddPartnerPage({ isDarkMode }) {
                 </p>
               )}
             </div>
+            <div>
+              <label className="admin-text mb-2 block text-sm font-semibold">
+                Password
+                {!isEdit ? (
+                  <span className="text-[var(--admin-danger-text)]"> *</span>
+                ) : null}
+              </label>
+              <AdminPasswordInput
+                placeholder={isEdit ? "Enter new password to change it" : "Enter Password"}
+                value={form.password}
+                autoComplete="new-password"
+                aria-label="Password"
+                onChange={(e) => setField("password", e.target.value)}
+                onBlur={() => touch("password")}
+                disabled={controlDisabled}
+              />
+              {showError("password") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
+                  {showError("password")}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="admin-text mb-2 block text-sm font-semibold">
+                Confirm Password
+                {!isEdit ? (
+                  <span className="text-[var(--admin-danger-text)]"> *</span>
+                ) : null}
+              </label>
+              <AdminPasswordInput
+                placeholder="Confirm Password"
+                value={form.confirmPassword}
+                autoComplete="new-password"
+                aria-label="Confirm Password"
+                onChange={(e) => setField("confirmPassword", e.target.value)}
+                onBlur={() => touch("confirmPassword")}
+                disabled={controlDisabled}
+              />
+              {showError("confirmPassword") && (
+                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
+                  {showError("confirmPassword")}
+                </p>
+              )}
+            </div>
+            {PARTNER_REDIRECT_FIELDS.map(({ key, field, label }) => (
+              <div key={key}>
+                <label className="admin-text mb-2 block text-sm font-semibold">
+                  {label}
+                </label>
+                <div className="flex items-stretch gap-2">
+                  <input
+                    className={`${inputClass} flex-1`}
+                    value={form[key]}
+                    onChange={(event) => setField(key, event.target.value)}
+                    onBlur={(event) => {
+                      setField(key, String(event.target.value ?? "").trim());
+                      touch(key);
+                    }}
+                    placeholder={field.example}
+                    disabled={controlDisabled}
+                    aria-invalid={Boolean(showError(key))}
+                    aria-label={label}
+                  />
+                  <CopyValueButton
+                    value={form[key]}
+                    successMessage={`${label} copied`}
+                    label={`Copy ${label}`}
+                    disabled={controlDisabled}
+                  />
+                </div>
+                {showError(key) ? (
+                  <p
+                    className="mt-1 whitespace-pre-line text-xs text-[var(--admin-danger-text)]"
+                    role="alert"
+                  >
+                    {showError(key)}
+                  </p>
+                ) : null}
+              </div>
+            ))}
             <div className="md:col-span-2">
               <label className="admin-text mb-2 block text-sm font-semibold">
                 About Partner

@@ -73,6 +73,8 @@ export const API_ROUTES = {
     update: (id) => `/api/partner/${id}`,
     delete: (id) => `/api/partner/${id}`,
     exportCsv: "/api/partner/export/csv",
+    login: "/api/partner/login",
+    me: "/api/partner/me",
   },
   projectManagers: {
     list: "/api/projectmanager/list",

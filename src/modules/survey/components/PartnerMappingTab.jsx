@@ -262,9 +262,11 @@ function PartnerMappingTab({
   projectLinkType = "",
   isDarkMode,
   readOnly = false,
+  restrictToPartnerId = "",
 }) {
   const { canWrite } = useModulePermission("survey");
-  const allowWrite = canWrite && !readOnly;
+  const scopedPartnerId = String(restrictToPartnerId ?? "").trim();
+  const allowWrite = canWrite && !readOnly && !scopedPartnerId;
   const inputClass = getAdminInputClass();
 
   const [projectUrls, setProjectUrls] = useState([]);
@@ -425,11 +427,18 @@ function PartnerMappingTab({
         listSupplierMappings({
           projectId,
           projectUrlId: resolvedProjectUrlId,
+          partnerId: scopedPartnerId,
         }),
         loadMultiLinkStats(),
       ]);
       const nextRows = Array.isArray(records)
-        ? records.map((record, index) => mapSupplierMappingToRow(record, index))
+        ? records
+            .map((record, index) => mapSupplierMappingToRow(record, index))
+            .filter((row) =>
+              scopedPartnerId
+                ? String(row.partnerId) === String(scopedPartnerId)
+                : true
+            )
         : [];
       setRows(nextRows);
     } catch (error) {
@@ -439,7 +448,7 @@ function PartnerMappingTab({
     } finally {
       setIsLoading(false);
     }
-  }, [projectId, resolvedProjectUrlId, loadMultiLinkStats]);
+  }, [projectId, resolvedProjectUrlId, loadMultiLinkStats, scopedPartnerId]);
 
   useEffect(() => {
     loadMappings();
@@ -599,7 +608,7 @@ function PartnerMappingTab({
 
     REDIRECT_FIELDS.forEach((field) => {
       next[field.key] = getOptionalUrlError(
-        form.redirects[field.key] ?? "",
+        form.redirects?.[field.key] ?? "",
         field.label
       );
     });
@@ -1236,12 +1245,12 @@ function PartnerMappingTab({
                         <div className="flex items-stretch gap-2">
                           <input
                             className={`${inputClass} min-w-0 flex-1`}
-                            value={form.redirects[field.key] ?? ""}
+                            value={form.redirects?.[field.key] ?? ""}
                             onChange={(event) =>
                               setForm((prev) => ({
                                 ...prev,
                                 redirects: {
-                                  ...prev.redirects,
+                                  ...(prev.redirects ?? emptyPartnerRedirects()),
                                   [field.key]: event.target.value,
                                 },
                               }))
@@ -1255,7 +1264,7 @@ function PartnerMappingTab({
                             )}
                           />
                           <CopyValueButton
-                            value={form.redirects[field.key] ?? ""}
+                            value={form.redirects?.[field.key] ?? ""}
                             successMessage={`${field.label} URL copied`}
                             label={`Copy ${field.label} URL`}
                           />

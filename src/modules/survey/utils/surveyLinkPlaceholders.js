@@ -7,6 +7,7 @@
 export const SURVEY_LINK_PLACEHOLDER_TOKENS = Object.freeze([
   "identifier",
   "[identifier]",
+  "XXX",
   "XXXX",
 ]);
 
@@ -65,17 +66,17 @@ export function rewriteUrlToRedirectOrigin(value) {
 }
 
 /** Placeholder shown in Live Link / Test Link inputs. */
-export const DEFAULT_SURVEY_LINK_PLACEHOLDER = `${ADMIN_SPADE_COMMUNITY_ORIGIN}/?pid=PROJECT_URL_CODE&uid=${DEFAULT_SURVEY_LINK_UID_PLACEHOLDER}`;
+export const DEFAULT_SURVEY_LINK_PLACEHOLDER = `${ADMIN_SPADE_COMMUNITY_ORIGIN}/?pid=XXX&uid=XXX`;
 
 const PID_PARAM_NAMES = ["pid"];
 const UID_PARAM_NAMES = ["uid"];
 
 const BOTH_PARAMS_MESSAGE =
-  "must include both PID and a supported UID placeholder (identifier or XXXX)";
+  "must include both PID and a supported UID placeholder (XXX, XXXX, or identifier)";
 const MISSING_PID_MESSAGE = "must include a PID query parameter";
 const MISSING_UID_MESSAGE = "must include a UID query parameter";
 const INVALID_UID_MESSAGE =
-  "must include a supported UID placeholder (identifier or XXXX)";
+  "must include a supported UID placeholder (XXX, XXXX, or identifier)";
 
 function coerceText(value) {
   return String(value ?? "").trim();
@@ -104,7 +105,7 @@ function getQueryParamIgnoreCase(searchParams, names) {
 
 /**
  * True when the UID query value is a supported configuration placeholder.
- * Does not accept arbitrary respondent IDs or partial tokens (XXX, XXXXX).
+ * Accepts identifier, XXX, and XXXX. Does not accept respondent IDs or XXXXX.
  * @param {unknown} value
  */
 export function isSupportedUidPlaceholder(value) {
@@ -112,7 +113,7 @@ export function isSupportedUidPlaceholder(value) {
   if (!trimmed) return false;
   const key = trimmed.toLowerCase();
   if (key === "identifier" || key === "[identifier]") return true;
-  return key === "xxxx";
+  return key === "xxx" || key === "xxxx";
 }
 
 /**

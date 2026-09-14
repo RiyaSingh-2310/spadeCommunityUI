@@ -10,11 +10,13 @@ import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { cloneSurvey, getRecords, updateSurveyStatus } from "../services/surveyApi";
 import ProjectUrlInfoModal from "../components/ProjectUrlInfoModal";
+import PartnerProjectsPage from "./PartnerProjectsPage";
+import { isPartnerLoginRole } from "../../../services/auth/loginRole";
 
 const CLONE_CONFIRM_CLASS =
   "admin-btn-primary flex h-10 cursor-pointer items-center justify-center gap-2 px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60";
 
-function SurveyPage({ isDarkMode }) {
+function AdminSurveyListingPage({ isDarkMode }) {
   const navigate = useNavigate();
   useFlashMessage();
   const [cloneTarget, setCloneTarget] = useState(null);
@@ -202,6 +204,13 @@ function SurveyPage({ isDarkMode }) {
       />
     </>
   );
+}
+
+function SurveyPage({ isDarkMode }) {
+  if (isPartnerLoginRole()) {
+    return <PartnerProjectsPage isDarkMode={isDarkMode} />;
+  }
+  return <AdminSurveyListingPage isDarkMode={isDarkMode} />;
 }
 
 export default SurveyPage;

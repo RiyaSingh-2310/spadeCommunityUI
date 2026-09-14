@@ -165,6 +165,8 @@ export function mapPartnerToForm(partner) {
     apiBaseUrl: partner?.api_base_url ?? partner?.apiBaseUrl ?? "",
     apiSecretKey: partner?.api_secret_key ?? partner?.apiSecretKey ?? "",
     apiBody: partner?.api_body ?? partner?.apiBody ?? "",
+    password: "",
+    confirmPassword: "",
   };
 }
 
@@ -227,6 +229,11 @@ function buildPartnerApiFields(form) {
 export function buildCreatePartnerPayload(form) {
   const panelSize = Number.parseInt(String(form.panelSize ?? "").trim(), 10);
   const panelSizeMax = 10 ** PARTNER_PANEL_SIZE_MAX_DIGITS - 1;
+  const password = String(form.password ?? "").trim();
+  const confirmPassword = String(form.confirmPassword ?? "").trim();
+  const encryptedPassword = encryptValue(password);
+  const encryptedConfirm =
+    confirmPassword === password ? encryptedPassword : encryptValue(confirmPassword);
 
   return {
     name: form.name.trim(),
@@ -245,6 +252,8 @@ export function buildCreatePartnerPayload(form) {
     quality_term: String(form.qualityTerm ?? "").trim(),
     survey_close: String(form.surveyClose ?? "").trim(),
     about_partner: form.aboutPartner.trim(),
+    password: encryptedPassword,
+    confirm_password: encryptedConfirm,
     ...buildPartnerApiFields(form),
   };
 }
@@ -253,11 +262,27 @@ export function buildCreatePartnerPayload(form) {
  * @param {Parameters<typeof buildCreatePartnerPayload>[0]} form
  */
 export function buildUpdatePartnerPayload(form) {
+  const password = String(form.password ?? "").trim();
+  const confirmPassword = String(form.confirmPassword ?? "").trim();
+  const encryptedPassword = password ? encryptValue(password) : "";
+  const encryptedConfirm =
+    password && confirmPassword === password
+      ? encryptedPassword
+      : password
+        ? encryptValue(confirmPassword || password)
+        : "";
+
   return {
     name: form.name.trim(),
     status: formValueToApiStatus(form.status),
     ...buildPartnerSurveyPayload(form),
     ...buildPartnerApiFields(form),
+    ...(password
+      ? {
+          password: encryptedPassword,
+          confirm_password: encryptedConfirm,
+        }
+      : {}),
   };
 }
 

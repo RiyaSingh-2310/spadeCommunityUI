@@ -82,14 +82,16 @@ function assertAuthFlowSuccess(data, fallbackMessage) {
 function resolveLoginRoute(loginRole) {
   if (loginRole === LOGIN_ROLES.SALES) return API_ROUTES.salesManagers.login;
   if (loginRole === LOGIN_ROLES.MANAGER) return API_ROUTES.projectManagers.login;
+  if (loginRole === LOGIN_ROLES.PARTNER) return API_ROUTES.partners.login;
   return API_ROUTES.admin.login;
 }
 
 /**
- * Role-aware login:
+ * Role-aware login (same email/password payload and session mapping):
  * - Admin → POST /api/admin/login
  * - Sales Manager → POST /api/salesmanager/login
  * - Project Manager → POST /api/projectmanager/login
+ * - Partner → POST /api/partner/login
  * @param {{ email: string, password: string, loginRole?: string }} credentials
  */
 export async function loginAdmin(credentials) {

@@ -30,6 +30,7 @@ function ReportModeFilters({
   onSupplierChange,
   supplierOptions = [],
   isLoadingSuppliers = false,
+  hideSupplier = false,
   mode = REPORT_MODE.LIVE,
   onModeChange,
 }) {
@@ -75,7 +76,7 @@ function ReportModeFilters({
         />
       </div>
 
-      <div className="grid w-full min-w-0 grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:w-auto xl:shrink-0 xl:grid-cols-[9.5rem_20.5rem_11.25rem_7.5rem]">
+      <div className={`grid w-full min-w-0 grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:w-auto xl:shrink-0 ${hideSupplier ? "xl:grid-cols-[9.5rem_20.5rem_7.5rem]" : "xl:grid-cols-[9.5rem_20.5rem_11.25rem_7.5rem]"}`}>
         <div className={`${FILTER_FIELD_CLASS} w-full overflow-hidden`}>
           <label htmlFor="project-report-status-filter" className={FILTER_LABEL_CLASS}>
             Status
@@ -106,6 +107,7 @@ function ReportModeFilters({
           />
         </div>
 
+        {!hideSupplier ? (
         <div className={`${FILTER_FIELD_CLASS} w-full overflow-hidden`}>
           <span className={FILTER_LABEL_CLASS}>Supplier</span>
           <SearchableSelect
@@ -121,6 +123,7 @@ function ReportModeFilters({
             aria-label="Supplier"
           />
         </div>
+        ) : null}
 
         <div className={`${FILTER_FIELD_CLASS} w-full overflow-hidden`}>
           <label htmlFor="project-report-mode-filter" className={FILTER_LABEL_CLASS}>

@@ -5,7 +5,6 @@ import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
 import FormRadioGroup from "../../../components/admin/FormRadioGroup";
 import NumericInput from "../../../components/admin/NumericInput";
-import RichTextEditor from "../../../components/admin/RichTextEditor";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
@@ -239,18 +238,6 @@ function AddRecontactSurveyForm({
                 setField("projectName", limitTextInput(e.target.value, NAME_FIELD_MAX_LENGTH))
               }
               onBlur={() => touch("projectName")}
-              disabled={fieldDisabled(readOnly, isSubmitting)}
-            />
-          </FormField>
-        </div>
-
-        <div className="mt-4">
-          <FormField label="Project Description">
-            <RichTextEditor
-              isDarkMode={isDarkMode}
-              value={form.description}
-              onChange={(value) => setField("description", value)}
-              placeholder="Enter Project Description"
               disabled={fieldDisabled(readOnly, isSubmitting)}
             />
           </FormField>

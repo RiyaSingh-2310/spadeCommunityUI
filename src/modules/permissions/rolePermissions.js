@@ -12,6 +12,8 @@ function createRolePermissions(grants) {
 const readWrite = { canRead: true, canWrite: true, canDownload: true };
 const readOnly = { canRead: true, canWrite: false, canDownload: false };
 
+const readDownload = { canRead: true, canWrite: false, canDownload: true };
+
 const SALES_PERMISSIONS = createRolePermissions({
   dashboard: readOnly,
   rfq: readWrite,
@@ -22,6 +24,11 @@ const MANAGER_PERMISSIONS = createRolePermissions({
   dashboard: readOnly,
   survey: readWrite,
   group_survey: readWrite,
+});
+
+const PARTNER_PERMISSIONS = createRolePermissions({
+  dashboard: readOnly,
+  survey: readDownload,
 });
 
 /**
@@ -35,6 +42,9 @@ export function getRolePermissions(loginRole) {
   }
   if (loginRole === LOGIN_ROLES.MANAGER) {
     return MANAGER_PERMISSIONS;
+  }
+  if (loginRole === LOGIN_ROLES.PARTNER) {
+    return PARTNER_PERMISSIONS;
   }
   return null;
 }

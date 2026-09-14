@@ -29,6 +29,7 @@ import {
 import {
   createEmptyQuestionItem,
   LANGUAGES,
+  languageSelectOptions,
   needsQuestionOptions,
   normalizeQuestionTypeLabel,
   optionsArrayToTextarea,
@@ -155,6 +156,10 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
   const [touched, setTouched] = useState({});
   const inputClass = getAdminInputClass();
   const textareaClass = getAdminTextareaClass("min-h-[180px]");
+  const languageOptions = useMemo(
+    () => languageSelectOptions(form.language, LANGUAGES),
+    [form.language]
+  );
 
   useEffect(() => {
     const normalizedId = decodeQuestionId(id);
@@ -341,7 +346,7 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
               value={form.language}
               onChange={(language) => setForm((prev) => ({ ...prev, language }))}
               onBlur={() => touchField("language")}
-              options={LANGUAGES}
+              options={languageOptions}
               placeholder="Select Language"
               searchPlaceholder="Search language..."
               aria-label="Select language"

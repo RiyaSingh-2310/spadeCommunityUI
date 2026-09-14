@@ -101,6 +101,92 @@ export function normalizeOptionsForQuestionType(options, questionType) {
 
 export const LANGUAGES = ["English", "Arabic", "German", "French", "Spanish"];
 
+const LANGUAGE_CODE_ALIASES = {
+  en: "English",
+  eng: "English",
+  english: "English",
+  ar: "Arabic",
+  ara: "Arabic",
+  arabic: "Arabic",
+  de: "German",
+  deu: "German",
+  ger: "German",
+  german: "German",
+  fr: "French",
+  fra: "French",
+  fre: "French",
+  french: "French",
+  es: "Spanish",
+  spa: "Spanish",
+  spanish: "Spanish",
+  hi: "Hindi",
+  hin: "Hindi",
+  hindi: "Hindi",
+};
+
+/** Pull a language name/code/id out of a string or API object. */
+export function extractLanguageRaw(language) {
+  if (language == null || language === "") return "";
+  if (typeof language === "object") {
+    return String(
+      language.name ??
+        language.label ??
+        language.language ??
+        language.language_name ??
+        language.languageName ??
+        language.code ??
+        language.iso ??
+        language.iso_code ??
+        language.isoCode ??
+        language.id ??
+        ""
+    ).trim();
+  }
+  return String(language).trim();
+}
+
+/**
+ * Map an API language value onto a SearchableSelect option value.
+ * Matches catalog entries case-insensitively and known ISO/code aliases.
+ * Unknown languages are returned as display text so they can be injected as options.
+ */
+export function resolveLanguageSelectValue(language, catalog = LANGUAGES) {
+  const raw = extractLanguageRaw(language);
+  if (!raw) return "";
+
+  const slug = raw.toLowerCase();
+  const options = Array.isArray(catalog) ? catalog : [];
+  const alias = LANGUAGE_CODE_ALIASES[slug];
+
+  const catalogMatch =
+    options.find((option) => String(option).toLowerCase() === slug) ||
+    (alias
+      ? options.find((option) => String(option).toLowerCase() === alias.toLowerCase())
+      : null);
+
+  if (catalogMatch) return catalogMatch;
+  if (alias) return alias;
+
+  if (/^[a-z]/.test(raw) && raw === slug) {
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  }
+
+  return raw;
+}
+
+/** Dropdown options including an API language that is not in the static catalog. */
+export function languageSelectOptions(selected, catalog = LANGUAGES) {
+  const value = String(selected ?? "").trim();
+  const options = Array.isArray(catalog) ? [...catalog] : [];
+  if (!value) return options;
+
+  const exists = options.some(
+    (option) => String(option).toLowerCase() === value.toLowerCase()
+  );
+  if (exists) return options;
+  return [value, ...options];
+}
+
 export function createEmptyQuestionItem() {
   return {
     id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,

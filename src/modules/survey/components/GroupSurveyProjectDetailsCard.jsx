@@ -12,11 +12,6 @@ function GroupSurveyProjectDetailsCard({ details, isDarkMode }) {
         <DetailField label="Client Name" value={details.clientName} />
         <DetailField label="Status" value={formatStatusLabel(details.status)} />
         <DetailField label="Created Date" value={details.createdAt} />
-        <DetailField
-          label="Description"
-          value={details.description}
-          className="sm:col-span-2"
-        />
         {details.notes ? (
           <DetailField label="Notes" value={details.notes} className="sm:col-span-2" />
         ) : null}

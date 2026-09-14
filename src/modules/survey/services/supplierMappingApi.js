@@ -77,6 +77,12 @@ export function mapSupplierMappingToRow(record, index = 0) {
     partnerId: String(pickField(record, ["partnerid", "partner_id", "partnerId"]) ?? ""),
     partnerCode: partnerCode || "—",
     partnerName: partnerNameRaw || partnerCode || "—",
+    projectName: String(
+      pickField(record, ["project_name", "projectName", "Project_Name", "survey_title"]) ?? ""
+    ).trim(),
+    projectId: String(
+      pickField(record, ["projectid", "project_id", "projectId"]) ?? ""
+    ).trim(),
     quota: pickField(record, ["quota", "Quota"]) ?? "—",
     cpi: pickField(record, ["CPI", "cpi", "cpi_rate"]) ?? "—",
     linksToAssign:
@@ -224,16 +230,22 @@ export function buildSupplierMappingApiPayload({
  * GET /api/supplier-mapping/list
  * Response: { success, data: [...], total, page, limit, totalPages }
  */
-export async function listSupplierMappings({ projectId, projectUrlId } = {}) {
+export async function listSupplierMappings({
+  projectId,
+  projectUrlId,
+  partnerId,
+} = {}) {
   // Matches backend list contract:
   // GET /api/supplier-mapping/list?page&limit&projectid&partnerid&status&search
   const normalizedProjectId = String(projectId ?? "").trim();
   const normalizedUrlId = String(projectUrlId ?? "").trim();
+  const normalizedPartnerId = String(partnerId ?? "").trim();
   const url = appendListQuery(API_ROUTES.supplierMapping.list, {
     page: 1,
     limit: MAX_API_LIST_LIMIT,
     extra: {
       ...(normalizedProjectId ? { projectid: normalizedProjectId } : {}),
+      ...(normalizedPartnerId ? { partnerid: normalizedPartnerId } : {}),
     },
   });
 

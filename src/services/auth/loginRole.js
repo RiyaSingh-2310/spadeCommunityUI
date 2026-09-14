@@ -2,6 +2,7 @@ export const LOGIN_ROLES = {
   ADMIN: "admin",
   SALES: "sales",
   MANAGER: "manager",
+  PARTNER: "partner",
 };
 
 const LOGIN_ROLE_KEY = "loginRole";
@@ -38,4 +39,8 @@ export function isManagerLoginRole() {
 
 export function isAdminLoginRole() {
   return getLoginRole() === LOGIN_ROLES.ADMIN;
+}
+
+export function isPartnerLoginRole() {
+  return getLoginRole() === LOGIN_ROLES.PARTNER;
 }

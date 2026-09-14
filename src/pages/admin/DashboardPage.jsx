@@ -1,4 +1,5 @@
-import { Gift, Handshake, UserCog, Wallet } from "lucide-react";
+import { FolderKanban, Gift, Handshake, Link2, UserCog, Wallet } from "lucide-react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../components/admin/AdminPageHeader";
 import PermissionDenied from "../../components/admin/PermissionDenied";
@@ -6,15 +7,24 @@ import TableCard from "../../components/admin/TableCard";
 import { useModulePermission } from "../../modules/permissions/useModulePermission";
 import { usePermissions } from "../../modules/permissions/PermissionsContext";
 import { canAccessRewardManagement } from "../../modules/permissions/permissionsUtils";
+import {
+  isAdminLoginRole,
+  isPartnerLoginRole,
+} from "../../services/auth/loginRole";
 import { formatDashboardDate } from "../../modules/shared/utils/dateTime";
 import { formatStatusLabel } from "../../modules/shared/utils/statusLabels";
 import { BarsChart, DonutChart, PolylineChart, SummaryCard } from "./dashboard/dashboardCharts";
 import { TABLE_HEAD, dashboardCount } from "./dashboard/dashboardUtils";
 import DashboardLoadError from "./dashboard/DashboardLoadError";
+import PanelistAnalyticsDashboard from "./dashboard/PanelistAnalyticsDashboard";
 import { useDashboardData } from "./dashboard/useDashboardData";
+import { usePartnerDashboardData } from "./dashboard/usePartnerDashboardData";
 
 function DashboardPage({ isDarkMode }) {
   const navigate = useNavigate();
+  const isPartner = isPartnerLoginRole();
+  const isAdmin = isAdminLoginRole();
+  const [adminSurface, setAdminSurface] = useState("admin");
   const { canRead } = useModulePermission("dashboard");
   const { permissions, canRead: canReadModule, canWrite } = usePermissions();
   const showRewardWidgets = canAccessRewardManagement(permissions);
@@ -42,19 +52,24 @@ function DashboardPage({ isDarkMode }) {
     rfqTrend,
     userTrend,
     rewardTrend,
-  } = useDashboardData({ enabled: true });
+  } = useDashboardData({ enabled: !isPartner });
+  const partnerDashboard = usePartnerDashboardData({ enabled: isPartner });
 
   const dashboardTitle = isSales
     ? "Welcome to Sales Dashboard"
     : isManager
       ? "Welcome to Manager Dashboard"
-      : "Welcome to Admin Dashboard";
+      : isPartner
+        ? "Welcome to Partner Dashboard"
+        : "Welcome to Admin Dashboard";
 
   const dashboardSubtitle = isSales
     ? "Track your latest RFQs and survey projects."
     : isManager
       ? "Track your projects and group surveys."
-      : "Monitor system health, growth, operations, and revenue in one place.";
+      : isPartner
+        ? "Review the projects assigned to your partner account."
+        : "Monitor system health, growth, operations, and revenue in one place.";
   const isScopedDataLoading = dashboard.loading;
   const dashboardError = String(dashboard.error ?? "").trim();
 
@@ -68,9 +83,117 @@ function DashboardPage({ isDarkMode }) {
         title={dashboardTitle}
         subtitle={dashboardSubtitle}
         isDarkMode={isDarkMode}
+        rightContent={
+          isAdmin ? (
+            <div
+              className="flex rounded-xl border p-1"
+              style={{ borderColor: "var(--admin-header-surface-border)" }}
+              role="tablist"
+              aria-label="Dashboard view"
+            >
+              {[
+                { id: "admin", label: "Admin View" },
+                { id: "panelist", label: "Panelist View" },
+              ].map((option) => {
+                const isActive = adminSurface === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => setAdminSurface(option.id)}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                      isActive
+                        ? "bg-[#10a950] text-white"
+                        : "admin-text-muted hover:bg-[var(--admin-permissions-row-hover)]"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null
+        }
       />
 
-      {dashboardError && !isScopedDataLoading ? (
+      {isAdmin && adminSurface === "panelist" ? (
+        <PanelistAnalyticsDashboard isDarkMode={isDarkMode} />
+      ) : isPartner ? (
+        partnerDashboard.error && !partnerDashboard.loading ? (
+          <DashboardLoadError
+            message={partnerDashboard.error}
+            onRetry={partnerDashboard.retry}
+          />
+        ) : (
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <SummaryCard
+                icon={FolderKanban}
+                label="Assigned Projects"
+                value={partnerDashboard.projectCount}
+              />
+              <SummaryCard
+                icon={Link2}
+                label="Active Mappings"
+                value={partnerDashboard.activeCount}
+              />
+              <SummaryCard
+                icon={Link2}
+                label="Inactive Mappings"
+                value={partnerDashboard.inactiveCount}
+              />
+            </div>
+            <TableCard title="Assigned Projects" isDarkMode={isDarkMode}>
+              <div className="overflow-x-auto">
+                <table className="admin-table min-w-full text-sm">
+                  <thead>
+                    <tr className={headClass}>
+                      {["Project", "Partner Code", "Quota", "CPI", "Status"].map((h) => (
+                        <th key={h} className={TABLE_HEAD}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {partnerDashboard.loading ? (
+                      <tr className={`border-t ${borderRow}`}>
+                        <td colSpan={5} className="admin-text-muted px-3 py-6 text-center text-sm">
+                          Loading...
+                        </td>
+                      </tr>
+                    ) : partnerDashboard.rows.length === 0 ? (
+                      <tr className={`border-t ${borderRow}`}>
+                        <td colSpan={5} className="admin-text-muted px-3 py-6 text-center text-sm">
+                          No assigned projects found
+                        </td>
+                      </tr>
+                    ) : (
+                      partnerDashboard.rows.map((row) => (
+                        <tr key={row.id} className={`border-t ${borderRow}`}>
+                          <td className="admin-text whitespace-nowrap px-3 py-3">
+                            {row.projectName || row.projectId || "—"}
+                          </td>
+                          <td className="admin-text whitespace-nowrap px-3 py-3">
+                            {row.partnerCode}
+                          </td>
+                          <td className="admin-text whitespace-nowrap px-3 py-3">{row.quota}</td>
+                          <td className="admin-text whitespace-nowrap px-3 py-3">{row.cpi}</td>
+                          <td className="admin-text whitespace-nowrap px-3 py-3">
+                            {formatStatusLabel(row.statusActive ? "Active" : "Inactive")}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </TableCard>
+          </div>
+        )
+      ) : dashboardError && !isScopedDataLoading ? (
         <DashboardLoadError message={dashboardError} onRetry={retry} />
       ) : isSales ? (
         <div className="grid gap-4 lg:grid-cols-2">

@@ -17,6 +17,12 @@ import SurveyDetailsHeader, {
   getSurveyDetailTabs,
 } from "../components/SurveyDetailsHeader";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { ApiError } from "../../../services/api/ApiError";
+import { isPartnerLoginRole } from "../../../services/auth/loginRole";
+import { getSessionPartnerId } from "../../../services/auth/sessionIdentity";
+import {
+  listSupplierMappings,
+} from "../services/supplierMappingApi";
 import {
   getGroupProjectEditPath,
   getGroupProjectsPath,
@@ -40,6 +46,9 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
   const { id, groupId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const isGroupView = Boolean(groupId);
+  const partnerViewMode = isPartnerLoginRole();
+  const readOnlyView = salesViewMode || partnerViewMode;
+  const sessionPartnerId = getSessionPartnerId();
   const { canRead: canReadSurvey } = useModulePermission("survey");
   const { canRead: canReadGroupSurvey } = useModulePermission("group_survey");
   const canRead = canReadSurvey || (isGroupView && canReadGroupSurvey);
@@ -47,6 +56,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
   const [project, setProject] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [loadErrorMessage, setLoadErrorMessage] = useState("");
   const [projectStatus, setProjectStatus] = useState("");
   const [draftStatus, setDraftStatus] = useState("");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -133,17 +143,48 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         setProject(null);
         setIsLoading(false);
         setLoadFailed(true);
+        setLoadErrorMessage("Project not found.");
         return null;
       }
 
       if (!silent) setIsLoading(true);
       setLoadFailed(false);
+      setLoadErrorMessage("");
 
       try {
         const record = await getRecord(id);
         const mapped = mapSurveyToProjectDetails(record);
         if (!mapped) {
-          throw new Error("");
+          setProject(null);
+          setLoadFailed(true);
+          setLoadErrorMessage("Project not found.");
+          return null;
+        }
+
+        if (isPartnerLoginRole()) {
+          const assignedPartnerId = getSessionPartnerId();
+          if (!assignedPartnerId) {
+            setProject(null);
+            setLoadFailed(true);
+            setLoadErrorMessage("Partner session is missing.");
+            return null;
+          }
+          const mappings = await listSupplierMappings({
+            projectId: mapped.recordId ?? id,
+            partnerId: assignedPartnerId,
+          });
+          const allowed = (Array.isArray(mappings) ? mappings : []).some((row) => {
+            const mappingPartnerId = String(
+              row.partnerId ?? row.partnerid ?? row.partner_id ?? ""
+            );
+            return mappingPartnerId === String(assignedPartnerId);
+          });
+          if (!allowed) {
+            setProject(null);
+            setLoadFailed(true);
+            setLoadErrorMessage("This project is not assigned to your partner account.");
+            return null;
+          }
         }
 
         setProject(mapped);
@@ -166,6 +207,16 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         toastApiError(error);
         setProject(null);
         setLoadFailed(true);
+        const status = error instanceof ApiError ? Number(error.status) : 0;
+        if (status === 404) {
+          setLoadErrorMessage("Project not found.");
+        } else if (status === 401 || status === 403) {
+          setLoadErrorMessage("You do not have access to this project.");
+        } else {
+          setLoadErrorMessage(
+            error?.message || "Unable to load project details. Please try again."
+          );
+        }
         return null;
       } finally {
         if (!silent) setIsLoading(false);
@@ -283,7 +334,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
           isDarkMode={isDarkMode}
         />
         <div className="admin-text rounded-xl border border-[var(--admin-border)] p-6 text-sm">
-          Unable to load project details.
+          {loadErrorMessage || "Unable to load project details."}
           <button
             type="button"
             onClick={() => navigate(listPath)}
@@ -373,7 +424,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         isUpdatingStatus={isUpdatingStatus}
         surveyId={project.projectCode || project.surveyId || project.id}
         tabs={visibleTabs}
-        readOnly={salesViewMode}
+        readOnly={readOnlyView}
         onProjectReport={handleProjectReport}
         isProjectReportActive={activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT}
         onEditSurvey={() => {
@@ -416,7 +467,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
             urlView={urlView}
             urlId={urlId}
             onViewChange={handleProjectUrlViewChange}
-            onSaved={salesViewMode ? undefined : handleProjectUrlSaved}
+            onSaved={readOnlyView ? undefined : handleProjectUrlSaved}
           />
         )}
         {activeTab === SURVEY_DETAIL_TAB_IDS.PARTNER_MAPPING && (
@@ -426,15 +477,16 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
             projectCode={project?.projectCode || project?.surveyId || ""}
             projectLinkType={project?.projectLinkType}
             isDarkMode={isDarkMode}
-            readOnly={salesViewMode}
+            readOnly={readOnlyView}
+            restrictToPartnerId={partnerViewMode ? sessionPartnerId : ""}
           />
         )}
         {activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT && (
           <ProjectReportTab
             key={`project-report-${id}`}
             projectId={project?.recordId ?? id}
-            projectUrlId={savedProjectUrlId}
             projectName={project.projectName}
+            supplierId={partnerViewMode ? sessionPartnerId : ""}
             isDarkMode={isDarkMode}
           />
         )}

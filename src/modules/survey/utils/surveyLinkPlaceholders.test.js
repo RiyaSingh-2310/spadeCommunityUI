@@ -138,7 +138,7 @@ describe("rewriteUrlToRedirectOrigin", () => {
 describe("DEFAULT_SURVEY_LINK_PLACEHOLDER", () => {
   it("uses the admin origin with pid and uid placeholders", () => {
     expect(DEFAULT_SURVEY_LINK_PLACEHOLDER).toBe(
-      "https://spadecommunity.com/?pid=PROJECT_URL_CODE&uid=XXXX"
+      "https://spadecommunity.com/?pid=XXX&uid=XXX"
     );
   });
 });
@@ -146,7 +146,16 @@ describe("DEFAULT_SURVEY_LINK_PLACEHOLDER", () => {
 describe("getSurveyLinkPlaceholderError", () => {
   it("does not treat the bare admin origin as a complete live link", () => {
     expect(getSurveyLinkPlaceholderError(ADMIN_SPADE_COMMUNITY_URL, "Live Link")).toBe(
-      "Live Link must include both PID and a supported UID placeholder (identifier or XXXX)."
+      "Live Link must include both PID and a supported UID placeholder (XXX, XXXX, or identifier)."
     );
+  });
+
+  it("accepts XXX as a UID placeholder", () => {
+    expect(
+      getSurveyLinkPlaceholderError(
+        "https://spadecommunity.com/?pid=XXX&uid=XXX",
+        "Live Link"
+      )
+    ).toBe("");
   });
 });

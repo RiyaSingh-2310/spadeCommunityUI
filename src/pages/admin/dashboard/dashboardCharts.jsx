@@ -123,6 +123,34 @@ export function BarsChart({ data }) {
   );
 }
 
+export function HorizontalBarsChart({ data }) {
+  const series = asChartData(data).slice(0, 8);
+  const max = Math.max(...series.map((d) => d.value), 1);
+  return (
+    <div className="space-y-2">
+      {series.map((item) => (
+        <div key={item.label} className="space-y-1">
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <span className="admin-text-muted min-w-0 truncate" title={item.label}>
+              {item.label}
+            </span>
+            <span className="admin-text font-semibold">{numberFmt(item.value)}</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-[var(--admin-header-search-bg)]">
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${Math.max((item.value / max) * 100, 4)}%`,
+                backgroundColor: item.color || "var(--admin-primary-color)",
+              }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SummaryCard({ icon: Icon, label, value }) {
   return (
     <article className="rounded-3xl border border-[var(--admin-header-surface-border)] bg-[var(--admin-header-surface)] p-4">
@@ -136,3 +164,128 @@ export function SummaryCard({ icon: Icon, label, value }) {
     </article>
   );
 }
+
+function percentLabel(item) {
+  if (item.percent == null) return numberFmt(item.value);
+  return `${numberFmt(item.value)} · ${item.percent}%`;
+}
+
+export function AnalyticsDonutChart({ data }) {
+  const series = asChartData(data);
+  const total = Math.max(series.reduce((sum, item) => sum + Number(item.value || 0), 0), 1);
+  const radius = 42;
+  const circumference = 2 * Math.PI * radius;
+  const segments = series.map((item) => (Number(item.value || 0) / total) * circumference);
+  const offsets = segments.map((_, idx) =>
+    segments.slice(0, idx).reduce((sum, current) => sum + current, 0)
+  );
+
+  if (series.length === 0) {
+    return (
+      <p className="admin-text-muted py-8 text-center text-sm">No response data available for this question.</p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+      <svg viewBox="0 0 120 120" className="mx-auto h-44 w-44 shrink-0 sm:mx-0">
+        <circle cx="60" cy="60" r={radius} fill="none" stroke="var(--admin-header-search-border)" strokeWidth="14" />
+        {series.map((item, idx) => (
+          <circle
+            key={`${item.label}-${idx}`}
+            cx="60"
+            cy="60"
+            r={radius}
+            fill="none"
+            stroke={item.color || "var(--admin-primary-color)"}
+            strokeWidth="14"
+            strokeDasharray={`${segments[idx]} ${circumference}`}
+            strokeDashoffset={-offsets[idx]}
+            transform="rotate(-90 60 60)"
+          >
+            <title>{`${item.label}: ${numberFmt(item.value)} respondents (${item.percent ?? Math.round((item.value / total) * 100)}%)`}</title>
+          </circle>
+        ))}
+      </svg>
+      <ul className="min-w-0 flex-1 space-y-2.5">
+        {series.map((item, idx) => (
+          <li key={`${item.label}-${idx}`} className="flex items-start gap-2 text-sm">
+            <span
+              className="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: item.color || "var(--admin-primary-color)" }}
+            />
+            <span className="admin-text min-w-0 flex-1 break-words">{item.label}</span>
+            <span className="admin-text shrink-0 font-semibold">{percentLabel(item)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export function AnalyticsHorizontalBars({ data, maxRows = 12 }) {
+  const series = asChartData(data).slice(0, maxRows);
+  const max = Math.max(...series.map((item) => Number(item.value || 0)), 1);
+
+  if (series.length === 0) {
+    return (
+      <p className="admin-text-muted py-8 text-center text-sm">No response data available for this question.</p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {series.map((item, idx) => (
+        <div key={`${item.label}-${idx}`} className="space-y-1.5">
+          <div className="flex items-start justify-between gap-3 text-sm">
+            <span className="admin-text min-w-0 flex-1 break-words leading-snug">{item.label}</span>
+            <span className="admin-text shrink-0 font-semibold">{percentLabel(item)}</span>
+          </div>
+          <div className="h-2.5 overflow-hidden rounded-full bg-[var(--admin-header-search-bg)]">
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${Math.max((Number(item.value || 0) / max) * 100, 3)}%`,
+                backgroundColor: item.color || "var(--admin-primary-color)",
+              }}
+              title={`${item.label}: ${numberFmt(item.value)} respondents`}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function AnalyticsHistogram({ data }) {
+  const series = asChartData(data);
+  const max = Math.max(...series.map((item) => Number(item.value || 0)), 1);
+
+  if (series.length === 0) {
+    return (
+      <p className="admin-text-muted py-8 text-center text-sm">No response data available for this question.</p>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3 pt-1 sm:grid-cols-3 md:grid-cols-6">
+      {series.map((item, idx) => (
+        <div key={`${item.label}-${idx}`} className="flex min-w-0 flex-col items-center gap-2">
+          <div className="flex h-36 w-full items-end rounded-xl bg-[var(--admin-header-search-bg)] px-2 py-2">
+            <div
+              className="mx-auto w-full max-w-[2.25rem] rounded-md"
+              style={{
+                height: `${Math.max((Number(item.value || 0) / max) * 100, 8)}%`,
+                backgroundColor: item.color || "var(--admin-primary-color)",
+              }}
+              title={`${item.label}: ${numberFmt(item.value)} panelists (${item.percent ?? 0}%)`}
+            />
+          </div>
+          <p className="admin-text-muted w-full break-words text-center text-xs leading-tight">{item.label}</p>
+          <p className="admin-text text-center text-sm font-semibold">{percentLabel(item)}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+

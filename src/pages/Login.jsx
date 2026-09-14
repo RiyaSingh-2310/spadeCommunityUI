@@ -16,6 +16,7 @@ const LOGIN_ROLE_UI = {
     switchOptions: [
       { role: LOGIN_ROLES.SALES, label: "Login as Sales Manager" },
       { role: LOGIN_ROLES.MANAGER, label: "Login as Project Manager" },
+      { role: LOGIN_ROLES.PARTNER, label: "Login as Partner" },
     ],
   },
   [LOGIN_ROLES.SALES]: {
@@ -24,6 +25,7 @@ const LOGIN_ROLE_UI = {
     switchOptions: [
       { role: LOGIN_ROLES.ADMIN, label: "Login as Admin" },
       { role: LOGIN_ROLES.MANAGER, label: "Login as Project Manager" },
+      { role: LOGIN_ROLES.PARTNER, label: "Login as Partner" },
     ],
   },
   [LOGIN_ROLES.MANAGER]: {
@@ -32,6 +34,16 @@ const LOGIN_ROLE_UI = {
     switchOptions: [
       { role: LOGIN_ROLES.ADMIN, label: "Login as Admin" },
       { role: LOGIN_ROLES.SALES, label: "Login as Sales Manager" },
+      { role: LOGIN_ROLES.PARTNER, label: "Login as Partner" },
+    ],
+  },
+  [LOGIN_ROLES.PARTNER]: {
+    title: "Partner Login",
+    emailLabel: "Email Address / Login ID",
+    switchOptions: [
+      { role: LOGIN_ROLES.ADMIN, label: "Login as Admin" },
+      { role: LOGIN_ROLES.SALES, label: "Login as Sales Manager" },
+      { role: LOGIN_ROLES.MANAGER, label: "Login as Project Manager" },
     ],
   },
 };
@@ -48,7 +60,7 @@ function Login({ isDarkMode, onToggleTheme }) {
     password: false,
   });
 
-  const roleUi = LOGIN_ROLE_UI[loginRole];
+  const roleUi = LOGIN_ROLE_UI[loginRole] ?? LOGIN_ROLE_UI[LOGIN_ROLES.ADMIN];
 
   const hasEmailFormat = useMemo(
     () => isValidEmail(email),

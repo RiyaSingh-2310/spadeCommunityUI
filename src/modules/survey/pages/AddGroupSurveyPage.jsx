@@ -3,7 +3,6 @@ import { Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
-import RichTextEditor from "../../../components/admin/RichTextEditor";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
@@ -162,15 +161,6 @@ function AddGroupSurveyPage({ isDarkMode }) {
           </div>
 
           <div className="mt-4 space-y-4">
-            <FormField label="Project Description">
-              <RichTextEditor
-                isDarkMode={isDarkMode}
-                value={form.description}
-                onChange={(value) => setField("description", value)}
-                placeholder="Enter project description"
-                disabled={fieldDisabled(readOnly, isSubmitting)}
-              />
-            </FormField>
             <FormField label="Notes">
               <textarea
                 className={`${inputClass} min-h-[120px] resize-y py-3`}

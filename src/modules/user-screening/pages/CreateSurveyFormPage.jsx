@@ -31,7 +31,7 @@ import {
   updateScreeningSortOrder,
 } from "../../../services/screening/screeningQuestionsApi";
 import { useAdminFormAccess } from "../../permissions/FormAccessContext";
-import { LANGUAGES } from "../data/profilingQuestionsStore";
+import { LANGUAGES, languageSelectOptions } from "../data/profilingQuestionsStore";
 
 const SURVEY_FORM_FIELDS = ["language", "questionTitle", "questions"];
 
@@ -76,6 +76,10 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
   const [addingQuestionId, setAddingQuestionId] = useState(null);
   const inputClass = getAdminInputClass();
   const selectedLanguage = String(form.language ?? "").trim();
+  const languageOptions = useMemo(
+    () => languageSelectOptions(form.language, LANGUAGES),
+    [form.language]
+  );
   const resolvedActiveQuestionIndex = useMemo(() => {
     if (form.questions.length === 0) return 0;
     return Math.min(activeQuestionIndex, form.questions.length - 1);
@@ -415,7 +419,7 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
                   setForm((prev) => ({ ...prev, language }));
                 }}
                 onBlur={() => touch("language")}
-                options={LANGUAGES}
+                options={languageOptions}
                 placeholder="Select Language"
                 searchPlaceholder="Search language..."
                 aria-label="Select language"

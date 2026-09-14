@@ -42,7 +42,7 @@ function ReportActions({
   );
 }
 
-function ProjectReportTab({ isDarkMode, projectId, projectName }) {
+function ProjectReportTab({ isDarkMode, projectId, projectName, supplierId = "" }) {
   const { canDownload } = useModulePermission("survey");
   const [downloadingType, setDownloadingType] = useState("");
 
@@ -57,6 +57,7 @@ function ProjectReportTab({ isDarkMode, projectId, projectName }) {
       projectId: resolvedProjectId,
       reportType,
       projectName,
+      supplierId,
     });
   };
 
@@ -74,6 +75,7 @@ function ProjectReportTab({ isDarkMode, projectId, projectName }) {
       await downloadProjectReport({
         projectId: resolvedProjectId,
         reportType,
+        supplierId,
       });
     } catch (error) {
       toastApiError(error);

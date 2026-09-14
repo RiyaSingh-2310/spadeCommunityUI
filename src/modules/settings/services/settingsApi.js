@@ -9,6 +9,7 @@ import {
 import {
   getLoginRole,
   isManagerLoginRole,
+  isPartnerLoginRole,
   isSalesLoginRole,
 } from "../../../services/auth/loginRole";
 import {
@@ -36,6 +37,7 @@ function assertSuccess(data) {
 function resolveMeRoute() {
   if (isManagerLoginRole()) return API_ROUTES.projectManagers.me;
   if (isSalesLoginRole()) return API_ROUTES.salesManagers.me;
+  if (isPartnerLoginRole()) return API_ROUTES.partners.me;
   return API_ROUTES.admin.me;
 }
 
@@ -43,6 +45,7 @@ function resolveSelfUpdateRoute(userId) {
   const id = encodeURIComponent(String(userId ?? "").trim());
   if (isManagerLoginRole()) return API_ROUTES.projectManagers.update(id);
   if (isSalesLoginRole()) return API_ROUTES.salesManagers.update(id);
+  if (isPartnerLoginRole()) return API_ROUTES.partners.update(id);
   return API_ROUTES.admin.update(id);
 }
 
@@ -52,8 +55,14 @@ function extractSelfRecord(data) {
 
   if (!data || typeof data !== "object") return null;
   const nested = data.data && typeof data.data === "object" ? data.data : null;
+  if (nested?.partner && typeof nested.partner === "object") {
+    return nested.partner;
+  }
   if (nested && (nested.id != null || nested.email != null || nested.name != null)) {
     return nested;
+  }
+  if (data.partner && typeof data.partner === "object") {
+    return data.partner;
   }
   return null;
 }
@@ -143,11 +152,7 @@ export async function updateProfile(userId, payload) {
     throw new ApiError("Unable to update profile: missing user id.");
   }
 
-  if (isManagerLoginRole() || isSalesLoginRole()) {
-    const body = new FormData();
-    body.append("name", String(name ?? "").trim());
-    body.append("email", resolvedEmail);
-    body.append("status", formStatusToApiStatus(status));
+  if (isManagerLoginRole() || isSalesLoginRole() || isPartnerLoginRole()) {
     if (imageFile instanceof File) {
       body.append("profile_image", imageFile);
     }
@@ -222,7 +227,7 @@ export async function changePassword(payload) {
   const encryptedConfirm =
     plainConfirm === plainNew ? encryptedNew : encryptValue(plainConfirm);
 
-  if (isManagerLoginRole() || isSalesLoginRole()) {
+  if (isManagerLoginRole() || isSalesLoginRole() || isPartnerLoginRole()) {
     const sessionUser = getAdminUser();
     const userId = String(sessionUser?.id ?? "").trim();
     const email = String(sessionUser?.email ?? "").trim();
@@ -234,11 +239,18 @@ export async function changePassword(payload) {
 
     const data = await apiRequest(resolveSelfUpdateRoute(userId), {
       method: "PUT",
-      body: {
-        name,
-        email,
-        new_password: encryptedNew,
-      },
+      body: isPartnerLoginRole()
+        ? {
+            name,
+            email,
+            password: encryptedNew,
+            confirm_password: encryptedConfirm,
+          }
+        : {
+            name,
+            email,
+            new_password: encryptedNew,
+          },
     });
 
     return assertSuccess(data);

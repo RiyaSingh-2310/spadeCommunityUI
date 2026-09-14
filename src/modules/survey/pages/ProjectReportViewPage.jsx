@@ -9,6 +9,8 @@ import ProjectReportTable from "../components/ProjectReportTable";
 import ReportModeFilters from "../components/ReportModeFilters";
 import { REPORT_MODE, REPORT_STATUS } from "../utils/reportFilterConstants";
 import { useProjectReportList } from "../hooks/useProjectReportList";
+import { isPartnerLoginRole } from "../../../services/auth/loginRole";
+import { getSessionPartnerId } from "../../../services/auth/sessionIdentity";
 import {
   listSupplierMappings,
   mapSupplierMappingToRow,
@@ -26,10 +28,20 @@ function ProjectReportViewPageContent({ isDarkMode }) {
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
   const { canRead: canReadSurvey } = useModulePermission("survey");
 
-  const { reportType, supplierId, mode, status, startDate, endDate, projectName } = useMemo(
+  const parsed = useMemo(
     () => parseProjectReportSearch(searchParams),
     [searchParams]
   );
+  const lockedPartnerId = isPartnerLoginRole() ? getSessionPartnerId() : "";
+  const {
+    reportType,
+    mode,
+    status,
+    startDate,
+    endDate,
+    projectName,
+  } = parsed;
+  const supplierId = lockedPartnerId || parsed.supplierId;
 
   const pageTitle = useMemo(
     () => getProjectReportPageTitle({ reportType, projectName }),
@@ -61,13 +73,16 @@ function ProjectReportViewPageContent({ isDarkMode }) {
   useEffect(() => {
     let cancelled = false;
     const resolvedProjectId = String(projectId ?? "").trim();
-    if (!resolvedProjectId) {
+    if (!resolvedProjectId || lockedPartnerId) {
       setSupplierOptions([]);
       return undefined;
     }
 
     setIsLoadingSuppliers(true);
-    listSupplierMappings({ projectId: resolvedProjectId })
+    listSupplierMappings({
+      projectId: resolvedProjectId,
+      partnerId: lockedPartnerId,
+    })
       .then((records) => {
         if (cancelled) return;
         const seen = new Set();
@@ -97,7 +112,7 @@ function ProjectReportViewPageContent({ isDarkMode }) {
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [projectId, lockedPartnerId]);
 
   const paginationFooter = (
     <AdminPagination
@@ -131,7 +146,9 @@ function ProjectReportViewPageContent({ isDarkMode }) {
     } else {
       next.delete("status");
     }
-    if (nextSupplierId) next.set("supplierId", nextSupplierId);
+    if (lockedPartnerId) {
+      next.set("supplierId", lockedPartnerId);
+    } else if (nextSupplierId) next.set("supplierId", nextSupplierId);
     else next.delete("supplierId");
     if (nextStartDate) next.set("start_date", nextStartDate);
     else next.delete("start_date");
@@ -162,9 +179,14 @@ function ProjectReportViewPageContent({ isDarkMode }) {
             updateFilters({ nextStartDate, nextEndDate })
           }
           supplierId={supplierId}
-          onSupplierChange={(nextSupplierId) => updateFilters({ nextSupplierId })}
-          supplierOptions={supplierOptions}
-          isLoadingSuppliers={isLoadingSuppliers}
+          onSupplierChange={
+            lockedPartnerId
+              ? undefined
+              : (nextSupplierId) => updateFilters({ nextSupplierId })
+          }
+          supplierOptions={lockedPartnerId ? [] : supplierOptions}
+          isLoadingSuppliers={lockedPartnerId ? false : isLoadingSuppliers}
+          hideSupplier={Boolean(lockedPartnerId)}
           mode={mode}
           onModeChange={(nextMode) => updateFilters({ nextMode })}
         />

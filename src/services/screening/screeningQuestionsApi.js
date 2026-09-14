@@ -14,10 +14,11 @@ import {
   uiToApiQuestionType,
 } from "../question-library/questionLibraryApi";
 import {
+  extractLanguageRaw,
   normalizeOptionsForQuestionType,
   normalizeQuestionTypeLabel,
+  resolveLanguageSelectValue,
 } from "../../modules/user-screening/data/profilingQuestionsStore";
-import { toUiSentenceCase } from "../../modules/shared/utils/uiText";
 
 function isApiSuccess(data) {
   if (!data || typeof data !== "object") return false;
@@ -150,6 +151,37 @@ export function getScreeningRowId(row) {
   return getRecordId(row);
 }
 
+function firstPresentLanguage(...candidates) {
+  for (const candidate of candidates) {
+    if (extractLanguageRaw(candidate)) return candidate;
+  }
+  return "";
+}
+
+function getRecordLanguage(record) {
+  if (!record || typeof record !== "object") return "";
+  return firstPresentLanguage(
+    record.language,
+    record.Language,
+    record.language_name,
+    record.languageName,
+    record.language_code,
+    record.languageCode,
+    record.lang
+  );
+}
+
+function languagesMatch(left, right) {
+  const a = extractLanguageRaw(left).toLowerCase();
+  const b = extractLanguageRaw(right).toLowerCase();
+  if (!a || !b) return false;
+  if (a === b) return true;
+  return (
+    resolveLanguageSelectValue(left).toLowerCase() ===
+    resolveLanguageSelectValue(right).toLowerCase()
+  );
+}
+
 function normalizeScreeningListRecord(record) {
   if (!record || typeof record !== "object") return record;
 
@@ -182,7 +214,7 @@ function normalizeScreeningListRecord(record) {
       primary.question_title ??
       primary.questionTitle ??
       "",
-    language: record.language ?? primary.language ?? "",
+    language: firstPresentLanguage(record.language, primary.language),
     question_type:
       record.question_type ??
       record.questionType ??
@@ -299,7 +331,7 @@ function mergeScreeningQuestionRecord(listRecord, detailRecord) {
     ...listRecord,
     ...detailRecord,
     id: getRecordId(listRecord) ?? getRecordId(detailRecord),
-    language: listRecord?.language ?? detailRecord.language ?? "",
+    language: firstPresentLanguage(detailRecord.language, listRecord?.language),
     question_title:
       detailRecord.question_title ??
       detailRecord.questionTitle ??
@@ -358,13 +390,12 @@ async function enrichScreeningQuestionRecord(record) {
 }
 
 function normalizePanelQuestionnaireLanguage(language) {
-  return String(language ?? "").trim().toLowerCase();
+  const raw = extractLanguageRaw(language);
+  return raw.toLowerCase();
 }
 
 function formatPanelQuestionnaireLanguageForUi(language) {
-  const slug = normalizePanelQuestionnaireLanguage(language);
-  if (!slug) return "";
-  return toUiSentenceCase(slug);
+  return resolveLanguageSelectValue(language);
 }
 
 function resolveOptionsAsStrings(payload) {
@@ -500,23 +531,24 @@ export function mapScreeningRecordToQuestionItem(record) {
 export async function getScreeningQuestionsByLanguage(language) {
   const normalizedLanguage = String(language ?? "").trim();
   if (!normalizedLanguage) return [];
+  const apiLanguage = normalizePanelQuestionnaireLanguage(normalizedLanguage);
 
   try {
-    const data = await apiRequest(API_ROUTES.screening.byLanguage(normalizedLanguage));
+    const data = await apiRequest(API_ROUTES.screening.byLanguage(apiLanguage));
     assertSuccess(data);
-    return extractLanguageQuestionRecords(data, normalizedLanguage);
+    return extractLanguageQuestionRecords(data, apiLanguage);
   } catch {
     const data = await apiRequest(
       appendScreeningListQuery(API_ROUTES.screening.list, {
         page: 1,
         limit: MAX_API_LIST_LIMIT,
-        search: normalizedLanguage,
+        search: apiLanguage || normalizedLanguage,
       })
     );
     assertSuccess(data);
     return extractQuestionList(data)
       .map((record) => normalizeScreeningListRecord(record))
-      .filter((record) => String(record?.language ?? "").trim() === normalizedLanguage);
+      .filter((record) => languagesMatch(getRecordLanguage(record), normalizedLanguage));
   }
 }
 
@@ -565,7 +597,7 @@ export function mapScreeningQuestionToForm(record) {
   const required = mapRequiredValue(record);
 
   return {
-    language: formatPanelQuestionnaireLanguageForUi(record?.language),
+    language: formatPanelQuestionnaireLanguageForUi(getRecordLanguage(record)),
     questionTitle: record?.question_title ?? record?.questionTitle ?? "",
     questionText: record?.question_text ?? record?.questionText ?? "",
     questionType,
@@ -587,11 +619,20 @@ export function mapQuestionnaireToForm(records) {
       (Number(b?.sort_order ?? b?.sortOrder ?? 0) || 0)
   );
   const first = sorted[0] ?? {};
+  const mappedFirst = first && Object.keys(first).length > 0
+    ? mapScreeningQuestionToForm(first)
+    : null;
+  const language =
+    mappedFirst?.language ||
+    sorted.reduce((found, record) => {
+      if (found) return found;
+      return formatPanelQuestionnaireLanguageForUi(getRecordLanguage(record));
+    }, "");
 
   return {
-    language: first.language ?? "",
-    questionTitle: first.question_title ?? first.questionTitle ?? "",
-    status: apiStatusToFormValue(first.status),
+    language,
+    questionTitle: mappedFirst?.questionTitle ?? "",
+    status: mappedFirst?.status ?? apiStatusToFormValue(first.status),
     questions: sorted.map((record) => {
       const mapped = mapScreeningQuestionToForm(record);
       const recordId = getRecordId(record);
@@ -614,12 +655,14 @@ export function mapScreeningQuestionToRow(record) {
   const createdRaw = record?.created_at ?? record?.createdAt ?? "";
   const sortOrder = Number(record?.sort_order ?? record?.sortOrder ?? 0) || 0;
   const title = record?.question_title ?? record?.questionTitle ?? "";
+  const questionText = record?.question_text ?? record?.questionText ?? "";
 
   return {
     id: getRecordId(record),
     title,
     questionTitle: title,
-    language: formatPanelQuestionnaireLanguageForUi(record?.language),
+    questionText: questionText || title,
+    language: formatPanelQuestionnaireLanguageForUi(getRecordLanguage(record)),
     questionType: normalizeQuestionTypeLabel(
       apiToUiQuestionType(record?.question_type ?? record?.questionType)
     ),
@@ -750,11 +793,11 @@ async function loadQuestionnaireFromList(seed, id) {
     .map((record) => normalizeScreeningListRecord(record))
     .filter((record) => {
       const recordTitle = String(record?.question_title ?? record?.questionTitle ?? "").trim();
-      const recordLanguage = String(record?.language ?? "").trim();
+      const recordLanguage = getRecordLanguage(record);
       const recordId = String(getRecordId(record) ?? "");
       return (
         recordTitle === questionTitle &&
-        recordLanguage === language &&
+        (!language || languagesMatch(recordLanguage, language)) &&
         (apiStatusToFormValue(record?.status) === "Active" || recordId === seedId)
       );
     })
