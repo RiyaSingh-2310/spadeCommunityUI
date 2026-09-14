@@ -8,19 +8,19 @@ describe("rewardSettingsApi mapping", () => {
   it("maps GET response data into form fields", () => {
     const form = mapRewardSettingsToForm({
       id: 1,
-      registration_reward_points: 100,
+      registration_reward_points: 50,
       minimum_payout: "100.00",
-      maximum_redeem_points: "500.00",
       amazon_enabled: true,
       flipkart_enabled: true,
       paypal_enabled: false,
+      max_redeem_points: 500,
     });
 
     expect(form).toEqual({
       id: 1,
-      registrationReward: "100",
+      registrationReward: "50",
       minimumPayout: "100.00",
-      maximumRedeemPoints: "500.00",
+      maximumRedeemPoints: "500",
       amazon: "Yes",
       flipkart: "Yes",
       paypal: "No",
@@ -29,28 +29,28 @@ describe("rewardSettingsApi mapping", () => {
 
   it("maps camelCase maximum redeem aliases from GET data", () => {
     const form = mapRewardSettingsToForm({
-      maximumRedeemPoints: 250,
+      maxRedeemPoints: 250,
     });
     expect(form.maximumRedeemPoints).toBe("250");
   });
 
-  it("builds PUT payload with boolean flags and numbers", () => {
+  it("builds PUT payload with max_redeem_points", () => {
     const payload = buildRewardSettingsPayload({
-      registrationReward: "150",
-      minimumPayout: "50.00",
+      registrationReward: "50",
+      minimumPayout: "100.00",
       maximumRedeemPoints: "500",
       amazon: "Yes",
       flipkart: "Yes",
-      paypal: "Yes",
+      paypal: "No",
     });
 
     expect(payload).toEqual({
-      registration_reward_points: 150,
-      minimum_payout: 50,
-      maximum_redeem_points: 500,
+      registration_reward_points: 50,
+      minimum_payout: 100,
+      max_redeem_points: 500,
       amazon_enabled: true,
       flipkart_enabled: true,
-      paypal_enabled: true,
+      paypal_enabled: false,
     });
   });
 });

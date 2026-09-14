@@ -13,6 +13,7 @@ import { toastApiSuccess } from "../toast/apiToast";
 import { clearAuthSession, getAuthToken } from "./authStorage";
 import { mapAuthFlowResponse } from "./mapAuthFlowResponse";
 import { mapLoginResponse } from "./mapLoginResponse";
+import { decodeJwtPayload } from "./jwtUtils";
 import {
   beginIntentionalLogout,
   endIntentionalLogout,
@@ -164,30 +165,62 @@ export async function loginAdmin(credentials) {
 async function enrichPartnerLoginSession(mapped, loginRole, email) {
   if (loginRole !== LOGIN_ROLES.PARTNER) return mapped;
   if (!mapped?.token) return mapped;
-  if (mapped.admin?.id != null && mapped.admin?.id !== "") return mapped;
 
-  try {
-    const meData = await apiRequest(API_ROUTES.partners.me, {
-      method: "GET",
-      auth: false,
-      headers: { Authorization: `Bearer ${mapped.token}` },
-    });
-    const meMapped = mapLoginResponse(meData);
-    if (meMapped.admin) {
-      return {
-        ...mapped,
-        admin: meMapped.admin,
-        message: mapped.message || meMapped.message,
-      };
+  const jwtIdentity = decodeJwtPayload(mapped.token) ?? {};
+  const partnerId = String(
+    mapped.admin?.id ??
+      mapped.admin?.partner_id ??
+      mapped.admin?.partnerId ??
+      jwtIdentity.id ??
+      jwtIdentity.partner_id ??
+      jwtIdentity.partnerId ??
+      jwtIdentity.partnerid ??
+      jwtIdentity.sub ??
+      ""
+  ).trim();
+  const partnerEmail = String(
+    mapped.admin?.email ?? jwtIdentity.email ?? email ?? ""
+  ).trim();
+
+  let admin = {
+    ...(mapped.admin && typeof mapped.admin === "object" ? mapped.admin : {}),
+    ...(partnerId ? { id: partnerId } : {}),
+    ...(partnerEmail ? { email: partnerEmail } : {}),
+  };
+
+  if (partnerId) {
+    try {
+      const detailData = await apiRequest(API_ROUTES.partners.byId(partnerId), {
+        method: "GET",
+        auth: false,
+        headers: { Authorization: `Bearer ${mapped.token}` },
+      });
+      const detailMapped = mapLoginResponse(detailData);
+      if (detailMapped.admin) {
+        admin = { ...admin, ...detailMapped.admin, id: partnerId };
+      } else if (detailData?.data && typeof detailData.data === "object") {
+        admin = { ...admin, ...detailData.data, id: partnerId };
+      }
+    } catch {
+      try {
+        const meData = await apiRequest(API_ROUTES.partners.me, {
+          method: "GET",
+          auth: false,
+          headers: { Authorization: `Bearer ${mapped.token}` },
+        });
+        const meMapped = mapLoginResponse(meData);
+        if (meMapped.admin) {
+          admin = { ...admin, ...meMapped.admin, id: admin.id || partnerId };
+        }
+      } catch {
+        // JWT identity is enough for Partner portal authorization.
+      }
     }
-  } catch {
-    // Token from POST /api/partner/login is still valid without /me.
   }
 
-  if (mapped.admin) return mapped;
   return {
     ...mapped,
-    admin: { email: String(email ?? "").trim() },
+    admin,
   };
 }
 

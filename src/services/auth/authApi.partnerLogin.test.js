@@ -24,18 +24,31 @@ describe("partner login API", () => {
   });
 
   it("sends email and encrypted password without a login bearer", async () => {
-    apiRequest.mockResolvedValueOnce({
-      success: true,
-      message: "Login successful!",
-      data: {
-        token: "partner-jwt",
-        partner: {
+    apiRequest.mockImplementation(async (path) => {
+      if (path === "/api/partner/login") {
+        return {
+          success: true,
+          message: "Login successful!",
+          data: {
+            token: "partner-jwt",
+            partner: {
+              id: 12,
+              email: "partner@example.com",
+              name: "Acme",
+              status: "active",
+            },
+          },
+        };
+      }
+      return {
+        success: true,
+        data: {
           id: 12,
           email: "partner@example.com",
           name: "Acme",
           status: "active",
         },
-      },
+      };
     });
 
     const result = await loginAdmin({
@@ -44,7 +57,6 @@ describe("partner login API", () => {
       loginRole: LOGIN_ROLES.PARTNER,
     });
 
-    expect(apiRequest).toHaveBeenCalledTimes(1);
     expect(apiRequest).toHaveBeenCalledWith("/api/partner/login", {
       method: "POST",
       auth: false,
@@ -55,6 +67,6 @@ describe("partner login API", () => {
       },
     });
     expect(result.token).toBe("partner-jwt");
-    expect(result.admin?.id).toBe(12);
+    expect(String(result.admin?.id)).toBe("12");
   });
 });

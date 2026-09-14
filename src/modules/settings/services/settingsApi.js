@@ -13,6 +13,10 @@ import {
   isSalesLoginRole,
 } from "../../../services/auth/loginRole";
 import {
+  getSessionPartnerId,
+} from "../../../services/auth/sessionIdentity";
+import { getRecord as getPartnerRecord } from "../../../services/partners/partnersApi";
+import {
   buildPermissionsPayload,
   extractPermissionsRawFromRecord,
   hasAnyPermissionGrant,
@@ -103,7 +107,29 @@ export function mapAdminToProfileForm(admin) {
     permission_type: mapped.permission_type,
     permissions: mapped.permissions,
     imageUrl: resolveProfileImageUrl(admin) ?? "",
+    code: String(admin?.code ?? admin?.partner_code ?? admin?.partnerCode ?? "").trim(),
+    country: String(admin?.country ?? "").trim(),
+    partnerId: String(admin?.id ?? "").trim(),
   };
+}
+
+async function fetchPartnerProfileRecord() {
+  const partnerId = getSessionPartnerId();
+  if (partnerId) {
+    try {
+      return await getPartnerRecord(partnerId);
+    } catch {
+      // Fall through to /api/partner/me when the id-based record is unavailable.
+    }
+  }
+
+  const data = await apiRequest(resolveMeRoute());
+  assertSuccess(data);
+  const record = extractSelfRecord(data);
+  if (!record) {
+    throw new ApiError(data?.message ?? "Partner not found.", data);
+  }
+  return record;
 }
 
 /**
@@ -111,6 +137,16 @@ export function mapAdminToProfileForm(admin) {
  * Never uses another user's id for the email/profile source.
  */
 export async function fetchProfile(_userId) {
+  if (isPartnerLoginRole()) {
+    const admin = await fetchPartnerProfileRecord();
+    syncAuthSessionFromRecord(admin);
+    return {
+      admin,
+      profile: null,
+      form: mapAdminToProfileForm(admin),
+    };
+  }
+
   const data = await apiRequest(resolveMeRoute());
   assertSuccess(data);
 
@@ -152,14 +188,26 @@ export async function updateProfile(userId, payload) {
     throw new ApiError("Unable to update profile: missing user id.");
   }
 
-  if (isManagerLoginRole() || isSalesLoginRole() || isPartnerLoginRole()) {
-    if (imageFile instanceof File) {
-      body.append("profile_image", imageFile);
-    }
-
+  if (isPartnerLoginRole()) {
     const data = await apiRequest(resolveSelfUpdateRoute(resolvedId), {
       method: "PUT",
-      body,
+      body: {
+        name: String(name ?? "").trim(),
+        email: resolvedEmail,
+      },
+    });
+    assertSuccess(data);
+    const refreshed = await fetchProfile(resolvedId);
+    return { ...data, admin: refreshed.admin };
+  }
+
+  if (isManagerLoginRole() || isSalesLoginRole()) {
+    const data = await apiRequest(resolveSelfUpdateRoute(resolvedId), {
+      method: "PUT",
+      body: {
+        name: String(name ?? "").trim(),
+        email: resolvedEmail,
+      },
     });
     assertSuccess(data);
 

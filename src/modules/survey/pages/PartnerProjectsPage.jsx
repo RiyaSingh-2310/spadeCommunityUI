@@ -4,6 +4,7 @@ import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import TableCard from "../../../components/admin/TableCard";
 import PermissionDenied from "../../../components/admin/PermissionDenied";
 import { toastApiError } from "../../../services/toast/apiToast";
+import { isPartnerLoginRole } from "../../../services/auth/loginRole";
 import { getSessionPartnerId } from "../../../services/auth/sessionIdentity";
 import {
   listSupplierMappings,
@@ -51,8 +52,19 @@ function PartnerProjectsPage({ isDarkMode }) {
     };
   }, [partnerId]);
 
-  if (!partnerId) {
+  if (!isPartnerLoginRole()) {
     return <PermissionDenied isDarkMode={isDarkMode} />;
+  }
+
+  if (!partnerId) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader title="Projects" isDarkMode={isDarkMode} />
+        <p className="admin-text-muted text-sm">
+          Unable to identify the authenticated partner account. Please sign in again.
+        </p>
+      </div>
+    );
   }
 
   return (

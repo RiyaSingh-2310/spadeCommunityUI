@@ -13,7 +13,7 @@ import {
 } from "../../services/auth/loginRole";
 import { formatDashboardDate } from "../../modules/shared/utils/dateTime";
 import { formatStatusLabel } from "../../modules/shared/utils/statusLabels";
-import { BarsChart, DonutChart, PolylineChart, SummaryCard } from "./dashboard/dashboardCharts";
+import { BarsChart, DonutChart, HorizontalBarsChart, PolylineChart, SummaryCard } from "./dashboard/dashboardCharts";
 import { TABLE_HEAD, dashboardCount } from "./dashboard/dashboardUtils";
 import DashboardLoadError from "./dashboard/DashboardLoadError";
 import PanelistAnalyticsDashboard from "./dashboard/PanelistAnalyticsDashboard";
@@ -144,13 +144,56 @@ function DashboardPage({ isDarkMode }) {
                 label="Inactive Mappings"
                 value={partnerDashboard.inactiveCount}
               />
+              {partnerDashboard.totalQuota != null ? (
+                <SummaryCard
+                  icon={Wallet}
+                  label="Total Partner Quota"
+                  value={partnerDashboard.totalQuota}
+                />
+              ) : null}
+              {partnerDashboard.usedQuota != null ? (
+                <SummaryCard
+                  icon={Wallet}
+                  label="Used Quota"
+                  value={partnerDashboard.usedQuota}
+                />
+              ) : null}
+              {partnerDashboard.remainingQuota != null ? (
+                <SummaryCard
+                  icon={Wallet}
+                  label="Remaining Quota"
+                  value={partnerDashboard.remainingQuota}
+                />
+              ) : null}
             </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <TableCard title="Mapping Status" isDarkMode={isDarkMode}>
+                {partnerDashboard.loading ? (
+                  <p className="admin-text-muted text-sm">Loading...</p>
+                ) : partnerDashboard.statusSeries.length === 0 ? (
+                  <p className="admin-text-muted text-sm">No mapping status data yet.</p>
+                ) : (
+                  <DonutChart data={partnerDashboard.statusSeries} />
+                )}
+              </TableCard>
+              <TableCard title="Quota by Project" isDarkMode={isDarkMode}>
+                {partnerDashboard.loading ? (
+                  <p className="admin-text-muted text-sm">Loading...</p>
+                ) : partnerDashboard.quotaByProject.length === 0 ? (
+                  <p className="admin-text-muted text-sm">No quota data available yet.</p>
+                ) : (
+                  <HorizontalBarsChart data={partnerDashboard.quotaByProject} />
+                )}
+              </TableCard>
+            </div>
+
             <TableCard title="Assigned Projects" isDarkMode={isDarkMode}>
               <div className="overflow-x-auto">
                 <table className="admin-table min-w-full text-sm">
                   <thead>
                     <tr className={headClass}>
-                      {["Project", "Partner Code", "Quota", "CPI", "Status"].map((h) => (
+                      {["Project", "Partner Code", "Quota", "CPI", "Status", "Action"].map((h) => (
                         <th key={h} className={TABLE_HEAD}>
                           {h}
                         </th>
@@ -160,18 +203,18 @@ function DashboardPage({ isDarkMode }) {
                   <tbody>
                     {partnerDashboard.loading ? (
                       <tr className={`border-t ${borderRow}`}>
-                        <td colSpan={5} className="admin-text-muted px-3 py-6 text-center text-sm">
+                        <td colSpan={6} className="admin-text-muted px-3 py-6 text-center text-sm">
                           Loading...
                         </td>
                       </tr>
-                    ) : partnerDashboard.rows.length === 0 ? (
+                    ) : partnerDashboard.recentRows.length === 0 ? (
                       <tr className={`border-t ${borderRow}`}>
-                        <td colSpan={5} className="admin-text-muted px-3 py-6 text-center text-sm">
+                        <td colSpan={6} className="admin-text-muted px-3 py-6 text-center text-sm">
                           No assigned projects found
                         </td>
                       </tr>
                     ) : (
-                      partnerDashboard.rows.map((row) => (
+                      partnerDashboard.recentRows.map((row) => (
                         <tr key={row.id} className={`border-t ${borderRow}`}>
                           <td className="admin-text whitespace-nowrap px-3 py-3">
                             {row.projectName || row.projectId || "—"}
@@ -183,6 +226,18 @@ function DashboardPage({ isDarkMode }) {
                           <td className="admin-text whitespace-nowrap px-3 py-3">{row.cpi}</td>
                           <td className="admin-text whitespace-nowrap px-3 py-3">
                             {formatStatusLabel(row.statusActive ? "Active" : "Inactive")}
+                          </td>
+                          <td className="px-3 py-3">
+                            <button
+                              type="button"
+                              className="text-sm font-semibold text-[#10a950] hover:underline"
+                              disabled={!row.projectId}
+                              onClick={() =>
+                                navigate(`/survey/view/${encodeURIComponent(row.projectId)}`)
+                              }
+                            >
+                              View
+                            </button>
                           </td>
                         </tr>
                       ))

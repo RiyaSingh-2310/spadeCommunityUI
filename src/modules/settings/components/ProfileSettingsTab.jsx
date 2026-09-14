@@ -5,6 +5,8 @@ import FormField from "../../../components/admin/FormField";
 import TableCard from "../../../components/admin/TableCard";
 import { scrollPageToTop } from "../../../components/shared/ScrollToTopOnNavigate";
 import { getAdminUser, isAuthenticated } from "../../../services/auth/authStorage";
+import { isPartnerLoginRole } from "../../../services/auth/loginRole";
+import { getSessionPartnerId } from "../../../services/auth/sessionIdentity";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   IMAGE_UPLOAD_ACCEPT,
@@ -40,13 +42,18 @@ const EMPTY_PASSWORD_FORM = {
 };
 
 function ProfileSettingsTab({ isDarkMode }) {
+  const isPartner = isPartnerLoginRole();
   const sessionUser = getAdminUser();
-  const userId = sessionUser?.id;
+  const userId = isPartner ? getSessionPartnerId() || sessionUser?.id : sessionUser?.id;
   const canLoadProfile = Boolean(userId) || isAuthenticated();
 
   const [form, setForm] = useState({
     name: sessionUser?.displayName ?? sessionUser?.name ?? "",
     email: sessionUser?.email ?? "",
+    code: sessionUser?.code ?? "",
+    country: sessionUser?.country ?? "",
+    partnerId: String(userId ?? ""),
+    status: sessionUser?.status ?? "Active",
   });
   const [profileUserId, setProfileUserId] = useState(userId ?? "");
   const [profileMeta, setProfileMeta] = useState({
@@ -116,6 +123,10 @@ function ProfileSettingsTab({ isDarkMode }) {
         setForm({
           name: loadedForm.name,
           email: loadedForm.email,
+          code: loadedForm.code ?? "",
+          country: loadedForm.country ?? "",
+          partnerId: loadedForm.partnerId ?? String(admin?.id ?? userId ?? "").trim(),
+          status: loadedForm.status ?? "Active",
         });
         setProfileMeta({
           status: loadedForm.status,
@@ -267,6 +278,10 @@ function ProfileSettingsTab({ isDarkMode }) {
       setForm({
         name: refreshed.form.name,
         email: refreshed.form.email,
+        code: refreshed.form.code ?? form.code,
+        country: refreshed.form.country ?? form.country,
+        partnerId: refreshed.form.partnerId ?? form.partnerId,
+        status: refreshed.form.status ?? form.status,
       });
       setExistingImage(refreshed.form.imageUrl ?? "");
       setInitialSnapshot(snapshot);
@@ -392,6 +407,26 @@ function ProfileSettingsTab({ isDarkMode }) {
           <div className="border-t border-[var(--admin-header-surface-border)]" />
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            {isPartner ? (
+              <>
+                <FormField label="Partner ID">
+                  <input
+                    className={inputClass}
+                    value={form.partnerId}
+                    disabled
+                    readOnly
+                  />
+                </FormField>
+                <FormField label="Partner Code">
+                  <input
+                    className={inputClass}
+                    value={form.code}
+                    disabled
+                    readOnly
+                  />
+                </FormField>
+              </>
+            ) : null}
             <FormField
               label="Full Name"
               required
@@ -413,7 +448,7 @@ function ProfileSettingsTab({ isDarkMode }) {
               />
             </FormField>
 
-            <FormField label="Email Address">
+            <FormField label={isPartner ? "Email Address / Login ID" : "Email Address"}>
               <input
                 className={inputClass}
                 value={form.email}
@@ -422,6 +457,26 @@ function ProfileSettingsTab({ isDarkMode }) {
                 autoComplete="email"
               />
             </FormField>
+            {isPartner ? (
+              <>
+                <FormField label="Country">
+                  <input
+                    className={inputClass}
+                    value={form.country}
+                    disabled
+                    readOnly
+                  />
+                </FormField>
+                <FormField label="Status">
+                  <input
+                    className={inputClass}
+                    value={form.status}
+                    disabled
+                    readOnly
+                  />
+                </FormField>
+              </>
+            ) : null}
           </div>
 
           <div className="flex justify-end">

@@ -84,6 +84,15 @@ export function mapSupplierMappingToRow(record, index = 0) {
       pickField(record, ["projectid", "project_id", "projectId"]) ?? ""
     ).trim(),
     quota: pickField(record, ["quota", "Quota"]) ?? "—",
+    usedQuota: pickField(record, [
+      "used_quota",
+      "usedQuota",
+      "completes",
+      "complete_count",
+      "completes_count",
+      "ncomplete",
+      "NComplete",
+    ]),
     cpi: pickField(record, ["CPI", "cpi", "cpi_rate"]) ?? "—",
     linksToAssign:
       pickField(record, [
