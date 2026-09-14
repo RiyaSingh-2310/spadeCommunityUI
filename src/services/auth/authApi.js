@@ -79,7 +79,7 @@ function assertAuthFlowSuccess(data, fallbackMessage) {
   };
 }
 
-function resolveLoginRoute(loginRole) {
+export function resolveLoginRoute(loginRole) {
   if (loginRole === LOGIN_ROLES.SALES) return API_ROUTES.salesManagers.login;
   if (loginRole === LOGIN_ROLES.MANAGER) return API_ROUTES.projectManagers.login;
   if (loginRole === LOGIN_ROLES.PARTNER) return API_ROUTES.partners.login;
@@ -111,7 +111,7 @@ export async function loginAdmin(credentials) {
   let data;
   try {
     // Sales Manager login may send optional login bearer when VITE_API_LOGIN_BEARER_TOKEN is set
-    // (matches backend curl). Admin / Project Manager login stay unchanged.
+    // (matches backend curl). Partner login matches POST /api/partner/login with JSON only.
     data = await apiRequest(loginPath, {
       method: "POST",
       auth: false,
@@ -136,14 +136,16 @@ export async function loginAdmin(credentials) {
   }
 
   const mapped = mapLoginResponse(data);
+  const session = await enrichPartnerLoginSession(mapped, loginRole, payload.email);
 
-  if (!mapped.success || !mapped.token) {
+  if (!session.success || !session.token) {
     throw new ApiError("Invalid Credentials", data, 200);
   }
 
   const status =
-    mapped.admin?.status ??
+    session.admin?.status ??
     data?.data?.admin?.status ??
+    data?.data?.partner?.status ??
     data?.data?.status;
   if (status && String(status).toLowerCase() !== "active") {
     throw new ApiError("Your account is inactive. Please contact support.", data);
@@ -151,11 +153,41 @@ export async function loginAdmin(credentials) {
 
   return {
     success: true,
-    message: mapped.message || "Login successful!",
-    token: mapped.token,
-    refreshToken: mapped.refreshToken,
-    admin: mapped.admin,
-    data: data?.data ?? { token: mapped.token, admin: mapped.admin },
+    message: session.message || "Login successful!",
+    token: session.token,
+    refreshToken: session.refreshToken,
+    admin: session.admin,
+    data: data?.data ?? { token: session.token, admin: session.admin },
+  };
+}
+
+async function enrichPartnerLoginSession(mapped, loginRole, email) {
+  if (loginRole !== LOGIN_ROLES.PARTNER) return mapped;
+  if (!mapped?.token) return mapped;
+  if (mapped.admin?.id != null && mapped.admin?.id !== "") return mapped;
+
+  try {
+    const meData = await apiRequest(API_ROUTES.partners.me, {
+      method: "GET",
+      auth: false,
+      headers: { Authorization: `Bearer ${mapped.token}` },
+    });
+    const meMapped = mapLoginResponse(meData);
+    if (meMapped.admin) {
+      return {
+        ...mapped,
+        admin: meMapped.admin,
+        message: mapped.message || meMapped.message,
+      };
+    }
+  } catch {
+    // Token from POST /api/partner/login is still valid without /me.
+  }
+
+  if (mapped.admin) return mapped;
+  return {
+    ...mapped,
+    admin: { email: String(email ?? "").trim() },
   };
 }
 

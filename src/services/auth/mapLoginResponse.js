@@ -24,6 +24,8 @@ function looksLikeSessionUser(value) {
  * API shapes:
  * Admin:          { success, message, data: { token, admin, permissions? } }
  * Sales Manager:  { success, message, token, data: { id, code, name, email, image_url } }
+ * Partner:        { success, message, data: { token, partner } }
+ *                 or { success, token, data: { id, email, name } }
  *
  * @param {object | null | undefined} raw
  */
@@ -41,8 +43,13 @@ export function mapLoginResponse(raw) {
     nested?.token ??
       nested?.accessToken ??
       nested?.access_token ??
+      nested?.jwt ??
+      nested?.authToken ??
+      nested?.auth_token ??
       raw.token ??
       raw.accessToken ??
+      raw.access_token ??
+      raw.jwt ??
       ""
   ).trim();
 

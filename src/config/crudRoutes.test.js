@@ -21,6 +21,7 @@ describe("CRUD API contracts", () => {
     expect(API_ROUTES.partners.create).toBe("/api/partner/add");
     expect(API_ROUTES.partners.update(3)).toBe("/api/partner/3");
     expect(API_ROUTES.partners.delete(3)).toBe("/api/partner/3");
+    expect(API_ROUTES.partners.login).toBe("/api/partner/login");
   });
 
   it("project managers", () => {
