@@ -46,6 +46,14 @@ export function mapRewardSettingsToForm(record) {
       record?.registration_reward_points ?? record?.registrationRewardPoints
     ),
     minimumPayout: toFormNumber(record?.minimum_payout ?? record?.minimumPayout),
+    maximumRedeemPoints: toFormNumber(
+      record?.maximum_redeem_points ??
+        record?.maximumRedeemPoints ??
+        record?.max_redeem_points ??
+        record?.maxRedeemPoints ??
+        record?.maximum_redeem ??
+        record?.max_redeem
+    ),
     amazon: apiFlagToYesNo(record?.amazon_enabled ?? record?.amazonEnabled),
     flipkart: apiFlagToYesNo(record?.flipkart_enabled ?? record?.flipkartEnabled),
     paypal: apiFlagToYesNo(record?.paypal_enabled ?? record?.paypalEnabled),
@@ -55,7 +63,7 @@ export function mapRewardSettingsToForm(record) {
 /**
  * PUT body matches:
  * {
- *   registration_reward_points, minimum_payout,
+ *   registration_reward_points, minimum_payout, maximum_redeem_points,
  *   amazon_enabled, flipkart_enabled, paypal_enabled
  * }
  */
@@ -63,6 +71,7 @@ export function buildRewardSettingsPayload(form) {
   return {
     registration_reward_points: toApiNumber(form.registrationReward),
     minimum_payout: toApiNumber(form.minimumPayout),
+    maximum_redeem_points: toApiNumber(form.maximumRedeemPoints),
     amazon_enabled: yesNoToApiFlag(form.amazon),
     flipkart_enabled: yesNoToApiFlag(form.flipkart),
     paypal_enabled: yesNoToApiFlag(form.paypal),

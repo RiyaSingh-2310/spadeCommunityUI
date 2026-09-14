@@ -30,6 +30,7 @@ const EMPTY_FORM = {
   id: null,
   registrationReward: "",
   minimumPayout: "",
+  maximumRedeemPoints: "",
   amazon: "No",
   flipkart: "No",
   paypal: "No",
@@ -76,23 +77,38 @@ function RewardSettingsPage({ isDarkMode }) {
   }, []);
 
   const validationFields = useMemo(
-    () => ["registrationReward", "minimumPayout"],
+    () => ["registrationReward", "minimumPayout", "maximumRedeemPoints"],
     []
   );
 
-  const errors = useMemo(
-    () => ({
+  const errors = useMemo(() => {
+    const minimumPayout = getRequiredPositiveDecimalError(
+      form.minimumPayout,
+      "Minimum Payout"
+    );
+    let maximumRedeemPoints = getRequiredPositiveDecimalError(
+      form.maximumRedeemPoints,
+      "Maximum Redeem Points"
+    );
+
+    if (!minimumPayout && !maximumRedeemPoints) {
+      const minValue = Number(String(form.minimumPayout).trim());
+      const maxValue = Number(String(form.maximumRedeemPoints).trim());
+      if (maxValue < minValue) {
+        maximumRedeemPoints =
+          "Maximum Redeem Points must be greater than or equal to Minimum Payout";
+      }
+    }
+
+    return {
       registrationReward: getRequiredPositiveIntegerError(
         form.registrationReward,
         "User Registration Reward Point"
       ),
-      minimumPayout: getRequiredPositiveDecimalError(
-        form.minimumPayout,
-        "Minimum Payout"
-      ),
-    }),
-    [form]
-  );
+      minimumPayout,
+      maximumRedeemPoints,
+    };
+  }, [form]);
 
   const { showError, touch, validateSubmit } = useFormValidation({
     errors,
@@ -104,6 +120,7 @@ function RewardSettingsPage({ isDarkMode }) {
     return [
       "registrationReward",
       "minimumPayout",
+      "maximumRedeemPoints",
       ...REDEMPTION_METHOD_FIELDS,
     ].some(
       (key) =>
@@ -225,22 +242,38 @@ function RewardSettingsPage({ isDarkMode }) {
                 </p>
               </div>
 
-              <FormField
-                className="max-w-md"
-                label="Minimum Payout"
-                required
-                error={showError("minimumPayout")}
-              >
-                <DecimalInput
-                  className={inputClass}
-                  value={form.minimumPayout}
-                  onChange={(v) => setField("minimumPayout", v)}
-                  onBlur={() => touch("minimumPayout")}
-                  disabled={readOnly || isSubmitting}
-                  readOnly={readOnly}
-                  placeholder="1000"
-                />
-              </FormField>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  label="Minimum Payout"
+                  required
+                  error={showError("minimumPayout")}
+                >
+                  <DecimalInput
+                    className={inputClass}
+                    value={form.minimumPayout}
+                    onChange={(v) => setField("minimumPayout", v)}
+                    onBlur={() => touch("minimumPayout")}
+                    disabled={readOnly || isSubmitting}
+                    readOnly={readOnly}
+                    placeholder="1000"
+                  />
+                </FormField>
+                <FormField
+                  label="Maximum Redeem Points"
+                  required
+                  error={showError("maximumRedeemPoints")}
+                >
+                  <DecimalInput
+                    className={inputClass}
+                    value={form.maximumRedeemPoints}
+                    onChange={(v) => setField("maximumRedeemPoints", v)}
+                    onBlur={() => touch("maximumRedeemPoints")}
+                    disabled={readOnly || isSubmitting}
+                    readOnly={readOnly}
+                    placeholder="500"
+                  />
+                </FormField>
+              </div>
             </section>
 
             <section className="space-y-4 border-t border-[var(--admin-header-search-border)] pt-8">
