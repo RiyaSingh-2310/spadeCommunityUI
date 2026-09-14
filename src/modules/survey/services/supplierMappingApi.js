@@ -92,6 +92,14 @@ export function mapSupplierMappingToRow(record, index = 0) {
       pickField(record, ["projectUrlId", "project_url_id", "projecturlid", "ProjectUrlId"]) ??
         ""
     ).trim(),
+    projectUrlCode: String(
+      pickField(record, [
+        "project_url_code",
+        "projectUrlCode",
+        "url_code",
+        "Url_Code",
+      ]) ?? ""
+    ).trim(),
     quota: pickField(record, ["quota", "Quota"]) ?? "—",
     usedQuota: pickField(record, [
       "used_quota",
@@ -128,6 +136,26 @@ export function mapSupplierMappingToDetail(record) {
   return {
     mappingCode: pickField(record, ["mapping_code"]),
     partnerName: pickField(record, ["partner_name", "name", "partnerName"]),
+    partnerCode: pickField(record, ["partner_code", "code", "supplierCode"]),
+    projectId: pickField(record, ["projectid", "project_id", "projectId"]),
+    projectCode: pickField(record, [
+      "project_code",
+      "Project_code",
+      "survey_id",
+      "projectCode",
+    ]),
+    projectUrlId: pickField(record, [
+      "projectUrlId",
+      "project_url_id",
+      "projecturlid",
+      "ProjectUrlId",
+    ]),
+    projectUrlCode: pickField(record, [
+      "project_url_code",
+      "projectUrlCode",
+      "url_code",
+      "Url_Code",
+    ]),
     quota: pickField(record, ["quota", "Quota"]),
     cpi: pickField(record, ["CPI", "cpi", "cpi_rate"]),
     linksToAssign: pickField(record, [

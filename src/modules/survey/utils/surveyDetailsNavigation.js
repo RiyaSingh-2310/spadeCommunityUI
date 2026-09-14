@@ -6,6 +6,7 @@ export const SURVEY_DETAIL_TAB_IDS = {
   PROJECT_DETAILS: "project-details",
   PROJECT_URLS: "project-urls",
   PARTNER_MAPPING: "partner-mapping",
+  PARTNER_INFORMATION: "partner-information",
   PROJECT_REPORT: "project-report",
   PROJECT_MULTI_URL: "project-multi-url",
 };
@@ -20,6 +21,7 @@ export const SURVEY_DETAIL_TAB_LABELS = {
   [SURVEY_DETAIL_TAB_IDS.PROJECT_DETAILS]: "Project Information",
   [SURVEY_DETAIL_TAB_IDS.PROJECT_URLS]: "Project URLs",
   [SURVEY_DETAIL_TAB_IDS.PARTNER_MAPPING]: "Partner Mapping",
+  [SURVEY_DETAIL_TAB_IDS.PARTNER_INFORMATION]: "Partner Information",
   [SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT]: "Project Report",
   [SURVEY_DETAIL_TAB_IDS.PROJECT_MULTI_URL]: "Multi URL",
 };

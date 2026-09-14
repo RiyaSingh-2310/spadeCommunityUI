@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
+import StatusToggle from "../../../components/admin/StatusToggle";
 import TableCard from "../../../components/admin/TableCard";
+import ViewActionButton from "../../../components/admin/ViewActionButton";
 import PermissionDenied from "../../../components/admin/PermissionDenied";
 import { toastApiError } from "../../../services/toast/apiToast";
 import { isPartnerLoginRole } from "../../../services/auth/loginRole";
@@ -10,7 +12,6 @@ import {
   listSupplierMappings,
   mapSupplierMappingToRow,
 } from "../services/supplierMappingApi";
-import { formatStatusLabel } from "../../shared/utils/statusLabels";
 
 function PartnerProjectsPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -121,20 +122,20 @@ function PartnerProjectsPage({ isDarkMode }) {
                       <td className="admin-text max-w-[220px] truncate px-3 py-3">
                         {row.partnerUrl || "—"}
                       </td>
-                      <td className="admin-text whitespace-nowrap px-3 py-3">
-                        {formatStatusLabel(row.statusActive ? "Active" : "Inactive")}
+                      <td className="whitespace-nowrap px-3 py-3">
+                        <StatusToggle checked={Boolean(row.statusActive)} readOnly compact />
                       </td>
                       <td className="px-3 py-3">
-                        <button
-                          type="button"
-                          className="text-sm font-semibold text-[#10a950] hover:underline"
-                          disabled={!projectId}
-                          onClick={() =>
-                            navigate(`/survey/view/${encodeURIComponent(projectId)}`)
+                        <ViewActionButton
+                          iconOnly
+                          label="View"
+                          onView={
+                            projectId
+                              ? () =>
+                                  navigate(`/survey/view/${encodeURIComponent(projectId)}`)
+                              : undefined
                           }
-                        >
-                          View
-                        </button>
+                        />
                       </td>
                     </tr>
                   );

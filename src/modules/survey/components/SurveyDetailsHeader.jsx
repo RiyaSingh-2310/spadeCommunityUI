@@ -1,3 +1,4 @@
+import { SURVEY_DETAIL_TAB_IDS } from "../utils/surveyDetailsNavigation";
 import { Loader2 } from "lucide-react";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import { useModulePermission } from "../../permissions/useModulePermission";
@@ -6,20 +7,33 @@ import { PROJECT_STATUS_OPTIONS } from "../data/surveyFormData";
 import { primaryBtnClass, secondaryBtnClass } from "./surveyDetailsShared";
 
 export const SURVEY_DETAIL_TABS = [
-  { id: "project-details", label: "Project Information" },
-  { id: "project-urls", label: "Project URLs" },
-  { id: "partner-mapping", label: "Partner Mapping" },
+  { id: SURVEY_DETAIL_TAB_IDS.PROJECT_DETAILS, label: "Project Information" },
+  { id: SURVEY_DETAIL_TAB_IDS.PROJECT_URLS, label: "Project URLs" },
+  { id: SURVEY_DETAIL_TAB_IDS.PARTNER_MAPPING, label: "Partner Mapping" },
 ];
 
 /**
  * Build Project Details tabs.
- * Multi-link CSV upload is available when creating a project (Create Project form).
+ * Partner login uses a two-tab read-only view.
  */
-export function getSurveyDetailTabs() {
+export function getSurveyDetailTabs({ partnerView = false } = {}) {
+  if (partnerView) {
+    return [
+      {
+        id: SURVEY_DETAIL_TAB_IDS.PARTNER_INFORMATION,
+        label: "Partner Information",
+      },
+      {
+        id: SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT,
+        label: "Project Report",
+      },
+    ];
+  }
+
   return [
-    { id: "project-details", label: "Project Information" },
-    { id: "project-urls", label: "Project URLs" },
-    { id: "partner-mapping", label: "Partner Mapping" },
+    { id: SURVEY_DETAIL_TAB_IDS.PROJECT_DETAILS, label: "Project Information" },
+    { id: SURVEY_DETAIL_TAB_IDS.PROJECT_URLS, label: "Project URLs" },
+    { id: SURVEY_DETAIL_TAB_IDS.PARTNER_MAPPING, label: "Partner Mapping" },
   ];
 }
 
@@ -37,6 +51,7 @@ function SurveyDetailsHeader({
   surveyId,
   tabs = SURVEY_DETAIL_TABS,
   readOnly = false,
+  showHeaderStatus = true,
 }) {
   const { canWrite } = useModulePermission("survey");
   const allowWrite = canWrite && !readOnly;
@@ -86,57 +101,61 @@ function SurveyDetailsHeader({
           })}
         </div>
 
-        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center xl:justify-center">
-          {onProjectReport && (
-            <button
-              type="button"
-              onClick={onProjectReport}
-              className={isProjectReportActive ? primaryBtnClass : secondaryBtnClass}
-            >
-              Project Reports
-            </button>
-          )}
-          {allowWrite && (
-            <button type="button" onClick={onEditSurvey} className={primaryBtnClass}>
-              Edit Project
-            </button>
-          )}
-        </div>
-
-        {!readOnly ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-            <label className="admin-text-muted text-xs font-semibold tracking-[0.02em] sm:sr-only">
-              Project Status
-            </label>
-            <SearchableSelect
-              inputClass={`${getAdminInputClass()} min-w-[140px]`}
-              value={draftStatus}
-              onChange={onStatusChange}
-              options={PROJECT_STATUS_OPTIONS}
-              disabled={!allowWrite || isUpdatingStatus}
-              searchable={false}
-              aria-label="Project status"
-            />
-            {allowWrite && (
+        {allowWrite || onProjectReport ? (
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center xl:justify-center">
+            {onProjectReport && (
               <button
                 type="button"
-                onClick={onStatusUpdate}
-                disabled={!canUpdateStatus}
-                className={`${primaryBtnClass} flex min-w-[100px] items-center justify-center gap-2`}
+                onClick={onProjectReport}
+                className={isProjectReportActive ? primaryBtnClass : secondaryBtnClass}
               >
-                {isUpdatingStatus && <Loader2 size={16} className="animate-spin" />}
-                {isUpdatingStatus ? "Updating..." : "Update"}
+                Project Reports
+              </button>
+            )}
+            {allowWrite && (
+              <button type="button" onClick={onEditSurvey} className={primaryBtnClass}>
+                Edit Project
               </button>
             )}
           </div>
-        ) : (
-          <div className="flex flex-col items-end justify-end gap-1">
-            <span className="admin-text-muted text-xs font-semibold tracking-[0.02em]">
-              Project Status
-            </span>
-            <span className="admin-text text-sm font-semibold">{projectStatus}</span>
-          </div>
-        )}
+        ) : null}
+
+        {showHeaderStatus ? (
+          !readOnly ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <label className="admin-text-muted text-xs font-semibold tracking-[0.02em] sm:sr-only">
+                Project Status
+              </label>
+              <SearchableSelect
+                inputClass={`${getAdminInputClass()} min-w-[140px]`}
+                value={draftStatus}
+                onChange={onStatusChange}
+                options={PROJECT_STATUS_OPTIONS}
+                disabled={!allowWrite || isUpdatingStatus}
+                searchable={false}
+                aria-label="Project status"
+              />
+              {allowWrite && (
+                <button
+                  type="button"
+                  onClick={onStatusUpdate}
+                  disabled={!canUpdateStatus}
+                  className={`${primaryBtnClass} flex min-w-[100px] items-center justify-center gap-2`}
+                >
+                  {isUpdatingStatus && <Loader2 size={16} className="animate-spin" />}
+                  {isUpdatingStatus ? "Updating..." : "Update"}
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-end justify-end gap-1">
+              <span className="admin-text-muted text-xs font-semibold tracking-[0.02em]">
+                Project Status
+              </span>
+              <span className="admin-text text-sm font-semibold">{projectStatus}</span>
+            </div>
+          )
+        ) : null}
       </div>
       <p className="admin-text-subtle mt-3 text-xs sm:hidden">Project Code: {surveyId}</p>
     </div>

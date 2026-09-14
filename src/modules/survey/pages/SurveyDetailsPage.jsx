@@ -13,6 +13,7 @@ import ProjectDetailsTab from "../components/ProjectDetailsTab";
 import ProjectReportTab from "../components/ProjectReportTab";
 import ProjectUrlsTab from "../components/ProjectUrlsTab";
 import PartnerMappingTab from "../components/PartnerMappingTab";
+import PartnerInformationTab from "../components/PartnerInformationTab";
 import SurveyDetailsHeader, {
   getSurveyDetailTabs,
 } from "../components/SurveyDetailsHeader";
@@ -68,25 +69,36 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
     [searchParams]
   );
 
-  const visibleTabs = useMemo(() => getSurveyDetailTabs(), []);
+  const visibleTabs = useMemo(
+    () => getSurveyDetailTabs({ partnerView: partnerViewMode }),
+    [partnerViewMode]
+  );
 
   const tabLabels = useMemo(() => {
     const labels = visibleTabs.reduce((acc, tab) => {
       acc[tab.id] = tab.label;
       return acc;
     }, /** @type {Record<string, string>} */ ({}));
-    labels[SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT] = "Project Reports";
+    labels[SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT] = partnerViewMode
+      ? "Project Report"
+      : "Project Reports";
     return labels;
-  }, [visibleTabs]);
+  }, [visibleTabs, partnerViewMode]);
 
   const activeTab = useMemo(() => {
     const requested = parsedSearch.tab;
+    if (partnerViewMode) {
+      if (requested === SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT) {
+        return SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT;
+      }
+      return SURVEY_DETAIL_TAB_IDS.PARTNER_INFORMATION;
+    }
     if (requested === SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT) {
       return SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT;
     }
     const match = visibleTabs.find((tab) => tab.id === requested && !tab.disabled);
     return match?.id ?? visibleTabs[0]?.id ?? SURVEY_DETAIL_TAB_IDS.PROJECT_DETAILS;
-  }, [parsedSearch.tab, visibleTabs]);
+  }, [parsedSearch.tab, visibleTabs, partnerViewMode]);
 
   const urlView =
     activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_URLS
@@ -424,7 +436,8 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
         surveyId={project.projectCode || project.surveyId || project.id}
         tabs={visibleTabs}
         readOnly={readOnlyView}
-        onProjectReport={handleProjectReport}
+        showHeaderStatus={!partnerViewMode}
+        onProjectReport={partnerViewMode ? undefined : handleProjectReport}
         isProjectReportActive={activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT}
         onEditSurvey={() => {
           if (isGroupView) {
@@ -454,10 +467,25 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
       />
 
       <div role="tabpanel" aria-label={tabLabels[activeTab]}>
-        {activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_DETAILS && (
+        {partnerViewMode && activeTab === SURVEY_DETAIL_TAB_IDS.PARTNER_INFORMATION && (
+          <PartnerInformationTab
+            project={project}
+            projectId={project?.recordId ?? id}
+          />
+        )}
+        {partnerViewMode && activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT && (
+          <ProjectReportTab
+            key={`project-report-${id}`}
+            projectId={project?.recordId ?? id}
+            projectName={project.projectName}
+            supplierId={sessionPartnerId}
+            isDarkMode={isDarkMode}
+          />
+        )}
+        {!partnerViewMode && activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_DETAILS && (
           <ProjectDetailsTab project={project} isDarkMode={isDarkMode} />
         )}
-        {activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_URLS && (
+        {!partnerViewMode && activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_URLS && (
           <ProjectUrlsTab
             key={`project-urls-${id}`}
             surveyId={id}
@@ -469,7 +497,7 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
             onSaved={readOnlyView ? undefined : handleProjectUrlSaved}
           />
         )}
-        {activeTab === SURVEY_DETAIL_TAB_IDS.PARTNER_MAPPING && (
+        {!partnerViewMode && activeTab === SURVEY_DETAIL_TAB_IDS.PARTNER_MAPPING && (
           <PartnerMappingTab
             key={`partner-mapping-${id}`}
             projectId={project?.recordId ?? id}
@@ -477,15 +505,15 @@ function SurveyDetailsPage({ isDarkMode, salesViewMode = false }) {
             projectLinkType={project?.projectLinkType}
             isDarkMode={isDarkMode}
             readOnly={readOnlyView}
-            restrictToPartnerId={partnerViewMode ? sessionPartnerId : ""}
+            restrictToPartnerId=""
           />
         )}
-        {activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT && (
+        {!partnerViewMode && activeTab === SURVEY_DETAIL_TAB_IDS.PROJECT_REPORT && (
           <ProjectReportTab
             key={`project-report-${id}`}
             projectId={project?.recordId ?? id}
             projectName={project.projectName}
-            supplierId={partnerViewMode ? sessionPartnerId : ""}
+            supplierId=""
             isDarkMode={isDarkMode}
           />
         )}
