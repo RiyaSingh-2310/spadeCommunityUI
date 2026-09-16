@@ -58,6 +58,42 @@ describe("mapProjectReportRow", () => {
     expect(row.isTestLink).toBe("false");
   });
 
+  it("maps IP geo and fraud fields from GET /api/project-reports/:id/report", () => {
+    const row = mapProjectReportRow({
+      supplier_id: 4,
+      supplier_name: "Demo Partnerr (P004)",
+      client_id: "Demo Client",
+      supplier_identifier: "akshat",
+      status: "Initiated",
+      survey_start_date: "2026-09-15T05:35:29.000Z",
+      survey_end_date: null,
+      loi_minutes: null,
+      ip_address: "::1",
+      country: null,
+      city: null,
+      is_test_link: false,
+      ip_country_code: null,
+      ip_country_name: null,
+      ip_state_name: null,
+      ip_time_zone: null,
+      is_vpn: false,
+      fraud_score: 0,
+      fraud_risk: "low",
+    });
+    expect(row.supplierId).toBe("4");
+    expect(row.uid).toBe("akshat");
+    expect(row.status).toBe("Initiated");
+    expect(row.surveyEndDate).toBe("—");
+    expect(row.loiMinutes).toBe("—");
+    expect(row.ipCountryCode).toBe("—");
+    expect(row.ipCountryName).toBe("—");
+    expect(row.ipStateName).toBe("—");
+    expect(row.ipTimeZone).toBe("—");
+    expect(row.isVpn).toBe("false");
+    expect(row.fraudScore).toBe("0");
+    expect(row.fraudRisk).toBe("low");
+  });
+
   it("falls back to uid when Supplier Identifier is missing", () => {
     const row = mapProjectReportRow({
       uid: "uid-only",

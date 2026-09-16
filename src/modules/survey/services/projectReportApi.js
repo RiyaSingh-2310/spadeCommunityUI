@@ -170,6 +170,7 @@ function mapSharedSurveyRow(record, index = 0) {
 }
 
 /**
+ * Maps GET /api/project-reports/:id/report row.
  * @param {object} record
  * @param {number} index
  */
@@ -187,6 +188,27 @@ export function mapProjectReportRow(record, index = 0) {
         "IsTest",
         "isTest",
       ])
+    ),
+    ipCountryCode: formatCellValue(
+      pickField(record, ["ip_country_code", "ipCountryCode", "IP_Country_Code"])
+    ),
+    ipCountryName: formatCellValue(
+      pickField(record, ["ip_country_name", "ipCountryName", "IP_Country_Name"])
+    ),
+    ipStateName: formatCellValue(
+      pickField(record, ["ip_state_name", "ipStateName", "IP_State_Name"])
+    ),
+    ipTimeZone: formatCellValue(
+      pickField(record, ["ip_time_zone", "ipTimeZone", "IP_Time_Zone", "timezone"])
+    ),
+    isVpn: formatBooleanCell(
+      pickField(record, ["is_vpn", "isVpn", "Is_VPN", "vpn"])
+    ),
+    fraudScore: formatCellValue(
+      pickField(record, ["fraud_score", "fraudScore", "Fraud_Score", "score"])
+    ),
+    fraudRisk: formatCellValue(
+      pickField(record, ["fraud_risk", "fraudRisk", "Fraud_Risk", "risk"])
     ),
   };
 }

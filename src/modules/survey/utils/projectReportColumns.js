@@ -14,6 +14,13 @@ export const PROJECT_REPORT_COLUMNS = {
     { key: "country", label: "Country" },
     { key: "city", label: "City" },
     { key: "isTestLink", label: "Mode" },
+    { key: "ipCountryCode", label: "IP Country Code" },
+    { key: "ipCountryName", label: "IP Country Name" },
+    { key: "ipStateName", label: "IP State Name" },
+    { key: "ipTimeZone", label: "IP Time Zone" },
+    { key: "isVpn", label: "Is VPN" },
+    { key: "fraudScore", label: "Fraud Score" },
+    { key: "fraudRisk", label: "Fraud Risk" },
   ],
   [PROJECT_REPORT_TYPES.PRESCREEN]: [
     { key: "slNo", label: "Sl.No." },
