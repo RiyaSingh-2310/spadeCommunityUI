@@ -1,52 +1,213 @@
+import { useState } from "react";
 import { numberFmt } from "./dashboardUtils";
 
 function asChartData(data) {
   return Array.isArray(data) ? data : [];
 }
 
+/** Build evenly spaced numeric ticks from 0 up to a nice ceiling above maxValue. */
+function buildYAxisTicks(maxValue, tickCount = 4) {
+  const safeMax = Math.max(Number(maxValue) || 0, 0);
+  if (safeMax === 0) return [0, 1];
+
+  const rawStep = safeMax / tickCount;
+  const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+  const residual = rawStep / magnitude;
+  let niceFactor = 10;
+  if (residual <= 1) niceFactor = 1;
+  else if (residual <= 2) niceFactor = 2;
+  else if (residual <= 5) niceFactor = 5;
+
+  const step = niceFactor * magnitude;
+  const niceMax = Math.ceil(safeMax / step) * step;
+  const ticks = [];
+  for (let value = 0; value <= niceMax + step / 2; value += step) {
+    ticks.push(Number(value.toPrecision(12)));
+  }
+  return ticks;
+}
+
+function chartCategoryName(item) {
+  return item?.fullLabel || item?.label || "";
+}
+
+function chartNumericValue(item) {
+  const n = Number(item?.value);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export function PolylineChart({ data }) {
   const series = asChartData(data);
-  const width = 100;
-  const height = 44;
-  const max = Math.max(...series.map((d) => d.value), 1);
+  const [hoverIdx, setHoverIdx] = useState(null);
+
+  const plotW = 100;
+  const plotH = 40;
+  const maxValue = Math.max(...series.map(chartNumericValue), 0);
+  const yTicks = buildYAxisTicks(maxValue);
+  const yMax = yTicks[yTicks.length - 1] || 1;
+
+  const pointAt = (idx) => {
+    const x = series.length <= 1 ? plotW / 2 : (idx / (series.length - 1)) * plotW;
+    const value = chartNumericValue(series[idx]);
+    const y = plotH - (value / yMax) * plotH;
+    return { x, y, value };
+  };
+
   const points = series
-    .map((item, idx) => {
-      const x = (idx / Math.max(series.length - 1, 1)) * width;
-      const y = height - (item.value / max) * (height - 4) - 2;
+    .map((_, idx) => {
+      const { x, y } = pointAt(idx);
       return `${x},${y}`;
     })
     .join(" ");
 
+  const hovered = hoverIdx != null ? series[hoverIdx] : null;
+  const hoveredPoint = hoverIdx != null ? pointAt(hoverIdx) : null;
+  const bandWidth = series.length > 0 ? plotW / series.length : plotW;
+
   return (
     <div className="space-y-2">
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-36 w-full">
-        <polyline fill="none" stroke="var(--admin-primary-color)" strokeWidth="2.5" points={points} />
-        {series.map((item, idx) => {
-          const x = (idx / Math.max(series.length - 1, 1)) * width;
-          const y = height - (item.value / max) * (height - 4) - 2;
-          const title = item.fullLabel
-            ? `${item.fullLabel}: ${numberFmt(item.value)}`
-            : `${item.label}: ${numberFmt(item.value)}`;
-          return (
-            <circle
-              key={`${item.label}-${idx}`}
-              cx={x}
-              cy={y}
-              r="1.6"
-              fill="var(--admin-primary-color)"
+      <div className="flex gap-2">
+        {/* Persistent Y-axis so labels stay readable and do not disappear on narrow layouts */}
+        <div
+          className="admin-text-muted flex w-8 shrink-0 flex-col justify-between self-stretch py-0.5 text-right text-[10px] leading-none sm:w-9 sm:text-[11px]"
+          aria-hidden={series.length === 0}
+        >
+          {[...yTicks].reverse().map((tick) => (
+            <span key={`y-${tick}`}>{numberFmt(tick)}</span>
+          ))}
+        </div>
+
+        <div className="relative min-w-0 flex-1">
+          <svg
+            viewBox={`0 0 ${plotW} ${plotH}`}
+            className="h-36 w-full overflow-visible"
+            role="img"
+            aria-label="Trend chart"
+            onMouseLeave={() => setHoverIdx(null)}
+          >
+            {yTicks.map((tick) => {
+              const y = plotH - (tick / yMax) * plotH;
+              return (
+                <line
+                  key={`grid-${tick}`}
+                  x1="0"
+                  y1={y}
+                  x2={plotW}
+                  y2={y}
+                  stroke="var(--admin-header-search-border)"
+                  strokeWidth="0.35"
+                  vectorEffect="non-scaling-stroke"
+                />
+              );
+            })}
+
+            <line
+              x1="0"
+              y1="0"
+              x2="0"
+              y2={plotH}
+              stroke="var(--admin-muted-foreground)"
+              strokeWidth="0.6"
+              vectorEffect="non-scaling-stroke"
+            />
+            <line
+              x1="0"
+              y1={plotH}
+              x2={plotW}
+              y2={plotH}
+              stroke="var(--admin-muted-foreground)"
+              strokeWidth="0.6"
+              vectorEffect="non-scaling-stroke"
+            />
+
+            {series.length > 0 ? (
+              <polyline
+                fill="none"
+                stroke="var(--admin-primary-color)"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                points={points}
+                vectorEffect="non-scaling-stroke"
+              />
+            ) : null}
+
+            {series.map((item, idx) => {
+              const { x, y } = pointAt(idx);
+              const isActive = hoverIdx === idx;
+              const bandX = Math.min(Math.max(0, x - bandWidth / 2), plotW - bandWidth);
+              return (
+                <g key={`${chartCategoryName(item)}-${idx}`}>
+                  {/* Full-column hit target so every category is reliably hoverable */}
+                  <rect
+                    x={bandX}
+                    y={0}
+                    width={bandWidth}
+                    height={plotH}
+                    fill="transparent"
+                    className="cursor-pointer"
+                    onMouseEnter={() => setHoverIdx(idx)}
+                    onFocus={() => setHoverIdx(idx)}
+                    onBlur={() => setHoverIdx(null)}
+                    tabIndex={0}
+                    role="img"
+                    aria-label={`${chartCategoryName(item)}: ${numberFmt(chartNumericValue(item))}`}
+                  />
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r={isActive ? 2.4 : 1.6}
+                    fill="var(--admin-primary-color)"
+                    stroke={isActive ? "var(--admin-surface-bg)" : "none"}
+                    strokeWidth={isActive ? 0.9 : 0}
+                    pointerEvents="none"
+                  />
+                </g>
+              );
+            })}
+          </svg>
+
+          {hovered && hoveredPoint ? (
+            <div
+              className={`pointer-events-none absolute z-10 rounded-md border border-[var(--admin-header-surface-border)] bg-[var(--admin-header-surface)] px-2 py-1 shadow-sm ${
+                hoveredPoint.y < plotH * 0.3
+                  ? "translate-y-2"
+                  : "-translate-y-[calc(100%+8px)]"
+              } ${
+                hoveredPoint.x < plotW * 0.15
+                  ? "translate-x-0"
+                  : hoveredPoint.x > plotW * 0.85
+                    ? "-translate-x-full"
+                    : "-translate-x-1/2"
+              }`}
+              style={{
+                left: `${(hoveredPoint.x / plotW) * 100}%`,
+                top: `${(hoveredPoint.y / plotH) * 100}%`,
+              }}
+              role="tooltip"
             >
-              <title>{title}</title>
-            </circle>
-          );
-        })}
-      </svg>
+              <p className="admin-text max-w-[10rem] truncate text-[11px] font-semibold leading-tight">
+                {chartCategoryName(hovered)}
+              </p>
+              <p className="admin-text-muted text-[11px] leading-tight">
+                {numberFmt(hoveredPoint.value)}
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
       {series.length > 0 ? (
-        <div className="flex justify-between gap-0.5 overflow-hidden">
+        <div className="flex justify-between gap-0.5 overflow-hidden pl-10 sm:pl-11">
           {series.map((item, idx) => (
             <span
-              key={`${item.fullLabel ?? item.label}-${idx}`}
-              className="admin-text-muted min-w-0 flex-1 truncate text-center text-[10px] leading-tight"
-              title={item.fullLabel ?? item.label}
+              key={`${chartCategoryName(item)}-${idx}`}
+              className={`admin-text-muted min-w-0 flex-1 truncate text-center text-[10px] leading-tight ${
+                hoverIdx === idx ? "admin-text font-semibold" : ""
+              }`}
+              title={chartCategoryName(item)}
+              onMouseEnter={() => setHoverIdx(idx)}
+              onMouseLeave={() => setHoverIdx(null)}
             >
               {item.label}
             </span>
