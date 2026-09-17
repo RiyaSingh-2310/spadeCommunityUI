@@ -2,20 +2,56 @@ import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 
+/**
+ * Only reject when the API explicitly reports failure.
+ * Some deployed responses omit `success` while still returning settings data.
+ */
 function assertSuccess(data) {
-  if (data?.success !== true && data?.success !== "true") {
-    throw new ApiError(data?.message ?? "", data);
+  if (
+    data &&
+    typeof data === "object" &&
+    "success" in data &&
+    data.success !== true &&
+    data.success !== "true" &&
+    data.success !== 1
+  ) {
+    throw new ApiError(data?.message || "Unable to load reward settings.", data);
   }
   return data;
 }
 
+function asObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
+
 function extractSettingsRecord(data) {
   if (!data || typeof data !== "object") return null;
-  if (data.data && typeof data.data === "object" && !Array.isArray(data.data)) {
-    return data.data;
+
+  const nested = asObject(data.data);
+  if (nested) {
+    const deeper =
+      asObject(nested.settings) ||
+      asObject(nested.reward_settings) ||
+      asObject(nested.rewardSettings) ||
+      asObject(nested.record);
+    if (deeper) return deeper;
+    return nested;
   }
-  if (data.id != null) return data;
-  return null;
+
+  if (Array.isArray(data.data) && data.data.length > 0) {
+    return asObject(data.data[0]);
+  }
+
+  if (data.id != null || data.registration_reward_points != null || data.registrationRewardPoints != null) {
+    return data;
+  }
+
+  return (
+    asObject(data.settings) ||
+    asObject(data.reward_settings) ||
+    asObject(data.rewardSettings) ||
+    null
+  );
 }
 
 function apiFlagToYesNo(value) {

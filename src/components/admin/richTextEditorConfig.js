@@ -1,6 +1,20 @@
+/**
+ * Self-hosted TinyMCE (copied to public/tinymce). Avoids Tiny Cloud domain
+ * allowlisting issues that break editors on deployed hosts while localhost works.
+ */
+export const TINYMCE_LICENSE_KEY = "gpl";
+
+/** @deprecated Cloud API key is no longer required; editors self-host from /tinymce. */
 export const TINYMCE_API_KEY =
   import.meta.env.VITE_TINYMCE_API_KEY ||
   "74nz0rvyzynmmg8392gqeer6nixxwjsawr42r8049ajgo968";
+
+/** Absolute script URL for the self-hosted TinyMCE bundle (respects Vite base). */
+export function resolveTinymceScriptSrc(baseUrl = import.meta.env.BASE_URL) {
+  const base = String(baseUrl ?? "/").trim() || "/";
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+  return `${normalizedBase}tinymce/tinymce.min.js`;
+}
 
 const TINYMCE_PLUGINS = [
   "lists",
@@ -161,6 +175,9 @@ export function createTinyMceInit({
     toolbar_mode: isCollapsedToolbar || alignExpandEnd ? "scrolling" : "sliding",
     auto_focus: false,
     highlight_on_focus: false,
+    license_key: TINYMCE_LICENSE_KEY,
+    base_url: resolveTinymceScriptSrc().replace(/\/tinymce\.min\.js$/i, ""),
+    suffix: ".min",
     skin: isDarkMode ? "oxide-dark" : "oxide",
     content_css: isDarkMode ? "dark" : "default",
     plugins: TINYMCE_PLUGINS,

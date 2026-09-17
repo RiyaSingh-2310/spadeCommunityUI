@@ -4,6 +4,9 @@ node_modules
 
 dist/
 
+# Copied from node_modules/tinymce by scripts/copy-tinymce.mjs
+public/tinymce/
+
 .env
 .env.production
 .env.local

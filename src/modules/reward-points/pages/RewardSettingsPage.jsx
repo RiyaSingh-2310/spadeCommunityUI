@@ -42,6 +42,7 @@ function RewardSettingsPage({ isDarkMode }) {
   const [initialSnapshot, setInitialSnapshot] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { canRead, canWrite, isReadOnly } = useModulePermission("reward_settings");
   const readOnly = isReadOnly;
@@ -74,7 +75,7 @@ function RewardSettingsPage({ isDarkMode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   const validationFields = useMemo(
     () => ["registrationReward", "minimumPayout", "maximumRedeemPoints"],
@@ -189,7 +190,7 @@ function RewardSettingsPage({ isDarkMode }) {
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={() => window.location.reload()}
+            onClick={() => setReloadKey((key) => key + 1)}
             className="h-11 rounded-xl bg-[#10a950] px-5 text-sm font-semibold text-white"
           >
             Retry

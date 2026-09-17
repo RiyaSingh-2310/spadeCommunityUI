@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "predev": "node scripts/copy-tinymce.mjs",
+    "prebuild": "node scripts/copy-tinymce.mjs",
+    "postinstall": "node scripts/copy-tinymce.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

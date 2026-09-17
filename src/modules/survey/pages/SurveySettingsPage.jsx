@@ -20,6 +20,7 @@ import {
   listAllSurveySettings,
   mapSurveySettingsToLanguageOptions,
   resolveSurveySettingsId,
+  resolveSurveySettingsItem,
   updateSurveySettings,
 } from "../services/surveySettingsApi";
 
@@ -39,6 +40,24 @@ const SURVEY_CONTENT_FIELDS = [
   "qualityTermRedirect",
   "surveyCloseRedirect",
 ];
+
+function applyLanguageSettings(baseForm, language, items) {
+  const nextLanguage = String(language ?? "").trim();
+  const match = resolveSurveySettingsItem(nextLanguage, items);
+  const next = {
+    ...baseForm,
+    language: nextLanguage,
+  };
+
+  if (!match) return next;
+
+  SURVEY_CONTENT_FIELDS.forEach((key) => {
+    const value = String(match[key] ?? "").trim();
+    if (value) next[key] = value;
+  });
+
+  return next;
+}
 
 const REDIRECT_FIELDS = [
   ["Complete Redirect Content", "completeRedirect"],
@@ -91,11 +110,10 @@ function SurveySettingsPage({ isDarkMode }) {
         return stillValid ? value : options[0]?.value ?? "";
       };
 
-      setForm((prev) => ({ ...prev, language: pickLanguage(prev.language) }));
-      setInitialSnapshot((prev) => ({
-        ...prev,
-        language: pickLanguage(prev.language),
-      }));
+      setForm((prev) => applyLanguageSettings(prev, pickLanguage(prev.language), items));
+      setInitialSnapshot((prev) =>
+        applyLanguageSettings(prev, pickLanguage(prev.language), items)
+      );
     } catch (error) {
       toastApiError(error);
       setSettingsItems([]);
@@ -168,6 +186,10 @@ function SurveySettingsPage({ isDarkMode }) {
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
+  const onLanguageChange = (language) => {
+    setForm((prev) => applyLanguageSettings(prev, language, settingsItems));
+  };
+
   const onSubmit = async (event) => {
     event.preventDefault();
     if (
@@ -219,7 +241,7 @@ function SurveySettingsPage({ isDarkMode }) {
             <SearchableSelect
               inputClass={inputClass}
               value={form.language}
-              onChange={(language) => setField("language", language)}
+              onChange={onLanguageChange}
               onBlur={() => touch("language")}
               options={languageOptions}
               placeholder="Select Language"

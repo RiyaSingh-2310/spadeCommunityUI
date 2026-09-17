@@ -35,6 +35,11 @@ describe("mapSurveySettingsListItem", () => {
       language: "English",
       createdAt: "2026-09-07T05:22:26.000Z",
       updatedAt: "2026-09-07T05:22:26.000Z",
+      completeRedirect: "",
+      terminateRedirect: "",
+      overQuotaRedirect: "",
+      qualityTermRedirect: "",
+      surveyCloseRedirect: "",
     });
   });
 });

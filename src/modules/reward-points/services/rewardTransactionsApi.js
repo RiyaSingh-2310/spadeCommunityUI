@@ -6,7 +6,14 @@ import { formatSurveyListDate } from "../../shared/utils/dateTime";
 import { toUiSentenceCase } from "../../shared/utils/uiText";
 
 function assertSuccess(data) {
-  if (data?.success !== true && data?.success !== "true") {
+  if (
+    data &&
+    typeof data === "object" &&
+    "success" in data &&
+    data.success !== true &&
+    data.success !== "true" &&
+    data.success !== 1
+  ) {
     throw new ApiError(data?.message ?? "Unable to fetch reward transactions.", data);
   }
   return data;

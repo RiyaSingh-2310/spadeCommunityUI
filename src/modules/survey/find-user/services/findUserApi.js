@@ -307,19 +307,19 @@ function mapFindUserSearchRecord(record) {
   if (!record || typeof record !== "object") return null;
 
   const id =
+    record.panelist_id ??
+    record.panelistId ??
     record.id ??
     record.user_id ??
-    record.userId ??
-    record.panelist_id ??
-    record.panelistId;
+    record.userId;
   if (id == null || id === "") return null;
 
   const panelistId =
     record.panelist_id ??
     record.panelistId ??
+    record.id ??
     record.user_id ??
-    record.userId ??
-    id;
+    record.userId;
 
   const joiningRaw =
     record.joiningDate ??

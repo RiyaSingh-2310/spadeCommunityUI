@@ -89,18 +89,33 @@ function CommunityUsersPage({ isDarkMode }) {
   const handleFiltersChange = useCallback(
     (nextFilters) => {
       setFilters(nextFilters);
+      setSelectedRowIds(new Set());
       handlePageChange(1);
     },
     [handlePageChange]
   );
 
+  const handleListingSearch = useCallback(
+    (query) => {
+      setSelectedRowIds(new Set());
+      handleSearch(query);
+    },
+    [handleSearch]
+  );
+
   const handleBulkSelectChange = useCallback(
     (checked) => {
-      if (checked) {
-        setSelectedRowIds(new Set(visibleRowIds));
-        return;
-      }
-      setSelectedRowIds(new Set());
+      setSelectedRowIds((prev) => {
+        if (!checked) {
+          if (visibleRowIds.length === 0) return new Set();
+          const next = new Set(prev);
+          visibleRowIds.forEach((rowId) => next.delete(rowId));
+          return next;
+        }
+        const next = new Set(prev);
+        visibleRowIds.forEach((rowId) => next.add(rowId));
+        return next;
+      });
     },
     [visibleRowIds]
   );
@@ -309,7 +324,7 @@ function CommunityUsersPage({ isDarkMode }) {
         onResendEmail={handleResendEmail}
         onDownload={canDownload ? handleRowDownload : undefined}
         onStatusToggle={handleStatusToggle}
-        onSearch={handleSearch}
+        onSearch={handleListingSearch}
         totalRecords={totalRecords}
         paginationTotalPages={totalPages}
         serverPaginated

@@ -1,20 +1,39 @@
 import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
-import { extractListTotalFromResponse } from "../../shared/utils/listResponse";
+import {
+  extractListItemsFromResponse,
+  extractListTotalFromResponse,
+  extractListTotalPagesFromResponse,
+  safeMapListItems,
+} from "../../shared/utils/listResponse";
 import { appendListQuery } from "../../shared/utils/listQueryParams";
 
+/**
+ * Only reject when the API explicitly reports failure.
+ * Deployed payloads sometimes omit `success` while still returning valid data.
+ */
 function assertSuccess(data) {
-  if (data?.success !== true && data?.success !== "true") {
+  if (
+    data &&
+    typeof data === "object" &&
+    "success" in data &&
+    data.success !== true &&
+    data.success !== "true" &&
+    data.success !== 1
+  ) {
     throw new ApiError(data?.message ?? "Unable to load survey settings.", data);
   }
   return data;
 }
 
-function extractSurveySettingsList(data) {
-  if (!data || typeof data !== "object") return [];
-  if (Array.isArray(data.data)) return data.data;
-  return [];
+function pickRedirectContent(record, ...keys) {
+  for (const key of keys) {
+    if (record?.[key] != null && String(record[key]).trim() !== "") {
+      return String(record[key]);
+    }
+  }
+  return "";
 }
 
 export function mapSurveySettingsListItem(record) {
@@ -28,6 +47,36 @@ export function mapSurveySettingsListItem(record) {
     language,
     createdAt: record.createdAt ?? record.created_at ?? "",
     updatedAt: record.updatedAt ?? record.updated_at ?? "",
+    completeRedirect: pickRedirectContent(
+      record,
+      "complete_redirect_content",
+      "completeRedirectContent",
+      "completeRedirect"
+    ),
+    terminateRedirect: pickRedirectContent(
+      record,
+      "terminate_redirect_content",
+      "terminateRedirectContent",
+      "terminateRedirect"
+    ),
+    overQuotaRedirect: pickRedirectContent(
+      record,
+      "over_quota_redirect_content",
+      "overQuotaRedirectContent",
+      "overQuotaRedirect"
+    ),
+    qualityTermRedirect: pickRedirectContent(
+      record,
+      "quality_term_redirect_content",
+      "qualityTermRedirectContent",
+      "qualityTermRedirect"
+    ),
+    surveyCloseRedirect: pickRedirectContent(
+      record,
+      "survey_close_redirect_content",
+      "surveyCloseRedirectContent",
+      "surveyCloseRedirect"
+    ),
   };
 }
 
@@ -60,6 +109,16 @@ export function resolveSurveySettingsId(language, items) {
   const id = match?.id;
   if (id == null || String(id).trim() === "") return "";
   return String(id).trim();
+}
+
+export function resolveSurveySettingsItem(language, items) {
+  const wanted = String(language ?? "").trim().toLowerCase();
+  if (!wanted || !Array.isArray(items)) return null;
+  return (
+    items.find(
+      (item) => String(item?.language ?? "").trim().toLowerCase() === wanted
+    ) ?? null
+  );
 }
 
 function normalizeRedirectContent(value) {
@@ -98,20 +157,21 @@ export async function listSurveySettings({ page = 1, limit = 10 } = {}) {
   );
   assertSuccess(data);
 
-  const records = extractSurveySettingsList(data)
-    .map((record) => mapSurveySettingsListItem(record))
-    .filter(Boolean);
+  const records = safeMapListItems(
+    extractListItemsFromResponse(data),
+    mapSurveySettingsListItem
+  );
   const total = extractListTotalFromResponse(data, records.length);
-  const safeLimit = Number(data.limit) || Number(limit) || 10;
-  const apiTotalPages = Number(data.totalPages);
+  const safeLimit = Number(data?.limit) || Number(limit) || 10;
+  const apiTotalPages = extractListTotalPagesFromResponse(data);
 
   return {
     items: records,
     total,
-    page: Number(data.page) || page,
+    page: Number(data?.page) || page,
     limit: safeLimit,
     totalPages:
-      Number.isFinite(apiTotalPages) && apiTotalPages > 0
+      apiTotalPages != null && apiTotalPages > 0
         ? apiTotalPages
         : Math.max(1, Math.ceil(total / safeLimit) || 1),
   };

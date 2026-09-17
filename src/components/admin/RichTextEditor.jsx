@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   createTinyMceInit,
-  TINYMCE_API_KEY,
+  resolveTinymceScriptSrc,
+  TINYMCE_LICENSE_KEY,
   TINYMCE_TOOLBAR_COLLAPSED,
   TINYMCE_TOOLBAR_FULL,
   TINYMCE_TOOLBAR_FULL_WITH_EXPAND,
@@ -125,7 +126,8 @@ function RichTextEditor({
         <TinyMceEditor
           key={`${editorId}-${isDarkMode ? "dark" : "light"}-${contentKey ?? "default"}-${isCompact ? "compact" : "expanded"}`}
           id={editorId}
-          apiKey={TINYMCE_API_KEY}
+          tinymceScriptSrc={resolveTinymceScriptSrc()}
+          licenseKey={TINYMCE_LICENSE_KEY}
           value={value}
           onEditorChange={(content) => onChange?.(content)}
           disabled={disabled}
