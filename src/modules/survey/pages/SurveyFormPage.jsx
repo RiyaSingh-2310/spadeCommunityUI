@@ -14,11 +14,13 @@ import {
 import {
   createSurvey,
   getRecord,
+  getRecords,
   mapSurveyToForm,
   projectCodeExists,
   projectNameExists,
   updateSurvey,
 } from "../services/surveyApi";
+import { generateProjectUrlCode } from "../services/projectUrlsApi";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   areSurveyFormsEqual,
@@ -54,6 +56,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [projectNameTaken, setProjectNameTaken] = useState(false);
   const [projectCodeTaken, setProjectCodeTaken] = useState(false);
+  const [isGeneratingProjectCode, setIsGeneratingProjectCode] = useState(!isEdit);
   const {
     clientOptions,
     projectManagerOptions,
@@ -158,6 +161,43 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
   useEffect(() => {
     setProjectCodeTaken(false);
   }, [form.projectCode]);
+
+  useEffect(() => {
+    if (isEdit) {
+      setIsGeneratingProjectCode(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadGeneratedProjectCode = async () => {
+      setIsGeneratingProjectCode(true);
+      try {
+        const response = await getRecords({ page: 1, limit: 1 });
+        const seedId = String(
+          response?.items?.[0]?.recordId ?? response?.items?.[0]?.id ?? ""
+        ).trim();
+        if (!seedId) {
+          return;
+        }
+        const code = await generateProjectUrlCode(seedId);
+        if (cancelled) return;
+        setForm((prev) => {
+          if (String(prev.projectCode ?? "").trim()) return prev;
+          return { ...prev, projectCode: code };
+        });
+      } catch (error) {
+        if (!cancelled) toastApiError(error);
+      } finally {
+        if (!cancelled) setIsGeneratingProjectCode(false);
+      }
+    };
+
+    loadGeneratedProjectCode();
+    return () => {
+      cancelled = true;
+    };
+  }, [isEdit]);
 
   useEffect(() => {
     if (!isEdit || !id || isLoadingOptions) return undefined;
@@ -307,6 +347,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
     !isSubmitting &&
     !isLoadingRecord &&
     !isLoadingOptions &&
+    !isGeneratingProjectCode &&
     !loadFailed &&
     (!isEdit || isDirty);
 
@@ -452,6 +493,7 @@ function SurveyFormPage({ isDarkMode, mode = "create" }) {
           touch={touch}
           isDarkMode={isDarkMode}
           disabled={fieldDisabled(readOnly, isSubmitting)}
+          isGeneratingProjectCode={isGeneratingProjectCode}
           clientOptions={mergedClientOptions}
           isLoadingClients={isLoadingOptions}
           projectManagerOptions={mergedProjectManagerOptions}

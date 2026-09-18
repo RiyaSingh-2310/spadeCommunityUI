@@ -234,14 +234,14 @@ function RewardSettingsPage({ isDarkMode }) {
             </section>
 
             <section className="space-y-4 border-t border-[var(--admin-header-search-border)] pt-8">
-              <div>
+              {/* <div>
                 <h3 className="text-sm font-semibold text-[var(--admin-danger-text)]">
                   User Redeem Points Settings
                 </h3>
                 <p className="admin-text-muted mt-1 text-xs">
                   Configure payout threshold and supported redemption methods.
                 </p>
-              </div>
+              </div> */}
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField

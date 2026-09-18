@@ -14,7 +14,7 @@ import {
 } from "./surveyLinkPlaceholders";
 
 function redirectExample(path) {
-  return `${getDefaultRedirectOrigin()}${path}?pid=XXX&uid=XXX`;
+  return `${getDefaultRedirectOrigin()}${path}?uid=XXX`;
 }
 
 export const PROJECT_URL_NUMERIC_MAX_DIGITS = 6;
@@ -114,7 +114,7 @@ export function getDefaultProjectUrlRedirects(projectUrlCode = "") {
   );
 }
 
-/** Sync pid on all Project URL redirect fields using the Project URL Code. */
+/** Prefill Project URL redirect fields when a Project URL Code is available. */
 export function applyPrefillProjectUrlRedirects(form, projectUrlCode) {
   if (!form || typeof form !== "object") return form;
   const code = String(projectUrlCode ?? form.projectUrlCode ?? "").trim();
@@ -235,8 +235,8 @@ export function getProjectNumericDecimalError(value, label, options) {
 }
 
 /**
- * Validates redirect URLs: domain may vary, but path + pid + uid placeholder must match.
- * pid may be any non-empty value. uid must be XXX, XXXX, or identifier.
+ * Validates redirect URLs: domain may vary, but path + uid placeholder must match.
+ * PID is not required. uid must be XXX, XXXX, or identifier.
  * All redirect URL fields are required.
  * @param {string} value
  * @param {{ path: string, label: string, example: string, acceptedPaths?: string[] }} options
@@ -248,7 +248,7 @@ export function getProjectRedirectUrlError(
   const trimmed = String(value ?? "").trim();
   if (!trimmed) return getRequiredError(trimmed, label);
 
-  const { url, hasPid, hasUid, uid, uidIsPlaceholder } = readPidUidFromUrl(trimmed);
+  const { url, hasUid, uid } = readPidUidFromUrl(trimmed);
   if (!url) {
     return `${label} must follow the required format. Example: ${example}`;
   }
@@ -264,12 +264,6 @@ export function getProjectRedirectUrlError(
     return `${label} must follow the required format. Example: ${example}`;
   }
 
-  if (!hasPid && !uidIsPlaceholder) {
-    return `${label} must include both PID and a supported UID placeholder (XXX, XXXX, or identifier).`;
-  }
-  if (!hasPid) {
-    return `${label} must include a PID query parameter.`;
-  }
   if (!hasUid) {
     return `${label} must include a UID query parameter.`;
   }

@@ -4,6 +4,7 @@ import TableCard from "../../../components/admin/TableCard";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { NAME_FIELD_MAX_LENGTH, limitTextInput } from "../../shared/utils/validation";
 import { PROJECT_STATUS_OPTIONS } from "../data/surveyFormData";
+import CopyValueButton from "./CopyValueButton";
 
 function SurveyForm({
   form,
@@ -17,6 +18,7 @@ function SurveyForm({
   readOnlyClient = false,
   lockedClientLabel = "",
   readOnlyProjectName = false,
+  isGeneratingProjectCode = false,
   clientOptions = [],
   isLoadingClients = false,
   projectManagerOptions = [],
@@ -93,14 +95,28 @@ function SurveyForm({
           </FormField>
 
           <FormField label="Project Code" required error={showError("projectCode")}>
-            <input
-              className={inputClass}
-              placeholder="Enter Project Code"
-              value={form.projectCode}
-              onChange={(e) => setField("projectCode", e.target.value)}
-              onBlur={() => touch("projectCode")}
-              disabled={disabled}
-            />
+            <div className="flex items-stretch gap-2">
+              <input
+                className={`${inputClass} flex-1`}
+                placeholder="Enter Project Code"
+                value={
+                  isGeneratingProjectCode && !form.projectCode
+                    ? "Generating..."
+                    : form.projectCode
+                }
+                onChange={(e) => setField("projectCode", e.target.value)}
+                onBlur={() => touch("projectCode")}
+                disabled={disabled || isGeneratingProjectCode}
+                aria-busy={isGeneratingProjectCode}
+                aria-label="Project Code"
+              />
+              <CopyValueButton
+                value={form.projectCode}
+                successMessage="Project Code copied"
+                label="Copy Project Code"
+                disabled={disabled || isGeneratingProjectCode}
+              />
+            </div>
           </FormField>
 
           <FormField label="Project Manager" required error={showError("projectManager")}>

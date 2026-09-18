@@ -528,6 +528,9 @@ function AddPartnerPage({ isDarkMode }) {
                     disabled={controlDisabled}
                   />
                 </div>
+                <p className="admin-text-muted mt-1 text-xs">
+                  Example: {field.example}
+                </p>
                 {showError(key) ? (
                   <p
                     className="mt-1 whitespace-pre-line text-xs text-[var(--admin-danger-text)]"

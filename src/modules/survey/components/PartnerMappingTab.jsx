@@ -40,7 +40,10 @@ import {
   formatProjectUrlOptionLabel,
   isProjectUrlEligibleForInvite,
 } from "../utils/projectUrlEligibility";
-import { normalizeProjectUrlStatus } from "../utils/projectUrlFormValidation";
+import {
+  normalizeProjectUrlStatus,
+  PROJECT_URL_REDIRECT_FIELDS,
+} from "../utils/projectUrlFormValidation";
 import { dedupeSelectOptions } from "../utils/dedupeSelectOptions";
 import {
   notePartnerUrlTabOpening,
@@ -82,22 +85,27 @@ const REDIRECT_FIELDS = [
   {
     key: "complete",
     label: "Complete",
+    example: PROJECT_URL_REDIRECT_FIELDS[0].example,
   },
   {
     key: "terminate",
     label: "Terminate",
+    example: PROJECT_URL_REDIRECT_FIELDS[1].example,
   },
   {
     key: "overQuota",
     label: "Quota",
+    example: PROJECT_URL_REDIRECT_FIELDS[2].example,
   },
   {
     key: "qualityTerm",
     label: "Quality Term",
+    example: PROJECT_URL_REDIRECT_FIELDS[3].example,
   },
   {
     key: "surveyClose",
     label: "Survey Closed",
+    example: PROJECT_URL_REDIRECT_FIELDS[4].example,
   },
 ];
 
@@ -1240,6 +1248,7 @@ function PartnerMappingTab({
                       <FormField
                         key={field.key}
                         label={field.label}
+                        hint={`Example: ${field.example}`}
                         error={showError(field.key) ? errors[field.key] : ""}
                       >
                         <div className="flex items-stretch gap-2">
@@ -1256,7 +1265,7 @@ function PartnerMappingTab({
                               }))
                             }
                             onBlur={() => touch(field.key)}
-                            placeholder=""
+                            placeholder={field.example}
                             disabled={isSubmitting}
                             aria-label={field.label}
                             aria-invalid={Boolean(

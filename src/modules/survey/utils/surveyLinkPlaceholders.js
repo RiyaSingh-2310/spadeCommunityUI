@@ -1,7 +1,7 @@
 /**
- * Live / Test / redirect-link PID + UID placeholders.
+ * Live / Test / redirect-link UID placeholders.
  * UID accepts only identifier / [identifier] / XXXX (case-insensitive).
- * PID may be any non-empty value (project code or placeholder).
+ * PID is not required in examples, prefills, or frontend validation.
  */
 
 export const SURVEY_LINK_PLACEHOLDER_TOKENS = Object.freeze([
@@ -66,14 +66,11 @@ export function rewriteUrlToRedirectOrigin(value) {
 }
 
 /** Placeholder shown in Live Link / Test Link inputs. */
-export const DEFAULT_SURVEY_LINK_PLACEHOLDER = `${ADMIN_SPADE_COMMUNITY_ORIGIN}/?pid=XXX&uid=XXX`;
+export const DEFAULT_SURVEY_LINK_PLACEHOLDER = `${ADMIN_SPADE_COMMUNITY_ORIGIN}/?uid=XXX`;
 
 const PID_PARAM_NAMES = ["pid"];
 const UID_PARAM_NAMES = ["uid"];
 
-const BOTH_PARAMS_MESSAGE =
-  "must include both PID and a supported UID placeholder (XXX, XXXX, or identifier)";
-const MISSING_PID_MESSAGE = "must include a PID query parameter";
 const MISSING_UID_MESSAGE = "must include a UID query parameter";
 const INVALID_UID_MESSAGE =
   "must include a supported UID placeholder (XXX, XXXX, or identifier)";
@@ -203,12 +200,10 @@ function shouldRewriteRedirectOrigin(url) {
   return shouldRewriteLocalOrigin(url) || isAdminRedirectUrl(url);
 }
 
-function syncPidUidOnAbsoluteUrl(trimmed, pid, defaultUid) {
+/** Ensure a supported UID placeholder is present; never adds or rewrites PID. */
+function syncUidOnAbsoluteUrl(trimmed, defaultUid) {
   const parsed = parseAbsoluteUrl(trimmed);
   if (!parsed) return trimmed;
-
-  const pidParam = getQueryParamIgnoreCase(parsed.searchParams, PID_PARAM_NAMES);
-  parsed.searchParams.set(pidParam.key || "pid", pid);
 
   const uidParam = getQueryParamIgnoreCase(parsed.searchParams, UID_PARAM_NAMES);
   if (!uidParam.key) {
@@ -219,73 +214,65 @@ function syncPidUidOnAbsoluteUrl(trimmed, pid, defaultUid) {
 }
 
 /**
- * Build a Single Link Live/Test URL with pid = Project URL Code and a supported UID placeholder.
- * Does not invent a second PID value.
- * @param {unknown} projectUrlCode
+ * Build a Single Link Live/Test URL with a supported UID placeholder.
+ * Does not include PID.
+ * @param {unknown} [_projectUrlCode] kept for call-site compatibility
  * @param {string} [uid]
  */
 export function buildPrefillSurveyLink(
-  projectUrlCode,
+  _projectUrlCode,
   uid = DEFAULT_SURVEY_LINK_UID_PLACEHOLDER
 ) {
-  const pid = coerceText(projectUrlCode);
   const safeUid = isSupportedUidPlaceholder(uid)
     ? coerceText(uid)
     : DEFAULT_SURVEY_LINK_UID_PLACEHOLDER;
-  if (!pid) {
-    return `${ADMIN_SPADE_COMMUNITY_ORIGIN}/?pid=PROJECT_URL_CODE&uid=${encodeURIComponent(safeUid)}`;
-  }
 
   try {
     const url = new URL("/", ADMIN_SPADE_COMMUNITY_ORIGIN);
-    url.searchParams.set("pid", pid);
     url.searchParams.set("uid", safeUid);
     return url.toString();
   } catch {
-    return `${ADMIN_SPADE_COMMUNITY_ORIGIN}/?pid=${encodeURIComponent(pid)}&uid=${encodeURIComponent(safeUid)}`;
+    return `${ADMIN_SPADE_COMMUNITY_ORIGIN}/?uid=${encodeURIComponent(safeUid)}`;
   }
 }
 
 /**
- * Set pid to the Project URL Code on an existing survey link.
- * Keeps the current UID (or adds the supported placeholder when missing).
- * Empty/legacy sample-pool defaults become the admin-origin live/test URL.
- * Localhost URLs keep their path and query; only the domain is updated.
+ * Prefill empty/legacy Live/Test links with the admin-origin URL + UID placeholder.
+ * Custom user-edited URLs keep their host/path/query (including any existing pid);
+ * only missing UID is added. Localhost origins are rewritten to the admin origin.
  * @param {unknown} url
- * @param {unknown} projectUrlCode
+ * @param {unknown} projectUrlCode trigger when a Project URL Code is available
  */
 export function withSurveyLinkPid(url, projectUrlCode) {
-  const pid = coerceText(projectUrlCode);
+  const code = coerceText(projectUrlCode);
   const trimmed = coerceText(url);
-  if (!pid) return trimmed;
+  if (!code) return trimmed;
   if (!trimmed || isLegacyOrDefaultSurveyLink(trimmed)) {
-    return buildPrefillSurveyLink(pid);
+    return buildPrefillSurveyLink(code);
   }
   if (shouldRewriteLocalOrigin(trimmed)) {
-    return syncPidUidOnAbsoluteUrl(
+    return syncUidOnAbsoluteUrl(
       rewriteUrlToAdminOrigin(trimmed),
-      pid,
       DEFAULT_SURVEY_LINK_UID_PLACEHOLDER
     );
   }
 
-  return syncPidUidOnAbsoluteUrl(trimmed, pid, DEFAULT_SURVEY_LINK_UID_PLACEHOLDER);
+  return syncUidOnAbsoluteUrl(trimmed, DEFAULT_SURVEY_LINK_UID_PLACEHOLDER);
 }
 
 /**
- * Build a redirect URL with pid + supported uid placeholder.
+ * Build a redirect URL with a supported uid placeholder (no PID).
  * @param {string} path
- * @param {unknown} projectUrlCode
+ * @param {unknown} [_projectUrlCode] kept for call-site compatibility
  * @param {string} [uid]
  */
 export function buildPrefillRedirectUrl(
   path,
-  projectUrlCode,
+  _projectUrlCode,
   uid = DEFAULT_REDIRECT_UID_PLACEHOLDER
 ) {
-  const pid = coerceText(projectUrlCode) || "xxxx";
   const redirectPath = String(path ?? "").trim();
-  if (!redirectPath) return pid ? buildPrefillSurveyLink(pid, uid) : ADMIN_SPADE_COMMUNITY_URL;
+  if (!redirectPath) return ADMIN_SPADE_COMMUNITY_URL;
 
   const safeUid = isSupportedUidPlaceholder(uid)
     ? coerceText(uid)
@@ -293,19 +280,18 @@ export function buildPrefillRedirectUrl(
 
   try {
     const url = new URL(redirectPath, FALLBACK_REDIRECT_ORIGIN);
-    url.searchParams.set("pid", pid);
     url.searchParams.set("uid", safeUid);
     return url.toString();
   } catch {
     const normalizedPath = redirectPath.startsWith("/")
       ? redirectPath
       : `/${redirectPath}`;
-    return `${FALLBACK_REDIRECT_ORIGIN}${normalizedPath}?pid=${encodeURIComponent(pid)}&uid=${encodeURIComponent(safeUid)}`;
+    return `${FALLBACK_REDIRECT_ORIGIN}${normalizedPath}?uid=${encodeURIComponent(safeUid)}`;
   }
 }
 
 /**
- * Ensure pid is present on a redirect URL. Empty values become a full pre-filled URL.
+ * Prefill empty redirect URLs. Does not add or rewrite PID on existing URLs.
  * Localhost and admin-domain redirect URLs keep path and query; only the domain is
  * updated to the client redirect origin.
  * @param {unknown} url
@@ -313,26 +299,25 @@ export function buildPrefillRedirectUrl(
  * @param {string} [fallbackPath]
  */
 export function withRedirectUrlPid(url, projectUrlCode, fallbackPath = "") {
-  const pid = coerceText(projectUrlCode);
+  const code = coerceText(projectUrlCode);
   const trimmed = coerceText(url);
-  if (!pid) return trimmed;
+  if (!code) return trimmed;
   if (!trimmed || isLegacyOrDefaultSurveyLink(trimmed)) {
-    return fallbackPath ? buildPrefillRedirectUrl(fallbackPath, pid) : buildPrefillSurveyLink(pid);
+    return fallbackPath ? buildPrefillRedirectUrl(fallbackPath, code) : buildPrefillSurveyLink(code);
   }
   if (shouldRewriteRedirectOrigin(trimmed)) {
-    return syncPidUidOnAbsoluteUrl(
+    return syncUidOnAbsoluteUrl(
       rewriteUrlToRedirectOrigin(trimmed),
-      pid,
       DEFAULT_REDIRECT_UID_PLACEHOLDER
     );
   }
-  return syncPidUidOnAbsoluteUrl(trimmed, pid, DEFAULT_REDIRECT_UID_PLACEHOLDER);
+  return syncUidOnAbsoluteUrl(trimmed, DEFAULT_REDIRECT_UID_PLACEHOLDER);
 }
 
 /**
  * Prefill Single Link live/test fields.
  * Empty and legacy sample-pool defaults become the admin-origin live/test URL.
- * Custom user-edited URLs keep their host/path; only pid is synced.
+ * Custom user-edited URLs keep their host/path; UID is ensured when missing.
  * Does not change Multi Link forms or redirect fields.
  * @param {object} form
  * @param {unknown} [projectUrlCode]
@@ -350,8 +335,9 @@ export function applyPrefillSingleLinkUrls(form, projectUrlCode) {
 }
 
 /**
- * Validates Live Link / Test Link for pid + a supported uid placeholder.
+ * Validates Live Link / Test Link for a supported uid placeholder.
  * Empty values are allowed (optional fields) — only non-empty values are checked.
+ * PID is not required.
  * @param {string} value
  * @param {string} label
  */
@@ -359,17 +345,11 @@ export function getSurveyLinkPlaceholderError(value, label = "Link") {
   const trimmed = coerceText(value);
   if (!trimmed) return "";
 
-  const { url, hasPid, hasUid, uidIsPlaceholder } = readPidUidFromUrl(trimmed);
+  const { url, hasUid, uidIsPlaceholder } = readPidUidFromUrl(trimmed);
   if (!url) {
-    return `${label} ${BOTH_PARAMS_MESSAGE}.`;
+    return `${label} ${INVALID_UID_MESSAGE}.`;
   }
 
-  if (!hasPid && !uidIsPlaceholder) {
-    return `${label} ${BOTH_PARAMS_MESSAGE}.`;
-  }
-  if (!hasPid) {
-    return `${label} ${MISSING_PID_MESSAGE}.`;
-  }
   if (!hasUid) {
     return `${label} ${MISSING_UID_MESSAGE}.`;
   }
@@ -381,7 +361,8 @@ export function getSurveyLinkPlaceholderError(value, label = "Link") {
 }
 
 /**
- * Validates optional redirect URLs for pid + supported uid placeholder.
+ * Validates optional redirect URLs for a supported uid placeholder.
+ * PID is not required.
  * @param {unknown} value
  * @param {string} label
  */
@@ -393,7 +374,7 @@ export function getOptionalRedirectUrlPidUidError(value, label = "URL") {
 
 /**
  * Replace a supported UID query placeholder with the real respondent UID.
- * Never invents a UID, never rewrites pid (pid may also use xxxx as a token).
+ * Never invents a UID, never rewrites pid.
  * @param {string} url
  * @param {string} uid
  */

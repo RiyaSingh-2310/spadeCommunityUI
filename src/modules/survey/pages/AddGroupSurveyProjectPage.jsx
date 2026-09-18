@@ -14,6 +14,7 @@ import {
   resolveGroupPrimaryClientId,
 } from "../services/groupSurveyApi";
 import { projectCodeExists, projectNameExists } from "../services/surveyApi";
+import { generateProjectUrlCode } from "../services/projectUrlsApi";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   getSurveyFormErrors,
@@ -38,6 +39,7 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [projectNameTaken, setProjectNameTaken] = useState(false);
   const [projectCodeTaken, setProjectCodeTaken] = useState(false);
+  const [isGeneratingProjectCode, setIsGeneratingProjectCode] = useState(true);
   const {
     clientOptions,
     projectManagerOptions,
@@ -102,6 +104,36 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
     setProjectCodeTaken(false);
   }, [form.projectCode]);
 
+  useEffect(() => {
+    if (!groupId || isLoadingGroup || loadFailed || !groupRecord) {
+      if (!groupId || loadFailed) setIsGeneratingProjectCode(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadGeneratedProjectCode = async () => {
+      setIsGeneratingProjectCode(true);
+      try {
+        const code = await generateProjectUrlCode(groupId);
+        if (cancelled) return;
+        setForm((prev) => {
+          if (String(prev.projectCode ?? "").trim()) return prev;
+          return { ...prev, projectCode: code };
+        });
+      } catch (error) {
+        if (!cancelled) toastApiError(error);
+      } finally {
+        if (!cancelled) setIsGeneratingProjectCode(false);
+      }
+    };
+
+    loadGeneratedProjectCode();
+    return () => {
+      cancelled = true;
+    };
+  }, [groupId, isLoadingGroup, loadFailed, groupRecord]);
+
   const canSubmit =
     showSubmit &&
     !readOnly &&
@@ -109,6 +141,7 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
     !isSubmitting &&
     !isLoadingGroup &&
     !isLoadingOptions &&
+    !isGeneratingProjectCode &&
     !loadFailed;
 
   const onSubmit = async (event) => {
@@ -210,6 +243,7 @@ function AddGroupSurveyProjectPage({ isDarkMode }) {
           touch={touch}
           isDarkMode={isDarkMode}
           disabled={fieldDisabled(readOnly, isSubmitting)}
+          isGeneratingProjectCode={isGeneratingProjectCode}
           groupProject={groupRecord.project_name}
           lockedClientLabel={lockedClientLabel}
           clientOptions={clientOptions}
