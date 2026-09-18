@@ -185,6 +185,8 @@ export function mapSurveyToRow(project) {
     clientCode: clientDisplay,
     clientName,
     projectManagerName: project?.Project_Manager ?? project?.project_manager_name ?? "",
+    salesManagerName: project?.Sales_Manager ?? project?.sales_manager_name ?? "",
+    rfq: project?.RFQ ?? project?.rfq ?? project?.sales_project_id ?? "",
     partnerNames: project?.partner_names ?? "",
     startDate: formatAppDate(startDate),
     endDate: formatAppDate(endDate),
@@ -704,10 +706,19 @@ export function buildUpdateSurveyPayload(form, selectOptions = {}, urlForm = nul
 }
 
 /** GET /api/projects/list */
-export async function getRecords({ page, limit, search, groupProjectId } = {}) {
+export async function getRecords({
+  page,
+  limit,
+  search,
+  groupProjectId,
+  hasUrl,
+} = {}) {
   const extra = {};
   if (String(groupProjectId ?? "").trim()) {
     extra.group_project_id = String(groupProjectId).trim();
+  }
+  if (hasUrl === true || hasUrl === "true" || hasUrl === 1 || hasUrl === "1") {
+    extra.hasUrl = "true";
   }
   const data = await apiRequest(
     appendListQuery(API_ROUTES.projects.list, {

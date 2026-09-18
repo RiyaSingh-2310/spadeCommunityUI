@@ -60,4 +60,28 @@ describe("mapSurveyToRecontactFormDefaults", () => {
     expect(mapped.loi).toBe("12");
     expect(mapped.ir).toBe("40");
   });
+
+  it("handles null optional fields and Project_Description from list-shaped payloads", () => {
+    const mapped = mapSurveyToRecontactFormDefaults({
+      id: 20,
+      Project_Name: "TESTING PROJECT",
+      Project_code: "PRJ020",
+      Clients: "Demo Client",
+      Project_Manager: "Demo Project Manager",
+      Sales_Manager: null,
+      RFQ: null,
+      Project_Description: null,
+      Notes: "TESTING...",
+      Status: "active",
+      min_start_date: "2026-08-31T18:30:00.000Z",
+      max_start_date: "2026-09-17T18:30:00.000Z",
+    });
+
+    expect(mapped.parentSurveyId).toBe("20");
+    expect(mapped.client).toBe("Demo Client");
+    expect(mapped.description).toBe("TESTING...");
+    expect(mapped.notes).toBe("TESTING...");
+    expect(mapped.startDate).toBeTruthy();
+    expect(mapped.endDate).toBeTruthy();
+  });
 });

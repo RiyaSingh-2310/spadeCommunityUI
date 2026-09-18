@@ -8,6 +8,8 @@ import {
   mapSurveyToForm,
   mapSurveyToProjectDetails,
 } from "./surveyApi";
+import { MAX_API_LIST_LIMIT } from "../../shared/utils/listQueryParams";
+import { formatAppDate } from "../../shared/utils/dateTime";
 import { matchesSearchQuery, normalizeSearchQuery } from "../../shared/utils/searchQuery";
 
 function assertSuccess(data) {
@@ -69,8 +71,15 @@ export function createEmptyRecontactSurveyForm() {
  */
 export function mapSurveyToRecontactParentOption(survey) {
   const recordId = survey?.recordId ?? survey?.id;
-  const surveyCode = survey?.id ?? survey?.survey_id ?? survey?.surveyId ?? "";
-  const projectName = survey?.project_name ?? survey?.projectName ?? "";
+  const surveyCode =
+    survey?.projectCode ??
+    survey?.Project_code ??
+    survey?.id ??
+    survey?.survey_id ??
+    survey?.surveyId ??
+    "";
+  const projectName =
+    survey?.projectName ?? survey?.Project_Name ?? survey?.project_name ?? "";
   const value = recordId != null ? String(recordId) : "";
   const label = [surveyCode, projectName].filter(Boolean).join(" — ") || value;
 
@@ -154,9 +163,34 @@ export function mapSurveyToRecontactFormDefaults(survey) {
     cpi: pickNonEmpty(stripPlaceholder(details?.cpiUsd), survey.cpi, survey.CPI),
     liveUrl: pickNonEmpty(details?.liveLink, survey.live_url, survey.Live_Link),
     testUrl: pickNonEmpty(details?.testLink, survey.test_url, survey.Test_Link),
-    description: pickNonEmpty(formMapped.description, details?.description, survey.description),
-    startDate: formMapped.startDate || "",
-    endDate: formMapped.endDate || "",
+    description: pickNonEmpty(
+      formMapped.description,
+      details?.description,
+      survey.Project_Description,
+      survey.project_description,
+      survey.description,
+      survey.Notes,
+      survey.notes
+    ),
+    notes: pickNonEmpty(formMapped.notes, survey.Notes, survey.notes),
+    startDate:
+      formMapped.startDate ||
+      stripPlaceholder(
+        formatAppDate(
+          survey.min_start_date ?? survey.Start_Date ?? survey.start_date,
+          ""
+        )
+      ) ||
+      "",
+    endDate:
+      formMapped.endDate ||
+      stripPlaceholder(
+        formatAppDate(
+          survey.max_start_date ?? survey.End_Date ?? survey.end_date,
+          ""
+        )
+      ) ||
+      "",
   };
 }
 
@@ -208,17 +242,47 @@ export function mapPartnersToSupplierDetailRows(partners = []) {
   }));
 }
 
-/** GET /api/projects/list — search Survey Projects by project name. */
+/**
+ * GET /api/projects/list?hasUrl=true — search projects that have at least one URL.
+ * Uses the shared projects list service (Bearer auth via apiRequest).
+ * Walks paginated pages using total / totalPages from the API response.
+ */
 export async function searchRecontactProjects(search = "") {
   const normalized = normalizeSearchQuery(search);
   if (!normalized) {
     return [];
   }
 
-  const data = await getRecords({ page: 1, limit: 50, search: normalized });
-  const items = Array.isArray(data.items) ? data.items : [];
+  const limit = MAX_API_LIST_LIMIT;
+  const items = [];
+  let page = 1;
+  let totalPages = 1;
 
-  return items.filter((item) => matchesSearchQuery(item.projectName, normalized));
+  do {
+    const data = await getRecords({
+      page,
+      limit,
+      search: normalized,
+      hasUrl: true,
+    });
+    items.push(...(Array.isArray(data.items) ? data.items : []));
+    totalPages = Math.max(1, Number(data.totalPages) || 1);
+    page += 1;
+  } while (page <= totalPages && page <= 50);
+
+  return items.filter((item) => {
+    const haystack = [
+      item?.projectName,
+      item?.projectCode,
+      item?.clientName,
+      item?.projectManagerName,
+      item?.salesManagerName,
+      item?.rfq,
+    ]
+      .filter((value) => value != null && String(value).trim() !== "")
+      .join(" ");
+    return matchesSearchQuery(haystack, normalized);
+  });
 }
 
 /** GET /api/projects/:id/partners — supplier details for the selected project. */
