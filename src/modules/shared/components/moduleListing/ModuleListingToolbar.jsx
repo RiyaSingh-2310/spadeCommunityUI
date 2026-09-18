@@ -4,6 +4,8 @@ import DebouncedSearchInput from "../../../../components/admin/DebouncedSearchIn
 /**
  * Search + action toolbar for ModuleListingPage.
  * Preserves existing layout and button styles.
+ * When labeled filters are present, rows use items-end so search/actions
+ * align with the filter controls (not the filter labels).
  */
 function ModuleListingToolbar({
   renderToolbar,
@@ -26,8 +28,14 @@ function ModuleListingToolbar({
   csvExportDisabled,
   csvExportLabel,
 }) {
+  const alignWithLabeledFilters = Boolean(toolbarFilters);
+
   return (
-    <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div
+      className={`flex min-w-0 flex-col gap-3 lg:flex-row lg:justify-between ${
+        alignWithLabeledFilters ? "lg:items-end" : "lg:items-center"
+      }`}
+    >
       {renderToolbar ? (
         <div className="w-full min-w-0">
           {renderToolbar({

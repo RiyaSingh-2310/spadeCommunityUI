@@ -1,7 +1,7 @@
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 
 export const QUESTIONNAIRE_GROUP_STATUS_FILTERS = [
-  { value: "all", label: "All" },
+  { value: "all", label: "All statuses" },
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
 ];
@@ -13,7 +13,7 @@ export const QUESTIONNAIRE_GROUP_LANGUAGE_FILTERS = [
   { value: "korean", label: "Korean" },
 ];
 
-const FILTER_LABEL_CLASS = "admin-text mb-2 block text-sm font-semibold";
+const FILTER_LABEL_CLASS = "admin-text mb-1.5 block text-sm font-semibold leading-5";
 
 function QuestionnaireGroupListFilters({
   status,
@@ -32,6 +32,8 @@ function QuestionnaireGroupListFilters({
     });
   });
 
+  const selectClass = getAdminInputClass();
+
   return (
     <div className="flex w-full flex-wrap items-end justify-end gap-3 sm:flex-nowrap sm:gap-4 lg:w-auto">
       <div className="w-full min-w-[min(100%,11.25rem)] shrink-0 sm:w-[11.25rem]">
@@ -40,7 +42,7 @@ function QuestionnaireGroupListFilters({
         </label>
         <select
           id="questionnaire-group-status-filter"
-          className={getAdminInputClass()}
+          className={selectClass}
           value={status}
           onChange={(event) => onStatusChange?.(event.target.value)}
           aria-label="Filter by status"
@@ -58,7 +60,7 @@ function QuestionnaireGroupListFilters({
         </label>
         <select
           id="questionnaire-group-language-filter"
-          className={getAdminInputClass()}
+          className={selectClass}
           value={language}
           onChange={(event) => onLanguageChange?.(event.target.value)}
           aria-label="Filter by language"

@@ -64,7 +64,7 @@ function AdminPagination({
         <div className="hidden sm:block" aria-hidden />
       )}
 
-      <p className="admin-text-muted text-center text-sm font-medium whitespace-nowrap">
+      <p className="admin-text-muted flex h-9 items-center justify-center text-center text-sm font-medium whitespace-nowrap">
         {`Showing ${start} of ${totalItems} entries`}
       </p>
 

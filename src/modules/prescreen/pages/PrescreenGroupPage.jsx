@@ -155,7 +155,6 @@ function PrescreenGroupPage({ isDarkMode }) {
       <ModuleListingPage
         isDarkMode={isDarkMode}
         title="Questionnaire Group"
-        breadcrumbs={[{ label: "Questionnaire Group" }]}
         searchPlaceholder="Search questionnaire groups..."
         actionLabel="Add Survey Group"
         onActionClick={() => navigate("/prescreen/group/add")}
