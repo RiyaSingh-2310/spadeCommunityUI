@@ -20,6 +20,14 @@ import PanelistAnalyticsDashboard from "./dashboard/PanelistAnalyticsDashboard";
 import { useDashboardData } from "./dashboard/useDashboardData";
 import { usePartnerDashboardData } from "./dashboard/usePartnerDashboardData";
 
+/** Admin View top KPI cards → existing app routes (sidebar roots). */
+const ADMIN_VIEW_KPI_ROUTES = Object.freeze({
+  "Total Users": "/community-users",
+  "Total Clients": "/clients",
+  "Total Partners": "/partners",
+  "Total Project Managers": "/project-managers",
+  "Total Projects": "/survey",
+});
 function DashboardPage({ isDarkMode }) {
   const navigate = useNavigate();
   const isPartner = isPartnerLoginRole();
@@ -501,9 +509,18 @@ function DashboardPage({ isDarkMode }) {
           <div className="space-y-3">
             {kpiRows.map((row, idx) => (
               <div key={idx} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {row.map((card) => (
-                  <SummaryCard key={card.label} icon={card.icon} label={card.label} value={card.value} />
-                ))}
+                {row.map((card) => {
+                  const path = ADMIN_VIEW_KPI_ROUTES[card.label];
+                  return (
+                    <SummaryCard
+                      key={card.label}
+                      icon={card.icon}
+                      label={card.label}
+                      value={card.value}
+                      onClick={path ? () => navigate(path) : undefined}
+                    />
+                  );
+                })}
               </div>
             ))}
           </div>

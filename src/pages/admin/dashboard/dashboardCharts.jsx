@@ -312,9 +312,31 @@ export function HorizontalBarsChart({ data }) {
   );
 }
 
-export function SummaryCard({ icon: Icon, label, value }) {
+export function SummaryCard({ icon: Icon, label, value, onClick }) {
+  const clickable = typeof onClick === "function";
+
   return (
-    <article className="rounded-3xl border border-[var(--admin-header-surface-border)] bg-[var(--admin-header-surface)] p-4">
+    <article
+      className={`rounded-3xl border border-[var(--admin-header-surface-border)] bg-[var(--admin-header-surface)] p-4${
+        clickable
+          ? " cursor-pointer transition hover:border-[var(--admin-primary-color)]/50 hover:bg-[var(--admin-permissions-row-hover)]"
+          : ""
+      }`}
+      onClick={clickable ? onClick : undefined}
+      onKeyDown={
+        clickable
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      aria-label={clickable ? `Open ${label}` : undefined}
+    >
       <div className="mb-2 flex items-center justify-between">
         <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--admin-header-search-bg)]">
           <Icon size={18} className="text-[var(--admin-primary-color)]" />

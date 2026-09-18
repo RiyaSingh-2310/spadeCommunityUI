@@ -47,54 +47,61 @@ function formatResponseMeta(item) {
 function QuestionAnalyticsCard({ item, isDarkMode }) {
   return (
     <TableCard isDarkMode={isDarkMode}>
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <h3 className="admin-text text-base font-semibold leading-snug break-words sm:text-lg">
+      <div className="flex min-h-0 min-w-0 flex-col gap-4">
+        <div className="min-w-0 space-y-1.5">
+          <h3
+            className="admin-text max-h-28 overflow-y-auto text-base font-semibold leading-snug break-words [overflow-wrap:anywhere] sm:max-h-32 sm:text-lg"
+            title={item.title}
+          >
             {item.title}
           </h3>
           <p className="admin-text-muted text-sm">{formatResponseMeta(item)}</p>
         </div>
 
-        <QuestionChartBoundary>
-          {item.chart === "empty" || item.total === 0 ? (
-          <p className="admin-text-muted py-8 text-center text-sm">
-            No response data available for this question.
-          </p>
-        ) : item.chart === "donut" ? (
-          <AnalyticsDonutChart data={item.series} />
-        ) : item.chart === "histogram" ? (
-          <AnalyticsHistogram data={item.series} />
-        ) : item.chart === "table" ? (
-          item.series.length === 0 ? (
-            <p className="admin-text-muted py-8 text-center text-sm">
-              No response data available for this question.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="admin-table min-w-full text-sm">
-                <thead>
-                  <tr className="admin-text-muted">
-                    <th className="px-3 py-2 text-left">Answer</th>
-                    <th className="px-3 py-2 text-left">Count</th>
-                    <th className="px-3 py-2 text-left">Percent</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {item.series.slice(0, 12).map((row) => (
-                    <tr key={row.label}>
-                      <td className="admin-text max-w-[28rem] break-words px-3 py-2">{row.label}</td>
-                      <td className="admin-text px-3 py-2">{numberFmt(row.value)}</td>
-                      <td className="admin-text px-3 py-2">{row.percent}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
-        ) : (
-          <AnalyticsHorizontalBars data={item.series} />
-        )}
-        </QuestionChartBoundary>
+        <div className="min-w-0">
+          <QuestionChartBoundary>
+            {item.chart === "empty" || item.total === 0 ? (
+              <p className="admin-text-muted py-8 text-center text-sm">
+                No response data available for this question.
+              </p>
+            ) : item.chart === "donut" ? (
+              <AnalyticsDonutChart data={item.series} />
+            ) : item.chart === "histogram" ? (
+              <AnalyticsHistogram data={item.series} />
+            ) : item.chart === "table" ? (
+              item.series.length === 0 ? (
+                <p className="admin-text-muted py-8 text-center text-sm">
+                  No response data available for this question.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="admin-table min-w-full text-sm">
+                    <thead>
+                      <tr className="admin-text-muted">
+                        <th className="px-3 py-2 text-left">Answer</th>
+                        <th className="px-3 py-2 text-left">Count</th>
+                        <th className="px-3 py-2 text-left">Percent</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {item.series.slice(0, 12).map((row) => (
+                        <tr key={row.label}>
+                          <td className="admin-text max-w-[28rem] break-words px-3 py-2 [overflow-wrap:anywhere]">
+                            {row.label}
+                          </td>
+                          <td className="admin-text px-3 py-2">{numberFmt(row.value)}</td>
+                          <td className="admin-text px-3 py-2">{row.percent}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            ) : (
+              <AnalyticsHorizontalBars data={item.series} />
+            )}
+          </QuestionChartBoundary>
+        </div>
 
         {item.stats ? (
           <p className="admin-text-muted text-sm">
@@ -102,7 +109,11 @@ function QuestionAnalyticsCard({ item, isDarkMode }) {
             {item.stats.max}
           </p>
         ) : null}
-        {item.insight ? <p className="admin-text-muted text-sm">{item.insight}</p> : null}
+        {item.insight ? (
+          <p className="admin-text-muted break-words text-sm [overflow-wrap:anywhere]">
+            {item.insight}
+          </p>
+        ) : null}
       </div>
     </TableCard>
   );
@@ -183,11 +194,15 @@ function PanelistAnalyticsDashboard({ isDarkMode }) {
           </TableCard>
         ) : (
           <>
-            <div className="grid gap-5 xl:grid-cols-2">
+            <div className="grid items-stretch gap-5 xl:grid-cols-2">
               {visibleQuestions.map((item) => (
                 <div
                   key={item.id}
-                  className={item.chart === "histogram" || item.chart === "table" ? "xl:col-span-2" : ""}
+                  className={`min-w-0 ${
+                    item.chart === "histogram" || item.chart === "table"
+                      ? "xl:col-span-2"
+                      : ""
+                  }`}
                 >
                   <QuestionAnalyticsCard item={item} isDarkMode={isDarkMode} />
                 </div>
