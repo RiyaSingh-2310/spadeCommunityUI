@@ -93,6 +93,7 @@ export function mapRewardSettingsToForm(record) {
     amazon: apiFlagToYesNo(record?.amazon_enabled ?? record?.amazonEnabled),
     flipkart: apiFlagToYesNo(record?.flipkart_enabled ?? record?.flipkartEnabled),
     paypal: apiFlagToYesNo(record?.paypal_enabled ?? record?.paypalEnabled),
+    tremendous: apiFlagToYesNo(record?.tremendous_enabled ?? record?.tremendousEnabled),
   };
 }
 
@@ -111,6 +112,7 @@ export function buildRewardSettingsPayload(form) {
     amazon_enabled: yesNoToApiFlag(form.amazon),
     flipkart_enabled: yesNoToApiFlag(form.flipkart),
     paypal_enabled: yesNoToApiFlag(form.paypal),
+    tremendous_enabled: yesNoToApiFlag(form.tremendous),
   };
 }
 

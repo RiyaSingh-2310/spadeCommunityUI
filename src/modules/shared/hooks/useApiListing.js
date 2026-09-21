@@ -150,7 +150,7 @@ export function useApiListing({
   }, []);
 
   const refresh = useCallback(() => {
-    fetchList();
+    return fetchList();
   }, [fetchList]);
 
   return {

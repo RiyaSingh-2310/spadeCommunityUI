@@ -221,4 +221,11 @@ export const SIDEBAR_NAV_ITEMS = [
     matcher: /^\/settings(\/|$)/,
     permissionKeys: [],
   },
+  {
+    type: "link",
+    label: "API Management",
+    root: "/api-management",
+    matcher: /^\/api-management(\/|$)/,
+    permissionKeys: [],
+  },
 ];

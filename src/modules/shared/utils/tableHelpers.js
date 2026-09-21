@@ -64,7 +64,7 @@ const COLUMN_KEY_MAP = {
   Username: "username",
   "User Name": "userName",
   "Panelist Name": "panelistName",
-  "Reward Type": "rewardType",
+  "Remark": "remark",
   "Total Reward Credit": "totalRewardCredit",
   "Total Reward Debit": "totalRewardDebit",
   "Total Reward Balance": "totalRewardBalance",

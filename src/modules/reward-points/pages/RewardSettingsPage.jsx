@@ -22,7 +22,7 @@ import {
   updateRewardSettings,
 } from "../services/rewardSettingsApi";
 
-const REDEMPTION_METHOD_FIELDS = ["amazon", "flipkart", "paypal"];
+const REDEMPTION_METHOD_FIELDS = ["amazon", "flipkart", "paypal", "tremendous"];
 
 const YES_NO_OPTIONS = ["Yes", "No"];
 
@@ -34,6 +34,7 @@ const EMPTY_FORM = {
   amazon: "No",
   flipkart: "No",
   paypal: "No",
+  tremendous: "No",
 };
 
 function RewardSettingsPage({ isDarkMode }) {
@@ -313,6 +314,16 @@ function RewardSettingsPage({ isDarkMode }) {
                   name="paypal"
                   value={form.paypal}
                   onChange={(v) => setField("paypal", v)}
+                  options={YES_NO_OPTIONS}
+                  isDarkMode={isDarkMode}
+                  disabled={readOnly || isSubmitting}
+                  required
+                />
+                <FormRadioGroup
+                  label="Tremendous"
+                  name="tremendous"
+                  value={form.tremendous}
+                  onChange={(v) => setField("tremendous", v)}
                   options={YES_NO_OPTIONS}
                   isDarkMode={isDarkMode}
                   disabled={readOnly || isSubmitting}

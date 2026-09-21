@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, LogOut, Menu, Moon, Settings, Sun, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import heroLogo from "../../assets/SpadeCommunitylogoWhite.png";
+import heroLogo from "../../assets/spade-community-logo.png";
 import Avatar from "../shared/Avatar";
 import {
   AUTH_SESSION_CHANGED_EVENT,
@@ -178,7 +178,7 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
               <img
                 src={heroLogo}
                 alt="Spade Community"
-                className="h-9 w-auto max-w-[min(100%,180px)] object-contain"
+                className="h-11 w-auto max-w-[min(100%,220px)] object-contain sm:h-12 sm:max-w-[240px]"
               />
             </div>
 

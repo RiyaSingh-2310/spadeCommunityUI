@@ -315,6 +315,15 @@ export const API_ROUTES = {
     redeemList: "/api/reward-history/redeem/list",
     redeemUpdateStatus: (id) => `/api/reward-history/redeem/${id}/status`,
   },
+  apiKeys: {
+    create: "/api/api-keys",
+    list: "/api/api-keys/list",
+    byId: (id) => `/api/api-keys/${encodeURIComponent(String(id ?? "").trim())}`,
+    update: (id) =>
+      `/api/api-keys/update/${encodeURIComponent(String(id ?? "").trim())}`,
+    delete: (id) =>
+      `/api/api-keys/delete/${encodeURIComponent(String(id ?? "").trim())}`,
+  },
   messages: {
     list: "/api/messages/list",
     unreadCount: "/api/messages/unread-count",

@@ -21,6 +21,23 @@ function validateRejectComment(comment) {
   return "";
 }
 
+function resolvePreservedRedemptionMethod(row) {
+  const candidates = [
+    row?.redemptionMethod,
+    row?.rewardType,
+    row?.productName,
+    row?.remark,
+  ];
+  for (const value of candidates) {
+    const text = String(value ?? "").trim();
+    const key = text.toLowerCase();
+    if (text && key !== "—" && key !== "verified" && key !== "rejected") {
+      return text;
+    }
+  }
+  return "";
+}
+
 function PendingRewardsPage({ isDarkMode }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [fromDate, setFromDate] = useState("");
@@ -73,12 +90,17 @@ function PendingRewardsPage({ isDarkMode }) {
     columnLabel: "User Name",
   });
 
-  const closeModal = () => {
-    if (isSubmitting) return;
+  const resetModalState = () => {
     setModalMode(null);
     setActiveRow(null);
     setComment("");
     setCommentError("");
+    setIsSubmitting(false);
+  };
+
+  const closeModal = () => {
+    if (isSubmitting) return;
+    resetModalState();
   };
 
   const openModal = (mode, row) => {
@@ -104,7 +126,9 @@ function PendingRewardsPage({ isDarkMode }) {
   };
 
   const handleConfirm = async () => {
-    if (!activeRow?.id) return;
+    if (!activeRow?.id || isSubmitting) return;
+
+    if (modalMode !== "approve" && modalMode !== "reject") return;
 
     if (modalMode === "reject") {
       const error = validateRejectComment(comment);
@@ -117,19 +141,27 @@ function PendingRewardsPage({ isDarkMode }) {
     setIsSubmitting(true);
     try {
       const isApprove = modalMode === "approve";
+      const adminRemark = String(comment ?? "").trim();
+      const preservedMethod = resolvePreservedRedemptionMethod(activeRow);
+
+      // 1) Approve / Reject API
       const data = await updateRedeemRequestStatus(activeRow.id, {
         status: isApprove ? "approved" : "rejected",
         actionBy: getAdminDisplayName(),
-        remark: isApprove ? "Verified" : "Rejected",
-        comment,
+        remark: preservedMethod,
+        comment: adminRemark,
       });
 
       toastApiSuccess(data);
+
+      // 2) Close modal only after successful response (no browser reload)
+      resetModalState();
+
+      // 3) Re-call reward-history/redeem/list and update list from backend
       await reloadRedeemList();
-      closeModal();
     } catch (error) {
       toastApiError(error);
-    } finally {
+      // Keep modal open; do not refresh list as if the action succeeded.
       setIsSubmitting(false);
     }
   };
@@ -155,9 +187,9 @@ function PendingRewardsPage({ isDarkMode }) {
         columns={[
           "S.No",
           "User Name",
-          "Reward Type",
           "Reward Points",
           "Created Date",
+          "Remark",
           "Status",
           "Action",
         ]}
@@ -199,6 +231,9 @@ function PendingRewardsPage({ isDarkMode }) {
                 ...activeRow,
                 createdDate: formatSurveyListDate(
                   activeRow.createdAtRaw ?? activeRow.createdAt ?? activeRow.createdDate
+                ),
+                updatedDate: formatSurveyListDate(
+                  activeRow.updatedAtRaw ?? activeRow.updatedAt ?? activeRow.updatedDate
                 ),
               }
             : activeRow

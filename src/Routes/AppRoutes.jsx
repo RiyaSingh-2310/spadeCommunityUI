@@ -341,6 +341,10 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
             element={withSuspense(Pages.InvoiceSettingsPage, { isDarkMode })}
           />
           <Route path="/settings" element={withSuspense(Pages.SettingsPage, { isDarkMode })} />
+          <Route
+            path="/api-management"
+            element={withSuspense(Pages.ApiManagementPage, { isDarkMode })}
+          />
           <Route path="/log-activity" element={withSuspense(Pages.LogActivityPage, { isDarkMode })} />
           <Route
             path="/community-users"

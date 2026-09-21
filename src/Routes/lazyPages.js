@@ -101,6 +101,9 @@ export const InvoiceSettingsPage = lazy(
 
 /** Settings & system */
 export const SettingsPage = lazy(() => import("../modules/settings/pages/SettingsPage"));
+export const ApiManagementPage = lazy(
+  () => import("../modules/settings/pages/ApiManagementPage")
+);
 export const LogActivityPage = lazy(() => import("../modules/log-activity/pages/LogActivityPage"));
 export const HomePageManagementPage = lazy(
   () => import("../modules/home-page/pages/HomePageManagementPage")

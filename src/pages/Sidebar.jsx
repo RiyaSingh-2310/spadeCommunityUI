@@ -11,8 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import heroLogo from "../assets/hero.png";
-import compressedLogo from "../assets/SpadeCommunitylogocompressed.png";
+import compactLogo from "../assets/spade-community-logo-compact.png";
 
 export default function Sidebar({ isDarkMode }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -55,7 +54,7 @@ export default function Sidebar({ isDarkMode }) {
             }`}
           >
             <img
-              src={heroLogo}
+              src={compactLogo}
               alt="Spade logo"
               className={`shrink-0 object-contain transition-all duration-300 ${
                 isCollapsed
@@ -80,7 +79,7 @@ export default function Sidebar({ isDarkMode }) {
             )}
 
             <img
-              src={compressedLogo}
+              src={compactLogo}
               alt="Spade compact logo"
               className={`shrink-0 object-contain transition-all duration-300 ${
                 isCollapsed

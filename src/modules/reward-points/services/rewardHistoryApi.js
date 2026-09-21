@@ -58,21 +58,68 @@ function mapRewardHistoryRow(item) {
   };
 }
 
+/**
+ * Redemption method lives in `remark` when the panelist submits.
+ * Admin approve/reject notes live in `comment`.
+ * Never treat status labels like "Verified"/"Rejected" as the method.
+ */
+function resolveRedemptionMethod(item) {
+  const method = String(
+    item?.redemption_method ??
+      item?.redemptionMethod ??
+      item?.reward_type ??
+      item?.rewardType ??
+      item?.product_name ??
+      item?.productName ??
+      item?.remark ??
+      ""
+  ).trim();
+  const normalized = method.toLowerCase();
+  if (!method || normalized === "verified" || normalized === "rejected") {
+    return coerceText(
+      item?.redemption_method ??
+        item?.redemptionMethod ??
+        item?.product_name ??
+        item?.productName,
+      "—"
+    );
+  }
+  return method;
+}
+
+function resolveAdminRemark(item) {
+  return String(item?.comment ?? item?.admin_remark ?? item?.adminRemark ?? "").trim();
+}
+
 function mapRedeemRequestRow(item) {
+  const comments = resolveAdminRemark(item);
+  const method = resolveRedemptionMethod(item);
+  const productName = String(
+    item?.product_name ?? item?.productName ?? item?.tremendous_product_name ?? ""
+  ).trim();
+  const productLogo = String(
+    item?.product_logo ?? item?.productLogo ?? item?.tremendous_product_logo ?? ""
+  ).trim();
+
   return {
     id: item?.id,
     userId: item?.user_id ?? null,
     userName: coerceText(item?.user_name, `User #${item?.user_id ?? "—"}`),
     email: coerceText(item?.user_email, "—"),
-    rewardType: coerceText(item?.remark, "—"),
+    rewardType: productName || method,
+    redemptionMethod: method,
+    productName,
+    productLogo,
     rewardPoints: String(toNumber(item?.reward_points, 0)),
     requestedBy: coerceText(item?.requested_by, "—"),
     status: normalizeStatus(item?.status),
-    remark: coerceText(item?.remark, ""),
-    comments: coerceText(item?.comment, ""),
+    // Keep raw method for preserve-on-update; display remark prefers admin comment.
+    remark: comments || "",
+    comments,
     actionBy: coerceText(item?.action_by, "—"),
     actionDate: item?.action_date ? formatSurveyListDate(item.action_date) : "—",
     actionDateRaw: item?.action_date ?? "",
+    completedDate: item?.action_date ? formatSurveyListDate(item.action_date) : "",
     createdAt: formatSurveyListDate(item?.created_at),
     createdAtRaw: item?.created_at ?? "",
     createdDate: formatSurveyListDate(item?.created_at),
@@ -169,15 +216,28 @@ export async function updateRedeemRequestStatus(
     throw new ApiError("Action by is required.");
   }
 
+  const remarkText = String(remark ?? "").trim();
+  const commentText = String(comment ?? "").trim();
+
   const data = await apiRequest(API_ROUTES.rewardHistory.redeemUpdateStatus(normalizedId), {
     method: "PATCH",
     body: {
       status: normalizedStatus,
       action_by: actionByText,
-      remark: String(remark ?? "").trim(),
-      comment: String(comment ?? "").trim(),
+      // `remark` = redemption method (preserve). `comment` = admin remark/note.
+      remark: remarkText,
+      comment: commentText,
     },
   });
 
-  return assertSuccess(data);
+  const success = assertSuccess(data);
+  const updatedRow =
+    success?.data && typeof success.data === "object"
+      ? mapRedeemRequestRow(success.data)
+      : null;
+
+  return {
+    ...success,
+    updatedRow,
+  };
 }

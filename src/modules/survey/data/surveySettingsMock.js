@@ -2,7 +2,7 @@
  * Frontend-only mock defaults for Survey Settings.
  * Replace with API mapping when backend integration is added.
  */
-import logoUrl from "../../../assets/SpadeCommunitylogocompressed.png";
+import logoUrl from "../../../assets/spade-community-logo-compact.png";
 
 /** Styled preview content similar to classic redirect pages (logo + message). */
 const MOCK_REDIRECT_HTML = `

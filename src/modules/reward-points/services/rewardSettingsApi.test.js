@@ -24,6 +24,7 @@ describe("rewardSettingsApi mapping", () => {
       amazon: "Yes",
       flipkart: "Yes",
       paypal: "No",
+      tremendous: "No",
     });
   });
 
@@ -42,6 +43,7 @@ describe("rewardSettingsApi mapping", () => {
       amazon: "Yes",
       flipkart: "Yes",
       paypal: "No",
+      tremendous: "Yes",
     });
 
     expect(payload).toEqual({
@@ -51,6 +53,7 @@ describe("rewardSettingsApi mapping", () => {
       amazon_enabled: true,
       flipkart_enabled: true,
       paypal_enabled: false,
+      tremendous_enabled: true,
     });
   });
 });

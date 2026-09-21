@@ -78,7 +78,7 @@ function RewardHistoryPage({ isDarkMode }) {
         columns={[
           "ID",
           "User Name",
-          "Reward Type",
+          "Remark",
           "Credit",
           "Debit",
           "Balance",
@@ -131,6 +131,10 @@ function RewardHistoryPage({ isDarkMode }) {
                 createdDate: formatSurveyListDate(
                   viewTarget.createdAtRaw ?? viewTarget.createdAt
                 ),
+                updatedDate: formatSurveyListDate(
+                  viewTarget.updatedAtRaw ?? viewTarget.updatedAt
+                ),
+                remark: viewTarget.remark || viewTarget.comments || "",
               }
             : null
         }

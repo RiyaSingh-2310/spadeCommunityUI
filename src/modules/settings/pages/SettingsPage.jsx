@@ -1,10 +1,12 @@
 import { useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import {
   DEFAULT_SETTINGS_TAB,
+  getLegacySettingsTabRedirect,
   getSettingsTabsForRole,
   isValidSettingsTab,
+  resolveSettingsTab,
 } from "../constants/settingsTabs";
 import NotificationsSettingsTab from "../components/NotificationsSettingsTab";
 import ProfileSettingsTab from "../components/ProfileSettingsTab";
@@ -13,21 +15,30 @@ import SystemSettingsTab from "../components/SystemSettingsTab";
 
 function SettingsPage({ isDarkMode }) {
   const settingsTabs = getSettingsTabsForRole();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const activeTab = isValidSettingsTab(tabParam, settingsTabs)
-    ? tabParam
-    : DEFAULT_SETTINGS_TAB;
+  const legacyRedirect = getLegacySettingsTabRedirect(tabParam);
+  const resolvedTab = resolveSettingsTab(tabParam, settingsTabs);
+  const activeTab = resolvedTab ?? DEFAULT_SETTINGS_TAB;
 
   useEffect(() => {
+    if (legacyRedirect) {
+      navigate(legacyRedirect, { replace: true });
+      return;
+    }
     if (!tabParam || !isValidSettingsTab(tabParam, settingsTabs)) {
       setSearchParams({ tab: DEFAULT_SETTINGS_TAB }, { replace: true });
     }
-  }, [settingsTabs, tabParam, setSearchParams]);
+  }, [legacyRedirect, navigate, settingsTabs, tabParam, setSearchParams]);
 
   const handleTabChange = (nextTab) => {
     setSearchParams({ tab: nextTab });
   };
+
+  if (legacyRedirect) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">

@@ -1,33 +1,60 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
+import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
+import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
+import { formatSurveyListDate } from "../../shared/utils/dateTime";
 import RewardDetailsModal from "../components/RewardDetailsModal";
-
-const REWARD_TYPES = ["Registration Reward", "Survey Completion", "Reward Redemption"];
-
-const DEMO_COMMENTS = [
-  "Approved after verification of survey completion.",
-  "Rejected due to incomplete profile information.",
-  "Approved — reward points credited successfully.",
-  "Rejected — duplicate reward request detected.",
-];
-
-const initialRows = Array.from({ length: 12 }, (_, idx) => ({
-  id: `cr-${idx + 1}`,
-  userName: `user_${idx + 1}`,
-  email: `user_${idx + 1}@example.com`,
-  rewardType: REWARD_TYPES[idx % REWARD_TYPES.length],
-  rewardPoints: String(750 + idx * 50),
-  createdDate: `${String(1 + (idx % 20)).padStart(2, "0")}/05/2026`,
-  completedDate: `${String(2 + (idx % 20)).padStart(2, "0")}/05/2026`,
-  status: idx % 5 === 0 ? "Rejected" : "Completed",
-  comments: DEMO_COMMENTS[idx % DEMO_COMMENTS.length],
-}));
+import { fetchRedeemRequests } from "../services/rewardHistoryApi";
 
 function CompletedRewardsPage({ isDarkMode }) {
   const [viewTarget, setViewTarget] = useState(null);
+
+  const fetchCompleted = useCallback(async (params) => {
+    // Completed = approved + rejected. Fetch approved page; include rejected via a second call.
+    const approved = await fetchRedeemRequests({ ...params, status: "approved" });
+    const rejected = await fetchRedeemRequests({
+      page: 1,
+      limit: params.limit || DEFAULT_PAGE_SIZE,
+      search: params.search,
+      status: "rejected",
+    });
+
+    const merged = [...(approved.items ?? []), ...(rejected.items ?? [])].sort((a, b) => {
+      const aTime = new Date(a.updatedAtRaw || a.actionDateRaw || a.createdAtRaw || 0).getTime();
+      const bTime = new Date(b.updatedAtRaw || b.actionDateRaw || b.createdAtRaw || 0).getTime();
+      return bTime - aTime;
+    });
+
+    return {
+      items: merged,
+      total: (approved.total ?? 0) + (rejected.total ?? 0),
+      page: approved.page,
+      limit: approved.limit,
+      totalPages: Math.max(approved.totalPages ?? 1, 1),
+    };
+  }, []);
+
+  const {
+    rows,
+    totalRecords,
+    totalPages,
+    isLoading,
+    listError,
+    currentPage,
+    pageSize,
+    handleSearch,
+    handlePageChange,
+    handlePageSizeChange,
+    refresh,
+  } = useApiListing({
+    fetchFn: fetchCompleted,
+    initialPageSize: DEFAULT_PAGE_SIZE,
+    preserveRowOrder: true,
+  });
+
   const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
-    rows: initialRows,
+    rows,
     columnLabel: "User Name",
   });
 
@@ -40,7 +67,7 @@ function CompletedRewardsPage({ isDarkMode }) {
         columns={[
           "S.No",
           "User Name",
-          "Reward Type",
+          "Remark",
           "Reward Points",
           "Status",
           "Created Date",
@@ -56,14 +83,43 @@ function CompletedRewardsPage({ isDarkMode }) {
         statusAsText
         permissionModule="completed_rewards"
         actionVariant="reward-pending"
+        isLoading={isLoading}
+        errorMessage={listError}
+        onRetry={refresh}
+        emptyMessage="No completed rewards found"
+        onSearch={handleSearch}
         showPagination
+        serverPaginated
+        serverSearch
+        totalRecords={totalRecords}
+        paginationTotalPages={totalPages}
+        paginationPage={currentPage}
+        onPaginationPageChange={handlePageChange}
+        paginationPageSize={pageSize}
+        onPaginationPageSizeChange={handlePageSizeChange}
         onView={(row) => setViewTarget(row)}
       />
 
       <RewardDetailsModal
         isOpen={Boolean(viewTarget)}
         mode="view"
-        row={viewTarget}
+        row={
+          viewTarget
+            ? {
+                ...viewTarget,
+                createdDate: formatSurveyListDate(
+                  viewTarget.createdAtRaw ?? viewTarget.createdAt ?? viewTarget.createdDate
+                ),
+                updatedDate: formatSurveyListDate(
+                  viewTarget.updatedAtRaw ?? viewTarget.updatedAt
+                ),
+                completedDate:
+                  viewTarget.completedDate ||
+                  formatSurveyListDate(viewTarget.actionDateRaw || viewTarget.updatedAtRaw),
+                remark: viewTarget.remark || viewTarget.comments || "",
+              }
+            : null
+        }
         onCancel={() => setViewTarget(null)}
       />
     </>

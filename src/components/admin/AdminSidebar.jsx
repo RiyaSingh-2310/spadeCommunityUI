@@ -10,6 +10,7 @@ import {
   Gift,
   Handshake,
   Home,
+  KeyRound,
   LayoutDashboard,
   Mail,
   ScrollText,
@@ -28,8 +29,8 @@ import {
   resolveActiveGroupChildLabel,
 } from "../../config/sidebarNavUtils";
 import { usePermissions } from "../../modules/permissions/PermissionsContext";
-import heroLogo from "../../assets/SpadeCommunitylogoWhite.png";
-import compressedLogo from "../../assets/SpadeCommunitylogocompressed.png";
+import heroLogo from "../../assets/spade-community-logo.png";
+import compressedLogo from "../../assets/spade-community-logo-compact.png";
 
 const COLLAPSED_SIDEBAR_WIDTH = 80;
 const FLYOUT_HIDE_DELAY_MS = 150;
@@ -100,6 +101,7 @@ function AdminSidebar({
     "User Email Template": <Mail size={21} strokeWidth={2} />,
     "User Email Templates": <Mail size={21} strokeWidth={2} />,
     Settings: <Settings size={21} strokeWidth={2} />,
+    "API Management": <KeyRound size={21} strokeWidth={2} />,
     "Log Activity": <ScrollText size={21} strokeWidth={2} />,
   };
 
@@ -269,28 +271,28 @@ function AdminSidebar({
           }`}
         >
           <div
-            className="flex h-[72px] shrink-0 items-center border-b border-[var(--admin-sidebar-border)] px-4"
+            className="flex h-[88px] shrink-0 items-center border-b border-[var(--admin-sidebar-border)] px-4"
           >
             <div
               className={`flex w-full items-center transition-all duration-300 ${
-                isCollapsed && !isMobile ? "justify-center" : "justify-start gap-3"
+                isCollapsed && !isMobile ? "justify-center" : "justify-start"
               }`}
             >
               <img
                 src={heroLogo}
-                alt="Spade logo"
-                className={`shrink-0 object-contain transition-all duration-300 ${
+                alt="Spade Community logo"
+                className={`shrink-0 object-contain object-left transition-all duration-300 ${
                   isCollapsed && !isMobile
                     ? "pointer-events-none absolute h-0 w-0 scale-95 opacity-0"
-                    : "h-[46px] w-auto max-w-[190px] opacity-100 scale-100"
+                    : "h-[52px] w-auto max-w-[min(100%,240px)] opacity-100 scale-100"
                 }`}
               />
               <img
                 src={compressedLogo}
-                alt="Spade compact logo"
+                alt="Spade Community logo"
                 className={`shrink-0 object-contain transition-all duration-300 ${
                   isCollapsed && !isMobile
-                    ? "h-9 w-9 opacity-100 scale-100 sm:h-10 sm:w-10"
+                    ? "h-11 w-11 opacity-100 scale-100 sm:h-12 sm:w-12"
                     : "pointer-events-none absolute h-0 w-0 scale-95 opacity-0"
                 }`}
               />

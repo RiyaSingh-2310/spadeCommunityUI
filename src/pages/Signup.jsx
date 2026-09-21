@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import heroLogo from "../assets/hero.png";
+import heroLogo from "../assets/spade-community-logo-compact.png";
 import {
   EMAIL_FIELD_MAX_LENGTH,
   NAME_FIELD_MAX_LENGTH,
@@ -31,7 +31,7 @@ function Signup() {
     <div className="min-h-screen bg-[#edf1f6] px-4 py-10">
       <div className="mx-auto w-full max-w-xl">
         <div className="mb-5 flex flex-col items-center gap-2">
-          <img src={heroLogo} alt="Spade Community logo" className="h-14 w-14" />
+          <img src={heroLogo} alt="Spade Community logo" className="h-16 w-16 object-contain" />
           <p className="text-base font-semibold tracking-wider text-[#138842]">
             SPADE COMMUNITY
           </p>

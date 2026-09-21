@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import FormField from "../../../components/admin/FormField";
 import { getAdminCancelButtonClass, getAdminTextareaClass } from "../../shared/utils/formStyles";
 
@@ -8,13 +8,16 @@ const USER_INFO_FIELDS = [
 ];
 
 const REWARD_INFO_FIELDS = [
-  { label: "Reward Type", key: "rewardType" },
+  { label: "Remark", key: "remark" },
   { label: "Reward Points", key: "rewardPoints" },
+  { label: "Redemption Method", key: "redemptionMethod" },
+  { label: "Tremendous Product", key: "productName" },
 ];
 
 const REQUEST_DETAIL_FIELDS = [
   { label: "Status", key: "status" },
   { label: "Created At", key: "createdDate" },
+  { label: "Updated At", key: "updatedDate" },
 ];
 
 const VIEW_EXTRA_FIELDS = [{ label: "Completed Date", key: "completedDate" }];
@@ -31,8 +34,18 @@ function resolveRowValue(row, key) {
   if (key === "createdDate") {
     return row.createdDate ?? row.createdAt ?? "";
   }
+  if (key === "updatedDate") {
+    return row.updatedDate ?? row.updatedAt ?? "";
+  }
+  if (key === "redemptionMethod") {
+    return row.redemptionMethod ?? "";
+  }
+  if (key === "productName") {
+    return row.productName ?? "";
+  }
   if (key === "remark") {
-    return row.remark ?? row.description ?? row.comments ?? "";
+    // Admin/panelist note lives in comments; do not fall back to method (`remark` raw).
+    return row.remark || row.comments || row.description || "";
   }
   return row[key];
 }
@@ -59,7 +72,18 @@ function DetailSection({ title, fields, row, emptyLabel = "—" }) {
           >
             <dt className="admin-text-muted text-xs font-medium">{field.label}</dt>
             <dd className="admin-text mt-0.5 text-sm break-words">
-              {formatDetailValue(resolveRowValue(row, field.key), { emptyLabel })}
+              {field.key === "productName" && row.productLogo ? (
+                <span className="flex items-center gap-2">
+                  <img
+                    src={row.productLogo}
+                    alt=""
+                    className="h-6 w-6 rounded object-contain"
+                  />
+                  {formatDetailValue(resolveRowValue(row, field.key), { emptyLabel })}
+                </span>
+              ) : (
+                formatDetailValue(resolveRowValue(row, field.key), { emptyLabel })
+              )}
             </dd>
           </div>
         ))}
@@ -71,6 +95,7 @@ function DetailSection({ title, fields, row, emptyLabel = "—" }) {
 function RequestSummarySection({ row }) {
   const status = resolveRowValue(row, "status");
   const createdAt = resolveRowValue(row, "createdDate");
+  const updatedAt = resolveRowValue(row, "updatedDate");
   const remark = resolveRowValue(row, "remark");
 
   return (
@@ -89,6 +114,12 @@ function RequestSummarySection({ row }) {
             <dd className="admin-text mt-0.5 text-sm">{formatDetailValue(createdAt)}</dd>
           </div>
         </div>
+        {updatedAt ? (
+          <div className="min-w-0">
+            <dt className="admin-text-muted text-xs font-medium">Updated At</dt>
+            <dd className="admin-text mt-0.5 text-sm">{formatDetailValue(updatedAt)}</dd>
+          </div>
+        ) : null}
         <div className="min-w-0">
           <dt className="admin-text-muted text-xs font-medium">Remark</dt>
           <dd className="admin-text mt-0.5 text-sm whitespace-pre-wrap break-words">
@@ -141,7 +172,7 @@ function RewardDetailsModal({
     <div className="admin-modal-overlay fixed inset-0 z-[250] flex items-center justify-center p-4">
       <button
         type="button"
-        className="admin-header-overlay absolute inset-0"
+        className="admin-header-overlay absolute inset-0 cursor-pointer"
         aria-label="Close reward details"
         onClick={onCancel}
         disabled={isSubmitting}
@@ -152,9 +183,24 @@ function RewardDetailsModal({
         aria-modal="true"
         aria-labelledby="reward-details-modal-title"
       >
-        <h2 id="reward-details-modal-title" className="admin-text mb-4 text-lg font-semibold">
-          {title}
-        </h2>
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <h2
+            id="reward-details-modal-title"
+            className="admin-text text-lg font-semibold"
+          >
+            {title}
+          </h2>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSubmitting}
+            className="admin-icon-btn admin-text-subtle flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Close"
+            title="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
         <DetailSection title="User Information" fields={USER_INFO_FIELDS} row={row} />
         <DetailSection title="Reward Information" fields={REWARD_INFO_FIELDS} row={row} />
@@ -173,13 +219,15 @@ function RewardDetailsModal({
         {isAction ? (
           <>
             <p className="admin-text-muted mb-4 text-sm">{confirmMessage}</p>
-            <FormField label="Comments" required={isReject} error={commentError}>
+            <FormField label="Remark / Comments" required={isReject} error={commentError}>
               <textarea
                 className={textareaClass}
                 value={comment}
                 onChange={(e) => onCommentChange?.(e.target.value)}
                 placeholder={
-                  isApprove ? "Optional comments..." : "Enter comments (minimum 3 characters)..."
+                  isApprove
+                    ? "Enter approval remark (e.g. voucher code)..."
+                    : "Enter rejection remark (minimum 3 characters)..."
                 }
                 disabled={isSubmitting}
               />
@@ -208,7 +256,13 @@ function RewardDetailsModal({
               }`}
             >
               {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-              {isSubmitting ? (isApprove ? "Approving..." : "Rejecting...") : isApprove ? "Approve" : "Reject"}
+              {isSubmitting
+                ? isApprove
+                  ? "Approving..."
+                  : "Rejecting..."
+                : isApprove
+                  ? "Approve"
+                  : "Reject"}
             </button>
           ) : null}
         </div>

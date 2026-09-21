@@ -53,11 +53,14 @@ function mapRewardTransactionRow(item, idx, page, limit) {
     totalRewardBalance: String(credit - debit),
     rewardPoints: String(points),
     status: normalizeStatus(item?.status),
-    remark: coerceText(item?.remark, ""),
+    // Prefer admin/panelist comment as the visible remark.
+    remark: coerceText(item?.comment, "") || coerceText(item?.remark, ""),
     comments: coerceText(item?.comment, ""),
     createdAt: formatSurveyListDate(item?.created_at),
     createdAtRaw: item?.created_at ?? "",
     createdDate: formatSurveyListDate(item?.created_at),
+    updatedAt: formatSurveyListDate(item?.updated_at),
+    updatedAtRaw: item?.updated_at ?? "",
   };
 }
 

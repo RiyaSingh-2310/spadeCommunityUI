@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CircleHelp, Moon, Sun, X } from "lucide-react";
-import logo from "../../../assets/SpadeCommunitylogoWhite.png";
+import logo from "../../../assets/spade-community-logo.png";
 import "../publicQuestionnaire.css";
 
 function PublicQuestionnaireLayout({
@@ -36,7 +36,7 @@ function PublicQuestionnaireLayout({
             <img
               src={logo}
               alt="Spade Community"
-              className="h-9 w-auto max-w-[200px] object-contain sm:h-10 sm:max-w-[240px]"
+              className="h-11 w-auto max-w-[220px] object-contain sm:h-12 sm:max-w-[260px]"
             />
 
             <div className="flex shrink-0 items-center gap-2 sm:gap-3">

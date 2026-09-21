@@ -9,7 +9,7 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
-import heroLogo from "../assets/hero.png";
+import heroLogo from "../assets/spade-community-logo.png";
 import { getAdminDisplayName, getAdminUser } from "../services/auth/authStorage";
 
 export default function Navbar({ isDarkMode, onToggleTheme }) {
@@ -31,7 +31,7 @@ export default function Navbar({ isDarkMode, onToggleTheme }) {
         <img
           src={heroLogo}
           alt="Spade Community logo"
-          className="h-8 w-auto max-w-[150px] object-contain sm:h-9 sm:max-w-[170px] md:h-10 md:max-w-[190px]"
+          className="h-10 w-auto max-w-[180px] object-contain sm:h-11 sm:max-w-[210px] md:h-12 md:max-w-[240px]"
         />
         <div className="leading-tight">
           <p
