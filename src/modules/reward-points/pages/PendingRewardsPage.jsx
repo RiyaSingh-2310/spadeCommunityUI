@@ -16,7 +16,7 @@ import {
 
 function validateRejectComment(comment) {
   if (String(comment ?? "").trim().length < 3) {
-    return "Comment must be at least 3 characters";
+    return "Admin remark must be at least 3 characters";
   }
   return "";
 }
@@ -26,12 +26,17 @@ function resolvePreservedRedemptionMethod(row) {
     row?.redemptionMethod,
     row?.rewardType,
     row?.productName,
-    row?.remark,
   ];
   for (const value of candidates) {
     const text = String(value ?? "").trim();
     const key = text.toLowerCase();
-    if (text && key !== "—" && key !== "verified" && key !== "rejected") {
+    if (
+      text &&
+      key !== "—" &&
+      key !== "verified" &&
+      key !== "rejected" &&
+      key !== "approved"
+    ) {
       return text;
     }
   }
@@ -193,7 +198,11 @@ function PendingRewardsPage({ isDarkMode }) {
           "Status",
           "Action",
         ]}
-        rows={sortedRows}
+        rows={sortedRows.map((row) => ({
+          ...row,
+          // Listing "Remark" = panelist remark for this redemption only.
+          remark: row.panelistRemark || row.remark || "",
+        }))}
         sortableColumns={sortableColumns}
         columnSort={columnSort}
         onColumnSort={onColumnSort}
@@ -235,8 +244,16 @@ function PendingRewardsPage({ isDarkMode }) {
                 updatedDate: formatSurveyListDate(
                   activeRow.updatedAtRaw ?? activeRow.updatedAt ?? activeRow.updatedDate
                 ),
+                panelistRemark: activeRow.panelistRemark || "",
+                adminRemark: activeRow.adminRemark || activeRow.comments || "",
               }
             : activeRow
+              ? {
+                  ...activeRow,
+                  panelistRemark: activeRow.panelistRemark || "",
+                  adminRemark: activeRow.adminRemark || activeRow.comments || "",
+                }
+              : activeRow
         }
         comment={comment}
         commentError={commentError}

@@ -74,7 +74,10 @@ function CompletedRewardsPage({ isDarkMode }) {
           "Completed Date",
           "Action",
         ]}
-        rows={sortedRows}
+        rows={sortedRows.map((row) => ({
+          ...row,
+          remark: row.panelistRemark || row.remark || "",
+        }))}
         sortableColumns={sortableColumns}
         columnSort={columnSort}
         onColumnSort={onColumnSort}
@@ -116,7 +119,8 @@ function CompletedRewardsPage({ isDarkMode }) {
                 completedDate:
                   viewTarget.completedDate ||
                   formatSurveyListDate(viewTarget.actionDateRaw || viewTarget.updatedAtRaw),
-                remark: viewTarget.remark || viewTarget.comments || "",
+                panelistRemark: viewTarget.panelistRemark || "",
+                adminRemark: viewTarget.adminRemark || viewTarget.comments || "",
               }
             : null
         }

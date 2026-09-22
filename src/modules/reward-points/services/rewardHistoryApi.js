@@ -59,8 +59,9 @@ function mapRewardHistoryRow(item) {
 }
 
 /**
- * Redemption method lives in `remark` when the panelist submits.
- * Admin approve/reject notes live in `comment`.
+ * `remark` = redemption method (panelist-selected).
+ * `comment` = panelist optional note.
+ * `admin_comment` = admin approve/reject note.
  * Never treat status labels like "Verified"/"Rejected" as the method.
  */
 function resolveRedemptionMethod(item) {
@@ -75,7 +76,7 @@ function resolveRedemptionMethod(item) {
       ""
   ).trim();
   const normalized = method.toLowerCase();
-  if (!method || normalized === "verified" || normalized === "rejected") {
+  if (!method || normalized === "verified" || normalized === "rejected" || normalized === "approved") {
     return coerceText(
       item?.redemption_method ??
         item?.redemptionMethod ??
@@ -87,12 +88,30 @@ function resolveRedemptionMethod(item) {
   return method;
 }
 
+function resolvePanelistRemark(item) {
+  return String(
+    item?.panelist_remark ??
+      item?.panelistRemark ??
+      item?.user_remark ??
+      item?.userRemark ??
+      item?.comment ??
+      ""
+  ).trim();
+}
+
 function resolveAdminRemark(item) {
-  return String(item?.comment ?? item?.admin_remark ?? item?.adminRemark ?? "").trim();
+  return String(
+    item?.admin_comment ??
+      item?.adminComment ??
+      item?.admin_remark ??
+      item?.adminRemark ??
+      ""
+  ).trim();
 }
 
 function mapRedeemRequestRow(item) {
-  const comments = resolveAdminRemark(item);
+  const panelistRemark = resolvePanelistRemark(item);
+  const adminRemark = resolveAdminRemark(item);
   const method = resolveRedemptionMethod(item);
   const productName = String(
     item?.product_name ?? item?.productName ?? item?.tremendous_product_name ?? ""
@@ -113,9 +132,11 @@ function mapRedeemRequestRow(item) {
     rewardPoints: String(toNumber(item?.reward_points, 0)),
     requestedBy: coerceText(item?.requested_by, "—"),
     status: normalizeStatus(item?.status),
-    // Keep raw method for preserve-on-update; display remark prefers admin comment.
-    remark: comments || "",
-    comments,
+    // Table "Remark" column shows panelist note for this redemption only.
+    remark: panelistRemark,
+    panelistRemark,
+    adminRemark,
+    comments: adminRemark,
     actionBy: coerceText(item?.action_by, "—"),
     actionDate: item?.action_date ? formatSurveyListDate(item.action_date) : "—",
     actionDateRaw: item?.action_date ?? "",
@@ -199,7 +220,7 @@ export async function fetchRedeemRequests({
 /** PATCH /api/reward-history/redeem/:id/status */
 export async function updateRedeemRequestStatus(
   id,
-  { status, actionBy, remark = "", comment = "" } = {}
+  { status, actionBy, remark = "", comment = "", adminComment } = {}
 ) {
   const normalizedId = String(id ?? "").trim();
   if (!normalizedId) {
@@ -217,16 +238,20 @@ export async function updateRedeemRequestStatus(
   }
 
   const remarkText = String(remark ?? "").trim();
-  const commentText = String(comment ?? "").trim();
+  const adminRemarkText = String(
+    adminComment !== undefined ? adminComment : comment ?? ""
+  ).trim();
 
   const data = await apiRequest(API_ROUTES.rewardHistory.redeemUpdateStatus(normalizedId), {
     method: "PATCH",
     body: {
       status: normalizedStatus,
       action_by: actionByText,
-      // `remark` = redemption method (preserve). `comment` = admin remark/note.
+      // Preserve redemption method. Admin note goes to admin_comment (backend also
+      // accepts legacy `comment` as the admin note without overwriting panelist comment).
       remark: remarkText,
-      comment: commentText,
+      admin_comment: adminRemarkText,
+      comment: adminRemarkText,
     },
   });
 

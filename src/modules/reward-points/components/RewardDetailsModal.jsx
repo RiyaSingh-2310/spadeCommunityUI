@@ -8,19 +8,10 @@ const USER_INFO_FIELDS = [
 ];
 
 const REWARD_INFO_FIELDS = [
-  { label: "Remark", key: "remark" },
   { label: "Reward Points", key: "rewardPoints" },
   { label: "Redemption Method", key: "redemptionMethod" },
   { label: "Tremendous Product", key: "productName" },
 ];
-
-const REQUEST_DETAIL_FIELDS = [
-  { label: "Status", key: "status" },
-  { label: "Created At", key: "createdDate" },
-  { label: "Updated At", key: "updatedDate" },
-];
-
-const VIEW_EXTRA_FIELDS = [{ label: "Completed Date", key: "completedDate" }];
 
 function formatDetailValue(value, { emptyLabel = "—" } = {}) {
   if (value == null || String(value).trim() === "") return emptyLabel;
@@ -38,14 +29,16 @@ function resolveRowValue(row, key) {
     return row.updatedDate ?? row.updatedAt ?? "";
   }
   if (key === "redemptionMethod") {
-    return row.redemptionMethod ?? "";
+    return row.redemptionMethod ?? row.rewardType ?? "";
   }
   if (key === "productName") {
     return row.productName ?? "";
   }
-  if (key === "remark") {
-    // Admin/panelist note lives in comments; do not fall back to method (`remark` raw).
-    return row.remark || row.comments || row.description || "";
+  if (key === "panelistRemark") {
+    return row.panelistRemark ?? "";
+  }
+  if (key === "adminRemark") {
+    return row.adminRemark ?? row.comments ?? "";
   }
   return row[key];
 }
@@ -71,7 +64,11 @@ function DetailSection({ title, fields, row, emptyLabel = "—" }) {
             className={`min-w-0 ${field.fullWidth ? "sm:col-span-2" : ""}`}
           >
             <dt className="admin-text-muted text-xs font-medium">{field.label}</dt>
-            <dd className="admin-text mt-0.5 text-sm break-words">
+            <dd
+              className={`admin-text mt-0.5 text-sm break-words ${
+                field.preWrap ? "whitespace-pre-wrap" : ""
+              }`}
+            >
               {field.key === "productName" && row.productLogo ? (
                 <span className="flex items-center gap-2">
                   <img
@@ -92,11 +89,38 @@ function DetailSection({ title, fields, row, emptyLabel = "—" }) {
   );
 }
 
+function RemarksSection({ row }) {
+  const panelistRemark = resolveRowValue(row, "panelistRemark");
+  const adminRemark = resolveRowValue(row, "adminRemark");
+
+  return (
+    <div className="mb-4">
+      <h3 className="admin-text-muted mb-2 text-xs font-semibold tracking-[0.02em]">
+        Remarks
+      </h3>
+      <dl className="space-y-2.5">
+        <div className="min-w-0">
+          <dt className="admin-text-muted text-xs font-medium">Panelist Remark</dt>
+          <dd className="admin-text mt-0.5 text-sm whitespace-pre-wrap break-words">
+            {formatDetailValue(panelistRemark, { emptyLabel: "N/A" })}
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="admin-text-muted text-xs font-medium">Admin Remark</dt>
+          <dd className="admin-text mt-0.5 text-sm whitespace-pre-wrap break-words">
+            {formatDetailValue(adminRemark, { emptyLabel: "N/A" })}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
 function RequestSummarySection({ row }) {
   const status = resolveRowValue(row, "status");
   const createdAt = resolveRowValue(row, "createdDate");
   const updatedAt = resolveRowValue(row, "updatedDate");
-  const remark = resolveRowValue(row, "remark");
+  const completedDate = resolveRowValue(row, "completedDate");
 
   return (
     <div className="mb-4">
@@ -120,12 +144,14 @@ function RequestSummarySection({ row }) {
             <dd className="admin-text mt-0.5 text-sm">{formatDetailValue(updatedAt)}</dd>
           </div>
         ) : null}
-        <div className="min-w-0">
-          <dt className="admin-text-muted text-xs font-medium">Remark</dt>
-          <dd className="admin-text mt-0.5 text-sm whitespace-pre-wrap break-words">
-            {formatDetailValue(remark, { emptyLabel: "N/A" })}
-          </dd>
-        </div>
+        {completedDate ? (
+          <div className="min-w-0">
+            <dt className="admin-text-muted text-xs font-medium">Completed Date</dt>
+            <dd className="admin-text mt-0.5 text-sm">
+              {formatDetailValue(completedDate)}
+            </dd>
+          </div>
+        ) : null}
       </dl>
     </div>
   );
@@ -161,12 +187,6 @@ function RewardDetailsModal({
     : isReject
       ? "Are you sure you want to reject this reward request?"
       : "";
-
-  const actionRequestFields = [
-    ...REQUEST_DETAIL_FIELDS,
-    { label: "Remark", key: "remark", alwaysShow: true, fullWidth: true },
-    ...VIEW_EXTRA_FIELDS.filter((field) => row[field.key]),
-  ];
 
   return (
     <div className="admin-modal-overlay fixed inset-0 z-[250] flex items-center justify-center p-4">
@@ -204,29 +224,29 @@ function RewardDetailsModal({
 
         <DetailSection title="User Information" fields={USER_INFO_FIELDS} row={row} />
         <DetailSection title="Reward Information" fields={REWARD_INFO_FIELDS} row={row} />
-
-        {isView ? (
-          <RequestSummarySection row={row} />
-        ) : (
-          <DetailSection
-            title="Request Details"
-            fields={actionRequestFields}
-            row={row}
-            emptyLabel="N/A"
-          />
-        )}
+        <RequestSummarySection row={row} />
+        <RemarksSection row={row} />
 
         {isAction ? (
           <>
             <p className="admin-text-muted mb-4 text-sm">{confirmMessage}</p>
-            <FormField label="Remark / Comments" required={isReject} error={commentError}>
+            <FormField
+              label="Admin Remark / Comment"
+              required={isReject}
+              error={commentError}
+              hint={
+                isApprove
+                  ? "Optional note for the panelist."
+                  : "Required for rejection (minimum 3 characters)."
+              }
+            >
               <textarea
                 className={textareaClass}
                 value={comment}
                 onChange={(e) => onCommentChange?.(e.target.value)}
                 placeholder={
                   isApprove
-                    ? "Enter approval remark (e.g. voucher code)..."
+                    ? "Enter approval remark (optional)..."
                     : "Enter rejection remark (minimum 3 characters)..."
                 }
                 disabled={isSubmitting}
@@ -242,7 +262,7 @@ function RewardDetailsModal({
             disabled={isSubmitting}
             className={getAdminCancelButtonClass("modal")}
           >
-            Cancel
+            {isView ? "Close" : "Cancel"}
           </button>
           {isAction ? (
             <button
