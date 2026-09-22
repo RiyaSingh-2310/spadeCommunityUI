@@ -11,6 +11,7 @@ import {
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
   getRequiredError,
+  getUrlError,
   isFormValidForFields,
 } from "../../shared/utils/validation";
 import {
@@ -21,11 +22,13 @@ import {
   EMPTY_API_MANAGEMENT_FORM,
   mapRecordToForm,
 } from "../constants/apiManagement";
+import { isMaskedApiKey } from "../services/apiKeysApi";
 
 function ApiManagementFormModal({
   isOpen,
   mode = "add",
   record = null,
+  isLoadingRecord = false,
   isDarkMode,
   isSubmitting = false,
   onClose,
@@ -38,33 +41,45 @@ function ApiManagementFormModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    setForm(
-      isEdit ? mapRecordToForm(record) : { ...EMPTY_API_MANAGEMENT_FORM }
-    );
+    if (isEdit) {
+      if (record) {
+        setForm(mapRecordToForm(record));
+      }
+      return;
+    }
+    setForm({ ...EMPTY_API_MANAGEMENT_FORM });
   }, [isOpen, isEdit, record]);
 
   const hasExistingKey = Boolean(
     form.hasExistingKey ||
-      String(record?.apiKey ?? record?.api_key ?? "").trim()
+      (record &&
+        (String(record.apiKey ?? "").trim() || record.apiKeyMasked))
   );
 
   const errors = useMemo(() => {
+    const authType = String(form.authType ?? "").trim();
+    const headerRequired = authType && authType !== "None";
+    const rawKey = String(form.apiKey ?? "").trim();
+
     const next = {
       apiName: getRequiredError(form.apiName, "API Name"),
       apiLabel: getRequiredError(form.apiLabel, "API Label"),
       apiUserId: getRequiredError(form.apiUserId, "API User ID"),
       apiKey: "",
-      baseUrl: getRequiredError(form.baseUrl, "Base URL"),
+      baseUrl: getUrlError(form.baseUrl, { required: true, label: "Base URL" }),
       endpoint: getRequiredError(form.endpoint, "Endpoint"),
       method: getRequiredError(form.method, "Method"),
       authType: getRequiredError(form.authType, "Auth Type"),
-      headerName: "",
+      headerName: headerRequired
+        ? getRequiredError(form.headerName, "Header Name")
+        : "",
       description: "",
       status: getRequiredError(form.status, "Status"),
     };
 
-    // Required on create; optional on edit when a key already exists.
-    if (!isEdit || !hasExistingKey) {
+    if (isMaskedApiKey(rawKey)) {
+      next.apiKey = "Enter a new API key or leave blank to keep the existing one.";
+    } else if (!isEdit || !hasExistingKey) {
       next.apiKey = getRequiredError(form.apiKey, "API Key");
     }
 
@@ -88,19 +103,26 @@ function ApiManagementFormModal({
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const fieldsLocked = isSubmitting || isLoadingRecord;
   const canSubmit =
-    !isSubmitting && isFormValidForFields(errors, API_MANAGEMENT_FORM_FIELDS);
+    !fieldsLocked &&
+    !(isEdit && !record) &&
+    isFormValidForFields(errors, API_MANAGEMENT_FORM_FIELDS);
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    if (isSubmitting || !validateSubmit() || !canSubmit) return;
+    if (fieldsLocked || (isEdit && !record) || !validateSubmit() || !canSubmit) {
+      return;
+    }
 
+    const rawKey = String(form.apiKey).trim();
     const payload = {
       ...form,
       apiName: String(form.apiName).trim(),
       apiLabel: String(form.apiLabel).trim(),
       apiUserId: String(form.apiUserId).trim(),
-      apiKey: String(form.apiKey).trim(),
+      // Never submit a masked value as the secret.
+      apiKey: isMaskedApiKey(rawKey) ? "" : rawKey,
       baseUrl: String(form.baseUrl).trim(),
       endpoint: String(form.endpoint).trim(),
       method: String(form.method).trim().toUpperCase(),
@@ -113,7 +135,7 @@ function ApiManagementFormModal({
     onSubmit?.(payload, { mode });
   };
 
-  const title = isEdit ? "Edit API" : "Add API";
+  const title = isEdit ? "Edit API Configuration" : "Add API Configuration";
   const submitLabel = isEdit ? "Update" : "Save";
 
   return (
@@ -123,7 +145,7 @@ function ApiManagementFormModal({
         className="admin-header-overlay absolute inset-0 cursor-pointer"
         aria-label="Close API form"
         onClick={onClose}
-        disabled={isSubmitting}
+        disabled={fieldsLocked}
       />
       <div
         className="admin-header-surface admin-modal-panel relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl border shadow-2xl"
@@ -143,218 +165,237 @@ function ApiManagementFormModal({
           </p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex min-h-0 flex-1 flex-col"
-          noValidate
-        >
-          <div className="flex-1 space-y-6 overflow-y-auto px-5 py-4">
-            <section className="space-y-4">
-              <h3 className="admin-text text-sm font-semibold">Basic Information</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  label="API Name"
-                  required
-                  error={showError("apiName")}
-                >
-                  <input
-                    className={inputClass}
-                    value={form.apiName}
-                    onChange={(e) => setField("apiName", e.target.value)}
-                    onBlur={() => touch("apiName")}
-                    placeholder="Tremendous"
-                    autoComplete="off"
-                    disabled={isSubmitting}
-                  />
-                </FormField>
-                <FormField
-                  label="API Label"
-                  required
-                  error={showError("apiLabel")}
-                >
-                  <input
-                    className={inputClass}
-                    value={form.apiLabel}
-                    onChange={(e) => setField("apiLabel", e.target.value)}
-                    onBlur={() => touch("apiLabel")}
-                    placeholder="Tremendous Reward API"
-                    autoComplete="off"
-                    disabled={isSubmitting}
-                  />
-                </FormField>
-                <FormField
-                  label="API User ID"
-                  required
-                  error={showError("apiUserId")}
-                >
-                  <input
-                    className={inputClass}
-                    value={form.apiUserId}
-                    onChange={(e) => setField("apiUserId", e.target.value)}
-                    onBlur={() => touch("apiUserId")}
-                    placeholder="Enter API User ID"
-                    autoComplete="off"
-                    disabled={isSubmitting}
-                  />
-                </FormField>
-                <FormField
-                  label="API Key"
-                  required={!isEdit || !hasExistingKey}
-                  error={showError("apiKey")}
-                  hint={
-                    isEdit && hasExistingKey
-                      ? "Leave blank to keep the existing key."
-                      : undefined
-                  }
-                >
-                  <AdminPasswordInput
-                    value={form.apiKey}
-                    onChange={(e) => setField("apiKey", e.target.value)}
-                    onBlur={() => touch("apiKey")}
-                    placeholder={
+        {isLoadingRecord && isEdit && !record ? (
+          <div className="flex min-h-[240px] items-center justify-center px-5 py-10">
+            <Loader2
+              size={28}
+              className="animate-spin text-[var(--admin-primary-color)]"
+            />
+          </div>
+        ) : (
+          <form
+            onSubmit={handleSubmit}
+            className="flex min-h-0 flex-1 flex-col"
+            noValidate
+          >
+            <div className="flex-1 space-y-6 overflow-y-auto px-5 py-4">
+              <section className="space-y-4">
+                <h3 className="admin-text text-sm font-semibold">
+                  Basic Information
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    label="API Name"
+                    required
+                    error={showError("apiName")}
+                  >
+                    <input
+                      className={inputClass}
+                      value={form.apiName}
+                      onChange={(e) => setField("apiName", e.target.value)}
+                      onBlur={() => touch("apiName")}
+                      placeholder="Tremendous"
+                      autoComplete="off"
+                      disabled={fieldsLocked}
+                    />
+                  </FormField>
+                  <FormField
+                    label="API Label"
+                    required
+                    error={showError("apiLabel")}
+                  >
+                    <input
+                      className={inputClass}
+                      value={form.apiLabel}
+                      onChange={(e) => setField("apiLabel", e.target.value)}
+                      onBlur={() => touch("apiLabel")}
+                      placeholder="Tremendous Reward API"
+                      autoComplete="off"
+                      disabled={fieldsLocked}
+                    />
+                  </FormField>
+                  <FormField
+                    label="API User ID"
+                    required
+                    error={showError("apiUserId")}
+                  >
+                    <input
+                      className={inputClass}
+                      value={form.apiUserId}
+                      onChange={(e) => setField("apiUserId", e.target.value)}
+                      onBlur={() => touch("apiUserId")}
+                      placeholder="Enter API User ID"
+                      autoComplete="off"
+                      disabled={fieldsLocked}
+                    />
+                  </FormField>
+                  <FormField
+                    label="API Key"
+                    required={!isEdit || !hasExistingKey}
+                    error={showError("apiKey")}
+                    hint={
                       isEdit && hasExistingKey
-                        ? "••••••••••••"
-                        : "Enter API Key"
+                        ? "Leave blank to keep the existing key."
+                        : undefined
                     }
-                    autoComplete="new-password"
-                    aria-label="API Key"
-                    disabled={isSubmitting}
-                  />
-                </FormField>
-              </div>
-            </section>
+                  >
+                    <AdminPasswordInput
+                      value={form.apiKey}
+                      onChange={(e) => setField("apiKey", e.target.value)}
+                      onBlur={() => touch("apiKey")}
+                      placeholder={
+                        isEdit && hasExistingKey
+                          ? "••••••••••••"
+                          : "Enter API Key"
+                      }
+                      autoComplete="new-password"
+                      aria-label="API Key"
+                      disabled={fieldsLocked}
+                    />
+                  </FormField>
+                </div>
+              </section>
 
-            <section className="space-y-4 border-t border-[var(--admin-table-border)] pt-5">
-              <h3 className="admin-text text-sm font-semibold">API Configuration</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  className="sm:col-span-2"
-                  label="Base URL"
-                  required
-                  error={showError("baseUrl")}
-                >
-                  <input
-                    className={inputClass}
-                    value={form.baseUrl}
-                    onChange={(e) => setField("baseUrl", e.target.value)}
-                    onBlur={() => touch("baseUrl")}
-                    placeholder="https://api.example.com"
-                    autoComplete="off"
-                    disabled={isSubmitting}
+              <section className="space-y-4 border-t border-[var(--admin-table-border)] pt-5">
+                <h3 className="admin-text text-sm font-semibold">
+                  API Configuration
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    className="sm:col-span-2"
+                    label="Base URL"
+                    required
+                    error={showError("baseUrl")}
+                  >
+                    <input
+                      className={inputClass}
+                      value={form.baseUrl}
+                      onChange={(e) => setField("baseUrl", e.target.value)}
+                      onBlur={() => touch("baseUrl")}
+                      placeholder="https://api.example.com"
+                      autoComplete="off"
+                      disabled={fieldsLocked}
+                    />
+                  </FormField>
+                  <FormField
+                    label="Endpoint"
+                    required
+                    error={showError("endpoint")}
+                  >
+                    <input
+                      className={inputClass}
+                      value={form.endpoint}
+                      onChange={(e) => setField("endpoint", e.target.value)}
+                      onBlur={() => touch("endpoint")}
+                      placeholder="/v2/orders"
+                      autoComplete="off"
+                      disabled={fieldsLocked}
+                    />
+                  </FormField>
+                  <FormField label="Method" required error={showError("method")}>
+                    <SearchableSelect
+                      value={form.method}
+                      onChange={(value) => {
+                        setField("method", value);
+                        touch("method");
+                      }}
+                      options={API_HTTP_METHODS}
+                      isDarkMode={isDarkMode}
+                      placeholder="Select method"
+                      disabled={fieldsLocked}
+                    />
+                  </FormField>
+                  <FormField
+                    label="Auth Type"
+                    required
+                    error={showError("authType")}
+                  >
+                    <SearchableSelect
+                      value={form.authType}
+                      onChange={(value) => {
+                        setField("authType", value);
+                        touch("authType");
+                      }}
+                      options={API_AUTH_TYPE_OPTIONS}
+                      isDarkMode={isDarkMode}
+                      placeholder="Select auth type"
+                      disabled={fieldsLocked}
+                    />
+                  </FormField>
+                  <FormField
+                    label="Header Name"
+                    required={
+                      Boolean(form.authType) && form.authType !== "None"
+                    }
+                    error={showError("headerName")}
+                  >
+                    <input
+                      className={inputClass}
+                      value={form.headerName}
+                      onChange={(e) => setField("headerName", e.target.value)}
+                      onBlur={() => touch("headerName")}
+                      placeholder="Authorization"
+                      autoComplete="off"
+                      disabled={fieldsLocked}
+                    />
+                  </FormField>
+                </div>
+              </section>
+
+              <section className="space-y-4 border-t border-[var(--admin-table-border)] pt-5">
+                <h3 className="admin-text text-sm font-semibold">
+                  Additional Information
+                </h3>
+                <FormField label="Description" error={showError("description")}>
+                  <textarea
+                    className={textareaClass}
+                    value={form.description}
+                    onChange={(e) => setField("description", e.target.value)}
+                    onBlur={() => touch("description")}
+                    placeholder="Optional notes about this integration"
+                    disabled={fieldsLocked}
                   />
                 </FormField>
-                <FormField
-                  label="Endpoint"
-                  required
-                  error={showError("endpoint")}
-                >
-                  <input
-                    className={inputClass}
-                    value={form.endpoint}
-                    onChange={(e) => setField("endpoint", e.target.value)}
-                    onBlur={() => touch("endpoint")}
-                    placeholder="/v2/orders"
-                    autoComplete="off"
-                    disabled={isSubmitting}
-                  />
-                </FormField>
-                <FormField label="Method" required error={showError("method")}>
+                <FormField label="Status" required error={showError("status")}>
                   <SearchableSelect
-                    value={form.method}
+                    value={form.status}
                     onChange={(value) => {
-                      setField("method", value);
-                      touch("method");
+                      setField("status", value);
+                      touch("status");
                     }}
-                    options={API_HTTP_METHODS}
+                    options={API_STATUS_OPTIONS}
                     isDarkMode={isDarkMode}
-                    placeholder="Select method"
-                    disabled={isSubmitting}
+                    placeholder="Select status"
+                    disabled={fieldsLocked}
                   />
                 </FormField>
-                <FormField
-                  label="Auth Type"
-                  required
-                  error={showError("authType")}
-                >
-                  <SearchableSelect
-                    value={form.authType}
-                    onChange={(value) => {
-                      setField("authType", value);
-                      touch("authType");
-                    }}
-                    options={API_AUTH_TYPE_OPTIONS}
-                    isDarkMode={isDarkMode}
-                    placeholder="Select auth type"
-                    disabled={isSubmitting}
-                  />
-                </FormField>
-                <FormField label="Header Name" error={showError("headerName")}>
-                  <input
-                    className={inputClass}
-                    value={form.headerName}
-                    onChange={(e) => setField("headerName", e.target.value)}
-                    onBlur={() => touch("headerName")}
-                    placeholder="Authorization"
-                    autoComplete="off"
-                    disabled={isSubmitting}
-                  />
-                </FormField>
-              </div>
-            </section>
+              </section>
+            </div>
 
-            <section className="space-y-4 border-t border-[var(--admin-table-border)] pt-5">
-              <h3 className="admin-text text-sm font-semibold">
-                Additional Information
-              </h3>
-              <FormField label="Description" error={showError("description")}>
-                <textarea
-                  className={textareaClass}
-                  value={form.description}
-                  onChange={(e) => setField("description", e.target.value)}
-                  onBlur={() => touch("description")}
-                  placeholder="Optional notes about this integration"
-                  disabled={isSubmitting}
-                />
-              </FormField>
-              <FormField label="Status" required error={showError("status")}>
-                <SearchableSelect
-                  value={form.status}
-                  onChange={(value) => {
-                    setField("status", value);
-                    touch("status");
-                  }}
-                  options={API_STATUS_OPTIONS}
-                  isDarkMode={isDarkMode}
-                  placeholder="Select status"
-                  disabled={isSubmitting}
-                />
-              </FormField>
-            </section>
-          </div>
-
-          <div className="admin-modal-actions flex flex-wrap items-center justify-end gap-2 border-t border-[var(--admin-table-border)] px-5 py-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className={getAdminCancelButtonClass("modal")}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="admin-btn-primary inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-              {isSubmitting
-                ? isEdit
-                  ? "Updating..."
-                  : "Saving..."
-                : submitLabel}
-            </button>
-          </div>
-        </form>
+            <div className="admin-modal-actions flex flex-wrap items-center justify-end gap-2 border-t border-[var(--admin-table-border)] px-5 py-4">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={fieldsLocked}
+                className={getAdminCancelButtonClass("modal")}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!canSubmit}
+                className="admin-btn-primary inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                {isSubmitting
+                  ? isEdit
+                    ? "Updating..."
+                    : "Saving..."
+                  : submitLabel}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

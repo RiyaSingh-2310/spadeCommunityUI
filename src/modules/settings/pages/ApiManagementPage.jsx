@@ -6,7 +6,7 @@ function ApiManagementPage({ isDarkMode }) {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="API Management"
+        title="API Key Management"
         subtitle="Manage external API credentials and configuration."
         isDarkMode={isDarkMode}
       />

@@ -1,13 +1,13 @@
-/** Field options and helpers for API Management (backed by /api/api-keys). */
+/** Field options and helpers for API Key Management (backed by /api/api-keys). */
 
 export const API_HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
-/** Values match backend `auth_type` (e.g. Bearer from API contract). */
+/** Values match backend `auth_type`. */
 export const API_AUTH_TYPE_OPTIONS = [
-  { value: "None", label: "None" },
+  { value: "Bearer", label: "Bearer" },
   { value: "API Key", label: "API Key" },
-  { value: "Bearer", label: "Bearer Token" },
-  { value: "Basic", label: "Basic Auth" },
+  { value: "Basic", label: "Basic" },
+  { value: "None", label: "None" },
   { value: "Custom Header", label: "Custom Header" },
 ];
 
@@ -44,17 +44,21 @@ export const EMPTY_API_MANAGEMENT_FORM = {
   headerName: "",
   description: "",
   status: "active",
+  hasExistingKey: false,
 };
 
 export const API_MANAGEMENT_TABLE_COLUMNS = [
   "API Name",
   "API Label",
   "API User ID",
+  "API Key",
   "Base URL",
   "Endpoint",
   "Method",
   "Auth Type",
   "Status",
+  "Created At",
+  "Updated At",
   "Actions",
 ];
 
@@ -63,14 +67,17 @@ export function maskApiSecret(value) {
   if (!text) return "—";
   // Prefer backend-provided mask (e.g. ***************3456) when present.
   if (/^\*+\w*$/.test(text) || /^[•]+/.test(text)) return text;
-  return "••••••••••••";
+  if (text.length <= 4) return "••••••••••••";
+  return `${"*".repeat(Math.max(12, text.length - 4))}${text.slice(-4)}`;
 }
 
 export function mapRecordToForm(record) {
   if (!record) return { ...EMPTY_API_MANAGEMENT_FORM };
   const rawKey = String(record.apiKey ?? record.api_key ?? "");
-  // Do not put masked secrets into the editable field; blank = keep existing on update.
-  const editableKey = /^\*+\w*$/.test(rawKey) || /^[•]+/.test(rawKey) ? "" : rawKey;
+  const looksMasked =
+    /^\*+\w*$/.test(rawKey) || /^[•]+/.test(rawKey) || Boolean(record.apiKeyMasked);
+  // Never put a masked secret into the editable field; blank = keep existing on update.
+  const editableKey = looksMasked ? "" : rawKey;
 
   return {
     id: record.id ?? null,
@@ -87,6 +94,6 @@ export function mapRecordToForm(record) {
     status: String(record.status ?? "active").toLowerCase() === "inactive"
       ? "inactive"
       : "active",
-    hasExistingKey: Boolean(rawKey),
+    hasExistingKey: Boolean(rawKey) || Boolean(record.apiKeyMasked),
   };
 }

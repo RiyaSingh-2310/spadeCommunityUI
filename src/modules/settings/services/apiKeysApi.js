@@ -1,6 +1,7 @@
 import { API_ROUTES } from "../../../config/api";
 import { ApiError } from "../../../services/api/ApiError";
 import { apiRequest } from "../../../services/api/client";
+import { formatAppDateTime } from "../../shared/utils/dateTime";
 import { appendListQuery } from "../../shared/utils/listQueryParams";
 import { toUiSentenceCase } from "../../shared/utils/uiText";
 
@@ -52,6 +53,8 @@ export function isMaskedApiKey(value) {
 export function mapApiKeyRecord(record) {
   if (!record || typeof record !== "object") return null;
   const apiKey = String(record.api_key ?? record.apiKey ?? "");
+  const createdAt = record.created_at ?? record.createdAt ?? null;
+  const updatedAt = record.updated_at ?? record.updatedAt ?? null;
   return {
     id: record.id ?? null,
     apiName: String(record.api_name ?? record.apiName ?? "").trim(),
@@ -59,6 +62,11 @@ export function mapApiKeyRecord(record) {
     apiUserId: String(record.api_user_id ?? record.apiUserId ?? "").trim(),
     apiKey,
     apiKeyMasked: isMaskedApiKey(apiKey) || Boolean(apiKey),
+    apiKeyDisplay: isMaskedApiKey(apiKey)
+      ? apiKey
+      : apiKey
+        ? `${"*".repeat(Math.max(12, apiKey.length - 4))}${apiKey.slice(-4)}`
+        : "—",
     baseUrl: String(record.base_url ?? record.baseUrl ?? "").trim(),
     endpoint: String(record.endpoint ?? "").trim(),
     method: String(record.method ?? "GET").trim().toUpperCase() || "GET",
@@ -67,14 +75,16 @@ export function mapApiKeyRecord(record) {
     description: String(record.description ?? "").trim(),
     status: normalizeStatus(record.status),
     statusLabel: formatStatusLabel(record.status),
-    createdAt: record.created_at ?? record.createdAt ?? null,
-    updatedAt: record.updated_at ?? record.updatedAt ?? null,
+    createdAt,
+    updatedAt,
+    createdAtLabel: formatAppDateTime(createdAt),
+    updatedAtLabel: formatAppDateTime(updatedAt),
   };
 }
 
 /**
  * Builds POST/PUT body for /api/api-keys.
- * Omits api_key on update when blank or still masked.
+ * Omits api_key on update when blank or still masked — never send ***************3456.
  */
 export function buildApiKeyPayload(form, { isEdit = false } = {}) {
   const apiKey = String(form.apiKey ?? "").trim();
@@ -106,18 +116,25 @@ export function buildApiKeyPayload(form, { isEdit = false } = {}) {
 }
 
 /** GET /api/api-keys/list */
-export async function fetchApiKeysList({ page = 1, limit = 100, search } = {}) {
+export async function fetchApiKeysList({ page = 1, limit = 10, search } = {}) {
   const path = appendListQuery(API_ROUTES.apiKeys.list, { page, limit, search });
   const data = await apiRequest(path);
   assertSuccess(data);
 
   const rows = Array.isArray(data?.data) ? data.data : [];
+  const total = Number(data?.total);
+  const resolvedPage = Number(data?.page) || page;
+  const resolvedLimit = Number(data?.limit) || limit;
+  const totalPages =
+    Number(data?.totalPages) ||
+    Math.max(1, Math.ceil((Number.isFinite(total) ? total : rows.length) / resolvedLimit));
+
   return {
     items: rows.map(mapApiKeyRecord).filter(Boolean),
-    total: Number(data?.total) || rows.length,
-    page: Number(data?.page) || page,
-    limit: Number(data?.limit) || limit,
-    totalPages: Number(data?.totalPages) || 1,
+    total: Number.isFinite(total) ? total : rows.length,
+    page: resolvedPage,
+    limit: resolvedLimit,
+    totalPages,
   };
 }
 
@@ -171,3 +188,7 @@ export async function deleteApiKey(id) {
   });
   return assertSuccess(data);
 }
+
+/** Aliases matching common service naming. */
+export const getApiKeys = fetchApiKeysList;
+export const getApiKeyById = fetchApiKeyById;
