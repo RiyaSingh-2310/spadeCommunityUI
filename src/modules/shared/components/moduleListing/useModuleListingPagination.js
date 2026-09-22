@@ -39,8 +39,13 @@ export function useModuleListingPagination({
     : internalPageSize;
 
   const safeRows = (Array.isArray(rows) ? rows : []).filter(Boolean);
+  // Include status so in-place status updates sync even for client-managed lists.
   const rowsSignature = safeRows
-    .map((row) => row?.[rowIdKey] ?? row?.id ?? "")
+    .map((row) => {
+      const id = row?.[rowIdKey] ?? row?.id ?? "";
+      const status = row?.status ?? "";
+      return `${id}:${status}`;
+    })
     .join(",");
   const [prevRowsSignature, setPrevRowsSignature] = useState(rowsSignature);
   if (!isExternallyManaged && rowsSignature !== prevRowsSignature) {
@@ -48,7 +53,10 @@ export function useModuleListingPagination({
     setInternalData(safeRows);
   }
 
-  const rawData = isExternallyManaged ? safeRows : internalData;
+  // Server-driven / externally managed listings always render the parent `rows`
+  // prop so approve/reject refreshes update the Action column immediately.
+  const rawData =
+    isExternallyManaged || usesServerListing ? safeRows : internalData;
   const data = Array.isArray(rawData) ? rawData.filter(Boolean) : [];
 
   const handlePageChange = useCallback(

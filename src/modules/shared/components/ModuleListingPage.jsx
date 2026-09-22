@@ -130,13 +130,19 @@ function ModuleListingPage({
   const safeColumns = Array.isArray(columns) ? columns : [];
   const hasActionColumn = safeColumns.some(isActionColumn);
   const isExternallyManaged = Boolean(
-    onStatusToggle ||
+    // Server-driven lists own their rows in the parent; never pin a stale
+    // internal copy keyed only by row ids (status changes would be ignored).
+    serverPaginated ||
+      serverSearch ||
+      onStatusToggle ||
       onStatusChange ||
       onEdit ||
       onDelete ||
       onManagePermissions ||
       onAddProject ||
-      onListProjects
+      onListProjects ||
+      onApprove ||
+      onReject
   );
   const editOnly = actionVariant === "edit-only";
   const viewEdit = actionVariant === "view-edit";

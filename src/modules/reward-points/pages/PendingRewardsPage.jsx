@@ -132,9 +132,10 @@ function PendingRewardsPage({ isDarkMode }) {
   };
 
   const applyLocalStatusUpdate = (targetId, updatedRow, nextStatus, adminRemark) => {
+    const matchesId = (row) => String(row?.id) === String(targetId);
     setRows((prev) =>
       prev.map((row) => {
-        if (row.id !== targetId) return row;
+        if (!matchesId(row)) return row;
         if (updatedRow && typeof updatedRow === "object") {
           return {
             ...row,
@@ -178,7 +179,6 @@ function PendingRewardsPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
-      // 1) Approve / Reject API — only continue on success
       const data = await updateRedeemRequestStatus(targetId, {
         status: isApprove ? "approved" : "rejected",
         actionBy: getAdminDisplayName(),
@@ -188,17 +188,16 @@ function PendingRewardsPage({ isDarkMode }) {
 
       toastApiSuccess(data);
 
-      // 2) Close modal after successful response (no browser reload)
+      // Close modal only after mutation succeeds.
       resetModalState();
 
-      // 3) Immediate Action-column update from response (Approve/Reject → Info)
+      // Apply mutation payload immediately so Action column flips before list returns.
       applyLocalStatusUpdate(targetId, data?.updatedRow, nextStatus, adminRemark);
 
-      // 4) Re-fetch GET /reward-history/redeem/list and replace list with latest data
+      // Source of truth: re-fetch redeem list and replace table rows.
       await reloadRedeemList();
     } catch (error) {
       toastApiError(error);
-      // Keep modal open and existing list state on failure.
       setIsSubmitting(false);
     }
   };
