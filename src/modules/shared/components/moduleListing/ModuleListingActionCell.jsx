@@ -252,36 +252,22 @@ function ModuleListingActionCell({
   if (actionVariant === "reward-pending") {
     const statusKey = String(row?.status ?? "").trim().toLowerCase();
     const isPending = !statusKey || statusKey === "pending";
-    const isViewOnly =
-      statusKey === "completed" || statusKey === "approved" || statusKey === "rejected";
-    const hasDecisionActions = Boolean(onApprove || onReject);
 
-    if (isPending && (onApprove || onReject)) {
-      if (allowWrite) {
-        return (
-          <td key={col} className={cellClass}>
-            <RewardPendingActions
-              isDarkMode={isDarkMode}
-              row={row}
-              onApprove={onApprove ? () => onApprove(row, globalIdx) : undefined}
-              onReject={onReject ? () => onReject(row, globalIdx) : undefined}
-            />
-          </td>
-        );
-      }
-
-      if (allowRead && onView) {
-        return (
-          <td key={col} className={cellClass}>
-            <ViewActionButton onView={() => onView(row, globalIdx)} iconOnly />
-          </td>
-        );
-      }
-
-      return null;
+    // Pending + write access → Approve / Reject. Any other status → Info (I) only.
+    if (isPending && (onApprove || onReject) && allowWrite) {
+      return (
+        <td key={col} className={cellClass}>
+          <RewardPendingActions
+            isDarkMode={isDarkMode}
+            row={row}
+            onApprove={onApprove ? () => onApprove(row, globalIdx) : undefined}
+            onReject={onReject ? () => onReject(row, globalIdx) : undefined}
+          />
+        </td>
+      );
     }
 
-    if ((isViewOnly || !hasDecisionActions || isPending) && allowRead && onView) {
+    if (allowRead && onView) {
       return (
         <td key={col} className={cellClass}>
           <ViewActionButton onView={() => onView(row, globalIdx)} iconOnly />

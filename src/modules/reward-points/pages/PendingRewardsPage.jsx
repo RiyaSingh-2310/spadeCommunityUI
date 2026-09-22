@@ -74,6 +74,7 @@ function PendingRewardsPage({ isDarkMode }) {
 
   const {
     rows,
+    setRows,
     totalRecords,
     totalPages,
     isLoading,
@@ -130,6 +131,32 @@ function PendingRewardsPage({ isDarkMode }) {
     handlePageChange(1);
   };
 
+  const applyLocalStatusUpdate = (targetId, updatedRow, nextStatus, adminRemark) => {
+    setRows((prev) =>
+      prev.map((row) => {
+        if (row.id !== targetId) return row;
+        if (updatedRow && typeof updatedRow === "object") {
+          return {
+            ...row,
+            ...updatedRow,
+            remark:
+              updatedRow.panelistRemark ||
+              updatedRow.remark ||
+              row.panelistRemark ||
+              row.remark ||
+              "",
+          };
+        }
+        return {
+          ...row,
+          status: nextStatus,
+          adminRemark: adminRemark || row.adminRemark || "",
+          comments: adminRemark || row.comments || "",
+        };
+      })
+    );
+  };
+
   const handleConfirm = async () => {
     if (!activeRow?.id || isSubmitting) return;
 
@@ -143,14 +170,16 @@ function PendingRewardsPage({ isDarkMode }) {
       }
     }
 
+    const targetId = activeRow.id;
+    const isApprove = modalMode === "approve";
+    const adminRemark = String(comment ?? "").trim();
+    const preservedMethod = resolvePreservedRedemptionMethod(activeRow);
+    const nextStatus = isApprove ? "Approved" : "Rejected";
+
     setIsSubmitting(true);
     try {
-      const isApprove = modalMode === "approve";
-      const adminRemark = String(comment ?? "").trim();
-      const preservedMethod = resolvePreservedRedemptionMethod(activeRow);
-
-      // 1) Approve / Reject API
-      const data = await updateRedeemRequestStatus(activeRow.id, {
+      // 1) Approve / Reject API — only continue on success
+      const data = await updateRedeemRequestStatus(targetId, {
         status: isApprove ? "approved" : "rejected",
         actionBy: getAdminDisplayName(),
         remark: preservedMethod,
@@ -159,14 +188,17 @@ function PendingRewardsPage({ isDarkMode }) {
 
       toastApiSuccess(data);
 
-      // 2) Close modal only after successful response (no browser reload)
+      // 2) Close modal after successful response (no browser reload)
       resetModalState();
 
-      // 3) Re-call reward-history/redeem/list and update list from backend
+      // 3) Immediate Action-column update from response (Approve/Reject → Info)
+      applyLocalStatusUpdate(targetId, data?.updatedRow, nextStatus, adminRemark);
+
+      // 4) Re-fetch GET /reward-history/redeem/list and replace list with latest data
       await reloadRedeemList();
     } catch (error) {
       toastApiError(error);
-      // Keep modal open; do not refresh list as if the action succeeded.
+      // Keep modal open and existing list state on failure.
       setIsSubmitting(false);
     }
   };
