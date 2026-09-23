@@ -125,6 +125,16 @@ export function mapSupplierMappingToRow(record, index = 0) {
       pickField(record, ["IsTest", "is_test", "isTest", "test_mode"]),
       false
     ),
+    isDefault: Boolean(
+      pickField(record, [
+        "is_default",
+        "isDefault",
+        "is_default_partner",
+        "isDefaultPartner",
+        "default_partner",
+        "defaultPartner",
+      ])
+    ),
     record,
   };
 }

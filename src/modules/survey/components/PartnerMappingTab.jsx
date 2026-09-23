@@ -58,6 +58,13 @@ import {
   readProjectUrlSampleSize,
   sumAssignedPartnerQuota,
 } from "../utils/partnerMappingQuota";
+import {
+  isDefaultPartnerRecord,
+  mappingRowsIncludePartner,
+  pickDefaultPartnerFromList,
+  resolveDefaultPartnerQuota,
+  resolvePartnerId,
+} from "../utils/defaultPartnerMapping";
 import PartnerMappingViewModal from "./PartnerMappingViewModal";
 import CopyValueButton from "./CopyValueButton";
 import {
@@ -298,6 +305,8 @@ function PartnerMappingTab({
   const pendingJumpToFormRef = useRef(false);
   const pendingJumpToMappingRef = useRef(false);
   const statsRequestIdRef = useRef(0);
+  const ensuringDefaultPartnerRef = useRef(false);
+  const ensuredDefaultPartnerKeysRef = useRef(new Set());
 
   const selectedProjectUrl = useMemo(
     () =>
@@ -420,6 +429,82 @@ function PartnerMappingTab({
     }
   }, [projectId, resolvedProjectUrlId]);
 
+  /**
+   * When mappings are empty and the backend flags a default partner, create a
+   * mapping at full project-URL sample size. Never hard-codes a partner ID.
+   */
+  const ensureDefaultPartnerMapping = useCallback(
+    async ({ existingRows, projectUrlSampleSize }) => {
+      if (!allowWrite || !projectId || !resolvedProjectUrlId) return false;
+      if (!selectedUrlEligible) return false;
+      if (Array.isArray(existingRows) && existingRows.length > 0) return false;
+
+      const quota = resolveDefaultPartnerQuota(projectUrlSampleSize);
+      if (!quota) return false;
+
+      const ensureKey = `${projectId}:${resolvedProjectUrlId}`;
+      if (
+        ensuringDefaultPartnerRef.current ||
+        ensuredDefaultPartnerKeysRef.current.has(ensureKey)
+      ) {
+        return false;
+      }
+
+      ensuringDefaultPartnerRef.current = true;
+      try {
+        const partners = await getPartnerPanelSizes();
+        const defaultPartner = pickDefaultPartnerFromList(partners);
+        if (!defaultPartner || !isDefaultPartnerRecord(defaultPartner)) {
+          return false;
+        }
+
+        const partnerId = resolvePartnerId(defaultPartner);
+        if (!partnerId) return false;
+        if (mappingRowsIncludePartner(existingRows, partnerId)) return false;
+
+        let detail = defaultPartner;
+        let mapped = mapPartnerToRow(defaultPartner);
+        try {
+          detail = await getPartnerRecord(partnerId);
+          mapped = mapPartnerToRow(detail);
+        } catch {
+          // Fall back to panel-size list fields when detail fetch fails.
+        }
+
+        const redirects = redirectsFromPartnerRecord(detail, mapped);
+        const payload = buildSupplierMappingApiPayload({
+          partnerId,
+          projectId,
+          projectUrlId: resolvedProjectUrlId,
+          quota,
+          cpi: "0",
+          redirects,
+          statusActive: true,
+          isTest: false,
+        });
+
+        if (
+          payload.partnerid == null ||
+          payload.projectid == null ||
+          payload.projectUrlId == null ||
+          payload.quota == null
+        ) {
+          return false;
+        }
+
+        await createSupplierMapping(payload);
+        ensuredDefaultPartnerKeysRef.current.add(ensureKey);
+        return true;
+      } catch (error) {
+        toastApiError(error);
+        return false;
+      } finally {
+        ensuringDefaultPartnerRef.current = false;
+      }
+    },
+    [allowWrite, projectId, resolvedProjectUrlId, selectedUrlEligible]
+  );
+
   const loadMappings = useCallback(async () => {
     if (!projectId || (!readOnly && !resolvedProjectUrlId)) {
       setRows([]);
@@ -439,7 +524,7 @@ function PartnerMappingTab({
       if (!readOnly) {
         await loadMultiLinkStats();
       }
-      const nextRows = Array.isArray(records)
+      let nextRows = Array.isArray(records)
         ? records
             .map((record, index) => mapSupplierMappingToRow(record, index))
             .filter((row) => {
@@ -448,6 +533,47 @@ function PartnerMappingTab({
               return String(row.partnerId) === String(scopedPartnerId);
             })
         : [];
+
+      nextRows = nextRows.map((row) => ({
+        ...row,
+        isDefault:
+          Boolean(row.isDefault) || isDefaultPartnerRecord(row.record),
+      }));
+
+      const createdDefault = await ensureDefaultPartnerMapping({
+        existingRows: nextRows,
+        projectUrlSampleSize: readProjectUrlSampleSize(
+          projectUrls.find(
+            (url) => String(url.id) === String(resolvedProjectUrlId)
+          ) ?? selectedProjectUrl
+        ),
+      });
+
+      if (createdDefault) {
+        const refreshed = await listSupplierMappings({
+          projectId,
+          projectUrlId: resolvedProjectUrlId || undefined,
+          partnerId: scopedPartnerId,
+        });
+        nextRows = Array.isArray(refreshed)
+          ? refreshed
+              .map((record, index) => mapSupplierMappingToRow(record, index))
+              .filter((row) => {
+                if (!scopedPartnerId) return true;
+                if (!row.partnerId) return true;
+                return String(row.partnerId) === String(scopedPartnerId);
+              })
+              .map((row) => ({
+                ...row,
+                isDefault:
+                  Boolean(row.isDefault) || isDefaultPartnerRecord(row.record),
+              }))
+          : nextRows;
+        if (!readOnly) {
+          await loadMultiLinkStats();
+        }
+      }
+
       setRows(nextRows);
     } catch (error) {
       toastApiError(error);
@@ -456,7 +582,16 @@ function PartnerMappingTab({
     } finally {
       setIsLoading(false);
     }
-  }, [projectId, resolvedProjectUrlId, loadMultiLinkStats, scopedPartnerId, readOnly]);
+  }, [
+    projectId,
+    resolvedProjectUrlId,
+    loadMultiLinkStats,
+    scopedPartnerId,
+    readOnly,
+    ensureDefaultPartnerMapping,
+    projectUrls,
+    selectedProjectUrl,
+  ]);
 
   useEffect(() => {
     loadMappings();
@@ -537,6 +672,8 @@ function PartnerMappingTab({
           code: partner.code,
           name: partner.name,
           panel_size: partner.panel_size,
+          is_default: partner.is_default,
+          partner_type: partner.partner_type,
         }))
       );
       return partners;

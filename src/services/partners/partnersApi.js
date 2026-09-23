@@ -146,6 +146,21 @@ export function mapPartnerToRow(partner) {
       partner?.panel_size != null && String(partner.panel_size).trim() !== ""
         ? String(partner.panel_size)
         : "—",
+    isDefault: Boolean(
+      partner?.is_default ??
+        partner?.isDefault ??
+        partner?.is_default_partner ??
+        partner?.isDefaultPartner ??
+        partner?.default_partner ??
+        partner?.defaultPartner
+    ),
+    partnerType: String(
+      partner?.partner_type ??
+        partner?.partnerType ??
+        partner?.partner_role ??
+        partner?.partnerRole ??
+        ""
+    ).trim(),
     completeUrl: partner?.complete_val ?? partner?.complete ?? "",
     terminateUrl: partner?.terminate_val ?? partner?.terminate ?? "",
     overQuotaUrl: partner?.over_quota_val ?? partner?.over_quota ?? "",
@@ -356,6 +371,21 @@ export async function getPartnerPanelSizes() {
     code: partner?.code ?? "",
     name: partner?.name ?? "",
     panel_size: Number(partner?.panel_size ?? partner?.panelSize ?? 0) || 0,
+    // Preserve backend default-partner markers for Partner Mapping auto-attach.
+    is_default:
+      partner?.is_default ??
+      partner?.isDefault ??
+      partner?.is_default_partner ??
+      partner?.isDefaultPartner ??
+      partner?.default_partner ??
+      partner?.defaultPartner ??
+      false,
+    partner_type:
+      partner?.partner_type ??
+      partner?.partnerType ??
+      partner?.partner_role ??
+      partner?.partnerRole ??
+      "",
   }));
 }
 

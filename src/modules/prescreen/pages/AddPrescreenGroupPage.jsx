@@ -161,7 +161,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
     () => ({
       language: getRequiredError(form.language, "Language"),
       surveyTitle:
-        getRequiredMaxLengthError(form.surveyTitle, "Survey Group Title") ||
+        getRequiredMaxLengthError(form.surveyTitle, "Pre-Screen Group Title") ||
         (titleTaken ? SURVEY_GROUP_TITLE_DUPLICATE_MESSAGE : ""),
       prescreenIds:
         form.prescreenIds.length > 0 ? "" : "Select at least one questionnaire",
@@ -361,20 +361,20 @@ function AddPrescreenGroupPage({ isDarkMode }) {
   };
 
   const breadcrumbItems = [
-    { label: "Questionnaire Group", to: "/prescreen/group" },
+    { label: "Pre-Screen Group", to: "/prescreen/group" },
   ];
 
   if (isEdit && isLoadingRecord) {
     return (
       <div className="space-y-6">
         <AdminPageHeader
-          title="Edit Questionnaire Group"
-          breadcrumbs={[...breadcrumbItems, { label: "Edit Questionnaire Group" }]}
+          title="Edit Pre-Screen Group"
+          breadcrumbs={[...breadcrumbItems, { label: "Edit Pre-Screen Group" }]}
           isDarkMode={isDarkMode}
         />
         <div className="admin-text flex items-center gap-2 text-sm">
           <Loader2 size={16} className="animate-spin" />
-          Loading survey group...
+          Loading pre-screen group...
         </div>
       </div>
     );
@@ -384,11 +384,11 @@ function AddPrescreenGroupPage({ isDarkMode }) {
     return (
       <div className="space-y-6">
         <AdminPageHeader
-          title="Edit Questionnaire Group"
-          breadcrumbs={[...breadcrumbItems, { label: "Edit Questionnaire Group" }]}
+          title="Edit Pre-Screen Group"
+          breadcrumbs={[...breadcrumbItems, { label: "Edit Pre-Screen Group" }]}
           isDarkMode={isDarkMode}
         />
-        <p className="admin-text-muted text-sm">Survey group not found.</p>
+        <p className="admin-text-muted text-sm">Pre-screen group not found.</p>
         <button
           type="button"
           onClick={() => navigate("/prescreen/group")}
@@ -403,14 +403,14 @@ function AddPrescreenGroupPage({ isDarkMode }) {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title={isEdit ? "Edit Questionnaire Group" : "Add Survey Group"}
+        title={isEdit ? "Edit Pre-Screen Group" : "Add Pre-Screen Group"}
         breadcrumbs={[
           ...breadcrumbItems,
-          { label: isEdit ? "Edit Questionnaire Group" : "Add Survey Group" },
+          { label: isEdit ? "Edit Pre-Screen Group" : "Add Pre-Screen Group" },
         ]}
         isDarkMode={isDarkMode}
       />
-      <TableCard title="Survey Group Details" isDarkMode={isDarkMode}>
+      <TableCard title="Pre-Screen Group Details" isDarkMode={isDarkMode}>
         <form className="space-y-4" onSubmit={handleSubmit} noValidate>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
@@ -435,12 +435,12 @@ function AddPrescreenGroupPage({ isDarkMode }) {
             </div>
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">
-                Survey Group Title
+                Pre-Screen Group Title
                 <span className="text-[var(--admin-danger-text)]"> *</span>
               </label>
               <input
                 className={inputClass}
-                placeholder="Enter Survey Group Title"
+                placeholder="Enter Pre-Screen Group Title"
                 value={form.surveyTitle}
                 maxLength={NAME_FIELD_MAX_LENGTH}
                 onChange={(e) =>

@@ -156,7 +156,7 @@ function PrescreenGroupPage({ isDarkMode }) {
         isDarkMode={isDarkMode}
         title="Questionnaire Group"
         searchPlaceholder="Search questionnaire groups..."
-        actionLabel="Add Survey Group"
+        actionLabel="Add Pre-Screen Group"
         onActionClick={() => navigate("/prescreen/group/add")}
         csvExportLabel="Download CSV"
         onCsvExportClick={downloadCsv}

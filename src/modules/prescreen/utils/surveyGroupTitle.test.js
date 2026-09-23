@@ -27,6 +27,7 @@ describe("survey group title uniqueness", () => {
 
   it("keeps the user-facing duplicate copy", () => {
     expect(SURVEY_GROUP_TITLE_DUPLICATE_MESSAGE).toContain("already exists");
-    expect(SURVEY_GROUP_TITLE_DUPLICATE_MESSAGE).toContain("unique survey title");
+    expect(SURVEY_GROUP_TITLE_DUPLICATE_MESSAGE).toContain("unique group title");
+    expect(SURVEY_GROUP_TITLE_DUPLICATE_MESSAGE).toContain("Pre-Screen Group");
   });
 });

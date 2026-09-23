@@ -1,9 +1,9 @@
-/** User-facing copy when a Survey Group title is not unique. */
+/** User-facing copy when a Pre-Screen Group title is not unique. */
 export const SURVEY_GROUP_TITLE_DUPLICATE_MESSAGE =
-  "Survey Group title already exists. Please use a unique survey title.";
+  "Pre-Screen Group title already exists. Please use a unique group title.";
 
 /**
- * Normalize a Survey Group title for uniqueness comparison.
+ * Normalize a Pre-Screen Group title for uniqueness comparison.
  * Trims, collapses inner whitespace, and ignores case.
  * @param {unknown} title
  * @returns {string}
