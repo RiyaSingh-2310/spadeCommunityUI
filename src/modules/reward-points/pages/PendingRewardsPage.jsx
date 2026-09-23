@@ -14,7 +14,7 @@ import {
   updateRedeemRequestStatus,
 } from "../services/rewardHistoryApi";
 
-function validateRejectComment(comment) {
+function validateAdminRemark(comment) {
   if (String(comment ?? "").trim().length < 3) {
     return "Admin remark must be at least 3 characters";
   }
@@ -163,8 +163,8 @@ function PendingRewardsPage({ isDarkMode }) {
 
     if (modalMode !== "approve" && modalMode !== "reject") return;
 
-    if (modalMode === "reject") {
-      const error = validateRejectComment(comment);
+    if (modalMode === "approve" || modalMode === "reject") {
+      const error = validateAdminRemark(comment);
       if (error) {
         setCommentError(error);
         return;

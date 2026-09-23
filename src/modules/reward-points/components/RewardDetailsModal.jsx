@@ -34,9 +34,6 @@ function resolveRowValue(row, key) {
   if (key === "productName") {
     return row.productName ?? "";
   }
-  if (key === "panelistRemark") {
-    return row.panelistRemark ?? "";
-  }
   if (key === "adminRemark") {
     return row.adminRemark ?? row.comments ?? "";
   }
@@ -89,38 +86,12 @@ function DetailSection({ title, fields, row, emptyLabel = "—" }) {
   );
 }
 
-function RemarksSection({ row }) {
-  const panelistRemark = resolveRowValue(row, "panelistRemark");
-  const adminRemark = resolveRowValue(row, "adminRemark");
-
-  return (
-    <div className="mb-4">
-      <h3 className="admin-text-muted mb-2 text-xs font-semibold tracking-[0.02em]">
-        Remarks
-      </h3>
-      <dl className="space-y-2.5">
-        <div className="min-w-0">
-          <dt className="admin-text-muted text-xs font-medium">Panelist Remark</dt>
-          <dd className="admin-text mt-0.5 text-sm whitespace-pre-wrap break-words">
-            {formatDetailValue(panelistRemark, { emptyLabel: "N/A" })}
-          </dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="admin-text-muted text-xs font-medium">Admin Remark</dt>
-          <dd className="admin-text mt-0.5 text-sm whitespace-pre-wrap break-words">
-            {formatDetailValue(adminRemark, { emptyLabel: "N/A" })}
-          </dd>
-        </div>
-      </dl>
-    </div>
-  );
-}
-
 function RequestSummarySection({ row }) {
   const status = resolveRowValue(row, "status");
   const createdAt = resolveRowValue(row, "createdDate");
   const updatedAt = resolveRowValue(row, "updatedDate");
   const completedDate = resolveRowValue(row, "completedDate");
+  const adminRemark = resolveRowValue(row, "adminRemark");
 
   return (
     <div className="mb-4">
@@ -152,6 +123,12 @@ function RequestSummarySection({ row }) {
             </dd>
           </div>
         ) : null}
+        <div className="min-w-0">
+          <dt className="admin-text-muted text-xs font-medium">Remark</dt>
+          <dd className="admin-text mt-0.5 text-sm whitespace-pre-wrap break-words">
+            {formatDetailValue(adminRemark, { emptyLabel: "N/A" })}
+          </dd>
+        </div>
       </dl>
     </div>
   );
@@ -225,20 +202,15 @@ function RewardDetailsModal({
         <DetailSection title="User Information" fields={USER_INFO_FIELDS} row={row} />
         <DetailSection title="Reward Information" fields={REWARD_INFO_FIELDS} row={row} />
         <RequestSummarySection row={row} />
-        <RemarksSection row={row} />
 
         {isAction ? (
           <>
             <p className="admin-text-muted mb-4 text-sm">{confirmMessage}</p>
             <FormField
               label="Admin Remark / Comment"
-              required={isReject}
+              required
               error={commentError}
-              hint={
-                isApprove
-                  ? "Optional note for the panelist."
-                  : "Required for rejection (minimum 3 characters)."
-              }
+              hint="Required (minimum 3 characters). This remark is sent to the panelist."
             >
               <textarea
                 className={textareaClass}
@@ -246,7 +218,7 @@ function RewardDetailsModal({
                 onChange={(e) => onCommentChange?.(e.target.value)}
                 placeholder={
                   isApprove
-                    ? "Enter approval remark (optional)..."
+                    ? "Enter approval remark (minimum 3 characters)..."
                     : "Enter rejection remark (minimum 3 characters)..."
                 }
                 disabled={isSubmitting}
