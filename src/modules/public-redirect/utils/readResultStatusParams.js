@@ -54,12 +54,3 @@ export function readResultStatusParams({ search = "", pathUid = "" } = {}) {
 
   return { pid, uid };
 }
-
-export function getMissingResultStatusParamLabel({ pid, uid } = {}) {
-  const missingPid = !String(pid ?? "").trim();
-  const missingUid = !String(uid ?? "").trim();
-  if (missingPid && missingUid) return "PID and UID";
-  if (missingPid) return "PID";
-  if (missingUid) return "UID";
-  return "";
-}

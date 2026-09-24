@@ -6,10 +6,7 @@ import {
   resolveSurveyResultStatusKind,
   updateSurveyResultStatus,
 } from "../services/surveyResultStatusApi";
-import {
-  getMissingResultStatusParamLabel,
-  readResultStatusParams,
-} from "../utils/readResultStatusParams";
+import { readResultStatusParams } from "../utils/readResultStatusParams";
 
 export const RESULT_STATUS_PHASE = {
   MISSING: "missing",
@@ -21,18 +18,10 @@ export const RESULT_STATUS_PHASE = {
 export const RESULT_REDIRECT_DELAY_MS = 5000;
 export const RESULT_REDIRECT_SECONDS = RESULT_REDIRECT_DELAY_MS / 1000;
 
-const MISSING_PARAMS_MESSAGE =
-  "This result link is missing a required survey identifier. Please use the original survey result URL.";
 const MISSING_REDIRECT_MESSAGE =
   "Your survey status was updated, but no redirect destination was provided.";
 const UPDATE_FAILED_MESSAGE =
   "Unable to update your survey status. Please try again.";
-
-function buildMissingParamsMessage(pid, uid) {
-  const label = getMissingResultStatusParamLabel({ pid, uid });
-  if (!label) return MISSING_PARAMS_MESSAGE;
-  return `This result link is missing a required ${label}. Please use the original survey result URL.`;
-}
 
 /**
  * Call the matching result status API once, then countdown to the API redirect_url.
@@ -56,9 +45,7 @@ export function useSurveyResultStatus({ outcome, pathUid = "" } = {}) {
   const [phase, setPhase] = useState(() =>
     canRequest ? RESULT_STATUS_PHASE.LOADING : RESULT_STATUS_PHASE.MISSING
   );
-  const [error, setError] = useState(() =>
-    canRequest ? "" : buildMissingParamsMessage(pid, uid)
-  );
+  const [error, setError] = useState("");
   const [redirectUrl, setRedirectUrl] = useState("");
   const [countdown, setCountdown] = useState(RESULT_REDIRECT_SECONDS);
   const [retryKey, setRetryKey] = useState(0);
@@ -67,7 +54,7 @@ export function useSurveyResultStatus({ outcome, pathUid = "" } = {}) {
   useEffect(() => {
     if (!canRequest) {
       setPhase(RESULT_STATUS_PHASE.MISSING);
-      setError(buildMissingParamsMessage(pid, uid));
+      setError("");
       setRedirectUrl("");
       setAllowRetry(false);
       return undefined;

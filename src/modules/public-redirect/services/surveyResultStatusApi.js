@@ -133,10 +133,15 @@ export async function updateSurveyResultStatus({ kind, pid, uid } = {}) {
     throw new ApiError("This survey result link is not recognized.", null);
   }
   if (!normalizedPid || !normalizedUid) {
-    throw new ApiError(
-      "This result link is missing a required survey identifier (PID or UID).",
-      null
-    );
+    return {
+      success: true,
+      message: "",
+      surveyStatus: "",
+      pid: normalizedPid,
+      uid: normalizedUid,
+      redirectUrl: "",
+      data: {},
+    };
   }
 
   const cacheKey = statusCacheKey(normalizedKind, normalizedPid, normalizedUid);

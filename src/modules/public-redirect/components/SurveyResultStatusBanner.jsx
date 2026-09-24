@@ -44,11 +44,24 @@ function SurveyResultStatusBanner({
     );
   }
 
-  if (phase === RESULT_STATUS_PHASE.MISSING || phase === RESULT_STATUS_PHASE.ERROR) {
+  if (phase === RESULT_STATUS_PHASE.MISSING) {
+    return null;
+  }
+
+  if (phase === RESULT_STATUS_PHASE.ERROR) {
+    const errorText = String(error ?? "");
+    if (
+      /original survey result URL|required PID|required UID|survey identifier \(PID or UID\)/i.test(
+        errorText
+      )
+    ) {
+      return null;
+    }
+
     return (
       <div className="pq-redirect-status pq-redirect-status--error" role="alert">
         <p className="pq-redirect-status-text">
-          {error ||
+          {errorText ||
             "We could not update your survey status from this link. Please contact support if you need help."}
         </p>
         {canRetry && typeof onRetry === "function" ? (
