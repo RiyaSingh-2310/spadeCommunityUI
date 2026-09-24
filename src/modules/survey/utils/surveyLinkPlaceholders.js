@@ -1,7 +1,11 @@
 /**
  * Live / Test / redirect-link UID placeholders.
- * UID accepts only identifier / [identifier] / XXXX (case-insensitive).
+ * UID accepts identifier / [identifier] / XXX+ (case-insensitive).
  * PID is not required in examples, prefills, or frontend validation.
+ *
+ * Live/Test links may carry the UID as:
+ * - query parameter: /survey?uid=XXXX
+ * - path segment:    /survey/XXXX  or  /XXXX
  */
 
 export const SURVEY_LINK_PLACEHOLDER_TOKENS = Object.freeze([
@@ -71,7 +75,8 @@ export const DEFAULT_SURVEY_LINK_PLACEHOLDER = `${ADMIN_SPADE_COMMUNITY_ORIGIN}/
 const PID_PARAM_NAMES = ["pid"];
 const UID_PARAM_NAMES = ["uid"];
 
-const MISSING_UID_MESSAGE = "must include a UID query parameter";
+const MISSING_UID_MESSAGE =
+  "must include a UID as a query parameter (?uid=) or as a path segment";
 const INVALID_UID_MESSAGE =
   "must include a supported UID placeholder (XXX, XXXX, or identifier)";
 
@@ -101,8 +106,22 @@ function getQueryParamIgnoreCase(searchParams, names) {
 }
 
 /**
- * True when the UID query value is a supported configuration placeholder.
- * Accepts identifier, XXX, and XXXX. Does not accept respondent IDs or XXXXX.
+ * Last non-empty pathname segment (used as path-parameter UID).
+ * @param {string} pathname
+ */
+function readLastPathSegment(pathname) {
+  const segments = String(pathname ?? "")
+    .split("/")
+    .map((part) => coerceText(part))
+    .filter(Boolean);
+  if (segments.length === 0) return "";
+  return segments[segments.length - 1];
+}
+
+/**
+ * True when the UID value is a supported configuration placeholder.
+ * Accepts identifier, XXX, XXXX, and longer X-runs (e.g. XXXXX). Does not
+ * accept arbitrary respondent IDs.
  * @param {unknown} value
  */
 export function isSupportedUidPlaceholder(value) {
@@ -110,13 +129,16 @@ export function isSupportedUidPlaceholder(value) {
   if (!trimmed) return false;
   const key = trimmed.toLowerCase();
   if (key === "identifier" || key === "[identifier]") return true;
-  return key === "xxx" || key === "xxxx";
+  return /^x{3,}$/i.test(trimmed);
 }
 
 /**
- * Read pid + uid from URL query params only (not from the rest of the string).
+ * Read pid + uid from URL query params, or uid from the last path segment.
+ * Query `uid` wins when both are present.
+ * Path uid is only recognized when the last segment is a supported placeholder
+ * (so static redirect paths like `/redirect/complete` are not treated as UIDs).
  * @param {string} value
- * @returns {{ url: URL|null, pid: string, uid: string, hasPid: boolean, hasUid: boolean, uidIsPlaceholder: boolean }}
+ * @returns {{ url: URL|null, pid: string, uid: string, hasPid: boolean, hasUid: boolean, uidIsPlaceholder: boolean, uidSource: 'query'|'path'|'' }}
  */
 export function readPidUidFromUrl(value) {
   const url = parseAbsoluteUrl(value);
@@ -128,25 +150,53 @@ export function readPidUidFromUrl(value) {
       hasPid: false,
       hasUid: false,
       uidIsPlaceholder: false,
+      uidSource: "",
     };
   }
 
   const pid = coerceText(getQueryParamIgnoreCase(url.searchParams, PID_PARAM_NAMES).value);
-  const uidRaw = getQueryParamIgnoreCase(url.searchParams, UID_PARAM_NAMES).value;
-  const uid = coerceText(uidRaw);
+  const queryUid = coerceText(
+    getQueryParamIgnoreCase(url.searchParams, UID_PARAM_NAMES).value
+  );
+
+  if (queryUid) {
+    return {
+      url,
+      pid,
+      uid: queryUid,
+      hasPid: Boolean(pid),
+      hasUid: true,
+      uidIsPlaceholder: isSupportedUidPlaceholder(queryUid),
+      uidSource: "query",
+    };
+  }
+
+  const pathUid = readLastPathSegment(url.pathname);
+  if (pathUid && isSupportedUidPlaceholder(pathUid)) {
+    return {
+      url,
+      pid,
+      uid: pathUid,
+      hasPid: Boolean(pid),
+      hasUid: true,
+      uidIsPlaceholder: true,
+      uidSource: "path",
+    };
+  }
 
   return {
     url,
     pid,
-    uid,
+    uid: "",
     hasPid: Boolean(pid),
-    hasUid: Boolean(uid),
-    uidIsPlaceholder: isSupportedUidPlaceholder(uid),
+    hasUid: false,
+    uidIsPlaceholder: false,
+    uidSource: "",
   };
 }
 
 /**
- * True when the URL has a uid query param using a supported placeholder.
+ * True when the URL has a uid (query or path) using a supported placeholder.
  * @param {string} value
  */
 export function hasSupportedSurveyLinkPlaceholder(value) {
@@ -204,6 +254,11 @@ function shouldRewriteRedirectOrigin(url) {
 function syncUidOnAbsoluteUrl(trimmed, defaultUid) {
   const parsed = parseAbsoluteUrl(trimmed);
   if (!parsed) return trimmed;
+
+  const existing = readPidUidFromUrl(trimmed);
+  if (existing.hasUid) {
+    return trimmed;
+  }
 
   const uidParam = getQueryParamIgnoreCase(parsed.searchParams, UID_PARAM_NAMES);
   if (!uidParam.key) {
@@ -337,6 +392,7 @@ export function applyPrefillSingleLinkUrls(form, projectUrlCode) {
 /**
  * Validates Live Link / Test Link for a supported uid placeholder.
  * Empty values are allowed (optional fields) — only non-empty values are checked.
+ * Accepts UID as `?uid=` query param or as the last path segment.
  * PID is not required.
  * @param {string} value
  * @param {string} label
@@ -373,7 +429,7 @@ export function getOptionalRedirectUrlPidUidError(value, label = "URL") {
 }
 
 /**
- * Replace a supported UID query placeholder with the real respondent UID.
+ * Replace a supported UID placeholder (query or path) with the real respondent UID.
  * Never invents a UID, never rewrites pid.
  * @param {string} url
  * @param {string} uid
@@ -388,10 +444,23 @@ export function replaceSurveyLinkPlaceholders(url, uid) {
   if (!parsed) return source;
 
   const uidParam = getQueryParamIgnoreCase(parsed.searchParams, UID_PARAM_NAMES);
-  if (!uidParam.key || !isSupportedUidPlaceholder(uidParam.value)) {
-    return source;
+  if (uidParam.key && isSupportedUidPlaceholder(uidParam.value)) {
+    parsed.searchParams.set(uidParam.key, respondentUid);
+    return parsed.toString();
   }
 
-  parsed.searchParams.set(uidParam.key, respondentUid);
-  return parsed.toString();
+  const pathUid = readLastPathSegment(parsed.pathname);
+  if (pathUid && isSupportedUidPlaceholder(pathUid)) {
+    const parts = parsed.pathname.split("/");
+    for (let i = parts.length - 1; i >= 0; i -= 1) {
+      if (parts[i] !== "") {
+        parts[i] = encodeURIComponent(respondentUid);
+        break;
+      }
+    }
+    parsed.pathname = parts.join("/") || "/";
+    return parsed.toString();
+  }
+
+  return source;
 }

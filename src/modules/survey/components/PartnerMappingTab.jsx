@@ -64,6 +64,7 @@ import {
   pickDefaultPartnerFromList,
   resolveDefaultPartnerQuota,
   resolvePartnerId,
+  shouldShowAddPartnerButton,
 } from "../utils/defaultPartnerMapping";
 import PartnerMappingViewModal from "./PartnerMappingViewModal";
 import CopyValueButton from "./CopyValueButton";
@@ -430,8 +431,8 @@ function PartnerMappingTab({
   }, [projectId, resolvedProjectUrlId]);
 
   /**
-   * When mappings are empty and the backend flags a default partner, create a
-   * mapping at full project-URL sample size. Never hard-codes a partner ID.
+   * When mappings are empty, create the Default Partner mapping at full
+   * project-URL sample size. Idempotent per project+URL; never hard-codes an ID.
    */
   const ensureDefaultPartnerMapping = useCallback(
     async ({ existingRows, projectUrlSampleSize }) => {
@@ -454,13 +455,16 @@ function PartnerMappingTab({
       try {
         const partners = await getPartnerPanelSizes();
         const defaultPartner = pickDefaultPartnerFromList(partners);
-        if (!defaultPartner || !isDefaultPartnerRecord(defaultPartner)) {
+        if (!defaultPartner) {
           return false;
         }
 
         const partnerId = resolvePartnerId(defaultPartner);
         if (!partnerId) return false;
-        if (mappingRowsIncludePartner(existingRows, partnerId)) return false;
+        if (mappingRowsIncludePartner(existingRows, partnerId)) {
+          ensuredDefaultPartnerKeysRef.current.add(ensureKey);
+          return false;
+        }
 
         let detail = defaultPartner;
         let mapped = mapPartnerToRow(defaultPartner);
@@ -492,7 +496,20 @@ function PartnerMappingTab({
           return false;
         }
 
-        await createSupplierMapping(payload);
+        try {
+          await createSupplierMapping(payload);
+        } catch (error) {
+          // Another tab/request may have created it — treat as already present.
+          const message = String(error?.message ?? "").toLowerCase();
+          const looksLikeDuplicate =
+            message.includes("duplicate") ||
+            message.includes("already") ||
+            message.includes("exist");
+          if (!looksLikeDuplicate) {
+            throw error;
+          }
+        }
+
         ensuredDefaultPartnerKeysRef.current.add(ensureKey);
         return true;
       } catch (error) {
@@ -789,8 +806,67 @@ function PartnerMappingTab({
       redirects: emptyPartnerRedirects(),
     });
     setIsFormLoading(true);
-    await loadPartnerOptions();
-    setIsFormLoading(false);
+    try {
+      const partners = await loadPartnerOptions();
+      const defaultPartner = pickDefaultPartnerFromList(partners);
+      const defaultPartnerId = resolvePartnerId(defaultPartner);
+
+      // Prefill Default Partner only when it is not already mapped (avoids duplicates).
+      if (
+        defaultPartnerId &&
+        !mappingRowsIncludePartner(rows, defaultPartnerId)
+      ) {
+        const partner =
+          partners.find(
+            (item) =>
+              String(item.partner_id ?? item.id) === String(defaultPartnerId)
+          ) ?? defaultPartner;
+        const panelSize = partner?.panel_size ?? partner?.panelSize;
+        const emptyRedirects = emptyPartnerRedirects();
+        const fullQuota = resolveDefaultPartnerQuota(sampleSize);
+        const quotaFromPanel =
+          panelSize != null && String(panelSize).trim() !== ""
+            ? capQuotaToAvailable(panelSize, availableQuota)
+            : "";
+
+        setForm({
+          ...createEmptyPartnerForm(),
+          partnerId: String(defaultPartnerId),
+          partnerCode: String(partner?.code ?? "").trim(),
+          partnerRedirectUrl: "",
+          quota: fullQuota || quotaFromPanel,
+          statusActive: true,
+          isTest: false,
+          redirects: { ...emptyRedirects },
+        });
+
+        try {
+          const detail = await getPartnerRecord(defaultPartnerId);
+          const mapped = mapPartnerToRow(detail);
+          const partnerRedirects = redirectsFromPartnerRecord(detail, mapped);
+          setForm((prev) => ({
+            ...prev,
+            partnerCode: String(
+              mapped.partnerCode || prev.partnerCode || ""
+            ).trim(),
+            partnerRedirectUrl: "",
+            redirects: {
+              ...emptyPartnerRedirects(),
+              ...partnerRedirects,
+            },
+            quota:
+              prev.quota ||
+              (mapped.panelSize && mapped.panelSize !== "—"
+                ? capQuotaToAvailable(mapped.panelSize, availableQuota)
+                : ""),
+          }));
+        } catch {
+          // Keep blank redirect/link fields when partner detail is unavailable.
+        }
+      }
+    } finally {
+      setIsFormLoading(false);
+    }
   };
 
   // After Add/Edit Partner form is rendered, jump to the form section.
@@ -1094,12 +1170,15 @@ function PartnerMappingTab({
 
   const canSubmit =
     isFormValid(errors) && !isSubmitting && !isFormLoading && selectedUrlEligible;
-  const showAddPartner =
-    allowWrite &&
-    resolvedProjectUrlId &&
-    selectedUrlEligible &&
-    !isLoadingStats &&
-    Boolean(multiLinkStats?.addPartner);
+  const showAddPartner = shouldShowAddPartnerButton({
+    allowWrite,
+    hasProjectUrl: Boolean(resolvedProjectUrlId),
+    urlEligible: selectedUrlEligible,
+    isLoadingStats,
+    addPartnerFlag: multiLinkStats?.addPartner ?? null,
+    remainingQuota: multiLinkStats?.remainingQuota ?? null,
+    availableQuota,
+  });
 
   if (isLoadingUrls) {
     return (

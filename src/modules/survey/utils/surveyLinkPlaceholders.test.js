@@ -6,6 +6,7 @@ import {
   buildPrefillSurveyLink,
   DEFAULT_SURVEY_LINK_PLACEHOLDER,
   getSurveyLinkPlaceholderError,
+  replaceSurveyLinkPlaceholders,
   rewriteUrlToAdminOrigin,
   rewriteUrlToRedirectOrigin,
   withRedirectUrlPid,
@@ -142,15 +143,39 @@ describe("DEFAULT_SURVEY_LINK_PLACEHOLDER", () => {
 
 describe("getSurveyLinkPlaceholderError", () => {
   it("does not treat the bare admin origin as a complete live link", () => {
-    expect(getSurveyLinkPlaceholderError(ADMIN_SPADE_COMMUNITY_URL, "Live Link")).toBe(
-      "Live Link must include a UID query parameter."
+    expect(getSurveyLinkPlaceholderError(ADMIN_SPADE_COMMUNITY_URL, "Live Link")).toMatch(
+      /must include a UID/
     );
   });
 
-  it("accepts XXX as a UID placeholder without requiring PID", () => {
+  it("accepts XXX as a UID query placeholder without requiring PID", () => {
     expect(
       getSurveyLinkPlaceholderError(
         "https://spadecommunity.com/?uid=XXX",
+        "Live Link"
+      )
+    ).toBe("");
+  });
+
+  it("accepts UID as a direct path segment", () => {
+    expect(
+      getSurveyLinkPlaceholderError(
+        "https://spadecommunity.com/XXXXX",
+        "Live Link"
+      )
+    ).toBe("");
+    expect(
+      getSurveyLinkPlaceholderError(
+        "https://spadecommunity.com/survey/XXXX",
+        "Live Link"
+      )
+    ).toBe("");
+  });
+
+  it("accepts UID as a query parameter on a survey path", () => {
+    expect(
+      getSurveyLinkPlaceholderError(
+        "https://spadecommunity.com/survey?uid=XXXXX",
         "Live Link"
       )
     ).toBe("");
@@ -163,5 +188,31 @@ describe("getSurveyLinkPlaceholderError", () => {
         "Live Link"
       )
     ).toBe("");
+  });
+
+  it("does not treat static redirect path segments as UIDs", () => {
+    expect(
+      getSurveyLinkPlaceholderError(
+        "https://spadecommunity.com/redirect/complete",
+        "Complete"
+      )
+    ).toMatch(/must include a UID/);
+  });
+});
+
+describe("replaceSurveyLinkPlaceholders", () => {
+  it("replaces query and path UID placeholders", () => {
+    expect(
+      replaceSurveyLinkPlaceholders(
+        "https://spadecommunity.com/survey?uid=XXXX",
+        "resp-1"
+      )
+    ).toBe("https://spadecommunity.com/survey?uid=resp-1");
+    expect(
+      replaceSurveyLinkPlaceholders(
+        "https://spadecommunity.com/survey/XXXX",
+        "resp-1"
+      )
+    ).toBe("https://spadecommunity.com/survey/resp-1");
   });
 });

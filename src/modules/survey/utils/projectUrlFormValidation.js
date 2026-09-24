@@ -265,7 +265,7 @@ export function getProjectRedirectUrlError(
   }
 
   if (!hasUid) {
-    return `${label} must include a UID query parameter.`;
+    return `${label} must include a UID as a query parameter (?uid=) or as a path segment.`;
   }
   if (!isSupportedUidPlaceholder(uid)) {
     return `${label} must include a supported UID placeholder (XXX, XXXX, or identifier).`;

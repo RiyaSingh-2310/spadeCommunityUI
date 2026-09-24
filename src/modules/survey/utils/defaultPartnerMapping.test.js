@@ -5,6 +5,7 @@ import {
   pickDefaultPartnerFromList,
   resolveDefaultPartnerQuota,
   resolvePartnerId,
+  shouldShowAddPartnerButton,
 } from "./defaultPartnerMapping";
 
 describe("defaultPartnerMapping", () => {
@@ -17,6 +18,18 @@ describe("defaultPartnerMapping", () => {
     expect(isDefaultPartnerRecord({ name: "Acme" })).toBe(false);
   });
 
+  it("detects default partner by name heuristics", () => {
+    expect(
+      isDefaultPartnerRecord({ id: 9, name: "Spade Community Portal" })
+    ).toBe(true);
+    expect(
+      isDefaultPartnerRecord({ id: 9, name: "Complete Terminate Partner" })
+    ).toBe(true);
+    expect(isDefaultPartnerRecord({ id: 9, name: "Default Partner" })).toBe(
+      true
+    );
+  });
+
   it("picks the first default partner from a list", () => {
     const partners = [
       { id: 1, name: "A" },
@@ -25,6 +38,18 @@ describe("defaultPartnerMapping", () => {
     ];
     expect(pickDefaultPartnerFromList(partners)?.id).toBe(2);
     expect(pickDefaultPartnerFromList([])).toBeNull();
+  });
+
+  it("falls back to the sole partner when no flag is present", () => {
+    expect(
+      pickDefaultPartnerFromList([{ id: 44, name: "Only Partner" }])?.id
+    ).toBe(44);
+    expect(
+      pickDefaultPartnerFromList([
+        { id: 1, name: "A" },
+        { id: 2, name: "B" },
+      ])
+    ).toBeNull();
   });
 
   it("resolves full sample size as default quota", () => {
@@ -39,5 +64,31 @@ describe("defaultPartnerMapping", () => {
     ).toBe(true);
     expect(mappingRowsIncludePartner([{ partnerId: "9" }], "12")).toBe(false);
     expect(resolvePartnerId({ partner_id: 44 })).toBe("44");
+  });
+
+  it("hides Add Partner when remaining quota is exhausted", () => {
+    expect(
+      shouldShowAddPartnerButton({
+        allowWrite: true,
+        hasProjectUrl: true,
+        urlEligible: true,
+        isLoadingStats: false,
+        addPartnerFlag: true,
+        remainingQuota: 0,
+        availableQuota: 0,
+      })
+    ).toBe(false);
+
+    expect(
+      shouldShowAddPartnerButton({
+        allowWrite: true,
+        hasProjectUrl: true,
+        urlEligible: true,
+        isLoadingStats: false,
+        addPartnerFlag: true,
+        remainingQuota: 100,
+        availableQuota: 100,
+      })
+    ).toBe(true);
   });
 });
