@@ -168,7 +168,7 @@ function LogActivityPage({ isDarkMode }) {
                     </td>
                       <td className="admin-text whitespace-nowrap px-4 py-3">{row.logDate}</td>
                       {canWrite && (
-                        <td className="admin-table-actions-col whitespace-nowrap px-4 py-3 text-center">
+                        <td className="admin-table-actions-col whitespace-nowrap px-4 py-3 text-right">
                           <button
                             type="button"
                             onClick={() => handleDeleteRequest(row)}

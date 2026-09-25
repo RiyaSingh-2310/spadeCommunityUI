@@ -38,7 +38,7 @@ function CommunityUserListingActions({
   }
 
   return (
-    <div className="flex flex-nowrap items-center justify-center gap-1 whitespace-nowrap">
+    <div className="flex flex-nowrap items-center justify-end gap-1 whitespace-nowrap">
       {onView && (
         <ActionIconButton label="View" onClick={onView}>
           <Eye size={16} strokeWidth={2} />

@@ -246,7 +246,7 @@ export function SurveyDataTable({
                         ellipsisMax,
                         `admin-text align-middle text-sm${
                           col === "Action" || col === "Actions"
-                            ? " admin-table-actions-col text-center"
+                            ? " admin-table-actions-col text-right"
                             : ""
                         }`
                       )}

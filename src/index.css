@@ -1769,11 +1769,10 @@ input[type="number"],
 
 .admin-table .admin-table-actions-col {
   white-space: nowrap;
-  text-align: center;
 }
 
-.admin-table .admin-table-actions-col > div {
-  justify-content: center;
+.admin-table th.admin-table-actions-col {
+  text-align: center;
 }
 
 .admin-modal-overlay {

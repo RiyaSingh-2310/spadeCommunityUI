@@ -55,7 +55,7 @@ function ModuleListingActionCell({
   handleEdit,
   handleDeleteRequest,
 }) {
-  const cellClass = "admin-table-actions-col px-4 py-3 align-middle text-center whitespace-nowrap";
+  const cellClass = "admin-table-actions-col px-4 py-3 align-middle text-right whitespace-nowrap";
   const rowAllowsDelete = typeof canDeleteRow !== "function" || canDeleteRow(row);
   const rowDeleteAllowed = Boolean(canShowDelete) && rowAllowsDelete;
 
@@ -216,7 +216,7 @@ function ModuleListingActionCell({
         labels={surveyActionLabels}
       />
     ) : (
-      <div className="flex items-center justify-center gap-1">
+      <div className="flex items-center justify-end gap-1">
         {allowRead && onView ? (
           <ViewActionButton
             isDarkMode={isDarkMode}

@@ -90,8 +90,8 @@ function UserSurveyDataTable({ rows, isLoading, isDarkMode, footer }) {
                         {statusLabel}
                       </span>
                     </td>
-                    <td className="admin-table-actions-col text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1.5">
+                    <td className="admin-table-actions-col text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
                           disabled

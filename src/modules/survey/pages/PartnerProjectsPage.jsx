@@ -130,7 +130,7 @@ function PartnerProjectsPage({ isDarkMode }) {
                       <td className="whitespace-nowrap px-3 py-3">
                         <StatusToggle checked={Boolean(row.statusActive)} readOnly compact />
                       </td>
-                      <td className="admin-table-actions-col px-3 py-3 text-center">
+                      <td className="admin-table-actions-col px-3 py-3 text-right">
                         <ViewActionButton
                           iconOnly
                           label="View"

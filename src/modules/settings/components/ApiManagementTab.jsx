@@ -328,8 +328,8 @@ function ApiManagementTab({ isDarkMode, showTitle = true }) {
                       <td className="admin-text whitespace-nowrap px-4 py-3">
                         {row.updatedAtLabel}
                       </td>
-                      <td className="admin-table-actions-col whitespace-nowrap px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
+                      <td className="admin-table-actions-col whitespace-nowrap px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
                             onClick={() => openView(row)}

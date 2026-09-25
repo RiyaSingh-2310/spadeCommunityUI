@@ -6,7 +6,7 @@ function IconActions({ onEdit, onDelete, onClone, onCopy, showDelete = true }) {
   }
 
   return (
-    <div className="flex items-center justify-center gap-1">
+    <div className="flex items-center justify-end gap-1">
       {onEdit && (
         <button
           type="button"

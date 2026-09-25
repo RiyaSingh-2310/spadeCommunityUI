@@ -66,7 +66,7 @@ function SupplierMappingTab({ surveyId, isDarkMode }) {
     }
     if (col === "Action") {
       return (
-        <div className="flex items-center justify-center gap-1">
+        <div className="flex items-center justify-end gap-1">
           <button
             type="button"
             onClick={() =>
