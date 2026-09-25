@@ -10,7 +10,16 @@ import { useApiListing } from "../../shared/hooks/useApiListing";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError } from "../../../services/toast/apiToast";
 import CommunityUserExpandableDetails from "../components/CommunityUserExpandableDetails";
-import { getRecord, getUserProfilingAnswers } from "../services/communityUsersApi";
+import {
+  LoginDetailsSection,
+  SignupDetailsSection,
+} from "../components/PanelistSignupLoginSections";
+import {
+  getPanelistLoginDetails,
+  getPanelistSignupDetails,
+  getRecord,
+  getUserProfilingAnswers,
+} from "../services/communityUsersApi";
 
 const TABLE_HEAD =
   "admin-text-muted text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap";
@@ -21,6 +30,18 @@ function CommunityUserDetailsPage({ isDarkMode }) {
   const [user, setUser] = useState(null);
   const [isLoadingUser, setIsLoadingUser] = useState(Boolean(id));
   const [query, setQuery] = useState("");
+  const [signupRecord, setSignupRecord] = useState(null);
+  const [signupLoading, setSignupLoading] = useState(Boolean(id));
+  const [signupError, setSignupError] = useState("");
+  const [loginPage, setLoginPage] = useState(1);
+  const [loginPageSize, setLoginPageSize] = useState(20);
+  const [loginResult, setLoginResult] = useState({
+    items: [],
+    total: 0,
+    totalPages: 1,
+  });
+  const [loginLoading, setLoginLoading] = useState(Boolean(id));
+  const [loginError, setLoginError] = useState("");
 
   useEffect(() => {
     if (!id) {
@@ -50,6 +71,70 @@ function CommunityUserDetailsPage({ isDarkMode }) {
       cancelled = true;
     };
   }, [id]);
+
+  useEffect(() => {
+    setLoginPage(1);
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) {
+      setSignupRecord(null);
+      setSignupError("");
+      setSignupLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setSignupLoading(true);
+    setSignupError("");
+    getPanelistSignupDetails(id)
+      .then((record) => {
+        if (cancelled) return;
+        setSignupRecord(record);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSignupRecord(null);
+        setSignupError("Unable to load signup details.");
+      })
+      .finally(() => {
+        if (!cancelled) setSignupLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) {
+      setLoginResult({ items: [], total: 0, totalPages: 1 });
+      setLoginError("");
+      setLoginLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setLoginLoading(true);
+    setLoginError("");
+    getPanelistLoginDetails(id, { page: loginPage, limit: loginPageSize })
+      .then((result) => {
+        if (cancelled) return;
+        setLoginResult(result);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoginResult({ items: [], total: 0, totalPages: 1 });
+        setLoginError("Unable to load login details.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoginLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, loginPage, loginPageSize]);
 
   const fetchAnswers = useCallback(
     async (params) =>
@@ -133,9 +218,31 @@ function CommunityUserDetailsPage({ isDarkMode }) {
         <p className="admin-text-muted text-sm">{user.emailAddress ?? user.email ?? "—"}</p>
       </div>
 
-      <TableCard isDarkMode={isDarkMode}>
+      <TableCard title="Panelist Information" isDarkMode={isDarkMode}>
         <CommunityUserExpandableDetails row={user} variant="detail" />
       </TableCard>
+
+      <SignupDetailsSection
+        record={signupRecord}
+        isLoading={signupLoading}
+        errorMessage={signupError}
+      />
+
+      <LoginDetailsSection
+        records={loginResult.items}
+        isLoading={loginLoading}
+        errorMessage={loginError}
+        isDarkMode={isDarkMode}
+        page={loginPage}
+        pageSize={loginPageSize}
+        total={loginResult.total}
+        totalPages={loginResult.totalPages}
+        onPageChange={setLoginPage}
+        onPageSizeChange={(nextSize) => {
+          setLoginPageSize(nextSize);
+          setLoginPage(1);
+        }}
+      />
 
       <DebouncedSearchInput
         value={query}

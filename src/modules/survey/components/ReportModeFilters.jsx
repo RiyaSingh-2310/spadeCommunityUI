@@ -77,23 +77,19 @@ function ReportModeFilters({
       </div>
 
       <div className={`grid w-full min-w-0 grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:w-auto xl:shrink-0 ${hideSupplier ? "xl:grid-cols-[9.5rem_20.5rem_7.5rem]" : "xl:grid-cols-[9.5rem_20.5rem_11.25rem_7.5rem]"}`}>
-        <div className={`${FILTER_FIELD_CLASS} w-full overflow-hidden`}>
+        <div className={`${FILTER_FIELD_CLASS} w-full`}>
           <label htmlFor="project-report-status-filter" className={FILTER_LABEL_CLASS}>
             Status
           </label>
-          <select
+          <SearchableSelect
             id="project-report-status-filter"
-            className={FILTER_SELECT_CLASS}
+            inputClass={`${getAdminInputClass()} min-w-[140px]`}
             value={resolvedStatus}
-            onChange={(event) => onStatusChange?.(event.target.value)}
+            onChange={(nextStatus) => onStatusChange?.(nextStatus)}
+            options={REPORT_STATUS_OPTIONS}
+            searchable={false}
             aria-label="Status"
-          >
-            {REPORT_STATUS_OPTIONS.map((option) => (
-              <option key={option.value || "all"} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         <div className={`${FILTER_FIELD_CLASS} w-full overflow-hidden`}>

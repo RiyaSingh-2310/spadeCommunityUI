@@ -16,7 +16,6 @@ const COLUMN_KEY_MAP = {
   "Link Type": "projectLinkType",
   "Project Link Type": "projectLinkType",
   ID: "id",
-  "Panelist ID": "id",
   URL: "url",
   "Project Name": "projectName",
   "Client Name": "clientName",
@@ -84,9 +83,6 @@ const COLUMN_KEY_MAP = {
   "Admin Email": "adminEmail",
   "Action Type": "actionType",
   "IP Address": "ipAddress",
-  "Email Verified": "emailVerified",
-  "Questionnaire Completed": "prescreenCompleted",
-  "Joining Date": "joiningDate",
   "Log Date": "logDate",
 };
 

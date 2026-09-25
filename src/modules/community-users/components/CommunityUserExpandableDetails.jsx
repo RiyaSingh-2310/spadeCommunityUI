@@ -48,9 +48,7 @@ function CommunityUserExpandableDetails({ row, variant = "listing" }) {
   ];
 
   const detailFields = [
-    { label: "ID", value: row.id },
-    { label: "Phone", value: row.phone ?? row.mobileNumber },
-    { label: "Status", value: row.status },
+    { label: "Name", value: row.name },
     { label: "Email Verified", value: row.emailVerified ?? row.isVerified },
     { label: "Reward Points", value: row.rewardPoints ?? row.balancePoint },
     { label: "Joining Date", value: row.joiningDate },
@@ -67,8 +65,13 @@ function CommunityUserExpandableDetails({ row, variant = "listing" }) {
 
   const fields = variant === "detail" ? detailFields : listingFields;
 
+  const gridClass =
+    variant === "detail"
+      ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+      : "grid gap-4 sm:grid-cols-2 lg:grid-cols-4";
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className={gridClass}>
       {fields.map((field) => (
         <DetailField
           key={field.label}

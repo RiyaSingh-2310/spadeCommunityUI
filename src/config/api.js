@@ -271,6 +271,8 @@ export const API_ROUTES = {
     list: "/api/panelist/list",
     logout: "/api/panelist/logout",
     byId: (id) => `/api/panelist/${id}`,
+    signupDetails: (id) => `/api/panelist/${id}/signup-details`,
+    loginDetails: (id) => `/api/panelist/${id}/login-details`,
     updateStatus: (id) => `/api/panelist/${id}/status`,
     resendInvite: (id) => `/api/panelist/${id}/resend-invite`,
     bulkInvite: "/api/panelist/bulk-invite",

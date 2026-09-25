@@ -646,6 +646,88 @@ export async function resendEmail(id) {
   return assertSuccess(data);
 }
 
+const SIGNUP_LOAD_ERROR = "Unable to load signup details.";
+const LOGIN_LOAD_ERROR = "Unable to load login details.";
+
+function isEmptySignupRecord(record) {
+  if (!record || typeof record !== "object") return true;
+  if ("signup_detail_id" in record || "signupDetailId" in record) {
+    const signupId = record.signup_detail_id ?? record.signupDetailId;
+    return signupId == null || String(signupId).trim() === "";
+  }
+  return false;
+}
+
+function extractLoginPayload(data) {
+  const nested = data?.data && typeof data.data === "object" && !Array.isArray(data.data)
+    ? data.data
+    : data;
+  const records = Array.isArray(nested?.login_details)
+    ? nested.login_details
+    : Array.isArray(nested?.loginDetails)
+      ? nested.loginDetails
+      : Array.isArray(data?.data)
+        ? data.data
+        : [];
+  const pagination = nested?.pagination && typeof nested.pagination === "object"
+    ? nested.pagination
+    : data?.pagination && typeof data.pagination === "object"
+      ? data.pagination
+      : {};
+  return { records, pagination };
+}
+
+/** GET /api/panelist/:id/signup-details */
+export async function getPanelistSignupDetails(id) {
+  const normalizedId = normalizePanelistId(id);
+  try {
+    const data = await apiRequest(API_ROUTES.panelist.signupDetails(normalizedId));
+    assertSuccess(data, SIGNUP_LOAD_ERROR);
+    const record = extractPanelistRecord(data);
+    if (!record || isEmptySignupRecord(record)) return null;
+    return record;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw new ApiError(SIGNUP_LOAD_ERROR, null, error?.status);
+  }
+}
+
+/** GET /api/panelist/:id/login-details?page=&limit= */
+export async function getPanelistLoginDetails(id, { page = 1, limit = 20 } = {}) {
+  const normalizedId = normalizePanelistId(id);
+  const path = appendListQuery(API_ROUTES.panelist.loginDetails(normalizedId), {
+    page,
+    limit,
+  });
+
+  try {
+    const data = await apiRequest(path);
+    assertSuccess(data, LOGIN_LOAD_ERROR);
+    const { records, pagination } = extractLoginPayload(data);
+    const items = records.filter((entry) => {
+      if (!entry || typeof entry !== "object") return false;
+      const entryId = entry.id ?? entry.login_detail_id ?? entry.loginDetailId;
+      return entryId != null && String(entryId).trim() !== "";
+    });
+    const total = Number(pagination.total ?? pagination.totalRecords ?? items.length);
+    const safeLimit = Number(pagination.limit ?? limit) || limit;
+    const totalPages = Number(pagination.totalPages) || Math.max(1, Math.ceil((Number.isFinite(total) ? total : 0) / safeLimit) || 1);
+
+    return {
+      items,
+      page: Number(pagination.page ?? page) || page,
+      limit: safeLimit,
+      total: Number.isFinite(total) ? total : items.length,
+      totalPages,
+    };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return { items: [], page, limit, total: 0, totalPages: 1 };
+    }
+    throw new ApiError(LOGIN_LOAD_ERROR, null, error?.status);
+  }
+}
+
 /** POST /api/panelist/bulk-invite */
 export async function bulkResendInvite(ids) {
   const normalizedIds = (Array.isArray(ids) ? ids : [])
