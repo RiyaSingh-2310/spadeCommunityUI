@@ -273,7 +273,7 @@ function AdminSidebar({
           }`}
         >
           <div
-            className="flex h-[88px] shrink-0 items-center border-b border-[var(--admin-sidebar-border)] px-4"
+            className="flex h-[72px] shrink-0 items-center border-b border-[var(--admin-sidebar-border)] px-4"
           >
             <div
               className={`flex w-full items-center transition-all duration-300 ${
@@ -286,7 +286,7 @@ function AdminSidebar({
                 className={`shrink-0 object-contain object-left transition-all duration-300 ${
                   isCollapsed && !isMobile
                     ? "pointer-events-none absolute h-0 w-0 scale-95 opacity-0"
-                    : "h-[52px] w-auto max-w-[min(100%,240px)] opacity-100 scale-100"
+                    : "h-11 w-auto max-w-[min(100%,240px)] opacity-100 scale-100"
                 }`}
               />
               <img
