@@ -216,9 +216,7 @@ export function SurveyDataTable({
             {columns.map((col) => (
               <th
                 key={col}
-                className={`${TABLE_HEAD}${
-                  col === "Action" || col === "Actions" ? " admin-table-actions-col text-center" : ""
-                }`}
+                className={TABLE_HEAD}
               >
                 {col}
               </th>

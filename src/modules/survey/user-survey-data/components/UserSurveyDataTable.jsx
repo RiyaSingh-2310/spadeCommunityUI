@@ -44,7 +44,7 @@ function UserSurveyDataTable({ rows, isLoading, isDarkMode, footer }) {
               {COLUMNS.map((col) => (
                 <th
                   key={col}
-                  className={`${TABLE_HEAD} ${col === "Action" ? "admin-table-actions-col text-center" : ""}`}
+                  className={`${TABLE_HEAD} ${col === "Action" ? "text-right" : ""}`}
                 >
                   {col}
                 </th>

@@ -1771,10 +1771,6 @@ input[type="number"],
   white-space: nowrap;
 }
 
-.admin-table th.admin-table-actions-col {
-  text-align: center;
-}
-
 .admin-modal-overlay {
   overflow-y: auto;
   overscroll-behavior: contain;

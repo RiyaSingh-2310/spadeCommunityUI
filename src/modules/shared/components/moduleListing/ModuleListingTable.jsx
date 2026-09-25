@@ -84,7 +84,7 @@ function ModuleListingTable({
                     ellipsisMax,
                     `${TABLE_HEAD_BASE} ${
                       isStatusColumn(h) ? `admin-table-status-col ${statusColumnClass}` : ""
-                    } ${isActionColumn(h) ? "admin-table-actions-col text-center" : "text-left"}`
+                    } ${isActionColumn(h) ? "admin-table-actions-col text-right" : "text-left"}`
                   )}
                   style={getEllipsisCellStyle(ellipsisMax)}
                 >

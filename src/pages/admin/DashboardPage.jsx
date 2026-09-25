@@ -204,7 +204,7 @@ function DashboardPage({ isDarkMode }) {
                       {["Project", "Partner Code", "Quota", "CPI", "Status", "Action"].map((h) => (
                         <th
                           key={h}
-                          className={`${TABLE_HEAD}${h === "Action" ? " admin-table-actions-col text-center" : ""}`}
+                          className={TABLE_HEAD}
                         >
                           {h}
                         </th>

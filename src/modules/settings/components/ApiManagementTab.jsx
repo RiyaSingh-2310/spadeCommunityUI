@@ -281,7 +281,7 @@ function ApiManagementTab({ isDarkMode, showTitle = true }) {
                       <th
                         key={heading}
                         className={`px-4 py-3 text-xs font-semibold tracking-[0.02em] whitespace-nowrap ${
-                          heading === "Actions" ? "admin-table-actions-col text-center" : "text-left"
+                          heading === "Actions" ? "text-right" : "text-left"
                         }`}
                       >
                         {heading}

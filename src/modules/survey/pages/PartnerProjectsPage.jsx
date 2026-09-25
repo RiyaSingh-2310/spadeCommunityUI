@@ -83,9 +83,7 @@ function PartnerProjectsPage({ isDarkMode }) {
                 ].map((label) => (
                   <th
                     key={label}
-                    className={`px-3 py-3 text-xs font-semibold ${
-                      label === "Action" ? "admin-table-actions-col text-center" : "text-left"
-                    }`}
+                    className="px-3 py-3 text-left text-xs font-semibold"
                   >
                     {label}
                   </th>
