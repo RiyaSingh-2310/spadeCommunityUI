@@ -194,7 +194,7 @@ function ApiManagementFormModal({
                       value={form.apiName}
                       onChange={(e) => setField("apiName", e.target.value)}
                       onBlur={() => touch("apiName")}
-                      placeholder="Tremendous"
+                      placeholder="API Name"
                       autoComplete="off"
                       disabled={fieldsLocked}
                     />
@@ -209,7 +209,7 @@ function ApiManagementFormModal({
                       value={form.apiLabel}
                       onChange={(e) => setField("apiLabel", e.target.value)}
                       onBlur={() => touch("apiLabel")}
-                      placeholder="Tremendous Reward API"
+                      placeholder="API Label"
                       autoComplete="off"
                       disabled={fieldsLocked}
                     />
@@ -352,7 +352,7 @@ function ApiManagementFormModal({
                     value={form.description}
                     onChange={(e) => setField("description", e.target.value)}
                     onBlur={() => touch("description")}
-                    placeholder="Optional notes about this integration"
+                    placeholder="Optional note..."
                     disabled={fieldsLocked}
                   />
                 </FormField>
