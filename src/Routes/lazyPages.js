@@ -148,6 +148,9 @@ export const CreateSurveyFormPage = lazy(
 export const CommunityUsersPage = lazy(
   () => import("../modules/community-users/pages/CommunityUsersPage")
 );
+export const PanelistInformationPage = lazy(
+  () => import("../modules/community-users/pages/PanelistInformationPage")
+);
 export const CommunityUserDetailsPage = lazy(
   () => import("../modules/community-users/pages/CommunityUserDetailsPage")
 );

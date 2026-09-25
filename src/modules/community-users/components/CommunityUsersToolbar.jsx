@@ -16,6 +16,7 @@ function CommunityUsersToolbar({
   onBulkDeleteRequest,
   onBulkDownloadRequest,
   onBulkResendRequest,
+  onInformationClick,
   selectedCount,
   disabled = false,
   isResending = false,
@@ -42,6 +43,7 @@ function CommunityUsersToolbar({
           onBulkDeleteRequest={onBulkDeleteRequest}
           onBulkDownloadRequest={onBulkDownloadRequest}
           onBulkResendRequest={onBulkResendRequest}
+          onInformationClick={onInformationClick}
           selectedCount={selectedCount}
           disabled={disabled}
           isResending={isResending}

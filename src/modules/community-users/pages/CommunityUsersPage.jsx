@@ -361,6 +361,7 @@ function CommunityUsersPage({ isDarkMode }) {
             isDownloading={isDownloading}
             canWrite={canWrite}
             canDownload={canDownload}
+            onInformationClick={() => navigate("/community-users/information")}
           />
         )}
         renderExpandedContent={(row) => <CommunityUserExpandableDetails row={row} />}

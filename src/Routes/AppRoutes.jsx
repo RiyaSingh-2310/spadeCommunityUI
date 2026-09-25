@@ -351,6 +351,10 @@ function AppRoutes({ isDarkMode, onToggleTheme }) {
             element={withSuspense(Pages.CommunityUsersPage, { isDarkMode })}
           />
           <Route
+            path="/community-users/information"
+            element={withSuspense(Pages.PanelistInformationPage, { isDarkMode })}
+          />
+          <Route
             path="/community-users/edit/:id"
             element={<EditCommunityUserRoute isDarkMode={isDarkMode} />}
           />
