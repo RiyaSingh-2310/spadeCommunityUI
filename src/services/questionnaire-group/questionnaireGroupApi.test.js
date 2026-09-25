@@ -6,7 +6,12 @@ vi.mock("../api/client", () => ({
 }));
 
 import { apiRequest } from "../api/client";
-import { getRecords, mapPrescreenGroupToRow } from "./questionnaireGroupApi";
+import {
+  getRecords,
+  mapPrescreenGroupToForm,
+  mapPrescreenGroupToRow,
+  updatePrescreenGroup,
+} from "./questionnaireGroupApi";
 
 const LIST_RECORD = {
   id: 9,
@@ -61,6 +66,48 @@ describe("Questionnaire Group listing columns", () => {
     expect(getRowValue(row, "Question Count")).toBe(2);
     expect(getRowValue(row, "Language")).toBe("Dutch");
     expect(getRowValue(row, "Website URL")).toBe(LIST_RECORD.website_url);
+  });
+});
+
+describe("questionnaire group sortOrder", () => {
+  it("orders questions by ascending sortOrder, including 0", () => {
+    const form = mapPrescreenGroupToForm({
+      id: 4,
+      surveyTitle: "Introduction",
+      language: "english",
+      questions: [
+        { questionId: 3, sortOrder: 5, question_title: "Third" },
+        { questionId: 1, sortOrder: 2, question_title: "Second" },
+        { questionId: 5, sortOrder: 0, question_title: "First" },
+      ],
+    });
+
+    expect(form.prescreenIds).toEqual(["5", "1", "3"]);
+    expect(form.questionSortOrders).toEqual({ 5: 0, 1: 2, 3: 5 });
+  });
+
+  it("sends questionId and sortOrder on update", async () => {
+    vi.mocked(apiRequest).mockResolvedValue({ success: true, data: {} });
+
+    await updatePrescreenGroup(4, {
+      language: "english",
+      surveyTitle: "Introduction",
+      prescreenIds: ["3", "1", "5"],
+      questionSortOrders: { 3: 5, 1: 2, 5: 0 },
+    });
+
+    expect(apiRequest).toHaveBeenCalledWith("/api/questionnaire-group/4", {
+      method: "PUT",
+      body: {
+        surveyTitle: "Introduction",
+        language: "english",
+        questions: [
+          { questionId: 3, sortOrder: 5 },
+          { questionId: 1, sortOrder: 2 },
+          { questionId: 5, sortOrder: 0 },
+        ],
+      },
+    });
   });
 });
 

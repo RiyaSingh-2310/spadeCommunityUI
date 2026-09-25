@@ -38,8 +38,47 @@ const EMPTY_FORM = {
   language: "",
   surveyTitle: "",
   prescreenIds: [],
+  questionSortOrders: {},
   status: STATUS_UI_ACTIVE,
 };
+
+function sortOptionsBySelectedOrder(options, selectedIds) {
+  const rank = new Map((selectedIds ?? []).map((id, index) => [String(id), index]));
+  return [...options].sort((left, right) => {
+    const leftRank = rank.has(String(left.value))
+      ? rank.get(String(left.value))
+      : Number.MAX_SAFE_INTEGER;
+    const rightRank = rank.has(String(right.value))
+      ? rank.get(String(right.value))
+      : Number.MAX_SAFE_INTEGER;
+    return leftRank - rightRank;
+  });
+}
+
+function sortOrdersMatchSelection(selectedIds, sortOrders) {
+  const ranked = [...selectedIds].sort((left, right) => {
+    const leftOrder = sortOrders?.[String(left)];
+    const rightOrder = sortOrders?.[String(right)];
+    const leftMissing = leftOrder == null || leftOrder === "";
+    const rightMissing = rightOrder == null || rightOrder === "";
+    if (leftMissing && rightMissing) return 0;
+    if (leftMissing) return 1;
+    if (rightMissing) return -1;
+    return Number(leftOrder) - Number(rightOrder);
+  });
+  return selectedIds.every((id, index) => String(id) === String(ranked[index]));
+}
+
+function nextQuestionSortOrders(selectedIds, previous = {}) {
+  const hasStoredOrder = selectedIds.every(
+    (id) => previous[String(id)] != null && previous[String(id)] !== ""
+  );
+  if (hasStoredOrder && sortOrdersMatchSelection(selectedIds, previous)) {
+    return Object.fromEntries(selectedIds.map((id) => [String(id), Number(previous[String(id)])]));
+  }
+
+  return Object.fromEntries(selectedIds.map((id, index) => [String(id), index]));
+}
 
 function arraysEqual(left = [], right = []) {
   if (left.length !== right.length) return false;
@@ -330,7 +369,7 @@ function AddPrescreenGroupPage({ isDarkMode }) {
               }
             });
 
-            setQuestionnaireOptions(options);
+            setQuestionnaireOptions(sortOptionsBySelectedOrder(options, prescreenIds));
           } finally {
             if (!cancelled) setIsLoadingQuestionnaires(false);
           }
@@ -388,7 +427,11 @@ function AddPrescreenGroupPage({ isDarkMode }) {
     if (!isEdit || !initialSnapshot) return false;
     return (
       form.surveyTitle !== initialSnapshot.surveyTitle ||
-      !arraysEqual(form.prescreenIds, initialSnapshot.prescreenIds)
+      !arraysEqual(form.prescreenIds, initialSnapshot.prescreenIds) ||
+      !arraysEqual(
+        form.prescreenIds.map((id) => form.questionSortOrders?.[String(id)]),
+        initialSnapshot.prescreenIds.map((id) => initialSnapshot.questionSortOrders?.[String(id)])
+      )
     );
   }, [isEdit, initialSnapshot, form]);
 
@@ -582,7 +625,14 @@ function AddPrescreenGroupPage({ isDarkMode }) {
                 options={questionnaireOptions}
                 selectedIds={form.prescreenIds}
                 onChange={(prescreenIds) => {
-                  setField("prescreenIds", prescreenIds);
+                  setForm((prev) => ({
+                    ...prev,
+                    prescreenIds,
+                    questionSortOrders: nextQuestionSortOrders(
+                      prescreenIds,
+                      prev.questionSortOrders
+                    ),
+                  }));
                   touch("prescreenIds");
                 }}
                 onReorder={setQuestionnaireOptions}

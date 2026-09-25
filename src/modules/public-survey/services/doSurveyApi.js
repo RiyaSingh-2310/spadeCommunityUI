@@ -525,7 +525,22 @@ function mapPrescreenQuestion(record) {
       "correctAnswer",
     ]),
     required: true,
+    sortOrder: (() => {
+      const raw = pickField(record, ["sortOrder", "sort_order"]);
+      if (raw == null || raw === "") return null;
+      const parsed = Number(raw);
+      return Number.isFinite(parsed) ? parsed : null;
+    })(),
   };
+}
+
+function comparePrescreenQuestionOrder(left, right) {
+  const leftMissing = left?.sortOrder == null;
+  const rightMissing = right?.sortOrder == null;
+  if (leftMissing && rightMissing) return 0;
+  if (leftMissing) return 1;
+  if (rightMissing) return -1;
+  return left.sortOrder - right.sortOrder;
 }
 
 /**
@@ -566,7 +581,7 @@ export function mapSurveyPrescreenResponse(data) {
     ? []
     : dedupeQuestionsByIdentity(
         questionsRaw.map(mapPrescreenQuestion).filter(Boolean)
-      );
+      ).sort(comparePrescreenQuestionOrder);
 
   return {
     required,

@@ -75,6 +75,37 @@ function normalizeQuestionLibraryIds(ids) {
     .filter((id) => Number.isFinite(id) && id > 0);
 }
 
+function parseSortOrder(value) {
+  if (value == null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function readQuestionId(item) {
+  if (item == null) return null;
+  const raw =
+    typeof item === "object"
+      ? item.questionId ?? item.question_id ?? item.id
+      : item;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function readSortOrder(item) {
+  if (!item || typeof item !== "object") return null;
+  return parseSortOrder(item.sortOrder ?? item.sort_order);
+}
+
+function compareQuestionSort(left, right) {
+  const leftMissing = left.sortOrder == null;
+  const rightMissing = right.sortOrder == null;
+  if (leftMissing && rightMissing) return left.questionId - right.questionId;
+  if (leftMissing) return 1;
+  if (rightMissing) return -1;
+  if (left.sortOrder !== right.sortOrder) return left.sortOrder - right.sortOrder;
+  return left.questionId - right.questionId;
+}
+
 function resolveQuestionLibraryIds(payload) {
   if (Array.isArray(payload.questionIds)) {
     return normalizeQuestionLibraryIds(payload.questionIds);
@@ -110,11 +141,40 @@ function buildQuestionnaireGroupCreateBody(payload) {
   };
 }
 
-/** PUT /api/questionnaire-group/:id — surveyTitle + questionIds (+ optional language). */
+function buildQuestionsPayload(payload) {
+  if (Array.isArray(payload.questions)) {
+    const fromQuestions = payload.questions
+      .map((item) => {
+        const questionId = readQuestionId(item);
+        if (!questionId) return null;
+        const sortOrder = readSortOrder(item);
+        return { questionId, sortOrder: sortOrder == null ? null : sortOrder };
+      })
+      .filter(Boolean);
+    if (fromQuestions.length > 0) {
+      return fromQuestions.map((item, index) => ({
+        questionId: item.questionId,
+        sortOrder: item.sortOrder == null ? index : item.sortOrder,
+      }));
+    }
+  }
+
+  const ids = resolveQuestionLibraryIds(payload);
+  const orders = payload.questionSortOrders ?? {};
+  return ids.map((questionId, index) => {
+    const stored = parseSortOrder(orders[questionId] ?? orders[String(questionId)]);
+    return {
+      questionId,
+      sortOrder: stored == null ? index : stored,
+    };
+  });
+}
+
+/** PUT /api/questionnaire-group/:id — surveyTitle + questions[{ questionId, sortOrder }]. */
 function buildQuestionnaireGroupUpdateBody(payload) {
   const body = {
     surveyTitle: resolveGroupTitle(payload),
-    questionIds: resolveQuestionLibraryIds(payload),
+    questions: buildQuestionsPayload(payload),
   };
 
   if (payload.language != null && String(payload.language).trim()) {
@@ -129,29 +189,34 @@ function getQuestionItemsFromRecord(record) {
   return record.questions.filter((item) => item != null);
 }
 
-function extractQuestionLibraryIdsFromRecord(record) {
-  if (Array.isArray(record?.questionIds)) {
-    return normalizeQuestionLibraryIds(record.questionIds);
-  }
-
-  if (Array.isArray(record?.question_library_ids)) {
-    return normalizeQuestionLibraryIds(record.question_library_ids);
-  }
-
-  if (Array.isArray(record?.questionLibraryIds)) {
-    return normalizeQuestionLibraryIds(record.questionLibraryIds);
-  }
-
+function extractQuestionEntriesFromRecord(record) {
   const questionItems = getQuestionItemsFromRecord(record);
-  if (questionItems.length) {
-    return questionItems
-      .map((item) => item?.id)
-      .filter((item) => item != null)
-      .map((item) => Number(item))
-      .filter((item) => Number.isFinite(item) && item > 0);
+  const fromQuestions = questionItems
+    .map((item) => {
+      const questionId = readQuestionId(item);
+      if (!questionId) return null;
+      return { questionId, sortOrder: readSortOrder(item) };
+    })
+    .filter(Boolean);
+
+  if (fromQuestions.length > 0) {
+    return [...fromQuestions].sort(compareQuestionSort);
   }
 
-  return [];
+  const fallbackIds = [
+    record?.questionIds,
+    record?.question_library_ids,
+    record?.questionLibraryIds,
+  ].find((ids) => Array.isArray(ids));
+
+  return normalizeQuestionLibraryIds(fallbackIds).map((questionId) => ({
+    questionId,
+    sortOrder: null,
+  }));
+}
+
+function extractQuestionLibraryIdsFromRecord(record) {
+  return extractQuestionEntriesFromRecord(record).map((item) => item.questionId);
 }
 
 function resolveGroupTitleFromRecord(record) {
@@ -285,13 +350,13 @@ function normalizeGroupQuestionOptions(options) {
 }
 
 function mapGroupQuestionItem(item) {
-  if (!item || item.id == null) return null;
-
-  const numericId = Number(item.id);
-  if (!Number.isFinite(numericId) || numericId <= 0) return null;
+  const numericId = readQuestionId(item);
+  if (!numericId) return null;
 
   return {
     id: numericId,
+    questionId: numericId,
+    sortOrder: readSortOrder(item),
     questionTitle: String(
       item.question_title ?? item.questionTitle ?? item.title ?? ""
     ).trim(),
@@ -310,19 +375,21 @@ function mapGroupQuestionsFromRecord(record) {
   const byId = new Map();
 
   questionItems.forEach((item) => {
-    const numericId = Number(item?.id);
-    if (!Number.isFinite(numericId) || numericId <= 0) return;
+    const numericId = readQuestionId(item);
+    if (!numericId) return;
     byId.set(numericId, item);
   });
 
-  const orderedIds = extractQuestionLibraryIdsFromRecord(record);
-  if (orderedIds.length > 0) {
-    return orderedIds
-      .map((id) => {
-        const item = byId.get(id);
+  const orderedEntries = extractQuestionEntriesFromRecord(record);
+  if (orderedEntries.length > 0) {
+    return orderedEntries
+      .map((entry) => {
+        const item = byId.get(entry.questionId);
         if (item) return mapGroupQuestionItem(item);
         return {
-          id,
+          id: entry.questionId,
+          questionId: entry.questionId,
+          sortOrder: entry.sortOrder,
           questionTitle: "",
           questionType: "",
           rightAnswer: "",
@@ -332,7 +399,10 @@ function mapGroupQuestionsFromRecord(record) {
       .filter(Boolean);
   }
 
-  return questionItems.map((item) => mapGroupQuestionItem(item)).filter(Boolean);
+  return questionItems
+    .map((item) => mapGroupQuestionItem(item))
+    .filter(Boolean)
+    .sort(compareQuestionSort);
 }
 
 export function mapPrescreenGroupToDetail(record) {
@@ -408,8 +478,13 @@ export function mapPrescreenGroupToForm(record) {
     selectedPrescreenId: questionLibraryIds[0] != null ? String(questionLibraryIds[0]) : "",
     selectedQuestionnaireLabel,
     prescreenIds: questionLibraryIds.map(String),
+    questionSortOrders: Object.fromEntries(
+      questions.map((item) => [String(item.id), item.sortOrder])
+    ),
     linkedQuestions: questions.map((item) => ({
       id: String(item.id),
+      questionId: item.id,
+      sortOrder: item.sortOrder,
       questionTitle: item.questionTitle || `Question #${item.id}`,
     })),
   };
