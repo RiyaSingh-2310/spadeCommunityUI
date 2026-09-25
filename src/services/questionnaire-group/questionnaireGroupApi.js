@@ -11,6 +11,7 @@ import { apiRequest } from "../api/client";
 import { buildDatedExportFilename, downloadCsvExport } from "../api/csvExport";
 import { ApiError } from "../api/ApiError";
 import { formatLocaleDateTime } from "../../modules/shared/utils/dateTime";
+import { toGroupListingStatusQuery } from "../../modules/survey/utils/reportFilterConstants";
 
 function isApiSuccess(data) {
   if (!data || typeof data !== "object") return false;
@@ -455,9 +456,9 @@ export async function getRecords({
   language,
 } = {}) {
   const extra = {};
-  const normalizedStatus = String(status ?? "").trim().toLowerCase();
-  if (normalizedStatus && normalizedStatus !== "all") {
-    extra.status = formValueToApiStatus(normalizedStatus);
+  const statusQuery = toGroupListingStatusQuery(status);
+  if (statusQuery) {
+    extra.status = statusQuery;
   }
   const listLanguage = normalizeQuestionnaireGroupLanguage(language);
   if (listLanguage && listLanguage !== "all") {

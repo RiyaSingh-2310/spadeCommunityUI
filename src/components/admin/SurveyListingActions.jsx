@@ -37,7 +37,7 @@ function SurveyListingActions({
   const infoLabel = labels.projectUrlInfo ?? "Project URL Info";
 
   return (
-    <div className="flex flex-nowrap items-center justify-end gap-1 whitespace-nowrap">
+    <div className="flex flex-nowrap items-center justify-center gap-1 whitespace-nowrap">
       {onView && (
         <ActionIconButton label={viewLabel} onClick={onView}>
           <Eye size={16} strokeWidth={2} />

@@ -63,6 +63,7 @@ function ModuleListingDataCells({
   canShowManagePermissions,
   editPath,
   showDeleteAction,
+  canDeleteRow,
   onEdit,
   onDelete,
   onManagePermissions,
@@ -260,6 +261,7 @@ function ModuleListingDataCells({
           canShowManagePermissions={canShowManagePermissions}
           editPath={editPath}
           showDeleteAction={showDeleteAction}
+          canDeleteRow={canDeleteRow}
           onView={onView}
           onEdit={onEdit}
           onDelete={onDelete}

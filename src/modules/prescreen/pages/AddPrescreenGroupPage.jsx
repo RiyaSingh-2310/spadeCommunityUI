@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { GripVertical, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
@@ -43,25 +43,99 @@ const EMPTY_FORM = {
 
 function arraysEqual(left = [], right = []) {
   if (left.length !== right.length) return false;
-  const sortedLeft = [...left].map(String).sort();
-  const sortedRight = [...right].map(String).sort();
-  return sortedLeft.every((value, index) => value === sortedRight[index]);
+  return left.every((value, index) => String(value) === String(right[index]));
+}
+
+function reorderList(items, fromIndex, toIndex) {
+  if (fromIndex === toIndex) return items;
+  const next = [...items];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next;
+}
+
+function orderSelectedIds(options, selectedIds) {
+  const selected = new Set((selectedIds ?? []).map(String));
+  const ordered = options
+    .map((option) => String(option.value))
+    .filter((id) => selected.has(id));
+  (selectedIds ?? []).forEach((id) => {
+    const value = String(id);
+    if (!ordered.includes(value)) ordered.push(value);
+  });
+  return ordered;
 }
 
 function QuestionnaireCheckboxList({
   options,
   selectedIds,
   onChange,
+  onReorder,
   disabled,
   isLoading,
   hasLanguage,
+  isDarkMode,
 }) {
   const allIds = useMemo(() => options.map((option) => String(option.value)), [options]);
   const allSelected =
     allIds.length > 0 && allIds.every((optionId) => selectedIds.includes(optionId));
+  const [dragIndex, setDragIndex] = useState(null);
+  const [overIndex, setOverIndex] = useState(null);
+  const rowRefs = useRef([]);
+  const scrollRef = useRef(null);
+  const pointerYRef = useRef(0);
+  const dragIndexRef = useRef(null);
+
+  const findIndexAtY = useCallback((clientY) => {
+    for (let index = 0; index < rowRefs.current.length; index += 1) {
+      const node = rowRefs.current[index];
+      if (!node) continue;
+      const rect = node.getBoundingClientRect();
+      if (clientY < rect.top + rect.height / 2) return index;
+    }
+    return Math.max(0, rowRefs.current.length - 1);
+  }, []);
+
+  const autoScroll = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container || dragIndexRef.current == null) return;
+    const rect = container.getBoundingClientRect();
+    const y = pointerYRef.current;
+    if (y < rect.top + 48) container.scrollTop -= 10;
+    else if (y > rect.bottom - 48) container.scrollTop += 10;
+  }, []);
+
+  useEffect(() => {
+    if (dragIndex == null) return undefined;
+    const interval = window.setInterval(autoScroll, 16);
+    return () => window.clearInterval(interval);
+  }, [dragIndex, autoScroll]);
+
+  const endDrag = useCallback(() => {
+    const from = dragIndexRef.current;
+    const to = overIndex;
+    dragIndexRef.current = null;
+    setDragIndex(null);
+    setOverIndex(null);
+    if (from == null || to == null || from === to) return;
+    const nextOptions = reorderList(options, from, to);
+    onReorder?.(nextOptions);
+    onChange(orderSelectedIds(nextOptions, selectedIds));
+  }, [onChange, onReorder, options, overIndex, selectedIds]);
 
   const handleSelectAll = () => {
-    onChange(allSelected ? [] : allIds);
+    onChange(allSelected ? [] : orderSelectedIds(options, allIds));
+  };
+
+  const handlePointerDown = (event, index) => {
+    if (disabled || event.button > 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragIndexRef.current = index;
+    setDragIndex(index);
+    setOverIndex(index);
+    pointerYRef.current = event.clientY;
   };
 
   if (!hasLanguage) {
@@ -106,34 +180,80 @@ function QuestionnaireCheckboxList({
         <span>Select All</span>
       </label>
 
-      <div className="max-h-[min(360px,50vh)] space-y-2 overflow-y-auto rounded-xl border border-[var(--admin-input-border)] bg-[var(--admin-header-search-bg)] p-3">
-      {options.map((option) => {
+      <div
+        ref={scrollRef}
+        className="sortable-question-list max-h-[min(360px,50vh)] space-y-2 overflow-y-auto rounded-xl border border-[var(--admin-input-border)] bg-[var(--admin-header-search-bg)] p-3"
+      >
+      {options.map((option, index) => {
         const optionId = String(option.value);
         const checked = selectedIds.includes(optionId);
+        const isDragging = dragIndex === index;
+        const isDropTarget = overIndex === index && dragIndex != null && dragIndex !== index;
 
         return (
-          <label
+          <div
             key={optionId}
-            className={`admin-text flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition ${
-              checked
-                ? "border-[var(--admin-primary-color)]/30 bg-[var(--admin-sidebar-active-bg)] font-medium text-[var(--admin-sidebar-active-text)]"
-                : "border-transparent bg-[var(--admin-surface-bg)] hover:border-[var(--admin-input-border)]"
-            } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
+            ref={(node) => {
+              rowRefs.current[index] = node;
+            }}
+            className={`sortable-question-row admin-text flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition ${
+              isDragging
+                ? "sortable-question-row-dragging opacity-60"
+                : isDropTarget
+                  ? "sortable-question-row-over"
+                  : checked
+                    ? "border-[var(--admin-primary-color)]/30 bg-[var(--admin-sidebar-active-bg)] font-medium text-[var(--admin-sidebar-active-text)]"
+                    : "border-transparent bg-[var(--admin-surface-bg)]"
+            } ${disabled ? "opacity-60" : ""}`}
           >
-            <input
-              type="checkbox"
-              checked={checked}
+            <button
+              type="button"
+              aria-label={`Drag to reorder ${option.label}`}
               disabled={disabled}
-              onChange={() => {
-                const next = checked
-                  ? selectedIds.filter((id) => id !== optionId)
-                  : [...selectedIds, optionId];
-                onChange(next);
+              onPointerDown={(event) => handlePointerDown(event, index)}
+              onPointerMove={(event) => {
+                if (dragIndexRef.current == null) return;
+                pointerYRef.current = event.clientY;
+                setOverIndex(findIndexAtY(event.clientY));
               }}
-              className="admin-checkbox"
-            />
-            <span>{option.label}</span>
-          </label>
+              onPointerUp={(event) => {
+                if (dragIndexRef.current == null) return;
+                if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                  event.currentTarget.releasePointerCapture(event.pointerId);
+                }
+                endDrag();
+              }}
+              onPointerCancel={() => {
+                dragIndexRef.current = null;
+                setDragIndex(null);
+                setOverIndex(null);
+              }}
+              className={`sortable-question-handle inline-flex h-9 w-9 shrink-0 cursor-grab items-center justify-center rounded-lg border transition active:cursor-grabbing ${
+                disabled ? "cursor-not-allowed opacity-50" : ""
+              } ${
+                isDarkMode
+                  ? "border-[#344662] text-[#9fb0c8] hover:bg-[#1f3047]"
+                  : "border-[#d8e3ef] text-[#5e718a] hover:bg-[#eef4fb]"
+              }`}
+            >
+              <GripVertical size={16} />
+            </button>
+            <label className={`flex min-w-0 flex-1 cursor-pointer items-center gap-3 ${disabled ? "cursor-not-allowed" : ""}`}>
+              <input
+                type="checkbox"
+                checked={checked}
+                disabled={disabled}
+                onChange={() => {
+                  const next = checked
+                    ? selectedIds.filter((id) => id !== optionId)
+                    : [...selectedIds, optionId];
+                  onChange(orderSelectedIds(options, next));
+                }}
+                className="admin-checkbox"
+              />
+              <span>{option.label}</span>
+            </label>
+          </div>
         );
       })}
       </div>
@@ -465,9 +585,11 @@ function AddPrescreenGroupPage({ isDarkMode }) {
                   setField("prescreenIds", prescreenIds);
                   touch("prescreenIds");
                 }}
+                onReorder={setQuestionnaireOptions}
                 disabled={controlDisabled || !form.language}
                 isLoading={isLoadingQuestionnaires}
                 hasLanguage={Boolean(form.language)}
+                isDarkMode={isDarkMode}
               />
               {showError("prescreenIds") && (
                 <p className="mt-1 text-xs text-[var(--admin-danger-text)]">

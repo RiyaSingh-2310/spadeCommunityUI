@@ -7,6 +7,7 @@ import {
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
 import { appendListQuery } from "../../shared/utils/listQueryParams";
+import { toGroupListingStatusQuery } from "../utils/reportFilterConstants";
 import { createSurveyUnderGroup, mapSurveyToRow } from "./surveyApi";
 import { formatSurveyListDate } from "../../shared/utils/dateTime";
 
@@ -180,9 +181,13 @@ export function createEmptyGroupProjectForm() {
 }
 
 /** GET /api/survey/groupproject/list */
-export async function getRecords({ page, limit, search } = {}) {
+export async function getRecords({ page, limit, search, status } = {}) {
+  const extra = {};
+  const statusQuery = toGroupListingStatusQuery(status);
+  if (statusQuery) extra.status = statusQuery;
+
   const data = await apiRequest(
-    appendListQuery(API_ROUTES.groupSurvey.list, { page, limit, search })
+    appendListQuery(API_ROUTES.groupSurvey.list, { page, limit, search, extra })
   );
   assertSuccess(data);
 

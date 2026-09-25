@@ -4,7 +4,7 @@ function InvoicePdfAction({ isDarkMode, onDownload }) {
   if (!onDownload) return null;
 
   return (
-    <div className="flex items-center justify-end">
+    <div className="flex items-center justify-center">
       <button
         type="button"
         onClick={onDownload}

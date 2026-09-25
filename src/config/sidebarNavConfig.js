@@ -124,21 +124,6 @@ export const SIDEBAR_NAV_ITEMS = [
   },
   {
     type: "group",
-    label: "Notifications",
-    key: "notifications",
-    matcher: /^\/(notifications|messages)(\/|$)/,
-    permissionKeys: ["notifications", "messages"],
-    children: [
-      {
-        label: "Messages",
-        root: "/messages",
-        matcher: /^\/messages(\/|$)/,
-        permissionKeys: ["messages", "notifications"],
-      },
-    ],
-  },
-  {
-    type: "group",
     label: "Panel Management",
     key: "questionnaire-management",
     matcher: /^\/(community-users|user-screening\/questions)(\/|$)/,
@@ -216,16 +201,23 @@ export const SIDEBAR_NAV_ITEMS = [
   },
   {
     type: "link",
-    label: "Settings",
-    root: "/settings",
-    matcher: /^\/settings(\/|$)/,
+    label: "API Management",
+    root: "/api-management",
+    matcher: /^\/api-management(\/|$)/,
     permissionKeys: [],
   },
   {
     type: "link",
-    label: "API Management",
-    root: "/api-management",
-    matcher: /^\/api-management(\/|$)/,
+    label: "Messages",
+    root: "/messages",
+    matcher: /^\/messages(\/|$)/,
+    permissionKeys: ["messages", "notifications"],
+  },
+  {
+    type: "link",
+    label: "Settings",
+    root: "/settings",
+    matcher: /^\/settings(\/|$)/,
     permissionKeys: [],
   },
 ];

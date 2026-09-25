@@ -9,12 +9,28 @@ export const REPORT_STATUS = {
   ALL: "",
   INITIATED: "initiated",
   COMPLETED: "completed",
+  QUOTA_FULL: "quota_full",
+  QUALITY_TERM: "quality_term",
+  SURVEY_CLOSED: "survey_closed",
+  TERMINATED: "terminated",
 };
 
 export const REPORT_STATUS_OPTIONS = [
   { value: REPORT_STATUS.ALL, label: "All" },
   { value: REPORT_STATUS.INITIATED, label: "Initiated" },
   { value: REPORT_STATUS.COMPLETED, label: "Completed" },
+  { value: REPORT_STATUS.QUOTA_FULL, label: "Quota Full" },
+  { value: REPORT_STATUS.QUALITY_TERM, label: "Quality Term" },
+  { value: REPORT_STATUS.SURVEY_CLOSED, label: "Survey Closed" },
+  { value: REPORT_STATUS.TERMINATED, label: "Terminated" },
+];
+
+/** Group listing filters share the report statuses and keep Active / Inactive. */
+export const GROUP_STATUS_FILTER_OPTIONS = [
+  { value: "all", label: "All" },
+  ...REPORT_STATUS_OPTIONS.filter((option) => option.value),
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
 ];
 
 export function normalizeReportMode(mode) {
@@ -28,6 +44,7 @@ export function normalizeReportStatus(status) {
     .trim()
     .toLowerCase()
     .replace(/[\s-]+/g, "_");
+  if (!key || key === "all") return REPORT_STATUS.ALL;
   if (key === "completed" || key === "complete") return REPORT_STATUS.COMPLETED;
   if (
     key === "initiated" ||
@@ -39,15 +56,58 @@ export function normalizeReportStatus(status) {
   ) {
     return REPORT_STATUS.INITIATED;
   }
+  if (
+    key === "quota_full" ||
+    key === "quotafull" ||
+    key === "over_quota" ||
+    key === "overquota" ||
+    key === "quota"
+  ) {
+    return REPORT_STATUS.QUOTA_FULL;
+  }
+  if (
+    key === "quality_term" ||
+    key === "qualityterm" ||
+    key === "quality_terminate" ||
+    key === "qualityterminate"
+  ) {
+    return REPORT_STATUS.QUALITY_TERM;
+  }
+  if (
+    key === "survey_closed" ||
+    key === "surveyclosed" ||
+    key === "survey_close" ||
+    key === "surveyclose"
+  ) {
+    return REPORT_STATUS.SURVEY_CLOSED;
+  }
+  if (key === "terminated" || key === "terminate" || key === "term") {
+    return REPORT_STATUS.TERMINATED;
+  }
   return REPORT_STATUS.ALL;
 }
 
 /** Query value for GET /api/project-reports/:id/report?status=completed */
 export function toProjectReportApiStatus(status) {
-  const normalized = normalizeReportStatus(status);
-  if (normalized === REPORT_STATUS.COMPLETED) return "completed";
-  if (normalized === REPORT_STATUS.INITIATED) return "initiated";
-  return "";
+  return normalizeReportStatus(status);
+}
+
+/**
+ * Listing status query for Project Group and Pre-Screen Group.
+ * Active/Inactive stay on the record-status API values. Outcome statuses
+ * use the same query values as Project Report / Pre-Screen Report.
+ * @param {unknown} status
+ * @returns {string}
+ */
+export function toGroupListingStatusQuery(status) {
+  const key = String(status ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  if (!key || key === "all") return "";
+  if (key === "inactive" || key === "deactivated") return "inactive";
+  if (key === "active" || key === "activated") return "active";
+  return toProjectReportApiStatus(status);
 }
 
 export function isReportTestModeValue(value) {

@@ -189,6 +189,8 @@ export function SurveyDataTable({
   headerAction,
   emptyMessage = "",
   getRowProps,
+  columnWidths = null,
+  fitContainer = false,
 }) {
   const hasRows = Array.isArray(rows) && rows.length > 0;
 
@@ -199,11 +201,25 @@ export function SurveyDataTable({
       footer={footer}
       headerAction={headerAction}
     >
-      <table className={ADMIN_TABLE_INNER_CLASS}>
+      <table
+        className={`${ADMIN_TABLE_INNER_CLASS}${fitContainer ? " w-full table-fixed" : ""}`}
+      >
+        {columnWidths ? (
+          <colgroup>
+            {columns.map((col) => (
+              <col key={col} style={columnWidths[col] ? { width: columnWidths[col] } : undefined} />
+            ))}
+          </colgroup>
+        ) : null}
         <thead>
           <tr>
             {columns.map((col) => (
-              <th key={col} className={TABLE_HEAD}>
+              <th
+                key={col}
+                className={`${TABLE_HEAD}${
+                  col === "Action" || col === "Actions" ? " admin-table-actions-col text-center" : ""
+                }`}
+              >
                 {col}
               </th>
             ))}
@@ -228,7 +244,11 @@ export function SurveyDataTable({
                       key={col}
                       className={getEllipsisCellClassName(
                         ellipsisMax,
-                        "admin-text align-middle text-sm"
+                        `admin-text align-middle text-sm${
+                          col === "Action" || col === "Actions"
+                            ? " admin-table-actions-col text-center"
+                            : ""
+                        }`
                       )}
                       style={getEllipsisCellStyle(ellipsisMax)}
                     >

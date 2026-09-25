@@ -83,6 +83,7 @@ const PARTNER_MAPPING_CPI_MAX_LENGTH = 6;
 const TABLE_COLUMNS = [
   "#",
   "Partner Code",
+  "Partner Name",
   "Partner Quota",
   "CPI",
   "Partner URL",
@@ -90,6 +91,35 @@ const TABLE_COLUMNS = [
   "Is Test?",
   "Action",
 ];
+
+const PARTNER_MAPPING_COLUMN_WIDTHS = {
+  "#": "4%",
+  "Partner Code": "12%",
+  "Partner Name": "16%",
+  "Partner Quota": "10%",
+  CPI: "8%",
+  "Links Assigned": "9%",
+  "Partner URL": "18%",
+  Status: "8%",
+  "Is Test?": "8%",
+  Action: "11%",
+};
+
+function resolveMappedPartnerName(row, partners = []) {
+  const fromRow = String(row?.partnerName ?? "").trim();
+  const code = String(row?.partnerCode ?? "").trim();
+  const partnerId = String(row?.partnerId ?? "").trim();
+  const match = partners.find((partner) => {
+    const id = String(partner?.id ?? partner?.partner_id ?? "").trim();
+    const partnerCode = String(partner?.code ?? partner?.partner_code ?? "").trim();
+    return (partnerId && id === partnerId) || (code && code !== "—" && partnerCode === code);
+  });
+  const fromList = String(match?.name ?? match?.partner_name ?? "").trim();
+  const rowNameMissing = !fromRow || fromRow === "—" || fromRow === "-" || (code && fromRow === code);
+  if (fromList && rowNameMissing) return fromList;
+  if (fromRow && fromRow !== "—" && fromRow !== "-") return fromRow;
+  return fromList || "—";
+}
 
 const REDIRECT_FIELDS = [
   {
@@ -544,8 +574,12 @@ function PartnerMappingTab({
     setMultiLinkStats(null);
     try {
       let resolvedDefaultPartnerId = defaultPartnerIdRef.current;
+      let partnerDirectory = partnerOptionsSource;
       try {
         const partners = await getPartnerPanelSizes();
+        if (Array.isArray(partners) && partners.length > 0) {
+          partnerDirectory = partners;
+        }
         const defaultPartner = pickDefaultPartnerFromList(partners);
         const nextDefaultId = resolvePartnerId(defaultPartner);
         if (nextDefaultId) {
@@ -560,6 +594,7 @@ function PartnerMappingTab({
       const annotateRows = (list) =>
         (Array.isArray(list) ? list : []).map((row) => ({
           ...row,
+          partnerName: resolveMappedPartnerName(row, partnerDirectory),
           isDefault: isDefaultPartnerMappingRow(row, resolvedDefaultPartnerId),
         }));
 
@@ -631,6 +666,7 @@ function PartnerMappingTab({
     ensureDefaultPartnerMapping,
     projectUrls,
     selectedProjectUrl,
+    partnerOptionsSource,
   ]);
 
   useEffect(() => {
@@ -1136,7 +1172,7 @@ function PartnerMappingTab({
       const url = String(row.partnerUrl ?? "").trim();
       if (!url) return "—";
       return (
-        <div className="flex max-w-[260px] min-w-0 items-center gap-1 overflow-hidden">
+        <div className="flex max-w-full min-w-0 items-center gap-1 overflow-hidden">
           <button
             type="button"
             onClick={() =>
@@ -1192,7 +1228,7 @@ function PartnerMappingTab({
       const canDelete = allowWrite && !isDefaultMapping;
 
       return (
-        <div className="flex items-center justify-end gap-1">
+        <div className="flex items-center justify-center gap-1">
           <button
             type="button"
             onClick={() =>
@@ -1235,6 +1271,7 @@ function PartnerMappingTab({
 
     const map = {
       "Partner Code": row.partnerCode,
+      "Partner Name": row.partnerName || "—",
       "Partner Quota": row.quota,
       CPI: row.cpi,
       "Links Assigned": row.linksToAssign ?? "—",
@@ -1392,6 +1429,8 @@ function PartnerMappingTab({
               rows={rows}
               renderCell={renderCell}
               isDarkMode={isDarkMode}
+              fitContainer
+              columnWidths={PARTNER_MAPPING_COLUMN_WIDTHS}
               emptyMessage="No partner mappings for this Project URL yet."
               headerAction={
                 showAddPartner ? (

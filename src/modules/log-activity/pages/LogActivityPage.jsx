@@ -101,7 +101,9 @@ function LogActivityPage({ isDarkMode }) {
                 {["S.No", "Name", "Date and Time", ...(canWrite ? ["Action"] : [])].map((h) => (
                   <th
                     key={h}
-                    className="px-4 py-3 text-left text-xs font-semibold tracking-[0.02em] whitespace-nowrap"
+                    className={`px-4 py-3 text-xs font-semibold tracking-[0.02em] whitespace-nowrap ${
+                      h === "Action" ? "admin-table-actions-col text-center" : "text-left"
+                    }`}
                   >
                     {h}
                   </th>
@@ -166,7 +168,7 @@ function LogActivityPage({ isDarkMode }) {
                     </td>
                       <td className="admin-text whitespace-nowrap px-4 py-3">{row.logDate}</td>
                       {canWrite && (
-                        <td className="whitespace-nowrap px-4 py-3">
+                        <td className="admin-table-actions-col whitespace-nowrap px-4 py-3 text-center">
                           <button
                             type="button"
                             onClick={() => handleDeleteRequest(row)}

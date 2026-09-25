@@ -281,7 +281,7 @@ function ApiManagementTab({ isDarkMode, showTitle = true }) {
                       <th
                         key={heading}
                         className={`px-4 py-3 text-xs font-semibold tracking-[0.02em] whitespace-nowrap ${
-                          heading === "Actions" ? "text-right" : "text-left"
+                          heading === "Actions" ? "admin-table-actions-col text-center" : "text-left"
                         }`}
                       >
                         {heading}
@@ -328,8 +328,8 @@ function ApiManagementTab({ isDarkMode, showTitle = true }) {
                       <td className="admin-text whitespace-nowrap px-4 py-3">
                         {row.updatedAtLabel}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="admin-table-actions-col whitespace-nowrap px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-1">
                           <button
                             type="button"
                             onClick={() => openView(row)}

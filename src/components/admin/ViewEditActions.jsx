@@ -11,7 +11,7 @@ function ViewEditActions({ isDarkMode, onView, onEdit }) {
   if (!onView && !onEdit) return null;
 
   return (
-    <div className="flex items-center justify-end gap-1.5">
+    <div className="flex items-center justify-center gap-1.5">
       {onView && (
         <button
           type="button"

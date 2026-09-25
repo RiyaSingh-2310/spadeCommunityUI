@@ -19,7 +19,7 @@ function GroupSurveyListingActions({ onEdit, onAddProject, onListProjects }) {
   if (!onEdit && !onAddProject && !onListProjects) return null;
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-1">
+    <div className="flex flex-wrap items-center justify-center gap-1">
       {onEdit && (
         <ActionIconButton label="Edit Group Survey" onClick={onEdit}>
           <Pencil size={16} strokeWidth={2} />

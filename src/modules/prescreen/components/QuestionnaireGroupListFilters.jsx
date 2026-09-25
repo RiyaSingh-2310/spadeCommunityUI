@@ -1,10 +1,7 @@
 import { getAdminInputClass } from "../../shared/utils/formStyles";
+import { GROUP_STATUS_FILTER_OPTIONS } from "../../survey/utils/reportFilterConstants";
 
-export const QUESTIONNAIRE_GROUP_STATUS_FILTERS = [
-  { value: "all", label: "All statuses" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-];
+export const QUESTIONNAIRE_GROUP_STATUS_FILTERS = GROUP_STATUS_FILTER_OPTIONS;
 
 export const QUESTIONNAIRE_GROUP_LANGUAGE_FILTERS = [
   { value: "all", label: "All languages" },
@@ -21,6 +18,7 @@ function QuestionnaireGroupListFilters({
   onStatusChange,
   onLanguageChange,
   extraLanguages = [],
+  showLanguage = true,
 }) {
   const languageOptions = [...QUESTIONNAIRE_GROUP_LANGUAGE_FILTERS];
   extraLanguages.forEach((slug) => {
@@ -54,6 +52,7 @@ function QuestionnaireGroupListFilters({
           ))}
         </select>
       </div>
+      {showLanguage ? (
       <div className="w-full min-w-[min(100%,11.25rem)] shrink-0 sm:w-[11.25rem]">
         <label htmlFor="questionnaire-group-language-filter" className={FILTER_LABEL_CLASS}>
           Language
@@ -72,6 +71,7 @@ function QuestionnaireGroupListFilters({
           ))}
         </select>
       </div>
+      ) : null}
     </div>
   );
 }

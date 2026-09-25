@@ -81,7 +81,12 @@ function PartnerProjectsPage({ isDarkMode }) {
                   "Status",
                   "Action",
                 ].map((label) => (
-                  <th key={label} className="px-3 py-3 text-left text-xs font-semibold">
+                  <th
+                    key={label}
+                    className={`px-3 py-3 text-xs font-semibold ${
+                      label === "Action" ? "admin-table-actions-col text-center" : "text-left"
+                    }`}
+                  >
                     {label}
                   </th>
                 ))}
@@ -125,7 +130,7 @@ function PartnerProjectsPage({ isDarkMode }) {
                       <td className="whitespace-nowrap px-3 py-3">
                         <StatusToggle checked={Boolean(row.statusActive)} readOnly compact />
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="admin-table-actions-col px-3 py-3 text-center">
                         <ViewActionButton
                           iconOnly
                           label="View"

@@ -32,6 +32,7 @@ export function buildListingDataCellProps(ctx) {
     canShowManagePermissions: ctx.canShowManagePermissions,
     editPath: ctx.editPath,
     showDeleteAction: ctx.showDeleteAction,
+    canDeleteRow: ctx.canDeleteRow,
     onEdit: ctx.onEdit,
     onDelete: ctx.onDelete,
     onManagePermissions: ctx.onManagePermissions,

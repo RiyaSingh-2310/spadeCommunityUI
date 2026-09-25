@@ -12,7 +12,7 @@ function RewardPendingActions({ isDarkMode, row, onApprove, onReject }) {
     "inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold transition-colors";
 
   return (
-    <div className="flex items-center justify-end gap-1 whitespace-nowrap">
+    <div className="flex items-center justify-center gap-1 whitespace-nowrap">
       {onApprove && canActOnReward && (
       <button
         type="button"

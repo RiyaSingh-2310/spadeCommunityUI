@@ -29,4 +29,26 @@ export function getEffectivePermissions(admin) {
   return resolvePermissionsFromRecord(admin);
 }
 
+/**
+ * Super Admin accounts cannot be deleted from Admin User management.
+ * Matches permission type and the Super Admin role/name.
+ * @param {object | null | undefined} user
+ */
+export function isNonDeletableAdminUser(user) {
+  if (!user || typeof user !== "object") return false;
+  if (isSuperAdminUser(user)) return true;
+
+  const name = String(user.name ?? "").trim().toLowerCase();
+  if (name === "super admin") return true;
+
+  const role = String(
+    user.role ?? user.role_name ?? user.roleName ?? user.user_role ?? user.userRole ?? ""
+  )
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+
+  return role === "super_admin" || role === "superadmin";
+}
+
 export { isSuperAdminUser };

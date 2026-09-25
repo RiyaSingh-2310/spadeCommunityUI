@@ -202,7 +202,10 @@ function DashboardPage({ isDarkMode }) {
                   <thead>
                     <tr className={headClass}>
                       {["Project", "Partner Code", "Quota", "CPI", "Status", "Action"].map((h) => (
-                        <th key={h} className={TABLE_HEAD}>
+                        <th
+                          key={h}
+                          className={`${TABLE_HEAD}${h === "Action" ? " admin-table-actions-col text-center" : ""}`}
+                        >
                           {h}
                         </th>
                       ))}
@@ -235,7 +238,7 @@ function DashboardPage({ isDarkMode }) {
                           <td className="admin-text whitespace-nowrap px-3 py-3">
                             {formatStatusLabel(row.statusActive ? "Active" : "Inactive")}
                           </td>
-                          <td className="px-3 py-3">
+                          <td className="admin-table-actions-col px-3 py-3 text-center">
                             <button
                               type="button"
                               className="text-sm font-semibold text-[#10a950] hover:underline"

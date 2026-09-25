@@ -8,6 +8,7 @@ import { useFlashMessage } from "../../modules/shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../modules/shared/hooks/useListingRefresh";
 import { useNameColumnSort } from "../../modules/shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../modules/shared/utils/pagination";
+import { isNonDeletableAdminUser } from "../../modules/permissions/getEffectivePermissions";
 import { toastApiError, toastApiSuccess } from "../../services/toast/apiToast";
 import {
   deleteRecord,
@@ -52,6 +53,7 @@ function UsersPage({ isDarkMode }) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDeleteRequest = (row) => {
+    if (isNonDeletableAdminUser(row)) return;
     setDeleteTarget(row);
   };
 
@@ -61,7 +63,10 @@ function UsersPage({ isDarkMode }) {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteTarget?.id) return;
+    if (!deleteTarget?.id || isNonDeletableAdminUser(deleteTarget)) {
+      setDeleteTarget(null);
+      return;
+    }
 
     setIsDeleting(true);
     try {
@@ -139,6 +144,7 @@ function UsersPage({ isDarkMode }) {
         emptyMessage="No Admin Users Found"
         onEdit={navigateToUserEdit}
         onDelete={handleDeleteRequest}
+        canDeleteRow={(row) => !isNonDeletableAdminUser(row)}
         onManagePermissions={navigateToUserPermissions}
         onStatusToggle={handleStatusToggle}
         onSearch={handleSearch}

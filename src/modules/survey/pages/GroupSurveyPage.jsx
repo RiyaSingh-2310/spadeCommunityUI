@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import QuestionnaireGroupListFilters from "../../prescreen/components/QuestionnaireGroupListFilters";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
 import { useApiListing } from "../../shared/hooks/useApiListing";
 import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
@@ -12,6 +13,11 @@ import { getRecords, updateGroupProjectStatus } from "../services/groupSurveyApi
 function GroupSurveyPage({ isDarkMode }) {
   const navigate = useNavigate();
   useFlashMessage();
+  const [statusFilter, setStatusFilter] = useState("all");
+  const fetchGroups = useCallback(
+    (params) => getRecords({ ...params, status: statusFilter }),
+    [statusFilter]
+  );
   const {
     rows,
     totalRecords,
@@ -25,7 +31,7 @@ function GroupSurveyPage({ isDarkMode }) {
     handlePageSizeChange,
     refresh: fetchGroupProjects,
     setRows,
-  } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
+  } = useApiListing({ fetchFn: fetchGroups, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(fetchGroupProjects);
   const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
     rows,
@@ -76,6 +82,16 @@ function GroupSurveyPage({ isDarkMode }) {
       title="Group Survey"
       subtitle="Manage group survey records here."
       searchPlaceholder="Search group surveys..."
+      toolbarFilters={
+        <QuestionnaireGroupListFilters
+          status={statusFilter}
+          showLanguage={false}
+          onStatusChange={(value) => {
+            setStatusFilter(value);
+            handlePageChange(1);
+          }}
+        />
+      }
       actionLabel="Add Group Survey"
       onActionClick={() => navigate("/survey/group/add")}
       columns={["S. No.", "Client Name", "Project Name", "Status", "Action"]}

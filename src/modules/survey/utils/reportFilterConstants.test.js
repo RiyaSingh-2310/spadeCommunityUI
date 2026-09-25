@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   filterReportRows,
+  GROUP_STATUS_FILTER_OPTIONS,
   REPORT_MODE,
   REPORT_STATUS,
+  REPORT_STATUS_OPTIONS,
+  toGroupListingStatusQuery,
+  toProjectReportApiStatus,
 } from "./reportFilterConstants";
 
 const liveCompleted = {
@@ -78,6 +82,32 @@ describe("filterReportRows", () => {
         search: "riya",
       })
     ).toEqual([liveCompleted]);
+  });
+
+  it("keeps the shared outcome status list for reports and groups", () => {
+    expect(REPORT_STATUS_OPTIONS.map((option) => option.label)).toEqual([
+      "All",
+      "Initiated",
+      "Completed",
+      "Quota Full",
+      "Quality Term",
+      "Survey Closed",
+      "Terminated",
+    ]);
+    expect(GROUP_STATUS_FILTER_OPTIONS.map((option) => option.label).slice(0, 7)).toEqual(
+      REPORT_STATUS_OPTIONS.map((option) => option.label)
+    );
+    expect(GROUP_STATUS_FILTER_OPTIONS.map((option) => option.value)).toEqual(
+      expect.arrayContaining(["all", "active", "inactive", REPORT_STATUS.QUOTA_FULL])
+    );
+    expect(toProjectReportApiStatus("Quota Full")).toBe("quota_full");
+    expect(toProjectReportApiStatus("Quality Term")).toBe("quality_term");
+    expect(toProjectReportApiStatus("Survey Closed")).toBe("survey_closed");
+    expect(toProjectReportApiStatus("Terminated")).toBe("terminated");
+    expect(toGroupListingStatusQuery("all")).toBe("");
+    expect(toGroupListingStatusQuery("active")).toBe("active");
+    expect(toGroupListingStatusQuery("Inactive")).toBe("inactive");
+    expect(toGroupListingStatusQuery("quota full")).toBe("quota_full");
   });
 
   it("returns an empty list when nothing matches", () => {

@@ -30,6 +30,7 @@ function ModuleListingActionCell({
   canShowManagePermissions,
   editPath,
   showDeleteAction,
+  canDeleteRow,
   onView,
   onEdit,
   onDelete,
@@ -54,14 +55,16 @@ function ModuleListingActionCell({
   handleEdit,
   handleDeleteRequest,
 }) {
-  const cellClass = "admin-table-actions-col px-4 py-3 align-middle text-right whitespace-nowrap";
+  const cellClass = "admin-table-actions-col px-4 py-3 align-middle text-center whitespace-nowrap";
+  const rowAllowsDelete = typeof canDeleteRow !== "function" || canDeleteRow(row);
+  const rowDeleteAllowed = Boolean(canShowDelete) && rowAllowsDelete;
 
   if (!allowRead) return null;
   if (!allowWrite && !allowDownload && !readOnlyListingActions) return null;
 
   if (communityUser) {
     const showEdit = allowWrite && Boolean(onEdit || editPath);
-    const showDelete = allowWrite && showDeleteAction && Boolean(onDelete);
+    const showDelete = allowWrite && showDeleteAction && rowAllowsDelete && Boolean(onDelete);
     const showRewardLog = allowWrite && Boolean(onRewardLog);
     const showDownload = allowDownload && Boolean(onDownload);
     const hasCommunityActions =
@@ -101,11 +104,12 @@ function ModuleListingActionCell({
         onDelete,
         showDeleteAction,
       });
+    const showDeleteForRow = showDelete && rowAllowsDelete;
 
     const showManagePermissions =
       canShowManagePermissions && Boolean(onManagePermissions);
 
-    if (!showEdit && !showDelete && !showManagePermissions) return null;
+    if (!showEdit && !showDeleteForRow && !showManagePermissions) return null;
 
     return (
       <td key={col} className={cellClass}>
@@ -113,14 +117,14 @@ function ModuleListingActionCell({
         isDarkMode={isDarkMode}
         showManagePermissions={showManagePermissions}
         showEdit={showEdit}
-        showDelete={showDelete}
+        showDelete={showDeleteForRow}
         onManagePermissions={
           showManagePermissions
             ? () => onManagePermissions(row, globalIdx)
             : undefined
         }
         onEdit={showEdit ? () => handleEdit(row, globalIdx) : undefined}
-        onDelete={showDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}
+        onDelete={showDeleteForRow ? () => handleDeleteRequest(row, globalIdx) : undefined}
       />
       </td>
     );
@@ -137,7 +141,7 @@ function ModuleListingActionCell({
         <RfqListingActions
         isDarkMode={isDarkMode}
         onEdit={canShowEdit ? () => handleEdit(row, globalIdx) : undefined}
-        onDelete={canShowDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}
+        onDelete={rowDeleteAllowed ? () => handleDeleteRequest(row, globalIdx) : undefined}
         onAddLog={allowWrite && onAddLog ? () => onAddLog(row, globalIdx) : undefined}
         onViewLogs={allowRead && onViewLogs ? () => onViewLogs(row, globalIdx) : undefined}
       />
@@ -152,7 +156,7 @@ function ModuleListingActionCell({
         isDarkMode={isDarkMode}
         onEdit={allowWrite && canShowEdit ? () => handleEdit(row, globalIdx) : undefined}
         onAddProject={allowWrite && onAddProject ? () => onAddProject(row, globalIdx) : undefined}
-        onDelete={canShowDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}
+        onDelete={rowDeleteAllowed ? () => handleDeleteRequest(row, globalIdx) : undefined}
       />
       </td>
     );
@@ -212,7 +216,7 @@ function ModuleListingActionCell({
         labels={surveyActionLabels}
       />
     ) : (
-      <div className="flex items-center justify-end gap-1">
+      <div className="flex items-center justify-center gap-1">
         {allowRead && onView ? (
           <ViewActionButton
             isDarkMode={isDarkMode}
@@ -222,11 +226,11 @@ function ModuleListingActionCell({
         ) : null}
         <IconActions
           isDarkMode={isDarkMode}
-          showDelete={canShowDelete}
+          showDelete={rowDeleteAllowed}
           onEdit={canShowEdit ? () => handleEdit(row, globalIdx) : undefined}
           onClone={allowWrite && onClone ? () => onClone(row, globalIdx) : undefined}
           onCopy={allowWrite && onCopy ? () => onCopy(row, globalIdx) : undefined}
-          onDelete={canShowDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}
+          onDelete={rowDeleteAllowed ? () => handleDeleteRequest(row, globalIdx) : undefined}
         />
       </div>
     )}
@@ -284,11 +288,11 @@ function ModuleListingActionCell({
     <td key={col} className={cellClass}>
       <IconActions
       isDarkMode={isDarkMode}
-      showDelete={canShowDelete}
+      showDelete={rowDeleteAllowed}
       onEdit={canShowEdit ? () => handleEdit(row, globalIdx) : undefined}
       onClone={allowWrite && onClone ? () => onClone(row, globalIdx) : undefined}
       onCopy={allowWrite && onCopy ? () => onCopy(row, globalIdx) : undefined}
-      onDelete={canShowDelete ? () => handleDeleteRequest(row, globalIdx) : undefined}
+      onDelete={rowDeleteAllowed ? () => handleDeleteRequest(row, globalIdx) : undefined}
     />
     </td>
   );

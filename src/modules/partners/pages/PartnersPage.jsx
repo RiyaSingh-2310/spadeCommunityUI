@@ -8,6 +8,7 @@ import { useFlashMessage } from "../../shared/hooks/useFlashMessage";
 import { useListingRefresh } from "../../shared/hooks/useListingRefresh";
 import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
+import { isDefaultPartnerRecord } from "../../survey/utils/defaultPartnerMapping";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   clearPartnerDetailCache,
@@ -64,7 +65,18 @@ function PartnersPage({ isDarkMode }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
+  const isProtectedPartner = (row) =>
+    isDefaultPartnerRecord({
+      id: row?.id,
+      name: row?.name,
+      code: row?.partnerCode,
+      is_default: row?.isDefault,
+      isDefault: row?.isDefault,
+      partner_type: row?.partnerType,
+    });
+
   const handleDeleteRequest = (row) => {
+    if (isProtectedPartner(row)) return;
     setDeleteTarget(row);
   };
 
@@ -74,7 +86,10 @@ function PartnersPage({ isDarkMode }) {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteTarget?.id) return;
+    if (!deleteTarget?.id || isProtectedPartner(deleteTarget)) {
+      setDeleteTarget(null);
+      return;
+    }
 
     setIsDeleting(true);
     try {
@@ -142,6 +157,7 @@ function PartnersPage({ isDarkMode }) {
         onRetry={refreshPartners}
         emptyMessage="No partners found"
         onDelete={handleDeleteRequest}
+        canDeleteRow={(row) => !isProtectedPartner(row)}
         onStatusToggle={handleStatusToggle}
         onSearch={handleSearch}
         totalRecords={totalRecords}
