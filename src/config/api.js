@@ -236,6 +236,7 @@ export const API_ROUTES = {
     update: (id) => `/api/supplier-mapping/${id}`,
     updateStatus: (id) => `/api/supplier-mapping/status/${id}`,
     updateTestMode: (id) => `/api/supplier-mapping/istest/${id}`,
+    delete: (id) => `/api/supplier-mapping/${id}`,
   },
   /**
    * SPA path helpers only — NOT backend APIs.

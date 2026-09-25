@@ -158,6 +158,34 @@ export function mappingRowsIncludePartner(rows, partnerId) {
 }
 
 /**
+ * True when a Partner Mapping row is the Default Partner (never deletable).
+ * Uses flags, configured id, and existing name/code heuristics — not list position.
+ * @param {object|null|undefined} row
+ * @param {unknown} [knownDefaultPartnerId]
+ */
+export function isDefaultPartnerMappingRow(row, knownDefaultPartnerId = "") {
+  if (!row || typeof row !== "object") return false;
+
+  if (row.isDefault === true || toTruthyFlag(row.isDefault)) return true;
+
+  const knownId = coerceText(knownDefaultPartnerId);
+  const rowPartnerId = coerceText(row.partnerId ?? row.partner_id ?? row.partnerid);
+  if (knownId && rowPartnerId && knownId === rowPartnerId) return true;
+
+  if (isDefaultPartnerRecord(row.record)) return true;
+
+  return isDefaultPartnerRecord({
+    ...(row.record && typeof row.record === "object" ? row.record : {}),
+    id: rowPartnerId || row.id,
+    partner_id: rowPartnerId,
+    code: row.partnerCode ?? row.partner_code,
+    name: row.partnerName ?? row.partner_name,
+    is_default: row.is_default ?? row.isDefault,
+    partner_type: row.partner_type ?? row.partnerType,
+  });
+}
+
+/**
  * Whether Add Partner should be offered given remaining quota.
  * Hidden when full quota is already assigned (e.g. default partner has 100%).
  * @param {{

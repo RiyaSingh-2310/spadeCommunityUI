@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Eye, ExternalLink, Link2, Loader2, Pencil } from "lucide-react";
+import { Eye, ExternalLink, Link2, Loader2, Pencil, Trash2 } from "lucide-react";
 import DecimalInput from "../../../components/admin/DecimalInput";
+import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import FormField from "../../../components/admin/FormField";
 import NumericInput from "../../../components/admin/NumericInput";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
@@ -24,6 +25,7 @@ import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast
 import { mapPartnersToSelectOptions } from "../services/surveyApi";
 import {
   createSupplierMapping,
+  deleteSupplierMapping,
   getSupplierMappingById,
   listSupplierMappings,
   mapSupplierMappingToForm,
@@ -59,7 +61,7 @@ import {
   sumAssignedPartnerQuota,
 } from "../utils/partnerMappingQuota";
 import {
-  isDefaultPartnerRecord,
+  isDefaultPartnerMappingRow,
   mappingRowsIncludePartner,
   pickDefaultPartnerFromList,
   resolveDefaultPartnerQuota,
@@ -301,6 +303,10 @@ function PartnerMappingTab({
   const [partnerOptionsSource, setPartnerOptionsSource] = useState([]);
   const [viewTarget, setViewTarget] = useState(null);
   const [togglingRowId, setTogglingRowId] = useState("");
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [defaultPartnerId, setDefaultPartnerId] = useState("");
+  const defaultPartnerIdRef = useRef("");
   const scrollToMappingIdRef = useRef("");
   const mappingTableRef = useRef(null);
   const pendingJumpToFormRef = useRef(false);
@@ -461,6 +467,8 @@ function PartnerMappingTab({
 
         const partnerId = resolvePartnerId(defaultPartner);
         if (!partnerId) return false;
+        defaultPartnerIdRef.current = partnerId;
+        setDefaultPartnerId(partnerId);
         if (mappingRowsIncludePartner(existingRows, partnerId)) {
           ensuredDefaultPartnerKeysRef.current.add(ensureKey);
           return false;
@@ -527,12 +535,34 @@ function PartnerMappingTab({
       setRows([]);
       setMultiLinkStats(null);
       setIsLoadingStats(false);
+      defaultPartnerIdRef.current = "";
+      setDefaultPartnerId("");
       return;
     }
 
     setIsLoading(true);
     setMultiLinkStats(null);
     try {
+      let resolvedDefaultPartnerId = defaultPartnerIdRef.current;
+      try {
+        const partners = await getPartnerPanelSizes();
+        const defaultPartner = pickDefaultPartnerFromList(partners);
+        const nextDefaultId = resolvePartnerId(defaultPartner);
+        if (nextDefaultId) {
+          resolvedDefaultPartnerId = nextDefaultId;
+          defaultPartnerIdRef.current = nextDefaultId;
+          setDefaultPartnerId(nextDefaultId);
+        }
+      } catch {
+        // Keep previously resolved default partner id when panel-sizes fails.
+      }
+
+      const annotateRows = (list) =>
+        (Array.isArray(list) ? list : []).map((row) => ({
+          ...row,
+          isDefault: isDefaultPartnerMappingRow(row, resolvedDefaultPartnerId),
+        }));
+
       const records = await listSupplierMappings({
         projectId,
         projectUrlId: resolvedProjectUrlId || undefined,
@@ -541,21 +571,17 @@ function PartnerMappingTab({
       if (!readOnly) {
         await loadMultiLinkStats();
       }
-      let nextRows = Array.isArray(records)
-        ? records
-            .map((record, index) => mapSupplierMappingToRow(record, index))
-            .filter((row) => {
-              if (!scopedPartnerId) return true;
-              if (!row.partnerId) return true;
-              return String(row.partnerId) === String(scopedPartnerId);
-            })
-        : [];
-
-      nextRows = nextRows.map((row) => ({
-        ...row,
-        isDefault:
-          Boolean(row.isDefault) || isDefaultPartnerRecord(row.record),
-      }));
+      let nextRows = annotateRows(
+        Array.isArray(records)
+          ? records
+              .map((record, index) => mapSupplierMappingToRow(record, index))
+              .filter((row) => {
+                if (!scopedPartnerId) return true;
+                if (!row.partnerId) return true;
+                return String(row.partnerId) === String(scopedPartnerId);
+              })
+          : []
+      );
 
       const createdDefault = await ensureDefaultPartnerMapping({
         existingRows: nextRows,
@@ -572,20 +598,17 @@ function PartnerMappingTab({
           projectUrlId: resolvedProjectUrlId || undefined,
           partnerId: scopedPartnerId,
         });
-        nextRows = Array.isArray(refreshed)
-          ? refreshed
-              .map((record, index) => mapSupplierMappingToRow(record, index))
-              .filter((row) => {
-                if (!scopedPartnerId) return true;
-                if (!row.partnerId) return true;
-                return String(row.partnerId) === String(scopedPartnerId);
-              })
-              .map((row) => ({
-                ...row,
-                isDefault:
-                  Boolean(row.isDefault) || isDefaultPartnerRecord(row.record),
-              }))
-          : nextRows;
+        nextRows = annotateRows(
+          Array.isArray(refreshed)
+            ? refreshed
+                .map((record, index) => mapSupplierMappingToRow(record, index))
+                .filter((row) => {
+                  if (!scopedPartnerId) return true;
+                  if (!row.partnerId) return true;
+                  return String(row.partnerId) === String(scopedPartnerId);
+                })
+            : nextRows
+        );
         if (!readOnly) {
           await loadMultiLinkStats();
         }
@@ -1073,6 +1096,40 @@ function PartnerMappingTab({
     }
   };
 
+  const handleDeleteConfirm = async () => {
+    if (!allowWrite || isDeleting || !pendingDelete?.id) return;
+
+    if (
+      isDefaultPartnerMappingRow(
+        pendingDelete,
+        defaultPartnerId || defaultPartnerIdRef.current
+      )
+    ) {
+      toastApiError({ message: "The default partner mapping cannot be deleted." });
+      setPendingDelete(null);
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const data = await deleteSupplierMapping(pendingDelete.id);
+      toastApiSuccess(data, "Partner mapping deleted successfully.");
+      setPendingDelete(null);
+      if (
+        formMode === "edit" &&
+        String(form.mappingId) === String(pendingDelete.id)
+      ) {
+        resetForm();
+      }
+      await loadMappings();
+      await loadProjectUrls();
+    } catch (error) {
+      toastApiError(error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const renderCell = (row, col) => {
     if (col === "#") return row.sno;
     if (col === "Partner URL") {
@@ -1128,6 +1185,12 @@ function PartnerMappingTab({
       );
     }
     if (col === "Action") {
+      const isDefaultMapping = isDefaultPartnerMappingRow(
+        row,
+        defaultPartnerId || defaultPartnerIdRef.current
+      );
+      const canDelete = allowWrite && !isDefaultMapping;
+
       return (
         <div className="flex items-center justify-end gap-1">
           <button
@@ -1153,6 +1216,17 @@ function PartnerMappingTab({
               title="Edit"
             >
               <Pencil size={16} />
+            </button>
+          ) : null}
+          {canDelete ? (
+            <button
+              type="button"
+              onClick={() => setPendingDelete(row)}
+              className="admin-icon-btn admin-text-subtle inline-flex h-8 w-8 items-center justify-center rounded-lg"
+              aria-label={`Delete ${row.partnerName}`}
+              title="Delete"
+            >
+              <Trash2 size={16} />
             </button>
           ) : null}
         </div>
@@ -1541,6 +1615,20 @@ function PartnerMappingTab({
         projectUrlCode={selectedProjectUrl?.projectUrlCode}
         onPartnerUrlClick={openPartnerUrl}
       />
+
+      {allowWrite ? (
+        <DeleteConfirmModal
+          isOpen={Boolean(pendingDelete)}
+          onCancel={() => {
+            if (isDeleting) return;
+            setPendingDelete(null);
+          }}
+          onConfirm={handleDeleteConfirm}
+          isDeleting={isDeleting}
+          title="Delete Partner Mapping"
+          message="Are you sure you want to delete this partner mapping?"
+        />
+      ) : null}
     </>
   );
 }

@@ -584,3 +584,17 @@ export async function updateSupplierMappingTestMode(mappingId, isTest) {
 
   return assertSuccess(data);
 }
+
+/** DELETE /api/supplier-mapping/:id */
+export async function deleteSupplierMapping(mappingId) {
+  const normalizedId = String(mappingId ?? "").trim();
+  if (!normalizedId) {
+    throw new ApiError("Mapping ID is required.", null);
+  }
+
+  const data = await apiRequest(
+    API_ROUTES.supplierMapping.delete(encodeURIComponent(normalizedId)),
+    { method: "DELETE" }
+  );
+  return assertSuccess(data);
+}

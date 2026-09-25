@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isDefaultPartnerMappingRow,
   isDefaultPartnerRecord,
   mappingRowsIncludePartner,
   pickDefaultPartnerFromList,
@@ -64,6 +65,27 @@ describe("defaultPartnerMapping", () => {
     ).toBe(true);
     expect(mappingRowsIncludePartner([{ partnerId: "9" }], "12")).toBe(false);
     expect(resolvePartnerId({ partner_id: 44 })).toBe("44");
+  });
+
+  it("identifies default mapping rows without relying on list position", () => {
+    expect(
+      isDefaultPartnerMappingRow(
+        { partnerId: "7", partnerName: "Acme", isDefault: false },
+        "7"
+      )
+    ).toBe(true);
+    expect(
+      isDefaultPartnerMappingRow({
+        partnerId: "3",
+        partnerName: "Spade Community Portal",
+      })
+    ).toBe(true);
+    expect(
+      isDefaultPartnerMappingRow(
+        { partnerId: "9", partnerName: "Other Supplier" },
+        "7"
+      )
+    ).toBe(false);
   });
 
   it("hides Add Partner when remaining quota is exhausted", () => {
