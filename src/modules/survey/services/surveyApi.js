@@ -705,6 +705,13 @@ export function buildUpdateSurveyPayload(form, selectOptions = {}, urlForm = nul
   return buildUpdateProjectApiPayload(form, selectOptions, urlForm);
 }
 
+/** Query value for GET /api/projects/list?status=active|inactive. Empty when unset. */
+export function toProjectListStatusQuery(status) {
+  const key = String(status ?? "").trim().toLowerCase();
+  if (key === "active" || key === "inactive") return key;
+  return "";
+}
+
 /** GET /api/projects/list */
 export async function getRecords({
   page,
@@ -712,6 +719,7 @@ export async function getRecords({
   search,
   groupProjectId,
   hasUrl,
+  status,
 } = {}) {
   const extra = {};
   if (String(groupProjectId ?? "").trim()) {
@@ -720,6 +728,8 @@ export async function getRecords({
   if (hasUrl === true || hasUrl === "true" || hasUrl === 1 || hasUrl === "1") {
     extra.hasUrl = "true";
   }
+  const statusQuery = toProjectListStatusQuery(status);
+  if (statusQuery) extra.status = statusQuery;
   const data = await apiRequest(
     appendListQuery(API_ROUTES.projects.list, {
       page,

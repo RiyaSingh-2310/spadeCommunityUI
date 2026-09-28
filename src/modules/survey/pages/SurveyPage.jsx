@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmModal from "../../../components/admin/DeleteConfirmModal";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
@@ -9,6 +9,7 @@ import { useNameColumnSort } from "../../shared/hooks/useNameColumnSort";
 import { DEFAULT_PAGE_SIZE } from "../../shared/utils/pagination";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import { cloneSurvey, getRecords, updateSurveyStatus } from "../services/surveyApi";
+import ProjectListStatusFilter from "../components/ProjectListStatusFilter";
 import ProjectUrlInfoModal from "../components/ProjectUrlInfoModal";
 import PartnerProjectsPage from "./PartnerProjectsPage";
 import { isPartnerLoginRole } from "../../../services/auth/loginRole";
@@ -16,12 +17,25 @@ import { isPartnerLoginRole } from "../../../services/auth/loginRole";
 const CLONE_CONFIRM_CLASS =
   "admin-btn-primary flex h-10 cursor-pointer items-center justify-center gap-2 px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60";
 
+function projectListEmptyMessage(status) {
+  return String(status).toLowerCase() === "inactive"
+    ? "No inactive projects found."
+    : "No active projects found.";
+}
+
 function AdminSurveyListingPage({ isDarkMode }) {
   const navigate = useNavigate();
   useFlashMessage();
+  const [statusFilter, setStatusFilter] = useState("active");
+  const [awaitingStatusResults, setAwaitingStatusResults] = useState(false);
+  const statusFetchStartedRef = useRef(false);
   const [cloneTarget, setCloneTarget] = useState(null);
   const [isCloning, setIsCloning] = useState(false);
   const [infoTarget, setInfoTarget] = useState(null);
+  const fetchProjects = useCallback(
+    (params) => getRecords({ ...params, status: statusFilter }),
+    [statusFilter]
+  );
   const {
     rows,
     setRows,
@@ -35,8 +49,26 @@ function AdminSurveyListingPage({ isDarkMode }) {
     handlePageChange,
     handlePageSizeChange,
     refresh: fetchSurveys,
-  } = useApiListing({ fetchFn: getRecords, initialPageSize: DEFAULT_PAGE_SIZE });
+  } = useApiListing({ fetchFn: fetchProjects, initialPageSize: DEFAULT_PAGE_SIZE });
   useListingRefresh(fetchSurveys);
+
+  useEffect(() => {
+    if (isLoading) {
+      statusFetchStartedRef.current = true;
+      return;
+    }
+    if (!statusFetchStartedRef.current) return;
+    statusFetchStartedRef.current = false;
+    setAwaitingStatusResults(false);
+  }, [isLoading]);
+
+  const handleStatusFilterChange = (value) => {
+    if (value === statusFilter) return;
+    setAwaitingStatusResults(true);
+    setRows([]);
+    setStatusFilter(value);
+    handlePageChange(1);
+  };
   const { sortedRows, sortableColumns, columnSort, onColumnSort } = useNameColumnSort({
     rows,
     columnLabel: "Project Name",
@@ -64,6 +96,7 @@ function AdminSurveyListingPage({ isDarkMode }) {
           ? "Project activated successfully."
           : "Project deactivated successfully."
       );
+      await fetchSurveys();
     } catch (error) {
       toastApiError(error);
       setRows((prev) =>
@@ -101,6 +134,12 @@ function AdminSurveyListingPage({ isDarkMode }) {
         title="Projects"
         subtitle="Manage project records here."
         searchPlaceholder="Search projects..."
+        toolbarEnd={
+          <ProjectListStatusFilter
+            value={statusFilter}
+            onChange={handleStatusFilterChange}
+          />
+        }
         actionLabel="Add Project"
         onActionClick={() => navigate("/survey/add")}
         columns={[
@@ -164,10 +203,10 @@ function AdminSurveyListingPage({ isDarkMode }) {
         }}
         onStatusToggle={handleStatusToggle}
         permissionModule="survey"
-        isLoading={isLoading}
+        isLoading={isLoading || awaitingStatusResults}
         errorMessage={listError}
         onRetry={fetchSurveys}
-        emptyMessage="No Data Available"
+        emptyMessage={projectListEmptyMessage(statusFilter)}
         onSearch={handleSearch}
         totalRecords={totalRecords}
         paginationTotalPages={totalPages}
