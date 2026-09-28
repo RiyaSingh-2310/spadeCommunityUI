@@ -1,14 +1,10 @@
+import { useMemo } from "react";
+import { toLanguageFilterOptions } from "../../../services/languages/languagesApi";
+import { useLanguages } from "../../shared/hooks/useLanguages";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { GROUP_STATUS_FILTER_OPTIONS } from "../../survey/utils/reportFilterConstants";
 
 export const QUESTIONNAIRE_GROUP_STATUS_FILTERS = GROUP_STATUS_FILTER_OPTIONS;
-
-export const QUESTIONNAIRE_GROUP_LANGUAGE_FILTERS = [
-  { value: "all", label: "All languages" },
-  { value: "english", label: "English" },
-  { value: "dutch", label: "Dutch" },
-  { value: "korean", label: "Korean" },
-];
 
 const FILTER_LABEL_CLASS = "admin-text mb-1.5 block text-sm font-semibold leading-5";
 
@@ -20,15 +16,11 @@ function QuestionnaireGroupListFilters({
   extraLanguages = [],
   showLanguage = true,
 }) {
-  const languageOptions = [...QUESTIONNAIRE_GROUP_LANGUAGE_FILTERS];
-  extraLanguages.forEach((slug) => {
-    const value = String(slug ?? "").trim().toLowerCase();
-    if (!value || languageOptions.some((option) => option.value === value)) return;
-    languageOptions.push({
-      value,
-      label: value.charAt(0).toUpperCase() + value.slice(1),
-    });
-  });
+  const { languages, isLoading } = useLanguages();
+  const languageOptions = useMemo(
+    () => toLanguageFilterOptions(languages, { extra: extraLanguages, selected: language }),
+    [languages, extraLanguages, language]
+  );
 
   const selectClass = getAdminInputClass();
 
@@ -63,6 +55,7 @@ function QuestionnaireGroupListFilters({
           value={language}
           onChange={(event) => onLanguageChange?.(event.target.value)}
           aria-label="Filter by language"
+          disabled={isLoading}
         >
           {languageOptions.map((option) => (
             <option key={option.value} value={option.value}>

@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  LANGUAGES,
   languageSelectOptions,
   resolveLanguageSelectValue,
 } from "./profilingQuestionsStore";
+
+const API_LANGUAGES = ["Arabic", "English", "French", "Hindi", "Spanish"];
 
 describe("resolveLanguageSelectValue", () => {
   it("maps API slugs and codes onto catalog option values", () => {
@@ -27,11 +28,13 @@ describe("resolveLanguageSelectValue", () => {
 
 describe("languageSelectOptions", () => {
   it("keeps catalog values unchanged when the selection already matches", () => {
-    expect(languageSelectOptions("English")).toEqual(LANGUAGES);
+    expect(languageSelectOptions("English", API_LANGUAGES)).toEqual(API_LANGUAGES);
   });
 
-  it("injects an API language that is not in the static catalog", () => {
-    expect(languageSelectOptions("Hindi")[0]).toBe("Hindi");
-    expect(languageSelectOptions("Hindi")).toContain("English");
+  it("injects a stored language that is not in the API list", () => {
+    expect(languageSelectOptions("Portuguese", API_LANGUAGES)).toEqual([
+      "Portuguese",
+      ...API_LANGUAGES,
+    ]);
   });
 });

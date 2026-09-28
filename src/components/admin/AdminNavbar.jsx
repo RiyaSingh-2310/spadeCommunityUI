@@ -85,7 +85,7 @@ function AdminNavbar({ isDarkMode, onToggleTheme, isMobile = false, onOpenMobile
         className={
           isMobile
             ? `${iconButtonClass} !p-2`
-            : "admin-header-surface flex cursor-pointer items-center gap-2 rounded-full border px-2.5 py-1.5 transition-all duration-200 focus:outline-none"
+            : "admin-dropdown-trigger admin-header-surface flex cursor-pointer items-center gap-2 rounded-full border py-1.5 pl-2.5 transition-all duration-200 focus:outline-none"
         }
         aria-label="Open profile menu"
         aria-expanded={isDropdownOpen}

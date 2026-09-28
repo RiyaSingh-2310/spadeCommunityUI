@@ -101,7 +101,7 @@ function TableStatusSelect({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label={ariaLabel}
-        className={`${triggerClass} ${isOpen ? "admin-table-status-select-trigger-open" : ""}`}
+        className={`${triggerClass} admin-dropdown-trigger ${isOpen ? "admin-table-status-select-trigger-open" : ""}`}
       >
         <span className="admin-table-status-select-label">{selectedLabel}</span>
         <ChevronDown

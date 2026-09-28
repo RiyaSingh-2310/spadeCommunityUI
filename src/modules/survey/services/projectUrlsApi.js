@@ -6,13 +6,11 @@
 import { API_ROUTES } from "../../../config/api";
 import { apiRequest } from "../../../services/api/client";
 import { ApiError } from "../../../services/api/ApiError";
-import {
-  PROJECT_URL_COUNTRY_OPTIONS,
-  PROJECT_URL_LANGUAGE_OPTIONS,
-  PROJECT_URL_STATUS_OPTIONS,
-} from "../data/projectUrlOptions";
+import { PROJECT_URL_STATUS_OPTIONS } from "../data/projectUrlOptions";
 import { getRecords as getQuestionnaireGroups } from "../../../services/questionnaire-group/questionnaireGroupApi";
-import { PRESCREEN_LANGUAGES } from "../../prescreen/data/prescreenLanguages";
+import { getCachedLanguages } from "../../../services/languages/languagesApi";
+import { resolveLanguageSelectValue } from "../../user-screening/data/profilingQuestionsStore";
+import { getCachedCountries } from "../../../services/countries/countriesApi";
 import { parseUtcToIst } from "../../shared/utils/dateTime";
 import { MAX_API_LIST_LIMIT } from "../../shared/utils/listQueryParams";
 import {
@@ -121,12 +119,7 @@ function resolveUrlRecordId(urlInfo) {
   return resolveProjectUrlRecordId(urlInfo);
 }
 
-export {
-  PROJECT_URL_COUNTRY_OPTIONS,
-  PROJECT_URL_LANGUAGE_OPTIONS,
-  PROJECT_URL_STATUS_OPTIONS,
-  PRESCREEN_LANGUAGES as PROJECT_URL_PRESCREEN_LANGUAGES,
-};
+export { PROJECT_URL_STATUS_OPTIONS };
 
 function assertSuccess(data) {
   if (data?.success !== true) {
@@ -340,9 +333,7 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
       ""
   ).trim();
   const matchedLanguage =
-    PRESCREEN_LANGUAGES.find(
-      (lang) => lang.toLowerCase() === rawLanguage.toLowerCase()
-    ) || rawLanguage;
+    resolveLanguageSelectValue(rawLanguage, getCachedLanguages()) || rawLanguage;
 
   const rawStatus = String(
     pickUrlInfoField(urlInfo, [
@@ -362,9 +353,9 @@ export function mapApiUrlInfoToForm(urlInfo, projectId = "", projectRecord = nul
       ""
   ).trim();
   const matchedCountry =
-    PROJECT_URL_COUNTRY_OPTIONS.find(
-      (country) => country.toLowerCase() === rawCountry.toLowerCase()
-    ) || rawCountry;
+    getCachedCountries().find(
+      (country) => String(country?.name ?? "").toLowerCase() === rawCountry.toLowerCase()
+    )?.name || rawCountry;
 
   const preScreenerId = pickUrlInfoField(urlInfo, [
     "PreScreenid",

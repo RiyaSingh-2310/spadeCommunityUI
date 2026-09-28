@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GripVertical, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
-import SearchableSelect from "../../../components/admin/SearchableSelect";
+import LanguageSelect from "../../../components/admin/LanguageSelect";
 import TableCard from "../../../components/admin/TableCard";
 import toast from "../../../services/toast/toast";
 import { resolveApiToastMessage, toastApiError } from "../../../services/toast/apiToast";
@@ -17,7 +17,6 @@ import {
   SURVEY_GROUP_TITLE_DUPLICATE_MESSAGE,
 } from "../utils/surveyGroupTitle";
 import { getQuestionnaireOptionsForLanguage } from "../../../services/question-library/questionLibraryApi";
-import { PRESCREEN_LANGUAGES } from "../data/prescreenLanguages";
 import { useAdminFormAccess } from "../../permissions/FormAccessContext";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
@@ -581,15 +580,11 @@ function AddPrescreenGroupPage({ isDarkMode }) {
                 Language
                 <span className="text-[var(--admin-danger-text)]"> *</span>
               </label>
-              <SearchableSelect
+              <LanguageSelect
                 inputClass={inputClass}
                 value={form.language}
                 onChange={handleLanguageChange}
                 onBlur={() => touch("language")}
-                options={PRESCREEN_LANGUAGES}
-                placeholder="Select Language"
-                searchPlaceholder="Search language..."
-                aria-label="Select language"
                 disabled={controlDisabled || isEdit}
               />
               {showError("language") && (

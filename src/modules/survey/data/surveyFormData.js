@@ -4,8 +4,6 @@ export const PROJECT_LINK_TYPES = ["Single Link", "Multi Link"];
 
 export const CURRENCY_OPTIONS = ["USD", "INR", "EUR", "GBP", "AUD", "CAD", "SGD"];
 
-export const LANGUAGE_OPTIONS = ["English", "Arabic", "German", "French", "Spanish"];
-
 export const SAMPLE_CSV_CONTENT = `project_name,live_link,test_link
 Brand Tracker Q2,https://spadecommunity.com/?uid=XXXX,https://spadecommunity.com/?uid=XXXX
 CX Pulse Study,https://spadecommunity.com/?uid=XXXX,https://spadecommunity.com/?uid=XXXX`;

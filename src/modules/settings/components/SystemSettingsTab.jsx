@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import FormField from "../../../components/admin/FormField";
+import LanguageSelect from "../../../components/admin/LanguageSelect";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
@@ -17,7 +18,6 @@ import {
 } from "../services/systemSettingsApi";
 import PreferenceToggle from "./PreferenceToggle";
 
-const LANGUAGE_OPTIONS = ["English", "Spanish", "French", "German", "Hindi"];
 const DATE_FORMAT_OPTIONS = ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"];
 const TIME_FORMAT_OPTIONS = ["12-hour", "24-hour"];
 
@@ -122,13 +122,11 @@ function SystemSettingsTab({ isDarkMode }) {
             />
           </FormField>
           <FormField label="Default Language">
-            <SearchableSelect
+            <LanguageSelect
               inputClass={inputClass}
               value={form.defaultLanguage}
               onChange={(value) => setField("defaultLanguage", value)}
-              options={LANGUAGE_OPTIONS}
               placeholder="Select language"
-              searchPlaceholder="Search language..."
               aria-label="Default language"
             />
           </FormField>

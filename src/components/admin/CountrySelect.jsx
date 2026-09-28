@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { getCountriesOrFallback } from "../../services/countries/countriesApi";
 import { useCountries } from "../../modules/shared/hooks/useCountries";
 import { mapCountryToSelectOption } from "../../modules/shared/utils/dropdownSearch";
 import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
@@ -17,9 +16,15 @@ function CountrySelect({
   const { countries, isLoading } = useCountries();
 
   const options = useMemo(() => {
-    const source = countries.length > 0 ? countries : getCountriesOrFallback();
-    return source.map((country) => mapCountryToSelectOption(country));
-  }, [countries]);
+    const mapped = countries.map((country) => mapCountryToSelectOption(country));
+    const selected = String(value ?? "").trim();
+    if (!selected) return mapped;
+    const exists = mapped.some(
+      (option) => String(option.value ?? "").trim().toLowerCase() === selected.toLowerCase()
+    );
+    if (exists) return mapped;
+    return [{ value: selected, label: selected }, ...mapped];
+  }, [countries, value]);
 
   return (
     <SearchableSelect

@@ -65,6 +65,9 @@ export const API_ROUTES = {
   countries: {
     list: "/api/countries/list",
   },
+  languages: {
+    list: "/api/languages",
+  },
   partners: {
     list: "/api/partner/list",
     panelSizes: "/api/partner/panel-sizes",

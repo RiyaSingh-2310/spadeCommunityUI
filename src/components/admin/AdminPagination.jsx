@@ -34,7 +34,7 @@ function AdminPagination({
     "cursor-not-allowed opacity-45 border border-[var(--admin-input-border)] bg-[var(--admin-surface-bg)] text-[var(--admin-subtle-foreground)]";
 
   const selectClass =
-    "h-9 appearance-none rounded-full border border-[var(--admin-input-border)] bg-[var(--admin-surface-bg)] pl-3 pr-8 text-sm font-semibold text-[var(--admin-foreground)] outline-none focus:border-[var(--admin-primary-color)] focus:shadow-[0_0_0_3px_var(--admin-input-focus-ring)]";
+    "h-9 rounded-full border border-[var(--admin-input-border)] bg-[var(--admin-surface-bg)] pl-3 text-sm font-semibold text-[var(--admin-foreground)] outline-none focus:border-[var(--admin-primary-color)] focus:shadow-[0_0_0_3px_var(--admin-input-focus-ring)]";
 
   const handlePageSizeChange = (nextValue) => {
     const nextSize = Number(nextValue);

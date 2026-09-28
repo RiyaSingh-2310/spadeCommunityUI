@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
+import LanguageSelect from "../../../components/admin/LanguageSelect";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import {
@@ -28,8 +29,6 @@ import {
 } from "../../../services/screening/screeningQuestionsApi";
 import {
   createEmptyQuestionItem,
-  LANGUAGES,
-  languageSelectOptions,
   needsQuestionOptions,
   normalizeQuestionTypeLabel,
   optionsArrayToTextarea,
@@ -156,11 +155,6 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
   const [touched, setTouched] = useState({});
   const inputClass = getAdminInputClass();
   const textareaClass = getAdminTextareaClass("min-h-[180px]");
-  const languageOptions = useMemo(
-    () => languageSelectOptions(form.language, LANGUAGES),
-    [form.language]
-  );
-
   useEffect(() => {
     const normalizedId = decodeQuestionId(id);
     if (!isEdit || !normalizedId) {
@@ -341,15 +335,11 @@ function ProfilingQuestionFormPage({ isDarkMode, mode = "add" }) {
       <TableCard title="Profiling Question Details" isDarkMode={isDarkMode}>
         <form className="admin-form-root min-w-0 space-y-6" onSubmit={(event) => event.preventDefault()} noValidate>
           <FormField label="Language" required error={showError("language")}>
-            <SearchableSelect
+            <LanguageSelect
               inputClass={inputClass}
               value={form.language}
               onChange={(language) => setForm((prev) => ({ ...prev, language }))}
               onBlur={() => touchField("language")}
-              options={languageOptions}
-              placeholder="Select Language"
-              searchPlaceholder="Search language..."
-              aria-label="Select language"
             />
           </FormField>
 

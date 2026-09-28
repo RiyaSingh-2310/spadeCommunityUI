@@ -3,9 +3,9 @@ import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
+import LanguageSelect from "../../../components/admin/LanguageSelect";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
-import { PRESCREEN_LANGUAGES } from "../data/prescreenLanguages";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   getRecord,
@@ -282,14 +282,10 @@ function AddPrescreenPage({ isDarkMode }) {
         <form className="admin-form-root space-y-6" onSubmit={handleSubmit} noValidate>
           <div className="admin-form-grid-2">
             <FormField label="Language" required>
-              <SearchableSelect
+              <LanguageSelect
                 inputClass={inputClass}
                 value={form.language}
                 onChange={(language) => setField("language", language)}
-                options={PRESCREEN_LANGUAGES}
-                placeholder="Select Language"
-                searchPlaceholder="Search language..."
-                aria-label="Select language"
               />
             </FormField>
             <FormField label="Question Title" required>

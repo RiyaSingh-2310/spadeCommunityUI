@@ -48,6 +48,8 @@ body {
   --admin-input-border: #d8e3ef;
   --admin-input-radius: 0.75rem; /* matches Tailwind rounded-xl */
   --admin-input-focus-ring: rgba(16, 169, 80, 0.28);
+  --admin-select-chevron-gap: 1rem;
+  --admin-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238b98ab' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   --admin-skeleton-bg: #e6edf5;
   --admin-header-surface: #ffffff;
   --admin-header-surface-border: #dce6f2;
@@ -120,6 +122,8 @@ body {
   --admin-input-border: #344662;
   --admin-input-radius: 0.75rem; /* matches Tailwind rounded-xl */
   --admin-input-focus-ring: rgba(40, 197, 109, 0.35);
+  --admin-select-chevron-gap: 1rem;
+  --admin-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238ea5c2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   --admin-skeleton-bg: #263850;
   --admin-header-surface: #121d2f;
   --admin-header-surface-border: #32445f;
@@ -510,6 +514,23 @@ button.admin-table-ellipsis-text {
   border-color: color-mix(in srgb, var(--admin-primary-color) 35%, var(--admin-input-border));
 }
 
+/* One chevron inset for every dropdown trigger. Does not change height or type. */
+.admin-dropdown-trigger {
+  padding-right: var(--admin-select-chevron-gap, 1rem) !important;
+}
+
+.admin-shell select:not(.pq-select),
+.srp-portal select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 2.5rem !important;
+  background-image: var(--admin-select-chevron);
+  background-repeat: no-repeat;
+  background-position: right var(--admin-select-chevron-gap, 1rem) center;
+  background-size: 1rem 1rem;
+}
+
 /* Native date/time widgets: hide OS chrome so themed pickers are used instead. */
 .admin-shell input[type="date"],
 .admin-shell input[type="time"],
@@ -647,7 +668,7 @@ button.admin-table-ellipsis-text {
 .admin-table-status-select-trigger {
   gap: 0.25rem;
   min-height: 30px;
-  padding: 4px 8px;
+  padding: 4px 1rem 4px 8px;
   border-radius: 6px;
   border: 1px solid var(--admin-input-border);
   background-color: var(--admin-input-bg);

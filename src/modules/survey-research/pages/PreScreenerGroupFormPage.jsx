@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { mergeLanguageNames } from "../../../services/languages/languagesApi";
+import { useLanguages } from "../../shared/hooks/useLanguages";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
 import { SURVEY_RESEARCH_API_UNAVAILABLE_MESSAGE } from "../data/surveyResearchData";
@@ -16,6 +18,8 @@ function PreScreenerGroupFormPage() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const [form, setForm] = useState(EMPTY_FORM);
+  const { languages } = useLanguages();
+  const languageOptions = mergeLanguageNames(languages, { selected: form.language });
   const isSaving = false;
 
   const updateField = (key, value) => {
@@ -73,10 +77,9 @@ function PreScreenerGroupFormPage() {
               className="mt-1.5 w-full rounded-xl border px-3 py-2.5 text-sm"
               style={{ borderColor: "var(--srp-border)", background: "var(--srp-surface)" }}
             >
-              <option>English</option>
-              <option>German</option>
-              <option>French</option>
-              <option>Spanish</option>
+              {languageOptions.map((language) => (
+                <option key={language}>{language}</option>
+              ))}
             </select>
           </label>
           <label className="block">

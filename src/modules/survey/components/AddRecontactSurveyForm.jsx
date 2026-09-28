@@ -5,6 +5,7 @@ import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
 import FormRadioGroup from "../../../components/admin/FormRadioGroup";
 import NumericInput from "../../../components/admin/NumericInput";
+import LanguageSelect from "../../../components/admin/LanguageSelect";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { fieldDisabled, useFormAccess } from "../../permissions/FormAccessContext";
@@ -21,7 +22,6 @@ import { isFormValid, limitTextInput, NAME_FIELD_MAX_LENGTH } from "../../shared
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   CURRENCY_OPTIONS,
-  LANGUAGE_OPTIONS,
   PROJECT_LINK_TYPES,
 } from "../data/surveyFormData";
 import {
@@ -457,18 +457,14 @@ function AddRecontactSurveyForm({
         {form.filters.preScreen ? (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <FormField label="Select Language" required error={showError("language")}>
-              <SearchableSelect
+              <LanguageSelect
                 inputClass={selectClass}
                 value={form.language}
                 onChange={(next) =>
                   setForm((prev) => ({ ...prev, language: next, surveyGroup: "" }))
                 }
                 onBlur={() => touch("language")}
-                options={LANGUAGE_OPTIONS}
-                placeholder="Select Language"
                 disabled={fieldDisabled(readOnly, isSubmitting)}
-                searchPlaceholder="Search language..."
-                aria-label="Select language"
               />
             </FormField>
             <FormField label="Select Survey Group">

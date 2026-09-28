@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
-import SearchableSelect from "../../../components/admin/SearchableSelect";
+import LanguageSelect from "../../../components/admin/LanguageSelect";
 import RichTextEditor from "../../../components/admin/RichTextEditor";
 import TableCard from "../../../components/admin/TableCard";
 import { useFormAccess } from "../../permissions/FormAccessContext";
@@ -14,6 +14,7 @@ import {
   isFormValidForFields,
 } from "../../shared/utils/validation";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
+import { getLanguages, mergeLanguageNames } from "../../../services/languages/languagesApi";
 import { createSurveySettingsForm } from "../data/surveySettingsMock";
 import { resetSurveySettingsViewAfterSave } from "../utils/resetSurveySettingsView";
 import {
@@ -74,8 +75,8 @@ function getSurveySettingsRedirectEditorHeight() {
 }
 
 /**
- * Survey Settings — languages from GET /api/survey-settings/list,
- * save via PUT /api/survey-settings/:id.
+ * Survey Settings — language dropdown uses the complete language catalog.
+ * Redirect content is loaded and saved through /api/survey-settings.
  */
 function SurveySettingsPage({ isDarkMode }) {
   const navigate = useNavigate();
@@ -84,7 +85,6 @@ function SurveySettingsPage({ isDarkMode }) {
     createSurveySettingsForm({ language: "" })
   );
   const [settingsItems, setSettingsItems] = useState([]);
-  const [languageOptions, setLanguageOptions] = useState([]);
   const [isLoadingLanguages, setIsLoadingLanguages] = useState(true);
   const [languagesFailed, setLanguagesFailed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,15 +99,26 @@ function SurveySettingsPage({ isDarkMode }) {
     setIsLoadingLanguages(true);
     setLanguagesFailed(false);
     try {
-      const items = await listAllSurveySettings();
-      const options = mapSurveySettingsToLanguageOptions(items);
+      const [apiLanguages, items] = await Promise.all([
+        getLanguages().catch(() => []),
+        listAllSurveySettings(),
+      ]);
+      const catalog = mergeLanguageNames(apiLanguages, {
+        extra: items.map((item) => item.language),
+      });
+      const settingsOptions = mapSurveySettingsToLanguageOptions(items);
       setSettingsItems(items);
-      setLanguageOptions(options);
+
+      const matchCatalog = (value) =>
+        catalog.find(
+          (name) => name.toLowerCase() === String(value ?? "").trim().toLowerCase()
+        ) ?? "";
 
       const pickLanguage = (current) => {
-        const value = String(current ?? "").trim();
-        const stillValid = options.some((option) => option.value === value);
-        return stillValid ? value : options[0]?.value ?? "";
+        const currentMatch = matchCatalog(current);
+        if (currentMatch) return currentMatch;
+        const firstSettings = settingsOptions[0]?.value ?? "";
+        return matchCatalog(firstSettings) || firstSettings || catalog[0] || "";
       };
 
       setForm((prev) => applyLanguageSettings(prev, pickLanguage(prev.language), items));
@@ -117,7 +128,6 @@ function SurveySettingsPage({ isDarkMode }) {
     } catch (error) {
       toastApiError(error);
       setSettingsItems([]);
-      setLanguageOptions([]);
       setLanguagesFailed(true);
     } finally {
       setIsLoadingLanguages(false);
@@ -238,23 +248,13 @@ function SurveySettingsPage({ isDarkMode }) {
             required
             error={showError("language")}
           >
-            <SearchableSelect
+            <LanguageSelect
               inputClass={inputClass}
               value={form.language}
               onChange={onLanguageChange}
               onBlur={() => touch("language")}
-              options={languageOptions}
-              placeholder="Select Language"
               disabled={readOnly || isLoadingLanguages}
               loading={isLoadingLanguages}
-              loadingLabel="Loading languages..."
-              emptyMessage={
-                languagesFailed
-                  ? "Unable to load languages"
-                  : "No languages found"
-              }
-              searchPlaceholder="Search language..."
-              aria-label="Select language"
             />
             {languagesFailed ? (
               <button

@@ -99,8 +99,6 @@ export function normalizeOptionsForQuestionType(options, questionType) {
   return normalized.length > 0 ? normalized : [createEmptyOption(type)];
 }
 
-export const LANGUAGES = ["English", "Arabic", "German", "French", "Spanish"];
-
 const LANGUAGE_CODE_ALIASES = {
   en: "English",
   eng: "English",
@@ -108,6 +106,14 @@ const LANGUAGE_CODE_ALIASES = {
   ar: "Arabic",
   ara: "Arabic",
   arabic: "Arabic",
+  zh: "Chinese",
+  chi: "Chinese",
+  zho: "Chinese",
+  chinese: "Chinese",
+  nl: "Dutch",
+  dut: "Dutch",
+  nld: "Dutch",
+  dutch: "Dutch",
   de: "German",
   deu: "German",
   ger: "German",
@@ -122,6 +128,18 @@ const LANGUAGE_CODE_ALIASES = {
   hi: "Hindi",
   hin: "Hindi",
   hindi: "Hindi",
+  it: "Italian",
+  ita: "Italian",
+  italian: "Italian",
+  ja: "Japanese",
+  jpn: "Japanese",
+  japanese: "Japanese",
+  ko: "Korean",
+  kor: "Korean",
+  korean: "Korean",
+  ru: "Russian",
+  rus: "Russian",
+  russian: "Russian",
 };
 
 /** Pull a language name/code/id out of a string or API object. */
@@ -146,11 +164,10 @@ export function extractLanguageRaw(language) {
 }
 
 /**
- * Map an API language value onto a SearchableSelect option value.
- * Matches catalog entries case-insensitively and known ISO/code aliases.
- * Unknown languages are returned as display text so they can be injected as options.
+ * Map a stored language value onto a dropdown option value.
+ * Matches the languages API list case-insensitively and known ISO/code aliases.
  */
-export function resolveLanguageSelectValue(language, catalog = LANGUAGES) {
+export function resolveLanguageSelectValue(language, catalog = []) {
   const raw = extractLanguageRaw(language);
   if (!raw) return "";
 
@@ -174,8 +191,8 @@ export function resolveLanguageSelectValue(language, catalog = LANGUAGES) {
   return raw;
 }
 
-/** Dropdown options including an API language that is not in the static catalog. */
-export function languageSelectOptions(selected, catalog = LANGUAGES) {
+/** Dropdown options, including a stored language that is not in the API list. */
+export function languageSelectOptions(selected, catalog = []) {
   const value = String(selected ?? "").trim();
   const options = Array.isArray(catalog) ? [...catalog] : [];
   if (!value) return options;

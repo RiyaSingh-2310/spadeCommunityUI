@@ -6,6 +6,7 @@ import DecimalInput from "../../../components/admin/DecimalInput";
 import FormField from "../../../components/admin/FormField";
 import FormRadioGroup from "../../../components/admin/FormRadioGroup";
 import NumericInput from "../../../components/admin/NumericInput";
+import CountrySelect from "../../../components/admin/CountrySelect";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import ModuleListingPage from "../../shared/components/ModuleListingPage";
@@ -29,11 +30,10 @@ import {
   mapApiUrlInfoToForm,
   mapProjectUrlToForm,
   normalizeProjectLinkType,
-  PROJECT_URL_COUNTRY_OPTIONS,
-  PROJECT_URL_PRESCREEN_LANGUAGES,
   PROJECT_URL_STATUS_OPTIONS,
   updateProjectUrls,
 } from "../services/projectUrlsApi";
+import LanguageSelect from "../../../components/admin/LanguageSelect";
 import { PROJECT_LINK_TYPES } from "../data/surveyFormData";
 import ProjectMultiUrlCsvUploadSection from "./ProjectMultiUrlCsvUploadSection";
 import {
@@ -608,32 +608,6 @@ function ProjectUrlsTab({
     return "Select Pre-Screen Group";
   }, [form.language, isLoadingPreScreeners, preScreenerOptions.length]);
 
-  const countryOptions = useMemo(() => {
-    const selected = String(form.country ?? "").trim();
-    if (!selected) return PROJECT_URL_COUNTRY_OPTIONS;
-    const exists = PROJECT_URL_COUNTRY_OPTIONS.some(
-      (option) =>
-        String(typeof option === "string" ? option : option?.value ?? "")
-          .trim()
-          .toLowerCase() === selected.toLowerCase()
-    );
-    return exists ? PROJECT_URL_COUNTRY_OPTIONS : [selected, ...PROJECT_URL_COUNTRY_OPTIONS];
-  }, [form.country]);
-
-  const languageOptions = useMemo(() => {
-    const selected = String(form.language ?? "").trim();
-    if (!selected) return PROJECT_URL_PRESCREEN_LANGUAGES;
-    const exists = PROJECT_URL_PRESCREEN_LANGUAGES.some(
-      (option) =>
-        String(typeof option === "string" ? option : option?.value ?? "")
-          .trim()
-          .toLowerCase() === selected.toLowerCase()
-    );
-    return exists
-      ? PROJECT_URL_PRESCREEN_LANGUAGES
-      : [selected, ...PROJECT_URL_PRESCREEN_LANGUAGES];
-  }, [form.language]);
-
   const mergedPreScreenerOptions = useMemo(() => {
     const selectedId = String(form.preScreenerId || form.surveyGroupId || "").trim();
     if (!selectedId) return preScreenerOptions;
@@ -1183,25 +1157,19 @@ function ProjectUrlsTab({
             />
           </FormField>
           <FormField label="Country">
-            <SearchableSelect
+            <CountrySelect
               inputClass={inputClass}
               value={form.country}
               onChange={(value) => setField("country", value)}
-              options={countryOptions}
               placeholder="Select Country"
-              searchPlaceholder="Search country..."
-              aria-label="Country"
               disabled={!canWrite}
             />
           </FormField>
           <FormField label="Language">
-            <SearchableSelect
+            <LanguageSelect
               inputClass={inputClass}
               value={form.language}
               onChange={handleLanguageChange}
-              options={languageOptions}
-              placeholder="Select Language"
-              searchPlaceholder="Search language..."
               aria-label="Language"
               disabled={!canWrite}
             />

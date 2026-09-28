@@ -18,14 +18,6 @@ const MOCK_REDIRECT_HTML = `
 </div>
 `.trim();
 
-export const SURVEY_SETTINGS_LANGUAGE_OPTIONS = [
-  "English",
-  "Spanish",
-  "French",
-  "German",
-  "Hindi",
-];
-
 export const DEFAULT_SURVEY_SETTINGS_FORM = {
   language: "English",
   completeRedirect: MOCK_REDIRECT_HTML,

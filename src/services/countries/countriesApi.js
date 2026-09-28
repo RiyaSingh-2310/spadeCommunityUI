@@ -1,6 +1,5 @@
 import { API_ROUTES } from "../../config/api";
 import { COUNTRY_NAME_TO_ISO } from "../../modules/shared/data/countryIsoByName";
-import { PHONE_COUNTRIES_FALLBACK } from "../../modules/shared/data/phoneCountries";
 import { apiRequest } from "../api/client";
 import { ApiError } from "../api/ApiError";
 
@@ -111,56 +110,27 @@ function extractCountriesList(data) {
   return [];
 }
 
-function buildFallbackCountries() {
-  const dialByCode = Object.fromEntries(
-    PHONE_COUNTRIES_FALLBACK.map((country) => [country.code, country.dialCode])
-  );
-  const nationalByCode = Object.fromEntries(
-    PHONE_COUNTRIES_FALLBACK.map((country) => [country.code, country.nationalLength])
-  );
-  const byCode = new Map();
-
-  for (const [name, code] of Object.entries(COUNTRY_NAME_TO_ISO)) {
-    const trimmedName = String(name ?? "").trim();
-    const isoCode = String(code ?? "").trim().toUpperCase();
-    if (!trimmedName || !isoCode) continue;
-
-    const existing = byCode.get(isoCode);
-    if (!existing || trimmedName.length > existing.name.length) {
-      byCode.set(isoCode, { name: trimmedName, code: isoCode });
-    }
-  }
-
-  return [...byCode.values()]
-    .map(({ name, code }) =>
-      normalizeCountry({
-        name,
-        calling_code: dialByCode[code]?.replace(/^\+/, "") ?? "",
-        nationalLength: nationalByCode[code],
-      })
-    )
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
-
 function setCountriesCache(countries) {
   const normalized = (Array.isArray(countries) ? countries : [])
     .map((country) => (country?.name ? country : normalizeCountry(country)))
     .filter((country) => country.name);
 
-  cachedCountries = normalized.length > 0 ? normalized : buildFallbackCountries();
+  cachedCountries = normalized;
   buildRegistry(cachedCountries);
   return cachedCountries;
 }
 
 /** Whether the countries list has been loaded and cached. */
 export function isCountriesCacheReady() {
-  return Boolean(cachedCountries?.length);
+  return Array.isArray(cachedCountries);
 }
 
-/** Synchronous countries list for dropdowns (cached API data or local fallback). */
-export function getCountriesOrFallback() {
-  if (cachedCountries?.length) return cachedCountries;
-  return buildFallbackCountries();
+/** Test helper. */
+export function clearCountriesCache() {
+  cachedCountries = null;
+  inflightRequest = null;
+  cachedByName = null;
+  cachedByCode = null;
 }
 
 /** GET /api/countries/list — cached after first successful fetch. */
@@ -179,7 +149,6 @@ export async function getCountries() {
       const rawCountries = extractCountriesList(data);
       return setCountriesCache(rawCountries.map((country) => normalizeCountry(country)));
     })
-    .catch(() => setCountriesCache([]))
     .finally(() => {
       inflightRequest = null;
     });

@@ -4,6 +4,8 @@ import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import PortalDataTable from "../components/PortalDataTable";
 import PortalDrawer from "../components/PortalDrawer";
 import PortalStatusBadge from "../components/PortalStatusBadge";
+import { mergeLanguageNames } from "../../../services/languages/languagesApi";
+import { useLanguages } from "../../shared/hooks/useLanguages";
 import { PRESCREENER_GROUPS, SURVEY_RESEARCH_API_UNAVAILABLE_MESSAGE } from "../data/surveyResearchData";
 import { usePortalTable } from "../hooks/usePortalTable";
 import { toastApiError } from "../../../services/toast/apiToast";
@@ -35,6 +37,11 @@ function PreScreenerGroupsPage() {
   });
 
   const columns = useMemo(() => TABLE_COLUMNS, []);
+  const { languages } = useLanguages();
+  const languageOptions = useMemo(
+    () => mergeLanguageNames(languages, { extra: rows.map((row) => row.language) }),
+    [languages, rows]
+  );
 
   const handleDelete = (row) => {
     if (!window.confirm(`Delete "${row.groupName}"?`)) return;
@@ -84,7 +91,7 @@ function PreScreenerGroupsPage() {
             style={{ borderColor: "var(--srp-border)", background: "var(--srp-surface)" }}
           >
             <option value="all">All Languages</option>
-            {table.languages.map((language) => (
+            {languageOptions.map((language) => (
               <option key={language} value={language}>
                 {language}
               </option>

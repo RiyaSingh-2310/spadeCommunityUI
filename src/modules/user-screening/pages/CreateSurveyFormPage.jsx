@@ -3,7 +3,7 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
-import SearchableSelect from "../../../components/admin/SearchableSelect";
+import LanguageSelect from "../../../components/admin/LanguageSelect";
 import TableCard from "../../../components/admin/TableCard";
 import {
   getAdminCancelButtonClass,
@@ -31,7 +31,6 @@ import {
   updateScreeningSortOrder,
 } from "../../../services/screening/screeningQuestionsApi";
 import { useAdminFormAccess } from "../../permissions/FormAccessContext";
-import { LANGUAGES, languageSelectOptions } from "../data/profilingQuestionsStore";
 
 const SURVEY_FORM_FIELDS = ["language", "questionTitle", "questions"];
 
@@ -76,10 +75,6 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
   const [addingQuestionId, setAddingQuestionId] = useState(null);
   const inputClass = getAdminInputClass();
   const selectedLanguage = String(form.language ?? "").trim();
-  const languageOptions = useMemo(
-    () => languageSelectOptions(form.language, LANGUAGES),
-    [form.language]
-  );
   const resolvedActiveQuestionIndex = useMemo(() => {
     if (form.questions.length === 0) return 0;
     return Math.min(activeQuestionIndex, form.questions.length - 1);
@@ -411,7 +406,7 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
         <form className="admin-form-root min-w-0 space-y-6" onSubmit={(event) => event.preventDefault()} noValidate>
           <div className="admin-form-grid-2">
             <FormField label="Language" required error={showError("language")}>
-              <SearchableSelect
+              <LanguageSelect
                 inputClass={inputClass}
                 value={form.language}
                 disabled={readOnly}
@@ -419,9 +414,6 @@ function CreateSurveyFormPage({ isDarkMode, mode = "add" }) {
                   setForm((prev) => ({ ...prev, language }));
                 }}
                 onBlur={() => touch("language")}
-                options={languageOptions}
-                placeholder="Select Language"
-                searchPlaceholder="Search language..."
                 aria-label="Select language"
               />
             </FormField>
