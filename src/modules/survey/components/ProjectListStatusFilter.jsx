@@ -17,7 +17,7 @@ function ProjectListStatusFilter({ value, onChange }) {
       <div className="min-w-0 w-full sm:w-[8.75rem]">
         <SearchableSelect
           id="project-list-status-filter"
-          inputClass={`${getAdminInputClass()} !h-10 appearance-none`}
+          inputClass={`${getAdminInputClass()} !h-10 appearance-none !pr-4`}
           value={value}
           onChange={onChange}
           options={PROJECT_LIST_STATUS_FILTERS}
