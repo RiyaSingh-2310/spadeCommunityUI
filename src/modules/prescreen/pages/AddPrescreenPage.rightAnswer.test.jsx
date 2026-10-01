@@ -172,6 +172,63 @@ describe("AddPrescreenPage right answer", () => {
     expect(rightAnswerTrigger()).toHaveTextContent("Select Right Answer");
   });
 
+  it("switching Dropdown ↔ Radio → Checkbox moves between single and multiple selection", async () => {
+    renderAt("/prescreen/add");
+    fillBaseFields("Dropdown");
+
+    fireEvent.click(rightAnswerTrigger());
+    fireEvent.click(option("A"));
+    chooseFromSelect("Select question type", "Radio Button");
+    expect(rightAnswerTrigger()).toHaveTextContent(/^A$/);
+    fireEvent.click(rightAnswerTrigger());
+    fireEvent.click(option("B"));
+    expect(rightAnswerTrigger()).toHaveTextContent(/^B$/);
+
+    chooseFromSelect("Select question type", "Checkbox");
+    fireEvent.click(rightAnswerTrigger());
+    expect(within(option("B")).getByRole("checkbox", { hidden: true })).toBeChecked();
+    fireEvent.click(option("D"));
+    fireEvent.click(rightAnswerTrigger());
+    expect(rightAnswerTrigger()).toHaveTextContent("B, D");
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Submit" })));
+    expect(saveRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ questionType: "Checkbox", rightAnswer: ["B", "D"] })
+    );
+  });
+
+  it("edit: legacy single-string answers still load for Checkbox and Radio questions", async () => {
+    vi.mocked(getRecord).mockResolvedValue({
+      id: 5,
+      language: "english",
+      question_title: "Pick letters",
+      question_type: "checkbox",
+      options: ["A", "B", "C", "D"],
+      right_answer: "B",
+      status: "active",
+    });
+    const { unmount } = renderAt("/prescreen/edit/5");
+    await waitFor(() => expect(rightAnswerTrigger()).toHaveTextContent(/^B$/));
+    fireEvent.click(rightAnswerTrigger());
+    expect(within(option("B")).getByRole("checkbox", { hidden: true })).toBeChecked();
+    expect(within(option("A")).getByRole("checkbox", { hidden: true })).not.toBeChecked();
+    unmount();
+
+    vi.mocked(getRecord).mockResolvedValue({
+      id: 6,
+      language: "english",
+      question_title: "Pick one",
+      question_type: "radio",
+      options: ["A", "B", "C", "D"],
+      right_answer: "C",
+      status: "active",
+    });
+    renderAt("/prescreen/edit/6");
+    await waitFor(() => expect(rightAnswerTrigger()).toHaveTextContent(/^C$/));
+    fireEvent.click(rightAnswerTrigger());
+    expect(within(option("C")).getByRole("radio", { hidden: true })).toBeChecked();
+  });
+
   it("edit: loads saved Checkbox answers and enables Update only after a change", async () => {
     vi.mocked(getRecord).mockResolvedValue({
       id: 4,

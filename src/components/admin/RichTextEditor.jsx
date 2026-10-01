@@ -205,7 +205,7 @@ function RichTextEditor({
           data-testid={`${editorId}-word-count`}
         >
           {stats.words} / {wordLimit} words ·{" "}
-           {/*{formatCount(stats.characters, "character", "characters")}*/}
+
           {stats.words > wordLimit
             ? " · Word limit exceeded"
             : isAtWordLimit
