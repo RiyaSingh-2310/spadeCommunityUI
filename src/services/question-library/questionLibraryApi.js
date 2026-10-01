@@ -161,6 +161,45 @@ export function questionTypeShowsRightAnswer(questionType) {
   return RIGHT_ANSWER_UI_QUESTION_TYPES.has(uiType);
 }
 
+/** Backend validator: body('right_answer').isLength({ max: 255 }). */
+export const QUESTION_LIBRARY_RIGHT_ANSWER_MAX_LENGTH = 255;
+
+/** Only Checkbox questions accept more than one right answer. */
+export function questionTypeAllowsMultipleRightAnswers(questionType) {
+  return apiToUiQuestionType(questionType) === "Checkbox";
+}
+
+function uniqueTrimmedAnswers(values) {
+  const seen = new Set();
+  const answers = [];
+  values.forEach((value) => {
+    const text = String(value ?? "").trim();
+    if (!text || seen.has(text)) return;
+    seen.add(text);
+    answers.push(text);
+  });
+  return answers;
+}
+
+/**
+ * `right_answer` is a single string column. Dropdown/Radio send the option
+ * text; Checkbox sends one option as plain text and several as a JSON array
+ * string (e.g. `["A","C"]`), which the admin list and the Client UI pre-screen
+ * check both parse as multiple answers.
+ * @param {unknown} rightAnswer string or string[]
+ * @param {unknown} questionType
+ */
+export function serializeQuestionLibraryRightAnswer(rightAnswer, questionType) {
+  if (!Array.isArray(rightAnswer)) return String(rightAnswer ?? "").trim();
+
+  const answers = uniqueTrimmedAnswers(rightAnswer);
+  if (answers.length === 0) return "";
+  if (answers.length === 1 || !questionTypeAllowsMultipleRightAnswers(questionType)) {
+    return answers[0];
+  }
+  return JSON.stringify(answers);
+}
+
 function parseMaybeJson(value) {
   if (typeof value !== "string") return value;
   const trimmed = value.trim();
@@ -292,11 +331,40 @@ export function formatQuestionLibraryRightAnswer(record) {
   return resolveRightAnswerToken(text, optionItems);
 }
 
+/**
+ * Right answers as a list of option labels, for the multi-select editor.
+ * @returns {string[]}
+ */
+export function resolveQuestionLibraryRightAnswers(record) {
+  const questionType = record?.question_type ?? record?.questionType;
+  if (!questionTypeShowsRightAnswer(questionType)) return [];
+
+  const raw = extractRightAnswerRaw(record);
+  if (raw === "" || raw == null) return [];
+
+  const optionItems = mapOptionsToFormItems(record?.options);
+  const resolve = (token) => resolveRightAnswerToken(token, optionItems);
+
+  if (Array.isArray(raw)) return uniqueTrimmedAnswers(raw.map(resolve));
+  if (typeof raw === "object") return uniqueTrimmedAnswers([resolve(raw)]);
+
+  const text = String(raw).trim();
+  const wholeMatch = optionItems.some(
+    (item) => String(item.label).toLowerCase() === text.toLowerCase()
+  );
+  if (!wholeMatch && text.includes(",") && optionItems.length > 0) {
+    return uniqueTrimmedAnswers(text.split(",").map((part) => resolve(part.trim())));
+  }
+  return uniqueTrimmedAnswers([resolve(text)]);
+}
+
 function buildQuestionLibraryCreateBody(payload) {
-  const rightAnswerRaw = payload.rightAnswer ?? payload.right_answer ?? "";
-  const rightAnswerTrimmed = String(rightAnswerRaw ?? "").trim();
   const questionType = uiToApiQuestionType(
     payload.questionType ?? payload.question_type ?? "textbox"
+  );
+  const rightAnswerTrimmed = serializeQuestionLibraryRightAnswer(
+    payload.rightAnswer ?? payload.right_answer ?? "",
+    questionType
   );
   const options = resolveOptionsAsStrings(payload);
 
@@ -325,8 +393,8 @@ function buildQuestionLibraryCreateBody(payload) {
 
 function buildQuestionLibraryUpdateBody(payload) {
   const rightAnswerRaw = payload.rightAnswer ?? payload.right_answer ?? "";
-  const rightAnswerTrimmed = String(rightAnswerRaw ?? "").trim();
   const questionType = payload.questionType ?? payload.question_type;
+  const rightAnswerTrimmed = serializeQuestionLibraryRightAnswer(rightAnswerRaw, questionType);
   const options = resolveOptionsAsStrings(payload);
 
   const body = {
@@ -359,7 +427,8 @@ function buildQuestionLibraryUpdateBody(payload) {
   } else if (
     payload.rightAnswer === null ||
     payload.right_answer === null ||
-    rightAnswerRaw === ""
+    rightAnswerRaw === "" ||
+    (Array.isArray(rightAnswerRaw) && rightAnswerTrimmed === "")
   ) {
     body.right_answer = null;
   }
@@ -399,6 +468,7 @@ export function mapQuestionToForm(record) {
     options: optionItems,
     optionItems,
     rightAnswer: formatQuestionLibraryRightAnswer(record),
+    rightAnswers: resolveQuestionLibraryRightAnswers(record),
     sortOrder: String(record?.sort_order ?? record?.sortOrder ?? 0),
     required,
     status: apiStatusToFormValue(record?.status),

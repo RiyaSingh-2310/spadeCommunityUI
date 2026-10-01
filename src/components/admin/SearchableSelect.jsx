@@ -26,6 +26,8 @@ function SearchableSelect({
   loadingLabel = "Loading...",
   emptyMessage = "No options found",
   searchPlaceholder = "Search...",
+  /** "radio" shows a radio button beside each option. */
+  optionIndicator,
   "aria-label": ariaLabel,
 }) {
   const generatedId = useId();
@@ -169,6 +171,16 @@ function SearchableSelect({
                 isSelected={isSelected}
                 onSelect={() => handleSelect(option.value)}
               >
+                {optionIndicator === "radio" ? (
+                  <input
+                    type="radio"
+                    checked={isSelected}
+                    readOnly
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    className="pointer-events-none h-4 w-4 shrink-0 accent-[var(--admin-primary-color)]"
+                  />
+                ) : null}
                 <span className="admin-portal-dropdown-text min-w-0 truncate">{option.label}</span>
               </PortalDropdownOption>
             );

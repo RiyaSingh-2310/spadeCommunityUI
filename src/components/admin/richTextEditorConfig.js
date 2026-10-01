@@ -131,6 +131,7 @@ function alignCollapsedExpandControl(editor) {
  *   expandActive?: boolean,
  *   alignExpandEnd?: boolean,
  *   onHeightChange?: (height: number) => void,
+ *   onPastePreProcess?: (event: { content: string }, editor: unknown) => void,
  * }} options
  */
 export function createTinyMceInit({
@@ -148,6 +149,7 @@ export function createTinyMceInit({
   expandActive = false,
   alignExpandEnd = false,
   onHeightChange,
+  onPastePreProcess,
 } = {}) {
   const isCollapsedToolbar = toolbar === TINYMCE_TOOLBAR_COLLAPSED;
   const resolvedMenubar =
@@ -238,6 +240,10 @@ export function createTinyMceInit({
           // TinyMCE can reflow the scrolling toolbar after first paint.
           requestAnimationFrame(() => alignCollapsedExpandControl(editor));
         });
+      }
+
+      if (typeof onPastePreProcess === "function") {
+        editor.on("PastePreProcess", (event) => onPastePreProcess(event, editor));
       }
 
       if (onFocus) {

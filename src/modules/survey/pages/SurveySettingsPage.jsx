@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
@@ -13,60 +13,46 @@ import {
   getRichTextError,
   isFormValidForFields,
 } from "../../shared/utils/validation";
-import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
-import { getLanguages, mergeLanguageNames } from "../../../services/languages/languagesApi";
-import { createSurveySettingsForm } from "../data/surveySettingsMock";
+import { ApiError } from "../../../services/api/ApiError";
+import {
+  resolveApiToastMessage,
+  toastApiError,
+  toastApiSuccess,
+  toastApiWarning,
+} from "../../../services/toast/apiToast";
 import { resetSurveySettingsViewAfterSave } from "../utils/resetSurveySettingsView";
 import {
-  listAllSurveySettings,
-  mapSurveySettingsToLanguageOptions,
-  resolveSurveySettingsId,
-  resolveSurveySettingsItem,
-  updateSurveySettings,
+  buildSurveySettingsUpdatePayload,
+  createEmptySurveySettingsForm,
+  DEFAULT_SURVEY_SETTINGS_LANGUAGE,
+  findUnpersistedContentKeys,
+  getSurveySettingsByLanguage,
+  getSurveySettingsIdForLanguage,
+  SURVEY_SETTINGS_CONTENT_KEYS,
+  updateSurveySettingsByLanguage,
 } from "../services/surveySettingsApi";
 
-const SURVEY_SETTINGS_FIELDS = [
-  "language",
-  "completeRedirect",
-  "terminateRedirect",
-  "overQuotaRedirect",
-  "qualityTermRedirect",
-  "surveyCloseRedirect",
-];
-
-const SURVEY_CONTENT_FIELDS = [
-  "completeRedirect",
-  "terminateRedirect",
-  "overQuotaRedirect",
-  "qualityTermRedirect",
-  "surveyCloseRedirect",
-];
-
-function applyLanguageSettings(baseForm, language, items) {
-  const nextLanguage = String(language ?? "").trim();
-  const match = resolveSurveySettingsItem(nextLanguage, items);
-  const next = {
-    ...baseForm,
-    language: nextLanguage,
-  };
-
-  if (!match) return next;
-
-  SURVEY_CONTENT_FIELDS.forEach((key) => {
-    const value = String(match[key] ?? "").trim();
-    if (value) next[key] = value;
-  });
-
-  return next;
-}
+const SURVEY_SETTINGS_FIELDS = ["language", ...SURVEY_SETTINGS_CONTENT_KEYS];
 
 const REDIRECT_FIELDS = [
   ["Complete Redirect Content", "completeRedirect"],
   ["Terminate Redirect Content", "terminateRedirect"],
-  ["Over Quota Redirect Content", "overQuotaRedirect"],
   ["Quality Term Redirect Content", "qualityTermRedirect"],
   ["Survey Close Redirect Content", "surveyCloseRedirect"],
 ];
+
+const REDIRECT_FIELD_LABELS = Object.fromEntries(
+  REDIRECT_FIELDS.map(([label, key]) => [key, label])
+);
+
+/** @param {import("../types/surveySettings").SurveySettingsFormValues} details */
+function toFormValues(details) {
+  const next = createEmptySurveySettingsForm(details.language);
+  SURVEY_SETTINGS_CONTENT_KEYS.forEach((key) => {
+    next[key] = details[key];
+  });
+  return next;
+}
 
 /** Half-viewport editor height so large redirect HTML/code is readable. */
 function getSurveySettingsRedirectEditorHeight() {
@@ -76,18 +62,25 @@ function getSurveySettingsRedirectEditorHeight() {
 
 /**
  * Survey Settings — language dropdown uses the complete language catalog.
- * Redirect content is loaded and saved through /api/survey-settings.
+ * Redirect content is loaded per language from
+ * GET /api/survey-settings/public/language/:language and saved through
+ * PUT /api/survey-settings/:id (id mapped from the language).
  */
 function SurveySettingsPage({ isDarkMode }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState(() => createSurveySettingsForm({ language: "" }));
-  const [initialSnapshot, setInitialSnapshot] = useState(() =>
-    createSurveySettingsForm({ language: "" })
+  const [form, setForm] = useState(() =>
+    createEmptySurveySettingsForm(DEFAULT_SURVEY_SETTINGS_LANGUAGE)
   );
-  const [settingsItems, setSettingsItems] = useState([]);
-  const [isLoadingLanguages, setIsLoadingLanguages] = useState(true);
-  const [languagesFailed, setLanguagesFailed] = useState(false);
+  const [initialSnapshot, setInitialSnapshot] = useState(() =>
+    createEmptySurveySettingsForm(DEFAULT_SURVEY_SETTINGS_LANGUAGE)
+  );
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [settingsRequest, setSettingsRequest] = useState({
+    language: DEFAULT_SURVEY_SETTINGS_LANGUAGE,
+    attempt: 0,
+  });
   const { readOnly, showSubmit } = useFormAccess();
   const inputClass = getAdminInputClass();
   const redirectEditorHeight = useMemo(
@@ -95,48 +88,42 @@ function SurveySettingsPage({ isDarkMode }) {
     []
   );
 
-  const loadLanguages = useCallback(async () => {
-    setIsLoadingLanguages(true);
-    setLanguagesFailed(false);
-    try {
-      const [apiLanguages, items] = await Promise.all([
-        getLanguages().catch(() => []),
-        listAllSurveySettings(),
-      ]);
-      const catalog = mergeLanguageNames(apiLanguages, {
-        extra: items.map((item) => item.language),
-      });
-      const settingsOptions = mapSurveySettingsToLanguageOptions(items);
-      setSettingsItems(items);
-
-      const matchCatalog = (value) =>
-        catalog.find(
-          (name) => name.toLowerCase() === String(value ?? "").trim().toLowerCase()
-        ) ?? "";
-
-      const pickLanguage = (current) => {
-        const currentMatch = matchCatalog(current);
-        if (currentMatch) return currentMatch;
-        const firstSettings = settingsOptions[0]?.value ?? "";
-        return matchCatalog(firstSettings) || firstSettings || catalog[0] || "";
-      };
-
-      setForm((prev) => applyLanguageSettings(prev, pickLanguage(prev.language), items));
-      setInitialSnapshot((prev) =>
-        applyLanguageSettings(prev, pickLanguage(prev.language), items)
-      );
-    } catch (error) {
-      toastApiError(error);
-      setSettingsItems([]);
-      setLanguagesFailed(true);
-    } finally {
-      setIsLoadingLanguages(false);
-    }
-  }, []);
-
   useEffect(() => {
-    loadLanguages();
-  }, [loadLanguages]);
+    const { language } = settingsRequest;
+    let cancelled = false;
+
+    const loadLanguageSettings = async () => {
+      try {
+        const next = toFormValues(await getSurveySettingsByLanguage(language));
+        if (cancelled) return;
+        setForm(next);
+        setInitialSnapshot(next);
+      } catch (error) {
+        if (cancelled) return;
+        setLoadError(
+          resolveApiToastMessage(error, `Unable to load ${language} survey settings.`)
+        );
+        toastApiError(error);
+      } finally {
+        if (!cancelled) setIsLoadingSettings(false);
+      }
+    };
+
+    loadLanguageSettings();
+    return () => {
+      cancelled = true;
+    };
+  }, [settingsRequest]);
+
+  /** Clears the editors before fetching so another language's content is never shown. */
+  const loadSettings = (language) => {
+    const empty = createEmptySurveySettingsForm(language);
+    setForm(empty);
+    setInitialSnapshot(empty);
+    setLoadError("");
+    setIsLoadingSettings(true);
+    setSettingsRequest((prev) => ({ language, attempt: prev.attempt + 1 }));
+  };
 
   const errors = useMemo(
     () => ({
@@ -148,10 +135,6 @@ function SurveySettingsPage({ isDarkMode }) {
       terminateRedirect: getRichTextError(
         form.terminateRedirect,
         "Terminate Redirect Content"
-      ),
-      overQuotaRedirect: getRichTextError(
-        form.overQuotaRedirect,
-        "Over Quota Redirect Content"
       ),
       qualityTermRedirect: getRichTextError(
         form.qualityTermRedirect,
@@ -175,21 +158,24 @@ function SurveySettingsPage({ isDarkMode }) {
 
     return (
       String(form.language ?? "") !== String(initialSnapshot.language ?? "") ||
-      SURVEY_CONTENT_FIELDS.some(
+      SURVEY_SETTINGS_CONTENT_KEYS.some(
         (key) => String(form[key] ?? "") !== String(initialSnapshot[key] ?? "")
       )
     );
   }, [form, initialSnapshot]);
 
   const selectedSettingsId = useMemo(
-    () => resolveSurveySettingsId(form.language, settingsItems),
-    [form.language, settingsItems]
+    () => getSurveySettingsIdForLanguage(form.language),
+    [form.language]
   );
+
+  const isSettingsReady = !isLoadingSettings && !loadError;
 
   const canSubmit =
     showSubmit &&
     !readOnly &&
     Boolean(selectedSettingsId) &&
+    isSettingsReady &&
     isFormValidForFields(errors, SURVEY_SETTINGS_FIELDS) &&
     !isSubmitting &&
     isDirty;
@@ -197,7 +183,7 @@ function SurveySettingsPage({ isDarkMode }) {
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const onLanguageChange = (language) => {
-    setForm((prev) => applyLanguageSettings(prev, language, settingsItems));
+    loadSettings(language);
   };
 
   const onSubmit = async (event) => {
@@ -205,6 +191,7 @@ function SurveySettingsPage({ isDarkMode }) {
     if (
       readOnly ||
       !showSubmit ||
+      !isSettingsReady ||
       !validateSubmit() ||
       !isFormValidForFields(errors, SURVEY_SETTINGS_FIELDS) ||
       !isDirty
@@ -217,19 +204,49 @@ function SurveySettingsPage({ isDarkMode }) {
       return;
     }
 
+    const { language } = form;
+    const submittedForm = { ...form };
+    const sentPayload = buildSurveySettingsUpdatePayload(submittedForm);
+
     setIsSubmitting(true);
     try {
-      const data = await updateSurveySettings(selectedSettingsId, form);
-      setInitialSnapshot({ ...form });
+      const data = await updateSurveySettingsByLanguage(language, submittedForm);
       toastApiSuccess(data, "Survey setting updated successfully!");
-      window.requestAnimationFrame(() => {
-        resetSurveySettingsViewAfterSave();
-      });
     } catch (error) {
       toastApiError(error);
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const persisted = toFormValues(await getSurveySettingsByLanguage(language));
+      setForm(persisted);
+      setInitialSnapshot(persisted);
+      const unpersisted = findUnpersistedContentKeys(sentPayload, persisted);
+      if (unpersisted.length) {
+        toastApiWarning(
+          `Saved, but the server returned different content for: ${unpersisted
+            .map((key) => REDIRECT_FIELD_LABELS[key])
+            .join(", ")}.`
+        );
+      }
+    } catch (error) {
+      setInitialSnapshot(submittedForm);
+      if (!(error instanceof ApiError && error.sessionExpired)) {
+        toastApiError({
+          message: `Saved, but reloading ${language} survey settings failed: ${resolveApiToastMessage(
+            error,
+            "Request failed"
+          )}`,
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
+
+    window.requestAnimationFrame(() => {
+      resetSurveySettingsViewAfterSave();
+    });
   };
 
   return (
@@ -246,20 +263,24 @@ function SurveySettingsPage({ isDarkMode }) {
             className="max-w-md"
             label="Language"
             required
-            error={showError("language")}
+            error={showError("language") || loadError}
+            hint={
+              isLoadingSettings && form.language
+                ? `Loading ${form.language} survey settings...`
+                : undefined
+            }
           >
             <LanguageSelect
               inputClass={inputClass}
               value={form.language}
               onChange={onLanguageChange}
               onBlur={() => touch("language")}
-              disabled={readOnly || isLoadingLanguages}
-              loading={isLoadingLanguages}
+              disabled={readOnly || isSubmitting}
             />
-            {languagesFailed ? (
+            {loadError && selectedSettingsId ? (
               <button
                 type="button"
-                onClick={loadLanguages}
+                onClick={() => loadSettings(form.language)}
                 className="mt-2 text-sm font-semibold text-[#10a950] hover:underline"
               >
                 Retry
@@ -276,7 +297,7 @@ function SurveySettingsPage({ isDarkMode }) {
                 className="survey-settings-redirect-field"
                 label={label}
                 required
-                error={showError(key)}
+                error={isSettingsReady ? showError(key) : ""}
               >
                 <RichTextEditor
                   id={`survey-settings-${key}`}
@@ -287,7 +308,7 @@ function SurveySettingsPage({ isDarkMode }) {
                   onChange={(value) => setField(key, value)}
                   onBlur={() => touch(key)}
                   placeholder={`Enter ${label.toLowerCase()}...`}
-                  disabled={readOnly}
+                  disabled={readOnly || !isSettingsReady || isSubmitting}
                   height={redirectEditorHeight}
                   minHeight={redirectEditorHeight}
                 />

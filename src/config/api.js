@@ -264,6 +264,8 @@ export const API_ROUTES = {
   },
   surveySettings: {
     list: "/api/survey-settings/list",
+    byLanguage: (language) =>
+      `/api/survey-settings/public/language/${encodeURIComponent(String(language ?? "").trim())}`,
     update: (id) => `/api/survey-settings/${id}`,
   },
   activity: {

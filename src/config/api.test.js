@@ -78,6 +78,9 @@ describe("buildApiUrl", () => {
     expect(API_ROUTES.survey.prescreenResponseEnd).toBe("/api/survey/prescreenResponseEnd");
     expect(API_ROUTES.surveySettings.list).toBe("/api/survey-settings/list");
     expect(API_ROUTES.surveySettings.update(1)).toBe("/api/survey-settings/1");
+    expect(API_ROUTES.surveySettings.byLanguage("Hindi")).toBe(
+      "/api/survey-settings/public/language/Hindi"
+    );
     expect(API_ROUTES.projectReports.preScreenReport).toBe(
       "/api/project-reports/pre-screen-report"
     );

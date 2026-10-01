@@ -4,13 +4,17 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import FormField from "../../../components/admin/FormField";
 import LanguageSelect from "../../../components/admin/LanguageSelect";
+import SearchableMultiSelect from "../../../components/admin/SearchableMultiSelect";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
 import {
   getRecord,
   mapQuestionToForm,
+  QUESTION_LIBRARY_RIGHT_ANSWER_MAX_LENGTH,
+  questionTypeAllowsMultipleRightAnswers,
   saveRecord,
+  serializeQuestionLibraryRightAnswer,
 } from "../../../services/question-library/questionLibraryApi";
 import {
   getAdminCancelButtonClass,
@@ -32,6 +36,7 @@ const EMPTY_FORM = {
   questionType: "",
   optionsText: "",
   rightAnswer: "",
+  rightAnswers: [],
   required: false,
   status: "Active",
 };
@@ -49,6 +54,12 @@ function syncRightAnswer(rightAnswer, options) {
   return options.includes(trimmed) ? trimmed : "";
 }
 
+/** Keeps only answers that are still options, de-duplicated, in option order. */
+function syncRightAnswers(rightAnswers, options) {
+  const selected = new Set(rightAnswers.map((answer) => String(answer).trim()));
+  return [...new Set(options)].filter((option) => selected.has(option));
+}
+
 function isPrescreenFormDirty(current, original) {
   if (!original) return false;
   return (
@@ -57,8 +68,17 @@ function isPrescreenFormDirty(current, original) {
     current.questionType !== original.questionType ||
     current.optionsText !== original.optionsText ||
     current.rightAnswer !== original.rightAnswer ||
+    current.rightAnswers.join("\n") !== original.rightAnswers.join("\n") ||
     current.required !== original.required
   );
+}
+
+function getRightAnswerLengthError(form) {
+  if (!questionTypeAllowsMultipleRightAnswers(form.questionType)) return "";
+  const serialized = serializeQuestionLibraryRightAnswer(form.rightAnswers, form.questionType);
+  return serialized.length > QUESTION_LIBRARY_RIGHT_ANSWER_MAX_LENGTH
+    ? `Selected right answers are too long to save (maximum ${QUESTION_LIBRARY_RIGHT_ANSWER_MAX_LENGTH} characters). Select fewer or shorter options.`
+    : "";
 }
 
 function isPrescreenFormValid(form) {
@@ -70,6 +90,13 @@ function isPrescreenFormValid(form) {
   if (needsQuestionOptions(questionType)) {
     const options = parseOptionsText(form.optionsText);
     if (!options.length) return false;
+    if (questionTypeAllowsMultipleRightAnswers(questionType)) {
+      return (
+        form.rightAnswers.length > 0 &&
+        form.rightAnswers.every((answer) => options.includes(answer)) &&
+        !getRightAnswerLengthError(form)
+      );
+    }
     if (!form.rightAnswer.trim()) return false;
     return options.includes(form.rightAnswer.trim());
   }
@@ -115,12 +142,15 @@ function AddPrescreenPage({ isDarkMode }) {
         const record = await getRecord(id);
         if (cancelled) return;
         const mapped = mapQuestionToForm(record);
+        const questionType = normalizeQuestionTypeLabel(mapped.questionType) || "Text Box";
+        const allowsMultiple = questionTypeAllowsMultipleRightAnswers(questionType);
         const nextForm = {
           language: mapped.language ?? "",
           questionTitle: mapped.questionTitle ?? "",
-          questionType: normalizeQuestionTypeLabel(mapped.questionType) || "Text Box",
+          questionType,
           optionsText: mapped.mappedOptions ?? "",
-          rightAnswer: mapped.rightAnswer ?? "",
+          rightAnswer: allowsMultiple ? "" : mapped.rightAnswer ?? "",
+          rightAnswers: allowsMultiple ? mapped.rightAnswers ?? [] : [],
           required: Boolean(mapped.required),
           status: mapped.status ?? "Active",
         };
@@ -146,14 +176,16 @@ function AddPrescreenPage({ isDarkMode }) {
 
   const rightAnswerOptions = useMemo(() => {
     const options = parseOptionsText(form.optionsText);
-    const savedAnswer = form.rightAnswer.trim();
-    if (savedAnswer && !options.includes(savedAnswer)) {
-      return [...options, savedAnswer];
-    }
-    return options;
-  }, [form.optionsText, form.rightAnswer]);
+    const savedAnswers = [form.rightAnswer.trim(), ...form.rightAnswers].filter(Boolean);
+    const missing = savedAnswers.filter((answer) => !options.includes(answer));
+    return missing.length ? [...new Set([...options, ...missing])] : options;
+  }, [form.optionsText, form.rightAnswer, form.rightAnswers]);
 
   const showOptionsField = needsQuestionOptions(normalizeQuestionTypeLabel(form.questionType));
+  const normalizedQuestionType = normalizeQuestionTypeLabel(form.questionType);
+  const allowsMultipleRightAnswers =
+    questionTypeAllowsMultipleRightAnswers(normalizedQuestionType);
+  const rightAnswerLengthError = getRightAnswerLengthError(form);
 
   const isDirty = useMemo(
     () => isEdit && isPrescreenFormDirty(form, initialSnapshot),
@@ -174,12 +206,39 @@ function AddPrescreenPage({ isDarkMode }) {
 
   const handleQuestionTypeChange = (questionType) => {
     const normalizedType = normalizeQuestionTypeLabel(questionType);
-    setForm((prev) => ({
-      ...prev,
-      questionType: normalizedType,
-      optionsText: needsQuestionOptions(normalizedType) ? prev.optionsText : "",
-      rightAnswer: needsQuestionOptions(normalizedType) ? prev.rightAnswer : "",
-    }));
+    setForm((prev) => {
+      if (!needsQuestionOptions(normalizedType)) {
+        return {
+          ...prev,
+          questionType: normalizedType,
+          optionsText: "",
+          rightAnswer: "",
+          rightAnswers: [],
+        };
+      }
+
+      const options = parseOptionsText(prev.optionsText);
+      const previousAnswers = questionTypeAllowsMultipleRightAnswers(prev.questionType)
+        ? prev.rightAnswers
+        : [prev.rightAnswer].filter((answer) => answer.trim());
+
+      if (questionTypeAllowsMultipleRightAnswers(normalizedType)) {
+        return {
+          ...prev,
+          questionType: normalizedType,
+          rightAnswer: "",
+          rightAnswers: syncRightAnswers(previousAnswers, options),
+        };
+      }
+
+      // A single-answer type keeps the previous answer only when it is unambiguous.
+      return {
+        ...prev,
+        questionType: normalizedType,
+        rightAnswer: previousAnswers.length === 1 ? previousAnswers[0] : "",
+        rightAnswers: [],
+      };
+    });
   };
 
   const handleOptionsTextChange = (value) => {
@@ -189,8 +248,16 @@ function AddPrescreenPage({ isDarkMode }) {
         ...prev,
         optionsText: value,
         rightAnswer: syncRightAnswer(prev.rightAnswer, options),
+        rightAnswers: syncRightAnswers(prev.rightAnswers, options),
       };
     });
+  };
+
+  const handleRightAnswersChange = (answers) => {
+    setForm((prev) => ({
+      ...prev,
+      rightAnswers: syncRightAnswers(answers, parseOptionsText(prev.optionsText)),
+    }));
   };
 
   const handleSubmit = async (event) => {
@@ -208,7 +275,11 @@ function AddPrescreenPage({ isDarkMode }) {
         questionnaireTitle: form.questionTitle.trim(),
         questionType,
         required: form.required,
-        rightAnswer: showOptionsField ? form.rightAnswer.trim() : null,
+        rightAnswer: !showOptionsField
+          ? null
+          : allowsMultipleRightAnswers
+            ? form.rightAnswers
+            : form.rightAnswer.trim(),
         sortOrder: 1,
         status: isEdit ? initialSnapshot?.status ?? form.status : "Active",
         options: showOptionsField ? mappedLines : [],
@@ -345,17 +416,31 @@ function AddPrescreenPage({ isDarkMode }) {
                 />
               </FormField>
 
-              <FormField label="Right Answer" required>
-                <SearchableSelect
-                  inputClass={inputClass}
-                  value={form.rightAnswer}
-                  onChange={(rightAnswer) => setField("rightAnswer", rightAnswer)}
-                  options={rightAnswerOptions}
-                  placeholder="Select Right Answer"
-                  searchPlaceholder="Search answer..."
-                  aria-label="Select right answer"
-                  disabled={rightAnswerOptions.length === 0}
-                />
+              <FormField label="Right Answer" required error={rightAnswerLengthError}>
+                {allowsMultipleRightAnswers ? (
+                  <SearchableMultiSelect
+                    inputClass={inputClass}
+                    value={form.rightAnswers}
+                    onChange={handleRightAnswersChange}
+                    options={rightAnswerOptions}
+                    placeholder="Select Right Answer"
+                    searchPlaceholder="Search answer..."
+                    aria-label="Select right answer"
+                    disabled={rightAnswerOptions.length === 0}
+                  />
+                ) : (
+                  <SearchableSelect
+                    inputClass={inputClass}
+                    value={form.rightAnswer}
+                    onChange={(rightAnswer) => setField("rightAnswer", rightAnswer)}
+                    options={rightAnswerOptions}
+                    placeholder="Select Right Answer"
+                    searchPlaceholder="Search answer..."
+                    aria-label="Select right answer"
+                    disabled={rightAnswerOptions.length === 0}
+                    optionIndicator={normalizedQuestionType === "Radio Button" ? "radio" : undefined}
+                  />
+                )}
               </FormField>
             </>
           )}

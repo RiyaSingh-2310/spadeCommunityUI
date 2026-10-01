@@ -13,6 +13,10 @@ import {
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import { getAdminCancelButtonClass, getAdminInputClass } from "../../shared/utils/formStyles";
 import { getRequiredError } from "../../shared/utils/validation";
+import {
+  getRichTextWordLimitError,
+  RICH_TEXT_COMMENT_WORD_LIMIT,
+} from "../../shared/utils/richTextWordCount";
 
 const COMMENT_BY_OPTIONS = [
   { value: "Sales", label: "Sales" },
@@ -46,7 +50,9 @@ function AddRfqLogModal({ isOpen, onClose, row, isDarkMode, onSubmitted }) {
   const errors = useMemo(
     () => ({
       subject: getRequiredError(form.subject, "Email Subject"),
-      comment: getRichTextRequiredError(form.comment, "Comment"),
+      comment:
+        getRichTextRequiredError(form.comment, "Comment") ||
+        getRichTextWordLimitError(form.comment, "Comment"),
       commentBy: getRequiredError(form.commentBy, "Comment By"),
     }),
     [form]
@@ -182,6 +188,7 @@ function AddRfqLogModal({ isOpen, onClose, row, isDarkMode, onSubmitted }) {
                 onBlur={() => touch("comment")}
                 placeholder="Enter Comment"
                 disabled={isSubmitting}
+                maxWords={RICH_TEXT_COMMENT_WORD_LIMIT}
               />
             </FormField>
 

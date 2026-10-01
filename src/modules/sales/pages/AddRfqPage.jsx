@@ -32,6 +32,10 @@ import {
 } from "../../shared/utils/validation";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import {
+  getRichTextWordLimitError,
+  RICH_TEXT_COMMENT_WORD_LIMIT,
+} from "../../shared/utils/richTextWordCount";
+import {
   applyResolvedSelectIds,
   resolveClientIdByName,
   resolveSelectIdByLabel,
@@ -168,7 +172,9 @@ function AddRfqPage({ isDarkMode }) {
         "Sales Manager"
       ),
       status: getRequiredError(form.status, "Status"),
-      comment: getRichTextError(form.comment, "Comment"),
+      comment:
+        getRichTextError(form.comment, "Comment") ||
+        getRichTextWordLimitError(form.comment, "Comment"),
     }),
     [form, resolvedClientId, resolvedSalesManagerId, isEdit]
   );
@@ -508,6 +514,7 @@ function AddRfqPage({ isDarkMode }) {
                 placeholder="Enter Comment"
                 disabled={controlDisabled}
                 contentKey={isEdit ? `rfq-${id}` : "rfq-add"}
+                maxWords={RICH_TEXT_COMMENT_WORD_LIMIT}
               />
               {showError("comment") && (
                 <p className="mt-1 text-xs text-[var(--admin-danger-text)]">{showError("comment")}</p>
