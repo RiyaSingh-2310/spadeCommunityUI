@@ -34,12 +34,7 @@ import {
 } from "../../modules/shared/utils/validation";
 import { getAdminInputClass } from "../../modules/shared/utils/formStyles";
 
-const CLIENT_ADD_REQUIRED_FIELDS = [
-  "name",
-  "email",
-  "country",
-  "contactNumber",
-];
+const CLIENT_ADD_REQUIRED_FIELDS = ["name", "email", "country"];
 
 const CLIENT_EDIT_REQUIRED_FIELDS = ["name", "email", "country", "contactNumber"];
 
@@ -114,7 +109,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
       name: getUserNameError(form.name),
       country: getRequiredError(form.country, "Country"),
       contactNumber: getPhoneError(form.contactNumber, {
-        required: true,
+        required: isEdit,
         label: "Contact Number",
         defaultCountryCode: phoneCountry,
       }),
@@ -347,7 +342,7 @@ function ClientFormPage({ isDarkMode, mode = "add" }) {
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">
                 Contact Number
-                <span className="text-[var(--admin-danger-text)]"> *</span>
+                {isEdit && <span className="text-[var(--admin-danger-text)]"> *</span>}
               </label>
               <PhoneInput
                 value={form.contactNumber}

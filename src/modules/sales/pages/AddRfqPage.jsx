@@ -7,7 +7,6 @@ import RichTextEditor from "../../../components/admin/RichTextEditor";
 import SearchableSelect from "../../../components/admin/SearchableSelect";
 import TableCard from "../../../components/admin/TableCard";
 import { toastApiError, toastApiSuccess } from "../../../services/toast/apiToast";
-import { getRecords as getClients } from "../../../services/clients/clientsApi";
 import {
   createSalesProject,
   getRecord,
@@ -16,7 +15,6 @@ import {
 } from "../../../services/sales/salesProjectsApi";
 import { getRecords as getSalesManagers } from "../../../services/sales/salesManagersApi";
 import {
-  mapClientsToSelectOptions,
   mapSalesManagersToSelectOptions,
   mergeSelectOption,
 } from "../../survey/hooks/useSurveyFormSelectOptions";
@@ -37,12 +35,11 @@ import {
 } from "../../shared/utils/richTextWordCount";
 import {
   applyResolvedSelectIds,
-  resolveClientIdByName,
   resolveSelectIdByLabel,
 } from "../../shared/utils/formPopulation";
 
 const RFQ_REQUIRED_FIELDS = [
-  "clientId",
+  "clientName",
   "email",
   "country",
   "subject",
@@ -89,8 +86,6 @@ function AddRfqPage({ isDarkMode }) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [initialSnapshot, setInitialSnapshot] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [clientOptions, setClientOptions] = useState([]);
-  const [clientRecords, setClientRecords] = useState([]);
   const [salesManagerOptions, setSalesManagerOptions] = useState([]);
   const [isOptionsLoading, setIsOptionsLoading] = useState(true);
   const { readOnly, showSubmit, controlDisabled, canSubmitForm } = useAdminFormAccess(isSubmitting);
@@ -101,13 +96,8 @@ function AddRfqPage({ isDarkMode }) {
     const loadOptions = async () => {
       setIsOptionsLoading(true);
       try {
-        const [clientsData, salesManagersData] = await Promise.all([
-          getClients(),
-          getSalesManagers(),
-        ]);
+        const salesManagersData = await getSalesManagers();
         if (cancelled) return;
-        setClientRecords(clientsData.items ?? []);
-        setClientOptions(mapClientsToSelectOptions(clientsData.items));
         setSalesManagerOptions(mapSalesManagersToSelectOptions(salesManagersData.items));
       } catch (error) {
         if (!cancelled) toastApiError(error);
@@ -122,12 +112,6 @@ function AddRfqPage({ isDarkMode }) {
     };
   }, []);
 
-  const resolvedClientOptions = useMemo(
-    () =>
-      mergeSelectOption(clientOptions, form.clientId, form.clientName),
-    [clientOptions, form.clientId, form.clientName]
-  );
-
   const resolvedSalesManagerOptions = useMemo(() => {
     const selected = salesManagerOptions.find(
       (option) => String(option.value) === String(form.salesManagerId)
@@ -138,17 +122,6 @@ function AddRfqPage({ isDarkMode }) {
       selected?.label ?? form.salesManagerName ?? ""
     );
   }, [salesManagerOptions, form.salesManagerId, form.salesManagerName]);
-
-  const resolvedClientId = useMemo(() => {
-    if (form.clientId) return String(form.clientId);
-    if (!form.clientName) return "";
-    const matched = clientRecords.find(
-      (client) =>
-        String(client.name ?? "").trim().toLowerCase() ===
-        String(form.clientName).trim().toLowerCase()
-    );
-    return matched?.id != null ? String(matched.id) : "";
-  }, [form.clientId, form.clientName, clientRecords]);
 
   const resolvedSalesManagerId = useMemo(() => {
     if (form.salesManagerId) return String(form.salesManagerId);
@@ -163,7 +136,7 @@ function AddRfqPage({ isDarkMode }) {
 
   const errors = useMemo(
     () => ({
-      clientId: getRequiredError(resolvedClientId || form.clientId, "Client Name"),
+      clientName: getRequiredError(form.clientName, "Client Name"),
       email: isEdit ? "" : getEmailError(form.email),
       country: getRequiredError(form.country, "Country"),
       subject: getRequiredError(form.subject, "Email Subject"),
@@ -176,7 +149,7 @@ function AddRfqPage({ isDarkMode }) {
         getRichTextError(form.comment, "Comment") ||
         getRichTextWordLimitError(form.comment, "Comment"),
     }),
-    [form, resolvedClientId, resolvedSalesManagerId, isEdit]
+    [form, resolvedSalesManagerId, isEdit]
   );
 
   const { showError, touch, validateSubmit, resetValidation } = useFormValidation({
@@ -220,18 +193,12 @@ function AddRfqPage({ isDarkMode }) {
   useEffect(() => {
     if (!isEdit || isOptionsLoading || isLoadingRecord || !initialSnapshot) return;
 
-    const resolvedClient = resolveClientIdByName(
-      clientRecords,
-      form.clientName,
-      form.clientId
-    );
     const resolvedSalesManager = resolveSelectIdByLabel(
       salesManagerOptions,
       form.salesManagerName
     );
 
     applyResolvedSelectIds(setForm, setInitialSnapshot, {
-      clientId: !form.clientId ? resolvedClient : "",
       salesManagerId: !form.salesManagerId ? resolvedSalesManager : "",
     });
   }, [
@@ -239,10 +206,7 @@ function AddRfqPage({ isDarkMode }) {
     isOptionsLoading,
     isLoadingRecord,
     initialSnapshot,
-    clientRecords,
     salesManagerOptions,
-    form.clientId,
-    form.clientName,
     form.salesManagerId,
     form.salesManagerName,
   ]);
@@ -262,23 +226,6 @@ function AddRfqPage({ isDarkMode }) {
     !isOptionsLoading &&
     (!isEdit || isDirty);
 
-  const handleClientChange = (clientId) => {
-    const selected = resolvedClientOptions.find(
-      (option) => String(option.value) === String(clientId)
-    );
-    const matchedClient = clientRecords.find(
-      (client) => String(client.id) === String(clientId)
-    );
-
-    setForm((prev) => ({
-      ...prev,
-      clientId,
-      clientName: selected?.label ?? matchedClient?.name ?? prev.clientName,
-      email: isEdit ? prev.email : matchedClient?.emailAddress ?? prev.email,
-      country: matchedClient?.countryValue ?? matchedClient?.country ?? prev.country,
-    }));
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (
@@ -294,17 +241,20 @@ function AddRfqPage({ isDarkMode }) {
 
     setIsSubmitting(true);
     try {
-      const selectedClient = resolvedClientOptions.find(
-        (option) => String(option.value) === String(resolvedClientId || form.clientId)
-      );
       const selectedSalesManager = resolvedSalesManagerOptions.find(
         (option) =>
           String(option.value) === String(resolvedSalesManagerId || form.salesManagerId)
       );
+      const clientName = String(form.clientName ?? "").trim();
+      const originalName = String(initialSnapshot?.clientName ?? "").trim();
+      const clientId =
+        isEdit && clientName.toLowerCase() === originalName.toLowerCase()
+          ? form.clientId
+          : "";
       const payload = {
         ...form,
-        clientId: resolvedClientId || form.clientId,
-        clientName: selectedClient?.label ?? form.clientName,
+        clientId,
+        clientName,
         salesManagerId: resolvedSalesManagerId || form.salesManagerId,
         salesManagerName: selectedSalesManager?.label ?? form.salesManagerName,
       };
@@ -412,27 +362,7 @@ function AddRfqPage({ isDarkMode }) {
       <TableCard title="RFQ Details" isDarkMode={isDarkMode}>
         <form className="space-y-4" onSubmit={handleSubmit} noValidate>
           <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="admin-text mb-2 block text-sm font-semibold">
-                Client Name
-                <span className="text-[var(--admin-danger-text)]"> *</span>
-              </label>
-              <SearchableSelect
-                inputClass={inputClass}
-                value={resolvedClientId}
-                onChange={handleClientChange}
-                onBlur={() => touch("clientId")}
-                options={resolvedClientOptions}
-                placeholder="Select Client"
-                disabled={controlDisabled || isOptionsLoading}
-                aria-label="Select client"
-              />
-              {showError("clientId") && (
-                <p className="mt-1 text-xs text-[var(--admin-danger-text)]">
-                  {showError("clientId")}
-                </p>
-              )}
-            </div>
+            {renderField("Client Name", "clientName", "Enter Client Name", "text", true)}
             {renderField("Email Address", "email", "Enter Email Address", "email", true, isEdit)}
             <div>
               <label className="admin-text mb-2 block text-sm font-semibold">

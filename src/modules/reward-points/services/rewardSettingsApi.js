@@ -42,7 +42,13 @@ function extractSettingsRecord(data) {
     return asObject(data.data[0]);
   }
 
-  if (data.id != null || data.registration_reward_points != null || data.registrationRewardPoints != null) {
+  if (
+    data.id != null ||
+    data.registration_reward_points != null ||
+    data.registrationRewardPoints != null ||
+    data.questionnaire_reward_points != null ||
+    data.questionnaireRewardPoints != null
+  ) {
     return data;
   }
 
@@ -81,6 +87,9 @@ export function mapRewardSettingsToForm(record) {
     registrationReward: toFormNumber(
       record?.registration_reward_points ?? record?.registrationRewardPoints
     ),
+    questionnaireReward: toFormNumber(
+      record?.questionnaire_reward_points ?? record?.questionnaireRewardPoints
+    ),
     minimumPayout: toFormNumber(record?.minimum_payout ?? record?.minimumPayout),
     maximumRedeemPoints: toFormNumber(
       record?.max_redeem_points ??
@@ -100,13 +109,15 @@ export function mapRewardSettingsToForm(record) {
 /**
  * PUT /api/reward-settings/update body:
  * {
- *   registration_reward_points, minimum_payout, max_redeem_points,
+ *   registration_reward_points, questionnaire_reward_points,
+ *   minimum_payout, max_redeem_points,
  *   amazon_enabled, flipkart_enabled, paypal_enabled
  * }
  */
 export function buildRewardSettingsPayload(form) {
   return {
     registration_reward_points: toApiNumber(form.registrationReward),
+    questionnaire_reward_points: toApiNumber(form.questionnaireReward),
     minimum_payout: toApiNumber(form.minimumPayout),
     max_redeem_points: toApiNumber(form.maximumRedeemPoints),
     amazon_enabled: yesNoToApiFlag(form.amazon),
