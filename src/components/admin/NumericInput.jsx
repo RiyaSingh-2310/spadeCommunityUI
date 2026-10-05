@@ -3,12 +3,35 @@ import {
   preventBlockedNumericKeys,
   preventWheelValueChange,
   sanitizeInteger,
+  sanitizeSignedInteger,
 } from "../../modules/shared/utils/numericInputUtils";
 
 /** Integer-only input: no decimals, no spinners, wheel-safe. */
-function NumericInput({ value, onChange, className = "", ...props }) {
+function NumericInput({
+  value,
+  onChange,
+  className = "",
+  allowNegative = false,
+  ...props
+}) {
   const handleChange = (event) => {
-    onChange(sanitizeInteger(event.target.value));
+    onChange(
+      allowNegative
+        ? sanitizeSignedInteger(event.target.value)
+        : sanitizeInteger(event.target.value)
+    );
+  };
+
+  const handleKeyDown = (event) => {
+    if (
+      allowNegative &&
+      event.key === "-" &&
+      (event.target.selectionStart ?? 0) === 0 &&
+      !String(event.target.value ?? "").includes("-")
+    ) {
+      return;
+    }
+    preventBlockedNumericKeys(event);
   };
 
   return (
@@ -18,8 +41,8 @@ function NumericInput({ value, onChange, className = "", ...props }) {
       autoComplete="off"
       value={value}
       onChange={handleChange}
-      onKeyDown={preventBlockedNumericKeys}
-      onPaste={(e) => handleIntegerPaste(e, onChange)}
+      onKeyDown={handleKeyDown}
+      onPaste={(e) => handleIntegerPaste(e, onChange, { allowNegative })}
       onWheel={preventWheelValueChange}
       className={`admin-number-input ${className}`}
       {...props}

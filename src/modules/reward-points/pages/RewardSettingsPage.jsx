@@ -12,6 +12,7 @@ import { useModulePermission } from "../../permissions/useModulePermission";
 import { getAdminInputClass } from "../../shared/utils/formStyles";
 import { useFormValidation } from "../../shared/hooks/useFormValidation";
 import {
+  getRequiredNonNegativeIntegerError,
   getRequiredPositiveDecimalError,
   getRequiredPositiveIntegerError,
   isFormValidForFields,
@@ -109,7 +110,7 @@ function RewardSettingsPage({ isDarkMode }) {
     }
 
     return {
-      registrationReward: getRequiredPositiveIntegerError(
+      registrationReward: getRequiredNonNegativeIntegerError(
         form.registrationReward,
         "User Registration Reward Point"
       ),
@@ -240,6 +241,7 @@ function RewardSettingsPage({ isDarkMode }) {
                     onBlur={() => touch("registrationReward")}
                     disabled={readOnly || isSubmitting}
                     readOnly={readOnly}
+                    allowNegative
                     placeholder="200"
                   />
                 </FormField>

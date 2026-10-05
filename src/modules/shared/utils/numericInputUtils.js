@@ -7,6 +7,15 @@ export function sanitizeInteger(raw) {
   return String(raw ?? "").replace(/\D/g, "");
 }
 
+/** Whole numbers that may be negative. Keeps a single leading minus. */
+export function sanitizeSignedInteger(raw) {
+  const text = String(raw ?? "");
+  const negative = text.trimStart().startsWith("-");
+  const digits = text.replace(/\D/g, "");
+  if (!digits) return negative ? "-" : "";
+  return `${negative ? "-" : ""}${digits}`;
+}
+
 /** Whole numbers greater than zero (empty allowed while typing). */
 export function sanitizePositiveInteger(raw, maxDigits) {
   const digits =
@@ -93,10 +102,10 @@ export function preventWheelValueChange(event) {
   event.currentTarget.blur();
 }
 
-export function handleIntegerPaste(event, onChange) {
+export function handleIntegerPaste(event, onChange, { allowNegative = false } = {}) {
   event.preventDefault();
   const pasted = event.clipboardData?.getData("text") ?? "";
-  onChange(sanitizeInteger(pasted));
+  onChange(allowNegative ? sanitizeSignedInteger(pasted) : sanitizeInteger(pasted));
 }
 
 export function handleDecimalPaste(event, onChange, maxDecimals = DEFAULT_DECIMAL_PLACES) {

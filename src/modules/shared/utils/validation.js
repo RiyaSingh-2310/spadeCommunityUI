@@ -152,6 +152,21 @@ export function getRequiredPositiveIntegerError(value, label) {
   return getOptionalPositiveIntegerError(value, label);
 }
 
+/** Required whole number that may be zero. Errors when the value is below 0. */
+export function getRequiredNonNegativeIntegerError(value, label) {
+  const required = getRequiredError(value, label);
+  if (required) return required;
+  const trimmed = String(value ?? "").trim();
+  if (!/^-?\d+$/.test(trimmed)) {
+    return `${label} cannot be below 0`;
+  }
+  const num = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(num) || num < 0) {
+    return `${label} cannot be below 0`;
+  }
+  return "";
+}
+
 /**
  * Required number greater than zero.
  * Allows up to 2 decimal places (e.g. payout amounts).
