@@ -9,6 +9,7 @@ describe("rewardSettingsApi mapping", () => {
     const form = mapRewardSettingsToForm({
       id: 1,
       registration_reward_points: 50,
+      questionnaire_reward_points: 25,
       minimum_payout: "100.00",
       amazon_enabled: true,
       flipkart_enabled: true,
@@ -19,6 +20,7 @@ describe("rewardSettingsApi mapping", () => {
     expect(form).toEqual({
       id: 1,
       registrationReward: "50",
+      questionnaireReward: "25",
       minimumPayout: "100.00",
       maximumRedeemPoints: "500",
       amazon: "Yes",
@@ -38,6 +40,7 @@ describe("rewardSettingsApi mapping", () => {
   it("builds PUT payload with max_redeem_points", () => {
     const payload = buildRewardSettingsPayload({
       registrationReward: "50",
+      questionnaireReward: "25",
       minimumPayout: "100.00",
       maximumRedeemPoints: "500",
       amazon: "Yes",
@@ -48,6 +51,7 @@ describe("rewardSettingsApi mapping", () => {
 
     expect(payload).toEqual({
       registration_reward_points: 50,
+      questionnaire_reward_points: 25,
       minimum_payout: 100,
       max_redeem_points: 500,
       amazon_enabled: true,

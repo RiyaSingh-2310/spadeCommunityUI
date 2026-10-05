@@ -29,6 +29,7 @@ const YES_NO_OPTIONS = ["Yes", "No"];
 const EMPTY_FORM = {
   id: null,
   registrationReward: "",
+  questionnaireReward: "",
   minimumPayout: "",
   maximumRedeemPoints: "",
   amazon: "No",
@@ -79,7 +80,12 @@ function RewardSettingsPage({ isDarkMode }) {
   }, [reloadKey]);
 
   const validationFields = useMemo(
-    () => ["registrationReward", "minimumPayout", "maximumRedeemPoints"],
+    () => [
+      "registrationReward",
+      "questionnaireReward",
+      "minimumPayout",
+      "maximumRedeemPoints",
+    ],
     []
   );
 
@@ -107,6 +113,10 @@ function RewardSettingsPage({ isDarkMode }) {
         form.registrationReward,
         "User Registration Reward Point"
       ),
+      questionnaireReward: getRequiredPositiveIntegerError(
+        form.questionnaireReward,
+        "Questionnaire Reward Point"
+      ),
       minimumPayout,
       maximumRedeemPoints,
     };
@@ -121,6 +131,7 @@ function RewardSettingsPage({ isDarkMode }) {
     if (!initialSnapshot) return false;
     return [
       "registrationReward",
+      "questionnaireReward",
       "minimumPayout",
       "maximumRedeemPoints",
       ...REDEMPTION_METHOD_FIELDS,
@@ -216,22 +227,38 @@ function RewardSettingsPage({ isDarkMode }) {
         <TableCard title="Reward Configuration" isDarkMode={isDarkMode}>
           <div className="space-y-8">
             <section className="space-y-5">
-              <FormField
-                className="max-w-md"
-                label="User Registration Reward Point"
-                required
-                error={showError("registrationReward")}
-              >
-                <NumericInput
-                  className={inputClass}
-                  value={form.registrationReward}
-                  onChange={(v) => setField("registrationReward", v)}
-                  onBlur={() => touch("registrationReward")}
-                  disabled={readOnly || isSubmitting}
-                  readOnly={readOnly}
-                  placeholder="200"
-                />
-              </FormField>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  label="User Registration Reward Point"
+                  required
+                  error={showError("registrationReward")}
+                >
+                  <NumericInput
+                    className={inputClass}
+                    value={form.registrationReward}
+                    onChange={(v) => setField("registrationReward", v)}
+                    onBlur={() => touch("registrationReward")}
+                    disabled={readOnly || isSubmitting}
+                    readOnly={readOnly}
+                    placeholder="200"
+                  />
+                </FormField>
+                <FormField
+                  label="Questionnaire Reward Point"
+                  required
+                  error={showError("questionnaireReward")}
+                >
+                  <NumericInput
+                    className={inputClass}
+                    value={form.questionnaireReward}
+                    onChange={(v) => setField("questionnaireReward", v)}
+                    onBlur={() => touch("questionnaireReward")}
+                    disabled={readOnly || isSubmitting}
+                    readOnly={readOnly}
+                    placeholder="100"
+                  />
+                </FormField>
+              </div>
             </section>
 
             <section className="space-y-4 border-t border-[var(--admin-header-search-border)] pt-8">

@@ -82,7 +82,7 @@ function buildClientOptionalApiFields(payload) {
  *   name: string,
  *   email: string,
  *   country: string,
- *   contact_no: string,
+ *   contact_no?: string,
  *   website?: string,
  *   apiBaseUrl?: string,
  *   apiHeaderKey?: string,
@@ -90,11 +90,12 @@ function buildClientOptionalApiFields(payload) {
  * }} payload
  */
 export async function createClient(payload) {
+  const contactNo = resolveClientContactNo(payload.contact_no, payload.country);
   const body = {
     name: payload.name.trim(),
     email: payload.email.trim(),
     country: payload.country.trim(),
-    contact_no: resolveClientContactNo(payload.contact_no, payload.country),
+    ...(contactNo ? { contact_no: contactNo } : {}),
     ...buildClientOptionalApiFields(payload),
   };
 
