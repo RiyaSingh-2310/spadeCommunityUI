@@ -20,6 +20,8 @@ import {
   resolvePermissionsFromRecord,
 } from "../../permissions/permissionsUtils";
 import { encryptValue } from "../../shared/utils/encryption";
+import { updateProjectManager } from "../../../services/projectManagers/projectManagersApi";
+import { updateSalesManager } from "../../../services/sales/salesManagersApi";
 import {
   extractAdminFromResponse,
   formStatusToApiStatus,
@@ -183,15 +185,23 @@ export async function updateProfile(userId, payload) {
     return { ...data, admin: refreshed.admin };
   }
 
-  if (isManagerLoginRole() || isSalesLoginRole()) {
-    const data = await apiRequest(resolveSelfUpdateRoute(resolvedId), {
-      method: "PUT",
-      body: {
-        name: String(name ?? "").trim(),
-        email: resolvedEmail,
-      },
+  if (isSalesLoginRole()) {
+    const data = await updateSalesManager(resolvedId, {
+      name: String(name ?? "").trim(),
+      email: resolvedEmail,
+      profileImage: imageFile,
     });
-    assertSuccess(data);
+
+    const refreshed = await fetchProfile(resolvedId);
+    return { ...data, admin: refreshed.admin };
+  }
+
+  if (isManagerLoginRole()) {
+    const data = await updateProjectManager(resolvedId, {
+      name: String(name ?? "").trim(),
+      email: resolvedEmail,
+      profileImage: imageFile,
+    });
 
     const refreshed = await fetchProfile(resolvedId);
     return { ...data, admin: refreshed.admin };

@@ -164,7 +164,7 @@ function AddSalesManagerPage({ isDarkMode }) {
       const data = isEdit
         ? await updateSalesManager(id, {
             name: form.name,
-            status: form.status,
+            email: form.email,
             profileImage,
             password: form.password,
             confirmPassword: form.confirmPassword,

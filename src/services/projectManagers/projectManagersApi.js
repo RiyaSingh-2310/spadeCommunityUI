@@ -171,42 +171,34 @@ export async function updateProjectManagerStatus(id, { status }) {
 
 /**
  * PUT /api/projectmanager/:id
+ * multipart/form-data: name, email, and profile_image (file) when a new photo is chosen.
+ * Content-Type is left unset so the client can set the multipart boundary.
  * @param {string|number} id
  * @param {{
  *   name: string,
  *   email: string,
- *   status: string,
+ *   password?: string,
  *   profileImage?: File | null,
  * }} payload
  */
 export async function updateProjectManager(id, payload) {
   const normalizedId = normalizeProjectManagerId(id);
-  const hasFile = payload.profileImage instanceof File;
-  const password = String(payload.password ?? "").trim();
-  const encryptedPassword = password ? encryptValue(password) : "";
+  const body = new FormData();
+  body.append("name", String(payload.name ?? "").trim());
+  body.append("email", String(payload.email ?? "").trim());
 
-  if (hasFile) {
-    const body = new FormData();
-    body.append("name", payload.name.trim());
-    body.append("status", formValueToApiStatus(payload.status));
+  if (payload.profileImage instanceof File) {
     body.append("profile_image", payload.profileImage);
-    if (encryptedPassword) body.append("new_password", encryptedPassword);
+  }
 
-    const data = await apiRequest(API_ROUTES.projectManagers.update(normalizedId), {
-      method: "PUT",
-      body,
-    });
-
-    return assertSuccess(data);
+  const password = String(payload.password ?? "").trim();
+  if (password) {
+    body.append("new_password", encryptValue(password));
   }
 
   const data = await apiRequest(API_ROUTES.projectManagers.update(normalizedId), {
     method: "PUT",
-    body: {
-      name: payload.name.trim(),
-      status: formValueToApiStatus(payload.status),
-      ...(encryptedPassword ? { new_password: encryptedPassword } : {}),
-    },
+    body,
   });
 
   return assertSuccess(data);
